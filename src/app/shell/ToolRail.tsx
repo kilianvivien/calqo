@@ -49,7 +49,7 @@ export function ToolRail() {
   return (
     <nav
       aria-label={t('tools.select')}
-      className="flex flex-col items-center gap-1 py-3"
+      className="glass panel-anim m-1.5 flex flex-col items-center gap-1 p-2"
     >
       {TOOLS.map((tool, i) => {
         const prev = TOOLS[i - 1];

@@ -1,25 +1,28 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SlidersHorizontal, Layers, Palette } from 'lucide-react';
-import { GlassPanel } from '@/components/glass';
+import { SlidersHorizontal, Layers, Palette, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
+import { PropertiesPane } from './inspector/PropertiesPane';
+import { LayersPane } from './inspector/LayersPane';
+import { StylePane } from './inspector/StylePane';
 
 type PaneId = 'properties' | 'layers' | 'style';
 
-/** Right inspector — three-tab panel with a persistent header. Panes are
- * placeholders until the editor and content tools land. */
+/** The single right-hand inspector (GeoCarto §4.4): a 3-tab panel with a
+ * persistent header. Layers + artboards live in the Layers tab — there is no
+ * separate left dock. */
 export function Inspector() {
   const { t } = useTranslation('editor');
   const [pane, setPane] = useState<PaneId>('properties');
 
-  const tabs: { id: PaneId; icon: typeof Layers; label: string }[] = [
+  const tabs: { id: PaneId; icon: LucideIcon; label: string }[] = [
     { id: 'properties', icon: SlidersHorizontal, label: t('panels.properties') },
     { id: 'layers', icon: Layers, label: t('panels.layers') },
     { id: 'style', icon: Palette, label: t('panels.style') },
   ];
 
   return (
-    <GlassPanel animate className="flex h-full w-full flex-col overflow-hidden">
+    <aside className="glass panel-anim m-1.5 flex w-[300px] flex-col overflow-hidden">
       <div
         role="tablist"
         aria-label={t('panels.inspector')}
@@ -48,9 +51,11 @@ export function Inspector() {
         })}
       </div>
 
-      <div className="flex-1 overflow-y-auto calqo-scroll p-4 text-[12px] text-[var(--calqo-text-3)]">
-        {t('workspace.empty')}
+      <div role="tabpanel" className="flex-1 overflow-y-auto calqo-scroll p-4">
+        {pane === 'properties' && <PropertiesPane />}
+        {pane === 'layers' && <LayersPane />}
+        {pane === 'style' && <StylePane />}
       </div>
-    </GlassPanel>
+    </aside>
   );
 }
