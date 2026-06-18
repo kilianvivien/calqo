@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { GlassPanel } from '@/components/glass';
+import { createProject } from '@/editor/commands/projectCommands';
 import { AppSettingsModal } from './AppSettingsModal';
+import { ExportDialog } from './ExportDialog';
+import { NewProjectModal } from './NewProjectModal';
 import { TitleBar } from './TitleBar';
 import { TabBar } from './TabBar';
 import { ToolRail } from './ToolRail';
@@ -15,6 +18,8 @@ export function AppShell() {
   const openTabCount = useWorkspaceStore((s) => s.openTabIds.length);
   const showTabs = openTabCount > 1;
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
 
   return (
     <div className="h-full w-full">
@@ -27,7 +32,10 @@ export function AppShell() {
             : '44px minmax(0, 1fr) 28px',
         }}
       >
-        <TitleBar />
+        <TitleBar
+          onExport={() => setExportOpen(true)}
+          onNewProject={() => setNewProjectOpen(true)}
+        />
         {showTabs && <TabBar />}
 
         <div className="grid min-h-0 grid-cols-[auto_1fr_auto]">
@@ -43,6 +51,15 @@ export function AppShell() {
       <AppSettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+      />
+      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
+      <NewProjectModal
+        open={newProjectOpen}
+        onClose={() => setNewProjectOpen(false)}
+        onSelect={(preset) => {
+          void createProject({ preset });
+          setNewProjectOpen(false);
+        }}
       />
     </div>
   );

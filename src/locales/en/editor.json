@@ -22,6 +22,15 @@
     "emptyHint": "Create a new project to start designing.",
     "createProject": "Create a project"
   },
+  "newProject": {
+    "title": "Choose a format",
+    "subtitle": "Pick a social-media size to start your new project."
+  },
+  "title": {
+    "rename": "Rename project",
+    "saveFile": "Save .calqo file",
+    "share": "Share (AirDrop…)"
+  },
   "canvas": {
     "missingAsset": "Missing asset",
     "loadingAsset": "Loading asset"
@@ -86,6 +95,37 @@
     "delete": "Delete artboard",
     "duplicateToPreset": "Duplicate to format",
     "duplicateSameSize": "Duplicate (same size)"
+  },
+  "export": {
+    "title": "Export",
+    "subtitle": "Render the artboard to an image, SVG, or HTML wrapper.",
+    "close": "Close",
+    "import": "Import .calqo",
+    "importFailed": "Could not import this file. It may be invalid or corrupted.",
+    "format": "Format",
+    "scale": "Scale",
+    "background": "Background",
+    "bgNormal": "Normal",
+    "bgTransparent": "Transparent",
+    "quality": "Quality",
+    "htmlMode": "HTML",
+    "standalone": "Standalone",
+    "snippet": "Snippet",
+    "scope": "Artboards",
+    "activeArtboard": "Active",
+    "allArtboards": "All ({{count}})",
+    "filename": "Filename",
+    "warnings": "Before you export",
+    "warnOverflow": "{{name}}: some layers fall outside the artboard.",
+    "warnMissingAsset": "{{name}}: an image asset is missing.",
+    "download": "Export",
+    "working": "Exporting…",
+    "copyImage": "Copy image",
+    "copySnippet": "Copy snippet",
+    "done": "Exported.",
+    "failed": "Export failed.",
+    "copied": "Copied to clipboard.",
+    "copyUnsupported": "Copy is not supported in this browser."
   },
   "ai": {
     "promptTemplate": "Prompt a template",

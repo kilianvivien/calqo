@@ -39,4 +39,18 @@ export const dexieAssetStorageAdapter: AssetStorageAdapter = {
   async deleteAsset(assetId): Promise<void> {
     await db.assets.delete(assetId);
   },
+
+  async restoreAsset(projectId, asset, blob): Promise<void> {
+    await db.assets.put({
+      id: asset.id,
+      projectId,
+      kind: asset.kind,
+      mimeType: asset.mimeType,
+      name: asset.name,
+      blob,
+      width: asset.width,
+      height: asset.height,
+      createdAt: asset.createdAt,
+    });
+  },
 };

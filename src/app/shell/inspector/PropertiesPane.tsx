@@ -519,24 +519,30 @@ function ColorField({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pipetteStatus, setPipetteStatus] = useState<string | null>(null);
   const pickerRef = useRef<HTMLButtonElement>(null);
+  const nativeColorRef = useRef<HTMLInputElement>(null);
   const normalized = value.toUpperCase();
+  // `<input type="color">` only accepts #rrggbb; fall back to black otherwise.
+  const nativeColorValue = /^#[0-9a-f]{6}$/i.test(value) ? value : '#000000';
   const swatches = COLOR_SWATCHES.includes(normalized)
     ? COLOR_SWATCHES
     : [normalized, ...COLOR_SWATCHES].slice(0, 8);
   const pickWithEyedropper = async () => {
-    if (!window.EyeDropper) {
-      setPipetteStatus(t('color.pickUnavailable'));
+    // Chromium: the in-page EyeDropper API samples anywhere on screen.
+    if (window.EyeDropper) {
+      setPipetteStatus(t('color.pickWaiting'));
+      try {
+        const result = await new window.EyeDropper().open();
+        onChange(result.sRGBHex.toUpperCase());
+        setPipetteStatus(t('color.picked'));
+        window.setTimeout(() => setPipetteStatus(null), 1400);
+      } catch {
+        setPipetteStatus(t('color.pickCancelled'));
+      }
       return;
     }
-    setPipetteStatus(t('color.pickWaiting'));
-    try {
-      const result = await new window.EyeDropper().open();
-      onChange(result.sRGBHex.toUpperCase());
-      setPipetteStatus(t('color.picked'));
-      window.setTimeout(() => setPipetteStatus(null), 1400);
-    } catch {
-      setPipetteStatus(t('color.pickCancelled'));
-    }
+    // Safari/Firefox: open the native color panel — on macOS its color picker
+    // includes a magnifier/eyedropper to sample the screen.
+    nativeColorRef.current?.click();
   };
 
   return (
@@ -583,6 +589,15 @@ function ColorField({
           >
             <Pipette size={13} />
           </button>
+          <input
+            ref={nativeColorRef}
+            type="color"
+            aria-hidden
+            tabIndex={-1}
+            value={nativeColorValue}
+            onChange={(event) => onChange(event.target.value.toUpperCase())}
+            className="pointer-events-none absolute h-0 w-0 opacity-0"
+          />
         </div>
         {pipetteStatus && (
           <p className="mt-1 text-[10.5px] text-[var(--calqo-text-3)]">

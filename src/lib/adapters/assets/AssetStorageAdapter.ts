@@ -18,4 +18,10 @@ export interface AssetStorageAdapter {
   ): Promise<CalqoAssetRef>;
   getAssetBlob(assetId: string): Promise<Blob | null>;
   deleteAsset(assetId: string): Promise<void>;
+  /** Re-create an asset under an existing ref id (used by `.calqo` import). */
+  restoreAsset(
+    projectId: string,
+    asset: CalqoAssetRef,
+    blob: Blob,
+  ): Promise<void>;
 }

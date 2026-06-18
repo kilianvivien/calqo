@@ -153,6 +153,14 @@ Exit criterion:
 
 ### Phase D — Export and persistence completion
 
+> **Status: COMPLETE (2026-06-18).** Exit criterion met — an export dialog
+> renders PNG/JPG/WebP (1×/2×/3×, transparency, quality), SVG, and HTML
+> wrapper (snippet/standalone) from an offscreen Konva stage; active or
+> all-artboard batch download; copy-to-clipboard (image + HTML snippet);
+> `.calqo` export/import with inlined asset data URLs, validation, and asset
+> restore; plus a title-bar Share action (Web Share / AirDrop). Verified with
+> `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, and in-browser.
+
 Goal: make the output useful outside the app.
 
 Deliverables:
@@ -2343,6 +2351,28 @@ Acceptance criteria:
 ---
 
 ## Phase D — Export and import
+
+> **Status: COMPLETE (D1–D6), 2026-06-18.** Export modules live in
+> `src/editor/export/` (`rasterExport`, `svgExport`, `htmlExport`, `calqoFile`,
+> `share`); UI in `ExportDialog.tsx`, wired from the title bar (Export, Save
+> `.calqo`, Import, Share). Konva is imported via browser-safe subpaths to keep
+> tests/jsdom working; SVG text reuses Konva's own line layout so it matches the
+> raster render. Asset restore added to the `AssetStorageAdapter`. Unit coverage
+> in `tests/unit/phaseD.test.ts`.
+>
+> **Title-bar / UX refinements landed alongside Phase D:**
+> - New app icon (Schematic LiquidGlass) wired to the favicon + title-bar logo;
+>   old `calqo_v03` icon set removed.
+> - New-project flow asks for a social format first — `NewProjectModal.tsx`
+>   (shared `FormatGrid`) opened from the title bar and shown in the empty-canvas
+>   state.
+> - `GlassIconButton` gained a built-in liquid-glass tooltip (with optional
+>   shortcut + placement); `ToolRail` refactored to use it.
+> - Title bar: editable project name (centered in the free space), Save button
+>   now downloads a `.calqo` file, and a Share action (Web Share / AirDrop).
+> - Color eyedropper falls back to the native `<input type="color">` (macOS
+>   system color panel / loupe) when the Chromium `EyeDropper` API is absent
+>   (Safari/Firefox).
 
 ### D1. Raster export
 
