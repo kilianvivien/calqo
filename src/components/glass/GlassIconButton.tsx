@@ -7,6 +7,7 @@ interface GlassIconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Accessible label; also drives the title tooltip. */
   label: string;
   size?: number;
+  showTitle?: boolean;
 }
 
 /** Square icon button used across the title bar, tool rail, and panels. */
@@ -14,6 +15,7 @@ export function GlassIconButton({
   active = false,
   label,
   size = 28,
+  showTitle = true,
   className,
   children,
   ...rest
@@ -22,7 +24,7 @@ export function GlassIconButton({
     <button
       type="button"
       aria-label={label}
-      title={label}
+      title={showTitle ? label : undefined}
       aria-pressed={active}
       style={{ width: size, height: size }}
       className={cn(

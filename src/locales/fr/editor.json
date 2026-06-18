@@ -22,6 +22,58 @@
     "emptyHint": "Créez un nouveau projet pour commencer à concevoir.",
     "createProject": "Créer un projet"
   },
+  "canvas": {
+    "missingAsset": "Ressource manquante",
+    "loadingAsset": "Chargement de la ressource"
+  },
+  "color": {
+    "pick": "Choisir une couleur",
+    "hex": "Couleur hex",
+    "custom": "Couleur personnalisée",
+    "pickFromScreen": "Prélever à l’écran",
+    "pickWaiting": "Choisissez une couleur à l’écran.",
+    "picked": "Couleur prélevée.",
+    "pickCancelled": "Prélèvement annulé.",
+    "pickUnavailable": "La pipette n’est pas disponible dans ce navigateur."
+  },
+  "properties": {
+    "tool": "Outil",
+    "active": "Actif",
+    "snap": "Magnétisme",
+    "selection": "Sélection",
+    "noLayerSelected": "Aucun calque sélectionné. Les réglages du plan de travail sont dans Style.",
+    "layers": "Calques",
+    "artboard": "Plan de travail",
+    "name": "Nom",
+    "size": "Taille",
+    "format": "Format",
+    "preset": "Format",
+    "background": "Arrière-plan",
+    "color": "Couleur",
+    "hex": "Hex",
+    "type": "Type",
+    "rotate": "Rotation",
+    "opacity": "Opacité",
+    "shape": "Forme",
+    "fill": "Fond",
+    "stroke": "Contour",
+    "text": "Texte",
+    "image": "Image",
+    "fit": "Ajustement",
+    "cover": "Couvrir",
+    "contain": "Contenir",
+    "stretch": "Étirer",
+    "svg": "SVG",
+    "replaceAsset": "Remplacer la ressource"
+  },
+  "layersPanel": {
+    "duplicate": "Dupliquer",
+    "deleteSelected": "Supprimer la sélection",
+    "hide": "Masquer",
+    "show": "Afficher",
+    "lock": "Verrouiller",
+    "unlock": "Déverrouiller"
+  },
   "ai": {
     "promptTemplate": "Générer un modèle",
     "translate": "Traduire"

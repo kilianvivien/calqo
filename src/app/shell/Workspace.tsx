@@ -1,12 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { Sparkles, Frame } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { GlassButton } from '@/components/glass';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
 import { createProject } from '@/editor/commands/projectCommands';
+import { CalqoStage } from '@/editor/canvas/CalqoStage';
 
-/** Neutral canvas workspace. The Konva stage mounts here in Phase B; for now it
- * shows the empty-state affordance, or a placeholder frame for the active
- * artboard so the persisted document is visibly loaded. */
+/** Neutral canvas workspace with the live Konva editor stage. */
 export function Workspace() {
   const { t } = useTranslation('editor');
   const project = useActiveProject();
@@ -35,51 +34,8 @@ export function Workspace() {
           </GlassButton>
         </div>
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center p-8">
-          {/* Placeholder artboard frame, scaled to fit — the real Konva stage
-              replaces this in Phase B. */}
-          <ArtboardPlaceholder
-            width={artboard.width}
-            height={artboard.height}
-            background={
-              artboard.background.type === 'solid'
-                ? artboard.background.color
-                : '#ffffff'
-            }
-            label={`${artboard.name} · ${artboard.width}×${artboard.height}`}
-          />
-        </div>
+        <CalqoStage project={project} artboard={artboard} />
       )}
-    </div>
-  );
-}
-
-function ArtboardPlaceholder({
-  width,
-  height,
-  background,
-  label,
-}: {
-  width: number;
-  height: number;
-  background: string;
-  label: string;
-}) {
-  const max = 520;
-  const scale = Math.min(max / width, max / height, 1);
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <div
-        className="rounded-[var(--calqo-radius-sm)] shadow-[0_16px_50px_rgba(0,0,0,0.18)] ring-1 ring-black/10 flex items-center justify-center"
-        style={{ width: width * scale, height: height * scale, background }}
-      >
-        <Frame
-          size={28}
-          className="opacity-20"
-          style={{ color: background === '#FFFFFF' ? '#000' : '#fff' }}
-        />
-      </div>
-      <span className="mono text-[10.5px] text-[var(--calqo-text-3)]">{label}</span>
     </div>
   );
 }

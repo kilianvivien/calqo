@@ -12,6 +12,7 @@ interface ProjectStoreState {
   saveState: Record<string, SaveState>;
 
   upsertProject: (project: CalqoProject) => void;
+  replaceProject: (project: CalqoProject, state?: SaveState) => void;
   /** Apply an immer mutation to a project and stamp `updatedAt`. */
   patchProject: (id: string, recipe: (draft: Draft<CalqoProject>) => void) => void;
   removeProject: (id: string) => void;
@@ -27,6 +28,12 @@ export const useProjectStore = create<ProjectStoreState>()(
       set((s) => {
         s.projects[project.id] = project;
         if (!s.saveState[project.id]) s.saveState[project.id] = 'saved';
+      }),
+
+    replaceProject: (project, state = 'unsaved') =>
+      set((s) => {
+        s.projects[project.id] = project;
+        s.saveState[project.id] = state;
       }),
 
     patchProject: (id, recipe) =>

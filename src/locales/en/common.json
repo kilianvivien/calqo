@@ -13,7 +13,18 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "duplicate": "Duplicate",
-    "rename": "Rename"
+    "rename": "Rename",
+    "close": "Close"
+  },
+  "settings": {
+    "open": "Open settings",
+    "title": "Settings",
+    "subtitle": "General app preferences",
+    "general": "General",
+    "appearance": "Appearance",
+    "languageMode": "App language",
+    "autoLanguage": "Auto",
+    "autoLanguageHint": "Uses your browser language when supported."
   },
   "theme": {
     "toggle": "Toggle theme",

@@ -98,23 +98,29 @@ Exit criterion:
 
 ### Phase B — Canvas editor core
 
+> **Status: COMPLETE (2026-06-18).** Exit criteria met — the placeholder
+> artboard is now a live Konva editor with creation tools, selection,
+> transform, image/SVG import, inspector edits, text overlay editing,
+> per-project undo/redo, shortcuts, snapping guides, and synchronized layer
+> selection. Verified with `pnpm typecheck`, `pnpm lint`, and `pnpm test`.
+
 Goal: make the canvas useful.
 
 Deliverables:
 
-- Konva stage and artboard renderer.
-- Selection model.
-- Move/resize/rotate for core nodes.
-- Text, rectangle, ellipse, line, image, and basic SVG/icon objects.
-- Context toolbar and inspector controls.
-- Undo/redo per project.
-- Keyboard shortcuts.
-- Snap-to-grid and simple alignment guides.
-- In-canvas text editing through an HTML overlay.
+- [x] Konva stage and artboard renderer.
+- [x] Selection model.
+- [x] Move/resize/rotate for core nodes.
+- [x] Text, rectangle, ellipse, line, image, and basic SVG/icon objects.
+- [x] Context toolbar and inspector controls.
+- [x] Undo/redo per project.
+- [x] Keyboard shortcuts.
+- [x] Snap-to-grid and simple alignment guides.
+- [x] In-canvas text editing through an HTML overlay.
 
 Exit criterion:
 
-- User can create a simple social visual and adjust its layout without using dev tools.
+- [x] User can create a simple social visual and adjust its layout without using dev tools.
 
 ### Phase C — Layers, artboards, and project document polish
 
@@ -2052,6 +2058,8 @@ Acceptance criteria:
 
 ### B1. Konva stage shell
 
+> **Status: COMPLETE (2026-06-18).**
+
 Tasks:
 
 - Add `CalqoStage`.
@@ -2069,6 +2077,8 @@ Acceptance criteria:
 
 ### B2. Render basic layers
 
+> **Status: COMPLETE (2026-06-18).**
+
 Tasks:
 
 - Implement layer renderer switch.
@@ -2085,6 +2095,8 @@ Acceptance criteria:
 
 ### B3. Add layer creation tools
 
+> **Status: COMPLETE (2026-06-18).**
+
 Tasks:
 
 - Add select/text/rect/ellipse/line/image tools.
@@ -2099,6 +2111,8 @@ Acceptance criteria:
 - Undo removes created layer.
 
 ### B4. Selection and transformation
+
+> **Status: COMPLETE (2026-06-18).**
 
 Tasks:
 
@@ -2118,6 +2132,8 @@ Acceptance criteria:
 
 ### B5. Inspector editing
 
+> **Status: COMPLETE (2026-06-18).**
+
 Tasks:
 
 - Add position/size fields.
@@ -2135,6 +2151,8 @@ Acceptance criteria:
 
 ### B6. Text editing overlay
 
+> **Status: COMPLETE (2026-06-18).**
+
 Tasks:
 
 - Add double-click text editing.
@@ -2151,6 +2169,8 @@ Acceptance criteria:
 - Text persists after save/reload.
 
 ### B7. Image import
+
+> **Status: COMPLETE (2026-06-18).**
 
 Tasks:
 
@@ -2170,6 +2190,8 @@ Acceptance criteria:
 
 ### B8. Undo/redo
 
+> **Status: COMPLETE (2026-06-18).**
+
 Tasks:
 
 - Implement history store.
@@ -2186,6 +2208,8 @@ Acceptance criteria:
 - Switching tabs does not mix histories.
 
 ### B9. Snapping and guides
+
+> **Status: COMPLETE (2026-06-18).**
 
 Tasks:
 
@@ -3103,4 +3127,3 @@ Do not implement these now, but prepare for them:
 - add OS-level menus and shortcuts.
 
 The browser prototype should require minimal editor changes when these adapters arrive.
-

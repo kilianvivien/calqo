@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { useActiveProject } from '@/lib/state/selectors';
+import { DocumentControls } from './PropertiesPane';
 
-/** Project-level style: the brand palette (and, later, page/background presets). */
+/** Project-level style: artboard setup, background, and brand palette. */
 export function StylePane() {
   const { t } = useTranslation('editor');
   const project = useActiveProject();
@@ -14,6 +15,8 @@ export function StylePane() {
 
   return (
     <div className="flex flex-col gap-4">
+      <DocumentControls />
+
       <section>
         <div className="mb-2">
           <span className="eyebrow">Palette</span>

@@ -22,6 +22,58 @@
     "emptyHint": "Create a new project to start designing.",
     "createProject": "Create a project"
   },
+  "canvas": {
+    "missingAsset": "Missing asset",
+    "loadingAsset": "Loading asset"
+  },
+  "color": {
+    "pick": "Pick color",
+    "hex": "Hex color",
+    "custom": "Custom color",
+    "pickFromScreen": "Pick from screen",
+    "pickWaiting": "Choose a color on screen.",
+    "picked": "Color picked.",
+    "pickCancelled": "Screen picker cancelled.",
+    "pickUnavailable": "Screen picker is unavailable in this browser."
+  },
+  "properties": {
+    "tool": "Tool",
+    "active": "Active",
+    "snap": "Snap",
+    "selection": "Selection",
+    "noLayerSelected": "No layer selected. Artboard and page styles are in Style.",
+    "layers": "Layers",
+    "artboard": "Artboard",
+    "name": "Name",
+    "size": "Size",
+    "format": "Format",
+    "preset": "Preset",
+    "background": "Background",
+    "color": "Color",
+    "hex": "Hex",
+    "type": "Type",
+    "rotate": "Rotate",
+    "opacity": "Opacity",
+    "shape": "Shape",
+    "fill": "Fill",
+    "stroke": "Stroke",
+    "text": "Text",
+    "image": "Image",
+    "fit": "Fit",
+    "cover": "Cover",
+    "contain": "Contain",
+    "stretch": "Stretch",
+    "svg": "SVG",
+    "replaceAsset": "Replace asset"
+  },
+  "layersPanel": {
+    "duplicate": "Duplicate",
+    "deleteSelected": "Delete selected",
+    "hide": "Hide",
+    "show": "Show",
+    "lock": "Lock",
+    "unlock": "Unlock"
+  },
   "ai": {
     "promptTemplate": "Prompt a template",
     "translate": "Translate"

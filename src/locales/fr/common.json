@@ -13,7 +13,18 @@
     "cancel": "Annuler",
     "delete": "Supprimer",
     "duplicate": "Dupliquer",
-    "rename": "Renommer"
+    "rename": "Renommer",
+    "close": "Fermer"
+  },
+  "settings": {
+    "open": "Ouvrir les réglages",
+    "title": "Réglages",
+    "subtitle": "Préférences générales de l'app",
+    "general": "Général",
+    "appearance": "Apparence",
+    "languageMode": "Langue de l'app",
+    "autoLanguage": "Auto",
+    "autoLanguageHint": "Utilise la langue de votre navigateur si elle est prise en charge."
   },
   "theme": {
     "toggle": "Changer de thème",
