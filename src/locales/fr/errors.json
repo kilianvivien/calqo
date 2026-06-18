@@ -1,0 +1,12 @@
+{
+  "generic": "Une erreur est survenue.",
+  "boundary": {
+    "title": "Calqo a rencontré une erreur inattendue",
+    "body": "L'application a intercepté une erreur et a évité un plantage de cette vue. Vous pouvez recharger pour continuer.",
+    "reload": "Recharger Calqo"
+  },
+  "storage": {
+    "loadFailed": "Impossible de charger vos projets depuis le stockage local.",
+    "saveFailed": "Impossible d'enregistrer votre projet. Exportez une sauvegarde .calqo par sécurité."
+  }
+}

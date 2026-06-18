@@ -1,0 +1,58 @@
+@import 'tailwindcss';
+@import './tokens.css';
+@import './glass.css';
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--calqo-wallpaper);
+  color: var(--calqo-text);
+  font-family: var(--calqo-font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background-color var(--calqo-t-slow) var(--calqo-ease-out),
+    color var(--calqo-t-slow) var(--calqo-ease-out);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Section eyebrows — all-caps tracked labels for panel headers. */
+.eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--calqo-text-3);
+}
+
+/* Visible focus ring for keyboard users on interactive glass surfaces. */
+:focus-visible {
+  outline: 2px solid var(--calqo-accent-ring);
+  outline-offset: 2px;
+}
+
+/* Calm scrollbars inside panels. */
+.calqo-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--calqo-divider) transparent;
+}
+.calqo-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.calqo-scroll::-webkit-scrollbar-thumb {
+  background: var(--calqo-divider);
+  border-radius: 999px;
+}

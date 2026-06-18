@@ -1,0 +1,37 @@
+{
+  "panels": {
+    "layers": "Layers",
+    "artboards": "Artboards",
+    "inspector": "Inspector",
+    "properties": "Properties",
+    "style": "Style",
+    "assets": "Assets"
+  },
+  "tools": {
+    "select": "Select",
+    "pan": "Pan",
+    "text": "Text",
+    "rect": "Rectangle",
+    "ellipse": "Ellipse",
+    "line": "Line",
+    "image": "Image",
+    "svg": "Icon / SVG"
+  },
+  "workspace": {
+    "empty": "No project open",
+    "emptyHint": "Create a new project to start designing.",
+    "createProject": "Create a project"
+  },
+  "ai": {
+    "promptTemplate": "Prompt a template",
+    "translate": "Translate"
+  },
+  "status": {
+    "saved": "Saved",
+    "saving": "Saving…",
+    "unsaved": "Unsaved",
+    "saveFailed": "Save failed",
+    "zoom": "Zoom",
+    "selection": "Selection"
+  }
+}

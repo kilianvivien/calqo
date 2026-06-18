@@ -1,0 +1,91 @@
+/* The liquid-glass recipe — four layered effects on the same element. Dropping
+ * any one breaks the illusion (GeoCarto design §3). */
+
+.glass {
+  /* 1. translucent fill (theme-aware) */
+  background: var(--calqo-glass);
+
+  /* 2. real backdrop blur — the saturate boost makes it glass, not frosted plastic */
+  backdrop-filter: blur(var(--calqo-blur-md)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--calqo-blur-md)) saturate(180%);
+
+  /* 3. hairline top-edge highlight (inner) + crisp outer hairline */
+  border: 0.5px solid var(--calqo-glass-border);
+  box-shadow:
+    0 1px 0 var(--calqo-glass-sheen) inset,
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 12px 40px rgba(20, 40, 80, 0.14),
+    0 2px 6px rgba(20, 40, 80, 0.06);
+
+  border-radius: var(--calqo-radius-md);
+}
+
+.glass-strong {
+  background: var(--calqo-glass-strong);
+  backdrop-filter: blur(var(--calqo-blur-window)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--calqo-blur-window)) saturate(180%);
+}
+
+.glass-thin {
+  background: var(--calqo-glass-thin);
+}
+
+.mono {
+  font-family: var(--calqo-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reduced-transparency: swap glass for solid surfaces. Honors both the OS media
+ * query and an explicit app setting via html[data-transparency="solid"]. */
+@media (prefers-reduced-transparency: reduce) {
+  html[data-transparency='auto'] .glass,
+  html[data-transparency='auto'] .glass-strong {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--calqo-solid-surface);
+  }
+}
+
+html[data-transparency='solid'] .glass,
+html[data-transparency='solid'] .glass-strong {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: var(--calqo-solid-surface);
+}
+
+html[data-transparency='solid'] .glass-strong {
+  background: var(--calqo-solid-surface-strong);
+}
+
+/* Entrance animations — opt in only when motion is welcome. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes calqo-window-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.992);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes calqo-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .window-anim {
+    animation: calqo-window-in var(--calqo-t-slow) var(--calqo-ease-out);
+  }
+
+  .panel-anim {
+    animation: calqo-panel-in var(--calqo-t-base) var(--calqo-ease-out) both;
+  }
+}

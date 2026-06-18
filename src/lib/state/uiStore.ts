@@ -1,0 +1,80 @@
+import { create } from 'zustand';
+
+export type ThemeMode = 'light' | 'dark';
+export type TransparencyMode = 'auto' | 'glass' | 'solid';
+
+const THEME_KEY = 'calqo-theme';
+const TRANSPARENCY_KEY = 'calqo-transparency';
+
+/** localStorage can throw in sandboxed/locked-down contexts — never let that
+ * break a click handler. */
+function safeGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function safeSet(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* ignore */
+  }
+}
+
+function resolveInitialTheme(): ThemeMode {
+  const saved = safeGet(THEME_KEY);
+  if (saved === 'light' || saved === 'dark') return saved;
+  if (
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-color-scheme: dark)').matches
+  ) {
+    return 'dark';
+  }
+  return 'light';
+}
+
+function resolveInitialTransparency(): TransparencyMode {
+  const saved = safeGet(TRANSPARENCY_KEY);
+  if (saved === 'auto' || saved === 'glass' || saved === 'solid') return saved;
+  return 'auto';
+}
+
+/** Reflect UI chrome preferences onto the document so CSS variables and the
+ * reduced-transparency rules can react. */
+export function applyUiAttributes(
+  theme: ThemeMode,
+  transparency: TransparencyMode,
+): void {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', theme);
+  root.setAttribute('data-transparency', transparency);
+}
+
+interface UiState {
+  theme: ThemeMode;
+  transparency: TransparencyMode;
+  setTheme: (theme: ThemeMode) => void;
+  toggleTheme: () => void;
+  setTransparency: (mode: TransparencyMode) => void;
+}
+
+export const useUiStore = create<UiState>((set, get) => ({
+  theme: resolveInitialTheme(),
+  transparency: resolveInitialTransparency(),
+  setTheme: (theme) => {
+    safeSet(THEME_KEY, theme);
+    applyUiAttributes(theme, get().transparency);
+    set({ theme });
+  },
+  toggleTheme: () => {
+    const next: ThemeMode = get().theme === 'light' ? 'dark' : 'light';
+    get().setTheme(next);
+  },
+  setTransparency: (transparency) => {
+    safeSet(TRANSPARENCY_KEY, transparency);
+    applyUiAttributes(get().theme, transparency);
+    set({ transparency });
+  },
+}));

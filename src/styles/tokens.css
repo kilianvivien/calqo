@@ -1,0 +1,121 @@
+/* Calqo design tokens — macOS Tahoe "Liquid Glass" language.
+ * Shared visual vocabulary with GeoCarto: translucent surfaces, soft refractive
+ * highlights, generous radii, a single system-blue accent. Switching theme swaps
+ * the variable set on html[data-theme="…"] — no DOM redraw. */
+
+:root {
+  /* Radii — descend with nesting: window 14 → panel 14 → input/tab 10 → row 6 */
+  --calqo-radius-xs: 6px;
+  --calqo-radius-sm: 10px;
+  --calqo-radius-md: 14px;
+  --calqo-radius-lg: 20px;
+  --calqo-radius-xl: 28px;
+  --calqo-radius-window: 14px;
+
+  /* Spacing — 4px scale */
+  --calqo-gap-1: 4px;
+  --calqo-gap-2: 8px;
+  --calqo-gap-3: 12px;
+  --calqo-gap-4: 16px;
+  --calqo-gap-5: 24px;
+  --calqo-gap-6: 32px;
+
+  /* Typography */
+  --calqo-font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter',
+    'Helvetica Neue', system-ui, sans-serif;
+  --calqo-font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+
+  /* Motion */
+  --calqo-t-fast: 160ms;
+  --calqo-t-base: 240ms;
+  --calqo-t-slow: 420ms;
+  --calqo-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --calqo-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Blur strength scales with surface importance */
+  --calqo-blur-window: 40px;
+  --calqo-blur-md: 30px;
+  --calqo-blur-sm: 20px;
+}
+
+/* Light theme */
+html[data-theme='light'] {
+  --calqo-text: #1d1d1f;
+  --calqo-text-2: #4a4a4f;
+  --calqo-text-3: #86868b;
+  --calqo-text-on-accent: #ffffff;
+
+  --calqo-accent: #007aff;
+  --calqo-accent-strong: #0a6fe3;
+  --calqo-accent-soft: rgba(0, 122, 255, 0.16);
+  --calqo-accent-ring: rgba(0, 122, 255, 0.35);
+
+  --calqo-glass: rgba(255, 255, 255, 0.55);
+  --calqo-glass-strong: rgba(255, 255, 255, 0.78);
+  --calqo-glass-thin: rgba(255, 255, 255, 0.35);
+  --calqo-glass-border: rgba(255, 255, 255, 0.85);
+  --calqo-glass-sheen: rgba(255, 255, 255, 0.9);
+  --calqo-surface-modal: rgba(248, 249, 252, 0.72);
+  --calqo-scrim: rgba(20, 30, 60, 0.18);
+
+  /* Solid surfaces used when transparency is reduced. */
+  --calqo-solid-surface: #f4f5f8;
+  --calqo-solid-surface-strong: #ffffff;
+
+  --calqo-divider: rgba(0, 0, 0, 0.07);
+  --calqo-hover: rgba(0, 0, 0, 0.04);
+  --calqo-active: rgba(0, 0, 0, 0.07);
+
+  /* Checkerboard that stands in for a transparent artboard background. */
+  --calqo-checker-light: #ffffff;
+  --calqo-checker-dark: #d6d6dc;
+
+  /* Neutral canvas workspace the artboards float on. */
+  --calqo-workspace: #e9ebf0;
+
+  --calqo-wallpaper:
+    radial-gradient(1200px 800px at 15% 10%, #cfe1ff 0%, transparent 55%),
+    radial-gradient(1000px 700px at 90% 20%, #ffd9e7 0%, transparent 50%),
+    radial-gradient(1100px 800px at 70% 95%, #d2f0e1 0%, transparent 55%),
+    linear-gradient(135deg, #eef2f8 0%, #e7ecf3 100%);
+}
+
+/* Dark theme */
+html[data-theme='dark'] {
+  --calqo-text: #f5f5f7;
+  --calqo-text-2: #c4c4c9;
+  --calqo-text-3: #86868b;
+  --calqo-text-on-accent: #ffffff;
+
+  --calqo-accent: #0a84ff;
+  --calqo-accent-strong: #0a6fe3;
+  --calqo-accent-soft: rgba(10, 132, 255, 0.22);
+  --calqo-accent-ring: rgba(10, 132, 255, 0.45);
+
+  --calqo-glass: rgba(40, 42, 52, 0.55);
+  --calqo-glass-strong: rgba(40, 42, 52, 0.78);
+  --calqo-glass-thin: rgba(255, 255, 255, 0.06);
+  --calqo-glass-border: rgba(255, 255, 255, 0.12);
+  --calqo-glass-sheen: rgba(255, 255, 255, 0.06);
+  --calqo-surface-modal: rgba(28, 30, 38, 0.72);
+  --calqo-scrim: rgba(0, 0, 0, 0.45);
+
+  --calqo-solid-surface: #1c1e26;
+  --calqo-solid-surface-strong: #24262f;
+
+  --calqo-divider: rgba(255, 255, 255, 0.08);
+  --calqo-hover: rgba(255, 255, 255, 0.05);
+  --calqo-active: rgba(255, 255, 255, 0.09);
+
+  --calqo-checker-light: #34343a;
+  --calqo-checker-dark: #26262b;
+
+  --calqo-workspace: #15161c;
+
+  --calqo-wallpaper:
+    radial-gradient(1200px 800px at 15% 10%, #1a2647 0%, transparent 55%),
+    radial-gradient(1000px 700px at 90% 20%, #3a1f33 0%, transparent 50%),
+    radial-gradient(1100px 800px at 70% 95%, #142a22 0%, transparent 55%),
+    linear-gradient(135deg, #0c0d12 0%, #111218 100%);
+}

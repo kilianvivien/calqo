@@ -1,0 +1,12 @@
+{
+  "generic": "Something went wrong.",
+  "boundary": {
+    "title": "Calqo hit an unexpected error",
+    "body": "The app caught an error and stopped this view from crashing. You can reload to continue.",
+    "reload": "Reload Calqo"
+  },
+  "storage": {
+    "loadFailed": "Could not load your projects from local storage.",
+    "saveFailed": "Could not save your project. Export a .calqo backup to be safe."
+  }
+}

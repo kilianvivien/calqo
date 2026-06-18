@@ -1,0 +1,34 @@
+{
+  "app": {
+    "name": "Calqo",
+    "tagline": "A simple, glass-native social visual maker"
+  },
+  "actions": {
+    "new": "New",
+    "open": "Open",
+    "save": "Save",
+    "export": "Export",
+    "undo": "Undo",
+    "redo": "Redo",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "duplicate": "Duplicate",
+    "rename": "Rename"
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "fr": "Français"
+  },
+  "transparency": {
+    "label": "Transparency",
+    "auto": "Auto",
+    "glass": "Glass",
+    "solid": "Solid"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "panels": {
+    "layers": "Calques",
+    "artboards": "Plans de travail",
+    "inspector": "Inspecteur",
+    "properties": "Propriétés",
+    "style": "Style",
+    "assets": "Ressources"
+  },
+  "tools": {
+    "select": "Sélection",
+    "pan": "Main",
+    "text": "Texte",
+    "rect": "Rectangle",
+    "ellipse": "Ellipse",
+    "line": "Ligne",
+    "image": "Image",
+    "svg": "Icône / SVG"
+  },
+  "workspace": {
+    "empty": "Aucun projet ouvert",
+    "emptyHint": "Créez un nouveau projet pour commencer à concevoir.",
+    "createProject": "Créer un projet"
+  },
+  "ai": {
+    "promptTemplate": "Générer un modèle",
+    "translate": "Traduire"
+  },
+  "status": {
+    "saved": "Enregistré",
+    "saving": "Enregistrement…",
+    "unsaved": "Non enregistré",
+    "saveFailed": "Échec de l'enregistrement",
+    "zoom": "Zoom",
+    "selection": "Sélection"
+  }
+}

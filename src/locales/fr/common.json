@@ -1,0 +1,34 @@
+{
+  "app": {
+    "name": "Calqo",
+    "tagline": "Un créateur de visuels sociaux, simple et tout en verre"
+  },
+  "actions": {
+    "new": "Nouveau",
+    "open": "Ouvrir",
+    "save": "Enregistrer",
+    "export": "Exporter",
+    "undo": "Annuler",
+    "redo": "Rétablir",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "duplicate": "Dupliquer",
+    "rename": "Renommer"
+  },
+  "theme": {
+    "toggle": "Changer de thème",
+    "light": "Clair",
+    "dark": "Sombre"
+  },
+  "language": {
+    "label": "Langue",
+    "en": "English",
+    "fr": "Français"
+  },
+  "transparency": {
+    "label": "Transparence",
+    "auto": "Auto",
+    "glass": "Verre",
+    "solid": "Opaque"
+  }
+}
