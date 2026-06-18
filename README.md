@@ -18,15 +18,16 @@ for the detailed build plan.
 
 ## Status
 
-Early scaffold — **Phase A (browser foundation)** in progress.
+**Phase A (browser foundation) complete.** Next: the Konva canvas editor (Phase B).
 
 - [x] Vite + React + TypeScript project
 - [x] Tailwind v4 + Liquid Glass design tokens & primitives
 - [x] EN/FR app localization (`react-i18next`)
 - [x] Theme (light/dark) + reduced-transparency modes
-- [x] App shell skeleton (title bar, tool rail, layers/artboards, canvas, inspector, status bar)
-- [ ] Zod project schema + Dexie persistence
-- [ ] Multi-project tab workspace
+- [x] App shell skeleton (title bar, tab bar, tool rail, layers/artboards, canvas, inspector, status bar)
+- [x] Zod project schema (versioned, migration-ready) + Dexie persistence
+- [x] Browser adapter layer (storage, assets, file, clipboard, fonts)
+- [x] Multi-project tab workspace with autosave + reload restore
 - [ ] Konva canvas editor (Phase B)
 - [ ] Layers, artboards, export (Phases C–D)
 - [ ] Multilingual content + AI flows (Phase E)

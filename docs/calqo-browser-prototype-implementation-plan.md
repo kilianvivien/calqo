@@ -70,25 +70,31 @@ AI template generation may initially use a deterministic mock provider, but the 
 
 ### Phase A — Browser foundation
 
+> **Status: COMPLETE (2026-06-18).** Exit criteria met — projects can be
+> created, renamed, duplicated, closed, saved, and reloaded from IndexedDB, and
+> the glass app skeleton is in place. Verified in-browser (create -> persist ->
+> reload -> reopen) and via unit tests. The canvas region currently shows a
+> placeholder artboard frame; the live Konva stage arrives in Phase B.
+
 Goal: get a clean, type-safe app shell with the data model, persistence, tabs, localization, and glass design primitives.
 
 Deliverables:
 
-- Vite React TypeScript project.
-- Tailwind and design-token system.
-- React Router or internal route model.
-- Zustand stores.
-- Zod-validated project schema.
-- Dexie persistence.
-- Multi-project tab workspace.
-- EN/FR app localization.
-- Browser-only adapter implementations.
-- Mock project seed data.
+- [x] Vite React TypeScript project.
+- [x] Tailwind and design-token system.
+- [~] React Router or internal route model. _(single-view shell; no router needed yet.)_
+- [x] Zustand stores. _(uiStore, projectStore, workspaceStore; selection/history deferred to Phase B.)_
+- [x] Zod-validated project schema.
+- [x] Dexie persistence.
+- [x] Multi-project tab workspace.
+- [x] EN/FR app localization.
+- [x] Browser-only adapter implementations. _(storage, asset, file, clipboard, font.)_
+- [x] Mock project seed data. _(fixtureProject.)_
 
 Exit criterion:
 
-- User can create, open, rename, duplicate, close, save, and reload projects from IndexedDB.
-- The UI has the intended app skeleton: tab bar, canvas region, toolbar, left layers area, right inspector area, bottom status/zoom area.
+- [x] User can create, open, rename, duplicate, close, save, and reload projects from IndexedDB.
+- [x] The UI has the intended app skeleton: tab bar, canvas region, toolbar, left layers area, right inspector area, bottom status/zoom area.
 
 ### Phase B — Canvas editor core
 
@@ -1918,7 +1924,14 @@ Implement:
 
 ## Phase A — Browser foundation
 
-### A1. Scaffold the project
+> **Status: COMPLETE (A1–A7), 2026-06-18.** Deviations from the planned tree:
+> shell components live under `src/app/shell/`, commands under
+> `src/editor/commands/`, and the schema is consolidated into
+> `src/lib/schema/{schema,defaults,presets,migrations,fixture}.ts` rather than
+> one file per model. Clipboard/font adapters are skeletons; a dedicated
+> `settingsStore` was folded into `uiStore` + i18n persistence.
+
+### A1. Scaffold the project — DONE
 
 Tasks:
 
@@ -1938,7 +1951,7 @@ Acceptance criteria:
 - `pnpm test` passes with at least one smoke test.
 - App renders a placeholder Calqo workspace.
 
-### A2. Add design tokens and glass components
+### A2. Add design tokens and glass components — DONE
 
 Tasks:
 
@@ -1955,7 +1968,7 @@ Acceptance criteria:
 - Solid fallback is visibly different and usable.
 - Components have focus states.
 
-### A3. Add i18n foundation
+### A3. Add i18n foundation — DONE
 
 Tasks:
 
@@ -1971,7 +1984,7 @@ Acceptance criteria:
 - Missing keys are visible in development.
 - Language setting persists.
 
-### A4. Define project schema
+### A4. Define project schema — DONE
 
 Tasks:
 
@@ -1986,7 +1999,7 @@ Acceptance criteria:
 - Fixture project validates.
 - Invalid AI-like project produces useful validation errors.
 
-### A5. Add Dexie storage
+### A5. Add Dexie storage — DONE
 
 Tasks:
 
@@ -2002,7 +2015,7 @@ Acceptance criteria:
 - Reloading app lists saved projects.
 - Deleting project removes it from IndexedDB.
 
-### A6. Workspace tabs
+### A6. Workspace tabs — DONE
 
 Tasks:
 
@@ -2019,7 +2032,7 @@ Acceptance criteria:
 - Dirty indicator updates after edits.
 - Closing dirty tab prompts or autosaves according to chosen policy.
 
-### A7. Browser adapters
+### A7. Browser adapters — DONE
 
 Tasks:
 

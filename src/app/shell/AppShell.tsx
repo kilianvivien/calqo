@@ -1,5 +1,6 @@
 import { GlassPanel } from '@/components/glass';
 import { TitleBar } from './TitleBar';
+import { TabBar } from './TabBar';
 import { ToolRail } from './ToolRail';
 import { LeftPanel } from './LeftPanel';
 import { Workspace } from './Workspace';
@@ -14,9 +15,10 @@ export function AppShell() {
       <GlassPanel
         strong
         className="window-anim grid h-full w-full overflow-hidden rounded-[var(--calqo-radius-window)]"
-        style={{ gridTemplateRows: '44px 1fr 28px' }}
+        style={{ gridTemplateRows: '44px 36px 1fr 28px' }}
       >
         <TitleBar />
+        <TabBar />
 
         <div
           className="grid min-h-0"

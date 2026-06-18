@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { Undo2, Redo2, Moon, Sun, Languages, Download } from 'lucide-react';
+import { Undo2, Redo2, Moon, Sun, Languages, Download, Copy } from 'lucide-react';
 import { GlassButton, GlassIconButton } from '@/components/glass';
 import { useUiStore } from '@/lib/state/uiStore';
+import { useWorkspaceStore } from '@/lib/state/workspaceStore';
+import { duplicateProject } from '@/editor/commands/projectCommands';
 import i18n, { type AppLanguage } from '@/lib/i18n';
 
 /** Top chrome: traffic-light affordance, centered title chip, and the global
@@ -10,6 +12,7 @@ export function TitleBar() {
   const { t } = useTranslation(['common', 'editor']);
   const theme = useUiStore((s) => s.theme);
   const toggleTheme = useUiStore((s) => s.toggleTheme);
+  const activeProjectId = useWorkspaceStore((s) => s.activeProjectId);
 
   const cycleLanguage = () => {
     const next: AppLanguage = i18n.language.startsWith('fr') ? 'en' : 'fr';
@@ -46,6 +49,13 @@ export function TitleBar() {
         <GlassIconButton label={t('actions.redo')} disabled>
           <Redo2 size={16} />
         </GlassIconButton>
+        <GlassIconButton
+          label={t('actions.duplicate')}
+          disabled={!activeProjectId}
+          onClick={() => activeProjectId && void duplicateProject(activeProjectId)}
+        >
+          <Copy size={16} />
+        </GlassIconButton>
         <span className="mx-1 h-5 w-px bg-[var(--calqo-divider)]" />
         <GlassIconButton label={t('theme.toggle')} onClick={toggleTheme}>
           {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
@@ -53,7 +63,7 @@ export function TitleBar() {
         <GlassIconButton label={t('language.label')} onClick={cycleLanguage}>
           <Languages size={16} />
         </GlassIconButton>
-        <GlassButton variant="primary" className="ml-1" disabled>
+        <GlassButton variant="primary" className="ml-1" disabled={!activeProjectId}>
           <Download size={15} />
           {t('actions.export')}
         </GlassButton>

@@ -1,0 +1,66 @@
+import { CURRENT_SCHEMA_VERSION, type CalqoProject } from './schema';
+
+/** A small multilingual fixture used for tests and as a developer seed. It
+ * exercises text locale variants, a shape, and a non-default background. */
+export const fixtureProject: CalqoProject = {
+  schemaVersion: CURRENT_SCHEMA_VERSION,
+  id: 'proj_fixture',
+  name: 'Spring campaign',
+  createdAt: '2026-06-18T00:00:00.000Z',
+  updatedAt: '2026-06-18T00:00:00.000Z',
+  contentLocales: ['fr', 'tr', 'en'],
+  activeContentLocale: 'fr',
+  palette: ['#0A2540', '#FFFFFF', '#E8B339'],
+  assets: [],
+  artboards: [
+    {
+      id: 'ab_fixture',
+      name: 'Instagram square',
+      preset: 'ig-square',
+      width: 1080,
+      height: 1080,
+      background: { type: 'solid', color: '#0A2540' },
+      layers: [
+        {
+          id: 'shape_block',
+          name: 'Accent block',
+          type: 'shape',
+          shape: 'rect',
+          x: 80,
+          y: 80,
+          w: 200,
+          h: 12,
+          rotation: 0,
+          opacity: 1,
+          visible: true,
+          locked: false,
+          fill: { type: 'solid', color: '#E8B339' },
+          cornerRadius: 6,
+        },
+        {
+          id: 'text_title',
+          name: 'Title',
+          type: 'text',
+          x: 80,
+          y: 120,
+          w: 920,
+          h: 200,
+          rotation: 0,
+          opacity: 1,
+          visible: true,
+          locked: false,
+          text: { fr: 'Bonjour', tr: 'Merhaba', en: 'Hello' },
+          style: {
+            fontFamily: 'Inter',
+            fontSize: 96,
+            fontWeight: 700,
+            color: '#FFFFFF',
+            align: 'left',
+            lineHeight: 1.1,
+            letterSpacing: 0,
+          },
+        },
+      ],
+    },
+  ],
+};
