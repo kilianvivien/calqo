@@ -74,7 +74,18 @@
     "hide": "Hide",
     "show": "Show",
     "lock": "Lock",
-    "unlock": "Unlock"
+    "unlock": "Unlock",
+    "group": "Group",
+    "ungroup": "Ungroup",
+    "expand": "Expand group",
+    "collapse": "Collapse group",
+    "reorder": "Reorder"
+  },
+  "artboards": {
+    "add": "Add artboard",
+    "delete": "Delete artboard",
+    "duplicateToPreset": "Duplicate to format",
+    "duplicateSameSize": "Duplicate (same size)"
   },
   "ai": {
     "promptTemplate": "Prompt a template",

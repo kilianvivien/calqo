@@ -2,13 +2,19 @@ import { useEffect } from 'react';
 import { useUiStore, applyUiAttributes } from '@/lib/state/uiStore';
 import { useWorkspaceStore } from '@/lib/state/workspaceStore';
 import {
+  copySelectedLayers,
   deleteSelectedLayers,
   duplicateSelectedLayers,
+  groupSelectedLayers,
   hydrateWorkspace,
   flushPendingSaves,
+  pasteLayers,
   redoProject,
   saveProject,
+  selectAllLayers,
+  shiftSelectionZOrder,
   undoProject,
+  ungroupSelected,
 } from '@/editor/commands/projectCommands';
 import { ErrorBoundary } from './ErrorBoundary';
 import { AppShell } from './shell/AppShell';
@@ -54,6 +60,37 @@ export function App() {
         if (id) redoProject(id);
       }
       if (typing) return;
+      if ((e.metaKey || e.ctrlKey) && key === 'c') {
+        if (id) copySelectedLayers(id);
+      }
+      if ((e.metaKey || e.ctrlKey) && key === 'v') {
+        e.preventDefault();
+        if (id) pasteLayers(id);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && key === 'a') {
+        e.preventDefault();
+        if (id) selectAllLayers(id);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && key === 'g') {
+        e.preventDefault();
+        if (id) {
+          if (e.shiftKey) ungroupSelected(id);
+          else groupSelectedLayers(id);
+        }
+        return;
+      }
+      if (key === '[') {
+        e.preventDefault();
+        if (id) shiftSelectionZOrder(id, e.metaKey || e.ctrlKey ? 'back' : 'backward');
+        return;
+      }
+      if (key === ']') {
+        e.preventDefault();
+        if (id) shiftSelectionZOrder(id, e.metaKey || e.ctrlKey ? 'front' : 'forward');
+        return;
+      }
       if (key === 'v') useUiStore.getState().setActiveTool('select');
       if (key === 'h') useUiStore.getState().setActiveTool('pan');
       if (key === 't') useUiStore.getState().setActiveTool('text');

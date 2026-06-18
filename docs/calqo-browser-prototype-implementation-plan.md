@@ -124,6 +124,16 @@ Exit criterion:
 
 ### Phase C — Layers, artboards, and project document polish
 
+> **Status: COMPLETE (2026-06-18).** Exit criterion met — projects support
+> multiple artboards driven by `selectionStore.activeArtboardId`, with a full
+> artboards manager (create-from-preset, reorder, rename, duplicate,
+> duplicate-to-preset with scaling, delete) and a layer tree with drag reorder
+> (`@dnd-kit`), inline rename, show/hide/lock, group/ungroup, and synchronized
+> canvas selection. Copy/paste/duplicate mint fresh ids. The redundant in-place
+> "Format" preset grid was removed from the Style tab (creation/resizing now
+> live in the Artboards panel). Verified with `pnpm typecheck`, `pnpm lint`,
+> `pnpm test`, and in-browser.
+
 Goal: make the app behave like a lightweight design tool, not just a canvas demo.
 
 Deliverables:
@@ -2227,6 +2237,14 @@ Acceptance criteria:
 ---
 
 ## Phase C — Layers and artboards
+
+> **Status: COMPLETE (C1–C6), 2026-06-18.** Artboards/layers state is now keyed
+> off `selectionStore.activeArtboardId` (not `artboards[0]`). New commands live
+> in `projectCommands.ts` (group/ungroup, reorder, z-order, copy/paste,
+> artboard add/rename/delete/reorder/duplicate-to-preset) with helpers in
+> `editor/utils/layers.ts`. UI: `ArtboardsPane.tsx` + rewritten `LayersPane.tsx`
+> (both use `@dnd-kit` for drag reorder). Unit coverage in
+> `tests/unit/phaseC.test.ts`.
 
 ### C1. Layers panel basic tree
 

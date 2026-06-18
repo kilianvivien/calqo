@@ -74,7 +74,18 @@
     "hide": "Masquer",
     "show": "Afficher",
     "lock": "Verrouiller",
-    "unlock": "Déverrouiller"
+    "unlock": "Déverrouiller",
+    "group": "Grouper",
+    "ungroup": "Dégrouper",
+    "expand": "Développer le groupe",
+    "collapse": "Réduire le groupe",
+    "reorder": "Réordonner"
+  },
+  "artboards": {
+    "add": "Ajouter un plan de travail",
+    "delete": "Supprimer le plan de travail",
+    "duplicateToPreset": "Dupliquer vers un format",
+    "duplicateSameSize": "Dupliquer (même taille)"
   },
   "ai": {
     "promptTemplate": "Générer un modèle",

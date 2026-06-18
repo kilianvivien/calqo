@@ -21,7 +21,6 @@ import {
   replaceLayerAsset,
 } from '@/editor/commands/projectCommands';
 import { findLayerInArtboard } from '@/editor/utils/layers';
-import { ARTBOARD_PRESET_LIST } from '@/lib/schema/presets';
 import { GlassSegmentedControl } from '@/components/glass';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
@@ -272,33 +271,12 @@ function ArtboardControls({
   const { t } = useTranslation('editor');
   const background =
     artboard.background.type === 'solid' ? artboard.background.color : '#ffffff';
-  const applyPreset = (presetId: string) => {
-    const preset = ARTBOARD_PRESET_LIST.find((candidate) => candidate.id === presetId);
-    if (!preset) return;
-    editProject(
-      projectId,
-      (draft) => {
-        const target = draft.artboards.find((candidate) => candidate.id === artboardId);
-        if (!target) return;
-        target.preset = preset.id;
-        target.name = preset.name;
-        target.width = preset.width;
-        target.height = preset.height;
-      },
-      { undoable: true },
-    );
-  };
 
   return (
     <>
       <Section title={t('properties.artboard')}>
         <Row label={t('properties.name')} value={artboard.name} />
         <Row label={t('properties.size')} value={`${artboard.width} x ${artboard.height}`} mono />
-        <PresetField
-          label={t('properties.format')}
-          activeId={artboard.preset}
-          onChange={applyPreset}
-        />
       </Section>
       <Section title={t('properties.background')}>
         <ColorField
@@ -493,60 +471,6 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
       <span className={`truncate text-[var(--calqo-text-2)] ${mono ? 'mono text-[11px]' : ''}`}>
         {value}
       </span>
-    </div>
-  );
-}
-
-function PresetField({
-  label,
-  activeId,
-  onChange,
-}: {
-  label: string;
-  activeId: string;
-  onChange: (presetId: string) => void;
-}) {
-  return (
-    <div className="px-2 py-1.5">
-      <div className="mb-2 text-[12px] text-[var(--calqo-text-3)]">{label}</div>
-      <div className="grid grid-cols-2 gap-1.5">
-        {ARTBOARD_PRESET_LIST.map((preset) => {
-          const active = preset.id === activeId;
-          const ratio = preset.width / preset.height;
-          return (
-            <button
-              key={preset.id}
-              type="button"
-              aria-pressed={active}
-              aria-label={`${preset.name} ${preset.width} x ${preset.height}`}
-              onClick={() => onChange(preset.id)}
-              className={[
-                'min-w-0 rounded-[10px] border p-2 text-left transition-[border-color,background,box-shadow,transform] duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-out)] hover:-translate-y-0.5',
-                active
-                  ? 'border-[var(--calqo-accent)] bg-[var(--calqo-accent-soft)] shadow-[0_0_0_2px_var(--calqo-accent-ring)]'
-                  : 'border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] hover:bg-[var(--calqo-hover)]',
-              ].join(' ')}
-            >
-              <span className="mb-2 flex h-12 items-center justify-center">
-                <span
-                  className="block rounded-[4px] border border-current bg-white/80 text-[var(--calqo-accent)] shadow-[0_5px_18px_rgba(0,0,0,0.16)]"
-                  style={
-                    ratio >= 1
-                      ? { width: '34px', height: `${Math.max(16, 34 / ratio)}px` }
-                      : { height: '38px', width: `${Math.max(16, 38 * ratio)}px` }
-                  }
-                />
-              </span>
-              <span className="block truncate text-[11.5px] font-semibold text-[var(--calqo-text)]">
-                {preset.name}
-              </span>
-              <span className="mono mt-0.5 block truncate text-[10px] text-[var(--calqo-text-3)]">
-                {preset.width} x {preset.height}
-              </span>
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }

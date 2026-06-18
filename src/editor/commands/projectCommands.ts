@@ -1,14 +1,20 @@
 import type { Draft } from 'immer';
 import { storage } from '@/lib/adapters';
 import {
+  createArtboard,
   createDefaultProject,
   type CalqoArtboard,
   type CalqoAssetRef,
   type CalqoLayer,
   type CalqoProject,
   type CreateProjectOptions,
+  type GroupLayer,
   type ShapeLayer,
 } from '@/lib/schema';
+import {
+  ARTBOARD_PRESETS,
+  type ArtboardPresetId,
+} from '@/lib/schema/presets';
 import { createId } from '@/lib/utils/ids';
 import { historyStore } from '@/lib/state/historyStore';
 import { projectStore } from '@/lib/state/projectStore';
@@ -16,8 +22,12 @@ import { selectionStore } from '@/lib/state/selectionStore';
 import { workspaceStore } from '@/lib/state/workspaceStore';
 import {
   applyLayerPatch,
+  boundingBox,
+  cloneLayerWithNewIds,
   findLayer,
   findLayerInArtboard,
+  isGroupLayer,
+  moveInArray,
   removeLayer,
   updateLayer,
   type LayerPatch,
@@ -427,6 +437,16 @@ export function updateLayerInActiveArtboard(
   );
 }
 
+export function renameLayer(
+  projectId: string,
+  layerId: string,
+  name: string,
+): void {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  updateLayerInActiveArtboard(projectId, layerId, { name: trimmed });
+}
+
 export function deleteSelectedLayers(projectId: string): void {
   const ids = selectionStore.getState().selectedLayerIds;
   if (ids.length === 0) return;
@@ -454,13 +474,13 @@ export function duplicateSelectedLayers(projectId: string): void {
   const copies = ids
     .map((id) => findLayer(artboard.layers, id))
     .filter((layer): layer is CalqoLayer => Boolean(layer))
-    .map((layer) => ({
-      ...structuredClone(layer),
-      id: createId('layer'),
-      name: `${layer.name} copy`,
-      x: layer.x + 24,
-      y: layer.y + 24,
-    }));
+    .map((layer) => {
+      const copy = cloneLayerWithNewIds(layer);
+      copy.name = `${layer.name} copy`;
+      copy.x = layer.x + 24;
+      copy.y = layer.y + 24;
+      return copy;
+    });
   if (copies.length === 0) return;
   editProject(
     projectId,
@@ -471,4 +491,394 @@ export function duplicateSelectedLayers(projectId: string): void {
     { undoable: true },
   );
   selectionStore.getState().setSelection(copies.map((copy) => copy.id));
+}
+
+// --- Layer ordering -------------------------------------------------------
+
+/** Reorder a top-level layer within the active artboard (layers-panel drag). */
+export function reorderTopLevelLayer(
+  projectId: string,
+  fromIndex: number,
+  toIndex: number,
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      if (!artboard) return;
+      artboard.layers = moveInArray(
+        artboard.layers as CalqoLayer[],
+        fromIndex,
+        toIndex,
+      );
+    },
+    { undoable: true },
+  );
+}
+
+type ZOrder = 'forward' | 'backward' | 'front' | 'back';
+
+/** Shift the selected top-level layers in the z-order ([ ] and Cmd+[ ] keys). */
+export function shiftSelectionZOrder(projectId: string, order: ZOrder): void {
+  const ids = selectionStore.getState().selectedLayerIds;
+  if (ids.length === 0) return;
+  editProject(
+    projectId,
+    (draft) => {
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      if (!artboard) return;
+      const layers = artboard.layers as CalqoLayer[];
+      // Recompute against live positions each step so multi-select moves stay
+      // consistent as the array shifts under us.
+      const move = (id: string, target: number) => {
+        const from = artboard.layers.findIndex((layer) => layer.id === id);
+        if (from < 0) return;
+        const clamped = Math.min(Math.max(target, 0), artboard.layers.length - 1);
+        artboard.layers = moveInArray(artboard.layers as CalqoLayer[], from, clamped);
+      };
+      const ordered = ids
+        .map((id) => ({ id, index: layers.findIndex((layer) => layer.id === id) }))
+        .filter((entry) => entry.index >= 0)
+        .sort((a, b) => a.index - b.index);
+      if (ordered.length === 0) return;
+      if (order === 'back') {
+        ordered.forEach((entry, i) => move(entry.id, i));
+      } else if (order === 'front') {
+        [...ordered].reverse().forEach((entry, i) => move(entry.id, layers.length - 1 - i));
+      } else if (order === 'backward') {
+        ordered.forEach((entry) => {
+          const from = artboard.layers.findIndex((layer) => layer.id === entry.id);
+          move(entry.id, from - 1);
+        });
+      } else {
+        [...ordered].reverse().forEach((entry) => {
+          const from = artboard.layers.findIndex((layer) => layer.id === entry.id);
+          move(entry.id, from + 1);
+        });
+      }
+    },
+    { undoable: true },
+  );
+}
+
+// --- Grouping -------------------------------------------------------------
+
+/** Group the selected top-level layers into a new group at their bounding box.
+ * Child coordinates are rewritten relative to the group origin. */
+export function groupSelectedLayers(projectId: string): void {
+  const ids = selectionStore.getState().selectedLayerIds;
+  if (ids.length < 2) return;
+  const project = projectStore.getState().projects[projectId];
+  const artboardId = project ? activeArtboardId(project) : null;
+  const artboard = project?.artboards.find((candidate) => candidate.id === artboardId);
+  if (!artboard) return;
+  // Only group layers that are direct children of the artboard, in z-order.
+  const ordered = artboard.layers.filter((layer) => ids.includes(layer.id));
+  if (ordered.length < 2) return;
+  const box = boundingBox(ordered);
+  const groupId = createId('layer');
+  editProject(
+    projectId,
+    (draft) => {
+      const target = getArtboard(draft, artboard.id);
+      if (!target) return;
+      const layers = target.layers as CalqoLayer[];
+      const topIndex = Math.max(
+        ...ordered.map((layer) => layers.findIndex((candidate) => candidate.id === layer.id)),
+      );
+      const children = ordered.map((layer) => {
+        const removed = removeLayer(layers, layer.id);
+        if (removed) {
+          removed.x -= box.x;
+          removed.y -= box.y;
+        }
+        return removed;
+      }).filter((layer): layer is CalqoLayer => Boolean(layer));
+      const group: GroupLayer = {
+        id: groupId,
+        name: 'Group',
+        type: 'group',
+        x: box.x,
+        y: box.y,
+        w: Math.max(1, box.w),
+        h: Math.max(1, box.h),
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        expanded: true,
+        children,
+      };
+      const insertAt = Math.min(topIndex - children.length + 1, layers.length);
+      layers.splice(Math.max(0, insertAt), 0, group);
+    },
+    { undoable: true },
+  );
+  selectionStore.getState().selectOne(groupId);
+}
+
+/** Dissolve a group, lifting its children back into the parent at their
+ * absolute positions. */
+export function ungroupLayer(projectId: string, groupId: string): void {
+  const project = projectStore.getState().projects[projectId];
+  const artboardId = project ? activeArtboardId(project) : null;
+  const artboard = project?.artboards.find((candidate) => candidate.id === artboardId);
+  if (!artboard) return;
+  const group = findLayer(artboard.layers, groupId);
+  if (!group || !isGroupLayer(group)) return;
+  const childIds: string[] = [];
+  editProject(
+    projectId,
+    (draft) => {
+      const target = getArtboard(draft, artboard.id);
+      if (!target) return;
+      const layers = target.layers as CalqoLayer[];
+      const index = layers.findIndex((layer) => layer.id === groupId);
+      if (index < 0) return;
+      const live = layers[index];
+      if (!isGroupLayer(live)) return;
+      const children = live.children.map((child) => {
+        child.x += live.x;
+        child.y += live.y;
+        childIds.push(child.id);
+        return child;
+      });
+      layers.splice(index, 1, ...children);
+    },
+    { undoable: true },
+  );
+  selectionStore.getState().setSelection(childIds);
+}
+
+/** Ungroup the selection if it is exactly one group (keyboard shortcut). */
+export function ungroupSelected(projectId: string): void {
+  const ids = selectionStore.getState().selectedLayerIds;
+  if (ids.length !== 1) return;
+  const project = projectStore.getState().projects[projectId];
+  const artboardId = project ? activeArtboardId(project) : null;
+  const artboard = project?.artboards.find((candidate) => candidate.id === artboardId);
+  const layer = artboard ? findLayer(artboard.layers, ids[0]) : null;
+  if (layer && isGroupLayer(layer)) ungroupLayer(projectId, layer.id);
+}
+
+/** Select every top-level layer in the active artboard (Cmd/Ctrl+A). */
+export function selectAllLayers(projectId: string): void {
+  const project = projectStore.getState().projects[projectId];
+  const artboardId = project ? activeArtboardId(project) : null;
+  const artboard = project?.artboards.find((candidate) => candidate.id === artboardId);
+  if (!artboard) return;
+  selectionStore.getState().setSelection(artboard.layers.map((layer) => layer.id));
+}
+
+/** Persist a group's expand/collapse state (panel-only, not history-worthy). */
+export function setGroupExpanded(
+  projectId: string,
+  groupId: string,
+  expanded: boolean,
+): void {
+  editProject(projectId, (draft) => {
+    draft.artboards.forEach((artboard) => {
+      updateLayer(artboard.layers as CalqoLayer[], groupId, (layer) => {
+        if (isGroupLayer(layer)) layer.expanded = expanded;
+      });
+    });
+  });
+}
+
+// --- Copy / paste ---------------------------------------------------------
+
+/** In-memory layer clipboard, shared across tabs within the session. */
+let layerClipboard: CalqoLayer[] = [];
+
+export function copySelectedLayers(projectId: string): void {
+  const ids = selectionStore.getState().selectedLayerIds;
+  const project = projectStore.getState().projects[projectId];
+  const artboardId = project ? activeArtboardId(project) : null;
+  const artboard = project?.artboards.find((candidate) => candidate.id === artboardId);
+  if (!artboard) return;
+  const copied = ids
+    .map((id) => findLayer(artboard.layers, id))
+    .filter((layer): layer is CalqoLayer => Boolean(layer))
+    .map((layer) => structuredClone(layer));
+  if (copied.length > 0) layerClipboard = copied;
+}
+
+export function hasClipboardLayers(): boolean {
+  return layerClipboard.length > 0;
+}
+
+/** Paste the clipboard into the active artboard with a small offset; new ids
+ * are minted so pasted layers are independent of their source. */
+export function pasteLayers(projectId: string): void {
+  if (layerClipboard.length === 0) return;
+  const pasted = layerClipboard.map((layer) => {
+    const copy = cloneLayerWithNewIds(layer);
+    copy.x += 24;
+    copy.y += 24;
+    return copy;
+  });
+  editProject(
+    projectId,
+    (draft) => {
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      artboard?.layers.push(...pasted);
+    },
+    { undoable: true },
+  );
+  selectionStore.getState().setSelection(pasted.map((layer) => layer.id));
+}
+
+// --- Artboards ------------------------------------------------------------
+
+/** Switch the editor to a different artboard and clear the layer selection. */
+export function setActiveArtboard(artboardId: string): void {
+  selectionStore.getState().setActiveArtboard(artboardId);
+  selectionStore.getState().clearSelection();
+}
+
+export function addArtboard(
+  projectId: string,
+  preset: ArtboardPresetId = 'ig-square',
+): void {
+  const artboard = createArtboard(preset);
+  editProject(
+    projectId,
+    (draft) => {
+      draft.artboards.push(artboard);
+    },
+    { undoable: true },
+  );
+  setActiveArtboard(artboard.id);
+}
+
+export function renameArtboard(
+  projectId: string,
+  artboardId: string,
+  name: string,
+): void {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  editProject(
+    projectId,
+    (draft) => {
+      const target = draft.artboards.find((candidate) => candidate.id === artboardId);
+      if (target) target.name = trimmed;
+    },
+    { undoable: true },
+  );
+}
+
+export function deleteArtboard(projectId: string, artboardId: string): void {
+  const project = projectStore.getState().projects[projectId];
+  if (!project || project.artboards.length <= 1) return; // keep at least one
+  const remaining = project.artboards.filter((ab) => ab.id !== artboardId);
+  editProject(
+    projectId,
+    (draft) => {
+      draft.artboards = draft.artboards.filter((ab) => ab.id !== artboardId);
+    },
+    { undoable: true },
+  );
+  if (selectionStore.getState().activeArtboardId === artboardId) {
+    setActiveArtboard(remaining[0]?.id ?? '');
+  }
+}
+
+export function reorderArtboard(
+  projectId: string,
+  fromIndex: number,
+  toIndex: number,
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      draft.artboards = moveInArray(draft.artboards, fromIndex, toIndex);
+    },
+    { undoable: true },
+  );
+}
+
+/** Duplicate an artboard, optionally retargeting it to a different preset size.
+ * Layers are scaled to fit the new bounds and recentred (plan §11.3). Layers
+ * that still fall outside the new artboard are flagged with a fit warning. */
+export function duplicateArtboard(
+  projectId: string,
+  artboardId: string,
+  targetPreset?: ArtboardPresetId,
+): void {
+  const project = projectStore.getState().projects[projectId];
+  const source = project?.artboards.find((ab) => ab.id === artboardId);
+  if (!source) return;
+  const preset = targetPreset ? ARTBOARD_PRESETS[targetPreset] : null;
+  const newWidth = preset?.width ?? source.width;
+  const newHeight = preset?.height ?? source.height;
+
+  const copy = structuredClone(source) as CalqoArtboard;
+  copy.id = createId('ab');
+  copy.name = preset ? `${source.name} → ${preset.name}` : `${source.name} copy`;
+  copy.preset = preset ? preset.id : source.preset;
+  copy.width = newWidth;
+  copy.height = newHeight;
+
+  if (preset && (newWidth !== source.width || newHeight !== source.height)) {
+    const scale = Math.min(newWidth / source.width, newHeight / source.height);
+    const offsetX = (newWidth - source.width * scale) / 2;
+    const offsetY = (newHeight - source.height * scale) / 2;
+    copy.layers = copy.layers.map((layer) => {
+      const scaled = scaleLayerAroundOrigin(layer, scale);
+      scaled.x += offsetX;
+      scaled.y += offsetY;
+      return scaled;
+    });
+  }
+
+  editProject(
+    projectId,
+    (draft) => {
+      const index = draft.artboards.findIndex((ab) => ab.id === artboardId);
+      draft.artboards.splice(index + 1, 0, copy);
+    },
+    { undoable: true },
+  );
+  setActiveArtboard(copy.id);
+}
+
+/** Scale a layer (and group children) about the artboard origin by a factor. */
+function scaleLayerAroundOrigin(layer: CalqoLayer, scale: number): CalqoLayer {
+  const next = structuredClone(layer);
+  const apply = (target: CalqoLayer) => {
+    target.x *= scale;
+    target.y *= scale;
+    target.w = Math.max(1, target.w * scale);
+    target.h = Math.max(1, target.h * scale);
+    if (target.type === 'text') {
+      target.style.fontSize = Math.max(1, target.style.fontSize * scale);
+    }
+    if (target.type === 'shape' && target.points) {
+      target.points = target.points.map((value) => value * scale);
+    }
+    if (isGroupLayer(target)) target.children.forEach(apply);
+  };
+  apply(next);
+  return next;
+}
+
+/** Layers that fall outside their artboard bounds — surfaced as fit warnings
+ * (plan §11.4). Checks top-level layers only. */
+export function artboardOverflowLayerIds(artboard: CalqoArtboard): string[] {
+  return artboard.layers
+    .filter(
+      (layer) =>
+        layer.x < -0.5 ||
+        layer.y < -0.5 ||
+        layer.x + layer.w > artboard.width + 0.5 ||
+        layer.y + layer.h > artboard.height + 0.5,
+    )
+    .map((layer) => layer.id);
 }

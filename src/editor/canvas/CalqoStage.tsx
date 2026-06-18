@@ -289,6 +289,18 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     const width = Math.max(1, layer.w * scaleX);
     const height = Math.max(1, layer.h * scaleY);
     node.scale({ x: 1, y: 1 });
+    if (layer.type === 'group') {
+      // Konva scaled the children visually; bake that into their schema coords.
+      updateLayerInActiveArtboard(project.id, layer.id, {
+        x: node.x(),
+        y: node.y(),
+        w: width,
+        h: height,
+        rotation: node.rotation(),
+        groupScale: { sx: scaleX, sy: scaleY },
+      });
+      return;
+    }
     if (layer.type === 'shape' && layer.shape === 'ellipse') {
       updateLayerInActiveArtboard(project.id, layer.id, {
         x: node.x() - width / 2,
