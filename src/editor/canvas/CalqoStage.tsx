@@ -88,6 +88,8 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const pan = useUiStore((s) => s.pan);
   const snapEnabled = useUiStore((s) => s.snapEnabled);
   const guides = useUiStore((s) => s.guides);
+  const shapeDefaults = useUiStore((s) => s.shapeDefaults);
+  const fitRequest = useUiStore((s) => s.fitRequest);
   const setZoom = useUiStore((s) => s.setZoom);
   const setPan = useUiStore((s) => s.setPan);
   const setGuides = useUiStore((s) => s.setGuides);
@@ -133,6 +135,14 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (fitRequest === 0) return;
+    setZoom(
+      fitZoom({ width: stageWidth, height: stageHeight }, artboard.width, artboard.height),
+    );
+    setPan({ x: 0, y: 0 });
+  }, [fitRequest, artboard.width, artboard.height, setPan, setZoom, stageHeight, stageWidth]);
 
   useEffect(() => {
     const transformer = transformerRef.current;
@@ -312,6 +322,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       y,
       moved ? Math.max(1, width) : 220,
       shape === 'line' ? (moved ? current.y - start.y : 1) : moved ? Math.max(1, height) : 150,
+      shapeDefaults,
     );
     if (shape === 'line') {
       layer.x = start.x;

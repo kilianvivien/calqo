@@ -40,6 +40,8 @@
     "tool": "Tool",
     "active": "Active",
     "snap": "Snap",
+    "toolDefaults": "{{tool}} settings",
+    "toolDefaultsHint": "Applied to the next object you place.",
     "selection": "Selection",
     "noLayerSelected": "No layer selected. Artboard and page styles are in Style.",
     "layers": "Layers",
@@ -84,6 +86,10 @@
     "unsaved": "Unsaved",
     "saveFailed": "Save failed",
     "zoom": "Zoom",
-    "selection": "Selection"
+    "selection": "Selection",
+    "snap": "Snap to grid",
+    "fitToScreen": "Fit to screen",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out"
   }
 }

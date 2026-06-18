@@ -43,7 +43,19 @@ export function TitleBar() {
       className="grid h-11 grid-cols-[1fr_auto_1fr] items-center border-b border-[var(--calqo-divider)] px-3"
       data-tauri-drag-region
     >
-      <div />
+      <div className="flex items-center gap-2 justify-self-start pl-1">
+        <img
+          src="/calqo-icon.png"
+          srcSet="/calqo-icon.png 1x, /calqo-icon@2x.png 2x"
+          alt=""
+          width={22}
+          height={22}
+          className="rounded-[6px]"
+        />
+        <span className="text-[13px] font-semibold tracking-tight text-[var(--calqo-text)]">
+          {t('app.webName')}
+        </span>
+      </div>
 
       <div className="min-w-0 justify-self-center rounded-full px-3 py-1 transition-colors hover:bg-[var(--calqo-hover)]">
         <span className="block max-w-[34ch] truncate text-center text-[13px] font-semibold text-[var(--calqo-text)]">

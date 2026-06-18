@@ -17,6 +17,14 @@ export interface CanvasGuide {
   position: number;
 }
 
+/** Style applied to the next shape a draw tool places — surfaced as the
+ * tool-defaults inspector (GeoCarto's "Réglages {outil}" card). */
+export interface ShapeDefaults {
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+}
+
 const THEME_KEY = 'calqo-theme';
 const TRANSPARENCY_KEY = 'calqo-transparency';
 
@@ -74,6 +82,8 @@ interface UiState {
   pan: { x: number; y: number };
   snapEnabled: boolean;
   guides: CanvasGuide[];
+  shapeDefaults: ShapeDefaults;
+  fitRequest: number;
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
   setTransparency: (mode: TransparencyMode) => void;
@@ -82,6 +92,8 @@ interface UiState {
   setPan: (pan: { x: number; y: number }) => void;
   setSnapEnabled: (enabled: boolean) => void;
   setGuides: (guides: CanvasGuide[]) => void;
+  setShapeDefaults: (patch: Partial<ShapeDefaults>) => void;
+  requestFit: () => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -92,6 +104,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   pan: { x: 0, y: 0 },
   snapEnabled: true,
   guides: [],
+  shapeDefaults: { fill: '#FFFFFF', stroke: '#007AFF', strokeWidth: 2 },
+  fitRequest: 0,
   setTheme: (theme) => {
     safeSet(THEME_KEY, theme);
     applyUiAttributes(theme, get().transparency);
@@ -111,4 +125,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   setPan: (pan) => set({ pan }),
   setSnapEnabled: (snapEnabled) => set({ snapEnabled }),
   setGuides: (guides) => set({ guides }),
+  setShapeDefaults: (patch) =>
+    set({ shapeDefaults: { ...get().shapeDefaults, ...patch } }),
+  requestFit: () => set({ fitRequest: get().fitRequest + 1 }),
 }));

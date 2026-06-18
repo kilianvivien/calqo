@@ -17,10 +17,10 @@ export function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
-    <div className="flex h-full w-full items-stretch p-3">
+    <div className="h-full w-full">
       <GlassPanel
         strong
-        className="window-anim grid h-full w-full overflow-hidden rounded-[var(--calqo-radius-window)]"
+        className="grid h-full w-full overflow-hidden rounded-none border-0 shadow-none"
         style={{
           gridTemplateRows: showTabs
             ? '44px 36px minmax(0, 1fr) 28px'

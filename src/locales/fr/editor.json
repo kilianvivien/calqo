@@ -40,6 +40,8 @@
     "tool": "Outil",
     "active": "Actif",
     "snap": "Magnétisme",
+    "toolDefaults": "Réglages {{tool}}",
+    "toolDefaultsHint": "Appliqué au prochain objet que vous placez.",
     "selection": "Sélection",
     "noLayerSelected": "Aucun calque sélectionné. Les réglages du plan de travail sont dans Style.",
     "layers": "Calques",
@@ -84,6 +86,10 @@
     "unsaved": "Non enregistré",
     "saveFailed": "Échec de l'enregistrement",
     "zoom": "Zoom",
-    "selection": "Sélection"
+    "selection": "Sélection",
+    "snap": "Magnétisme grille",
+    "fitToScreen": "Ajuster à l'écran",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière"
   }
 }

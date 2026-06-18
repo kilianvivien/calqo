@@ -26,6 +26,8 @@ export function StatusBar({ onOpenSettings }: { onOpenSettings: () => void }) {
   const save = useActiveSaveState();
   const selectedCount = useSelectionStore((s) => s.selectedLayerIds.length);
   const zoom = useUiStore((s) => s.zoom);
+  const snapEnabled = useUiStore((s) => s.snapEnabled);
+  const setSnapEnabled = useUiStore((s) => s.setSnapEnabled);
   const state: SaveState = save ?? 'saved';
 
   return (
@@ -41,6 +43,16 @@ export function StatusBar({ onOpenSettings }: { onOpenSettings: () => void }) {
           />
           {t(`editor:${STATUS_KEY[state]}`)}
         </span>
+        <span className="h-3 w-px bg-[var(--calqo-divider)]" />
+        <label className="flex cursor-pointer items-center gap-1.5 hover:text-[var(--calqo-text-2)]">
+          <input
+            type="checkbox"
+            checked={snapEnabled}
+            onChange={(event) => setSnapEnabled(event.target.checked)}
+            className="h-3 w-3 accent-[var(--calqo-accent)]"
+          />
+          {t('editor:status.snap')}
+        </label>
       </div>
       <div className="flex items-center gap-3">
         <span>

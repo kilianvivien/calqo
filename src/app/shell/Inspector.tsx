@@ -22,7 +22,7 @@ export function Inspector() {
   ];
 
   return (
-    <aside className="glass panel-anim m-1.5 flex w-[300px] flex-col overflow-hidden">
+    <aside className="glass panel-anim m-1.5 flex w-[340px] flex-col overflow-hidden">
       <div
         role="tablist"
         aria-label={t('panels.inspector')}

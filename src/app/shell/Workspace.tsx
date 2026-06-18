@@ -4,6 +4,7 @@ import { GlassButton } from '@/components/glass';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
 import { createProject } from '@/editor/commands/projectCommands';
 import { CalqoStage } from '@/editor/canvas/CalqoStage';
+import { ZoomControl } from './ZoomControl';
 
 /** Neutral canvas workspace with the live Konva editor stage. */
 export function Workspace() {
@@ -34,7 +35,10 @@ export function Workspace() {
           </GlassButton>
         </div>
       ) : (
-        <CalqoStage project={project} artboard={artboard} />
+        <>
+          <CalqoStage project={project} artboard={artboard} />
+          <ZoomControl />
+        </>
       )}
     </div>
   );

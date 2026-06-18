@@ -285,19 +285,29 @@ export function createTextLayer(
   };
 }
 
+export interface ShapeStyleDefaults {
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+}
+
 export function createShapeLayer(
   shape: ShapeLayer['shape'],
   x: number,
   y: number,
   w: number,
   h: number,
+  defaults?: ShapeStyleDefaults,
 ): CalqoLayer {
+  const fill = defaults?.fill ?? '#FFFFFF';
+  const strokeColor = defaults?.stroke ?? '#007AFF';
+  const strokeWidth = defaults?.strokeWidth ?? 2;
   const layer: ShapeLayer = {
     ...baseLayer(shape === 'line' ? 'Line' : shape === 'ellipse' ? 'Ellipse' : 'Rectangle', x, y, w, h),
     type: 'shape',
     shape,
-    fill: { type: 'solid', color: shape === 'line' ? 'transparent' : '#FFFFFF' },
-    stroke: { color: '#007AFF', width: shape === 'line' ? 6 : 2 },
+    fill: { type: 'solid', color: shape === 'line' ? 'transparent' : fill },
+    stroke: { color: strokeColor, width: shape === 'line' ? Math.max(strokeWidth, 4) : strokeWidth },
     cornerRadius: shape === 'rect' ? 18 : undefined,
   };
   if (shape === 'line') {

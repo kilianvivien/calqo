@@ -1,6 +1,7 @@
 {
   "app": {
     "name": "Calqo",
+    "webName": "Calqo Web",
     "tagline": "Un créateur de visuels sociaux, simple et tout en verre"
   },
   "actions": {
