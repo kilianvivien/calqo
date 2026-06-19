@@ -40,6 +40,10 @@ import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore, type EditorTool } from '@/lib/state/uiStore';
 import type { ArrowStyle, CalqoLayer, Fill, ShadowStyle, StrokeStyle, TextLayer } from '@/lib/schema';
+import {
+  isStageSamplerAvailable,
+  sampleColorFromStage,
+} from '@/editor/canvas/stageSampler';
 import { ColorPickerPopover } from './ColorPickerPopover';
 import { TextVariants } from './ContentControls';
 
@@ -1126,8 +1130,21 @@ export function ColorField({
       }
       return;
     }
-    // Safari/Firefox: open the native color panel — on macOS its color picker
-    // includes a magnifier/eyedropper to sample the screen.
+    // Safari/WebKit ships no EyeDropper — sample straight from the design
+    // canvas, which works reliably in every browser.
+    if (isStageSamplerAvailable()) {
+      setPipetteStatus(t('color.pickWaiting'));
+      const hex = await sampleColorFromStage();
+      if (hex) {
+        onChange(hex.toUpperCase());
+        setPipetteStatus(t('color.picked'));
+        window.setTimeout(() => setPipetteStatus(null), 1400);
+      } else {
+        setPipetteStatus(t('color.pickCancelled'));
+      }
+      return;
+    }
+    // Last resort: the native color panel (its macOS magnifier can sample).
     nativeColorRef.current?.click();
   };
 
