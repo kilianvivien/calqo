@@ -8,7 +8,11 @@ import { addImportedAssetLayer } from '@/editor/commands/projectCommands';
 import { generateSvgMark } from '@/editor/ai/svgService';
 import { getProvider } from '@/editor/ai/providerRegistry';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
-import { SVG_LIBRARY } from '@/editor/assets/svgLibrary';
+import {
+  SVG_CATEGORY_ORDER,
+  SVG_LIBRARY,
+  type SvgLibraryItem,
+} from '@/editor/assets/svgLibrary';
 import { extractSvgSize, looksLikeSvg, sanitizeSvg } from '@/lib/utils/svg';
 import { useActiveArtboard, useActiveProject } from '@/lib/state/selectors';
 import { useUiStore } from '@/lib/state/uiStore';
@@ -100,6 +104,34 @@ function SvgLibraryDialogInner() {
       )
     : SVG_LIBRARY;
 
+  // Group the (filtered) marks into their categories, preserving section order.
+  const sections = SVG_CATEGORY_ORDER.map((category) => ({
+    category,
+    items: filtered.filter((item) => item.category === category),
+  })).filter((section) => section.items.length > 0);
+
+  const renderItem = (item: SvgLibraryItem) => {
+    const name = t(`svgLibrary.items.${item.nameKey}`);
+    return (
+      <button
+        key={item.id}
+        type="button"
+        title={name}
+        onClick={() => void insertSvg(item.svg, name)}
+        className="group flex flex-col items-center gap-1.5"
+      >
+        <span
+          className="flex aspect-square w-full items-center justify-center rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-white p-3 transition-all group-hover:-translate-y-0.5 group-hover:border-[var(--calqo-accent)] group-hover:shadow-[0_6px_18px_rgba(0,0,0,0.12)]"
+          // Library SVGs are bundled and trusted.
+          dangerouslySetInnerHTML={{ __html: item.svg }}
+        />
+        <span className="w-full truncate text-center text-[10.5px] leading-tight text-[var(--calqo-text-3)] group-hover:text-[var(--calqo-text-2)]">
+          {name}
+        </span>
+      </button>
+    );
+  };
+
   const TABS: { id: Tab; label: string }[] = [
     { id: 'library', label: t('svgLibrary.tabLibrary') },
     { id: 'ai', label: t('svgLibrary.tabAi') },
@@ -169,19 +201,22 @@ function SvgLibraryDialogInner() {
                 onChange={(event) => setSearch(event.target.value)}
                 className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[12.5px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
               />
-              <div className="grid grid-cols-5 gap-2">
-                {filtered.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    title={t(`svgLibrary.items.${item.nameKey}`)}
-                    onClick={() => void insertSvg(item.svg, t(`svgLibrary.items.${item.nameKey}`))}
-                    className="flex aspect-square items-center justify-center rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-white p-2.5 transition-transform hover:scale-[1.05] hover:border-[var(--calqo-accent)]"
-                    // Library SVGs are bundled and trusted.
-                    dangerouslySetInnerHTML={{ __html: item.svg }}
-                  />
-                ))}
-              </div>
+              {sections.length === 0 ? (
+                <p className="py-8 text-center text-[12.5px] text-[var(--calqo-text-3)]">
+                  {t('svgLibrary.noResults')}
+                </p>
+              ) : (
+                sections.map((section) => (
+                  <section key={section.category} className="space-y-2">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--calqo-text-3)]">
+                      {t(`svgLibrary.categories.${section.category}`)}
+                    </h3>
+                    <div className="grid grid-cols-5 gap-2.5">
+                      {section.items.map(renderItem)}
+                    </div>
+                  </section>
+                ))
+              )}
             </div>
           )}
 

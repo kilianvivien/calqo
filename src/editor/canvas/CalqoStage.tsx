@@ -21,6 +21,7 @@ import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
 import { TextEditOverlay } from './TextEditOverlay';
 import { LayerRenderer, type NodeRegistry } from './LayerRenderer';
+import { registerStageSampler } from './stageSampler';
 
 interface CalqoStageProps {
   project: CalqoProject;
@@ -55,6 +56,19 @@ const SHAPE_TOOLS = new Set<string>([
 
 function previewPolygonPoints(shape: PolygonPreset, w: number, h: number): number[] {
   return polygonPoints(shape, Math.max(1, w), Math.max(1, h));
+}
+
+function channelToHex(value: number): string {
+  return Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0');
+}
+
+/** Whether a single line-like shape (line/arrow) is the only selection. Their
+ * Konva bounding box is paper-thin, so the transformer needs extra padding and
+ * a longer rotate handle to be grabbable. */
+function isLineLikeSelection(layers: CalqoLayer[]): boolean {
+  if (layers.length !== 1) return false;
+  const only = layers[0];
+  return only.type === 'shape' && (only.shape === 'line' || only.shape === 'arrow');
 }
 
 function backgroundColor(artboard: CalqoArtboard): string {
@@ -108,6 +122,9 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const [penCursor, setPenCursor] = useState<{ x: number; y: number } | null>(null);
   // Brush tool: the in-progress freehand path (null when not drawing).
   const [drawPoints, setDrawPoints] = useState<number[] | null>(null);
+  // Colour-sampling mode (eyedropper fallback): a click reads a stage pixel.
+  const [sampling, setSampling] = useState(false);
+  const samplerCbRef = useRef<((hex: string | null) => void) | null>(null);
   const stageWidth = size.width;
   const stageHeight = size.height;
 
@@ -141,6 +158,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const editingLayer = editingTextId
     ? (findLayerInArtboard(artboard, editingTextId) as TextLayer | null)
     : null;
+  const lineLikeSelection = useMemo(() => isLineLikeSelection(selectedLayers), [selectedLayers]);
 
   useEffect(() => {
     setActiveArtboard(artboard.id);
@@ -233,6 +251,61 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTool, penPoints]);
 
+  // Expose a colour sampler so the inspector's eyedropper works in every
+  // browser (Safari/WebKit ships no native EyeDropper). Begin arms a one-shot
+  // sampling click; the resolver is invoked from handleStagePointerDown.
+  useEffect(() => {
+    registerStageSampler({
+      begin: (onPick) => {
+        samplerCbRef.current = onPick;
+        setSampling(true);
+      },
+    });
+    return () => registerStageSampler(null);
+  }, []);
+
+  useEffect(() => {
+    if (!sampling) return undefined;
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      samplerCbRef.current?.(null);
+      samplerCbRef.current = null;
+      setSampling(false);
+    };
+    window.addEventListener('keydown', cancel);
+    return () => window.removeEventListener('keydown', cancel);
+  }, [sampling]);
+
+  const sampleStageColor = () => {
+    const stage = stageRef.current;
+    const pointer = stage?.getPointerPosition();
+    const callback = samplerCbRef.current;
+    samplerCbRef.current = null;
+    setSampling(false);
+    if (!stage || !pointer || !callback) {
+      callback?.(null);
+      return;
+    }
+    try {
+      const sampled = stage.toCanvas({
+        x: pointer.x,
+        y: pointer.y,
+        width: 1,
+        height: 1,
+        pixelRatio: 1,
+      });
+      const data = sampled.getContext('2d')?.getImageData(0, 0, 1, 1).data;
+      if (!data) {
+        callback(null);
+        return;
+      }
+      callback(`#${channelToHex(data[0])}${channelToHex(data[1])}${channelToHex(data[2])}`.toUpperCase());
+    } catch {
+      // Tainted canvas (cross-origin asset) — fail gracefully.
+      callback(null);
+    }
+  };
+
   const toArtboardPoint = () => {
     const stage = stageRef.current;
     const pointer = stage?.getPointerPosition();
@@ -269,6 +342,12 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   };
 
   const handleStagePointerDown = (event: Konva.KonvaEventObject<MouseEvent>) => {
+    // Sampling intercepts every click (including over shapes) before any tool.
+    if (sampling) {
+      event.evt.preventDefault();
+      sampleStageColor();
+      return;
+    }
     if (event.target !== event.target.getStage()) return;
     const point = toArtboardPoint();
     if (
@@ -467,6 +546,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     <div
       ref={containerRef}
       className="relative h-full w-full"
+      style={sampling ? { cursor: 'crosshair' } : undefined}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
@@ -694,12 +774,18 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             ref={transformerRef}
             rotateEnabled
             ignoreStroke
+            useSingleNodeRotation
+            // Lines/arrows have a near-flat bounding box; pad it and push the
+            // rotate handle further out so it can be grabbed like other shapes.
+            padding={lineLikeSelection ? 14 / zoom : 0}
+            rotateAnchorOffset={(lineLikeSelection ? 36 : 24) / zoom}
             boundBoxFunc={(_, next) =>
               next.width < 8 || next.height < 8 ? _ : next
             }
             anchorStroke="#007AFF"
             anchorFill="#FFFFFF"
-            anchorSize={TRANSFORMER_ANCHOR_SIZE / zoom}
+            anchorSize={(lineLikeSelection ? 8 : TRANSFORMER_ANCHOR_SIZE) / zoom}
+            rotateAnchorCursor="grab"
             borderStroke="#007AFF"
             borderDash={[6 / zoom, 4 / zoom]}
           />

@@ -2,6 +2,11 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Pipette } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import {
+  isStageSampling,
+  isStageSamplerAvailable,
+  sampleColorFromStage,
+} from '@/editor/canvas/stageSampler';
 
 interface HSV {
   h: number;
@@ -150,6 +155,9 @@ export function ColorPickerPopover({
       if (event.key === 'Escape') onClose();
     };
     const onPointerDown = (event: PointerEvent) => {
+      // A click on the canvas while sampling is the eyedropper at work, not a
+      // dismissal — keep the popover open so the picked colour is visible.
+      if (isStageSampling()) return;
       const target = event.target as Node;
       if (containerRef.current?.contains(target)) return;
       if (anchorRef.current?.contains(target)) return;
@@ -204,16 +212,25 @@ export function ColorPickerPopover({
   };
 
   const pickWithEyedropper = async () => {
-    if (!window.EyeDropper) return;
-    try {
-      const result = await new window.EyeDropper().open();
-      handleHexChange(result.sRGBHex);
-    } catch {
-      /* user cancelled */
+    // Prefer the native EyeDropper (Chromium); it samples anywhere on screen.
+    if (window.EyeDropper) {
+      try {
+        const result = await new window.EyeDropper().open();
+        handleHexChange(result.sRGBHex);
+      } catch {
+        /* user cancelled */
+      }
+      return;
     }
+    // Safari/WebKit has no EyeDropper — sample from the design canvas instead.
+    const hex = await sampleColorFromStage();
+    if (hex) handleHexChange(hex);
   };
 
   if (!open || !position) return null;
+
+  const eyedropperAvailable =
+    typeof window !== 'undefined' && (!!window.EyeDropper || isStageSamplerAvailable());
 
   const hueColor = hexFromHsv({ h: hsv.h, s: 1, v: 1 });
   const previewColor = hexFromHsv(hsv);
@@ -281,7 +298,7 @@ export function ColorPickerPopover({
           spellCheck={false}
           className="mono min-w-0 flex-1 rounded-[7px] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] px-2 py-1.5 text-[12px] uppercase tracking-wide text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent-ring)]"
         />
-        {typeof window !== 'undefined' && window.EyeDropper && (
+        {eyedropperAvailable && (
           <button
             type="button"
             aria-label={t('color.pickFromScreen')}
