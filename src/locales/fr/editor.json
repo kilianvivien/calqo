@@ -10,6 +10,7 @@
   },
   "tools": {
     "select": "Sélection",
+    "marquee": "Sélection rectangle",
     "pan": "Main",
     "text": "Texte",
     "rect": "Rectangle",

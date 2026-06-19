@@ -139,6 +139,9 @@ export function LayerRenderer(props: LayerRendererProps) {
     const stroke = strokeProps(layer.stroke);
     const lineColor = layer.stroke?.color ?? '#111827';
     const lineWidth = layer.stroke?.width ?? 4;
+    // Line-like shapes hit only along their thin stroke by default, which makes
+    // them frustrating to grab and drag. Widen the invisible hit area.
+    const lineHitWidth = Math.max(lineWidth, 18);
 
     if (layer.shape === 'ellipse') {
       return (
@@ -165,6 +168,7 @@ export function LayerRenderer(props: LayerRendererProps) {
           fill={lineColor}
           stroke={lineColor}
           strokeWidth={lineWidth}
+          hitStrokeWidth={lineHitWidth}
           dash={stroke.dash as number[] | undefined}
           lineCap="round"
           lineJoin="round"
@@ -179,6 +183,7 @@ export function LayerRenderer(props: LayerRendererProps) {
           tension={layer.tension ?? 0.4}
           stroke={lineColor}
           strokeWidth={lineWidth}
+          hitStrokeWidth={lineHitWidth}
           dash={stroke.dash as number[] | undefined}
           lineCap="round"
           lineJoin="round"
@@ -195,6 +200,7 @@ export function LayerRenderer(props: LayerRendererProps) {
           {...(isPolygon ? fillProps(layer.fill, layer.w, layer.h) : {})}
           stroke={lineColor}
           strokeWidth={lineWidth}
+          hitStrokeWidth={isPolygon ? undefined : lineHitWidth}
           dash={stroke.dash as number[] | undefined}
           lineCap="round"
           lineJoin="round"

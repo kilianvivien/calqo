@@ -29,6 +29,7 @@
     "redo": "Redo",
     "duplicate": "Duplicate",
     "selectTool": "Select tool",
+    "marqueeTool": "Marquee select tool",
     "panTool": "Pan tool",
     "textTool": "Text tool",
     "shapeTools": "Shape tools",

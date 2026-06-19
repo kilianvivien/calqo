@@ -92,6 +92,7 @@ export function App() {
         return;
       }
       if (key === 'v') useUiStore.getState().setActiveTool('select');
+      if (key === 'm') useUiStore.getState().setActiveTool('marquee');
       if (key === 'h') useUiStore.getState().setActiveTool('pan');
       if (key === 't') useUiStore.getState().setActiveTool('text');
       if (key === 'r') useUiStore.getState().setActiveTool('rect');

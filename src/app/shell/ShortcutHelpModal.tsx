@@ -30,6 +30,7 @@ export function ShortcutHelpModal({
         title: t('shortcuts.tools'),
         items: [
           ['V', t('shortcuts.selectTool')],
+          ['M', t('shortcuts.marqueeTool')],
           ['H', t('shortcuts.panTool')],
           ['T', t('shortcuts.textTool')],
           ['R / E / L', t('shortcuts.shapeTools')],

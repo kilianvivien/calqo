@@ -4,6 +4,7 @@ export type ThemeMode = 'light' | 'dark';
 export type TransparencyMode = 'auto' | 'glass' | 'solid';
 export type EditorTool =
   | 'select'
+  | 'marquee'
   | 'pan'
   | 'text'
   | 'rect'

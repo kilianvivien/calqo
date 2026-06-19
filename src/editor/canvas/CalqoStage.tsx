@@ -11,16 +11,21 @@ import {
   createPolygonShapeLayer,
   createShapeLayer,
   createTextLayer,
+  deleteSelectedLayers,
+  duplicateSelectedLayers,
+  groupSelectedLayers,
   polygonPoints,
   type PolygonPreset,
+  ungroupSelected,
   updateLayerInActiveArtboard,
 } from '@/editor/commands/projectCommands';
-import { findLayerInArtboard, flattenLayers } from '@/editor/utils/layers';
+import { findLayerInArtboard, flattenLayers, isGroupLayer } from '@/editor/utils/layers';
 import type { CalqoArtboard, CalqoLayer, CalqoProject, TextLayer } from '@/lib/schema';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
 import { TextEditOverlay } from './TextEditOverlay';
 import { LayerRenderer, type NodeRegistry } from './LayerRenderer';
+import { CanvasContextMenu } from './CanvasContextMenu';
 import { registerStageSampler } from './stageSampler';
 
 interface CalqoStageProps {
@@ -38,6 +43,15 @@ type DraftShape = {
   start: { x: number; y: number };
   current: { x: number; y: number };
 };
+
+/** Live rubber-band rectangle for the marquee selection tool (artboard coords). */
+type Marquee = {
+  start: { x: number; y: number };
+  current: { x: number; y: number };
+};
+
+/** Where the canvas context menu is anchored (container-relative pixels). */
+type ContextMenuState = { x: number; y: number };
 
 type ShapeTool = 'rect' | 'ellipse' | 'line' | 'arrow' | PolygonPreset;
 
@@ -117,6 +131,10 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const [pendingAssetPoint, setPendingAssetPoint] = useState({ x: 96, y: 96 });
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [draftShape, setDraftShape] = useState<DraftShape | null>(null);
+  // Marquee selection: a rubber-band box that selects intersecting layers.
+  const [marquee, setMarquee] = useState<Marquee | null>(null);
+  // Right-click context menu (group / ungroup / duplicate / delete).
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   // Pen tool: a growing list of committed vertices plus a live cursor point.
   const [penPoints, setPenPoints] = useState<number[]>([]);
   const [penCursor, setPenCursor] = useState<{ x: number; y: number } | null>(null);
@@ -159,6 +177,13 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     ? (findLayerInArtboard(artboard, editingTextId) as TextLayer | null)
     : null;
   const lineLikeSelection = useMemo(() => isLineLikeSelection(selectedLayers), [selectedLayers]);
+  // Group when ≥2 top-level layers are selected; ungroup when a single group is.
+  const topLevelSelectedCount = useMemo(
+    () => artboard.layers.filter((layer) => selectedLayerIds.includes(layer.id)).length,
+    [artboard.layers, selectedLayerIds],
+  );
+  const canGroup = topLevelSelectedCount >= 2;
+  const canUngroup = selectedLayers.length === 1 && isGroupLayer(selectedLayers[0]);
 
   useEffect(() => {
     setActiveArtboard(artboard.id);
@@ -342,6 +367,8 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   };
 
   const handleStagePointerDown = (event: Konva.KonvaEventObject<MouseEvent>) => {
+    // A left-click anywhere dismisses an open context menu.
+    if (event.evt.button === 0) setContextMenu(null);
     // Sampling intercepts every click (including over shapes) before any tool.
     if (sampling) {
       event.evt.preventDefault();
@@ -350,6 +377,10 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     }
     if (event.target !== event.target.getStage()) return;
     const point = toArtboardPoint();
+    if (activeTool === 'marquee') {
+      setMarquee({ start: point, current: point });
+      return;
+    }
     if (
       point.x < 0 ||
       point.y < 0 ||
@@ -517,6 +548,58 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     setActiveTool('select');
   };
 
+  /** Finalize a marquee drag: select every top-level layer whose box overlaps
+   * the swept rectangle. A click without a drag just clears the selection. */
+  const commitMarquee = () => {
+    if (!marquee) return;
+    const x1 = Math.min(marquee.start.x, marquee.current.x);
+    const y1 = Math.min(marquee.start.y, marquee.current.y);
+    const x2 = Math.max(marquee.start.x, marquee.current.x);
+    const y2 = Math.max(marquee.start.y, marquee.current.y);
+    setMarquee(null);
+    if (x2 - x1 < 3 && y2 - y1 < 3) {
+      clearSelection();
+      return;
+    }
+    const hits = artboard.layers.filter(
+      (layer) =>
+        !layer.locked &&
+        layer.visible &&
+        layer.x < x2 &&
+        layer.x + layer.w > x1 &&
+        layer.y < y2 &&
+        layer.y + layer.h > y1,
+    );
+    setSelection(hits.map((layer) => layer.id));
+  };
+
+  /** Map a Konva node to the id of the top-level artboard layer it belongs to
+   * (climbing out of any group), or null if it is the stage background. */
+  const topLevelLayerIdFor = (node: Konva.Node | null): string | null => {
+    let current: Konva.Node | null = node;
+    while (current) {
+      const id = typeof current.id === 'function' ? current.id() : undefined;
+      if (id && artboard.layers.some((layer) => layer.id === id)) return id;
+      current = current.getParent();
+    }
+    return null;
+  };
+
+  const handleContextMenu = (event: Konva.KonvaEventObject<PointerEvent>) => {
+    event.evt.preventDefault();
+    const stage = stageRef.current;
+    if (!stage) return;
+    const targetId = topLevelLayerIdFor(event.target === stage ? null : event.target);
+    if (targetId) {
+      if (!selectedLayerIds.includes(targetId)) selectOne(targetId);
+    }
+    const rect = containerRef.current?.getBoundingClientRect();
+    setContextMenu({
+      x: event.evt.clientX - (rect?.left ?? 0),
+      y: event.evt.clientY - (rect?.top ?? 0),
+    });
+  };
+
   const commitFreehand = () => {
     if (!drawPoints) return;
     const layer = createFreehandLayer(drawPoints, shapeDefaults);
@@ -546,7 +629,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     <div
       ref={containerRef}
       className="relative h-full w-full"
-      style={sampling ? { cursor: 'crosshair' } : undefined}
+      style={sampling || activeTool === 'marquee' ? { cursor: 'crosshair' } : undefined}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
@@ -582,7 +665,12 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
         onDblClick={() => {
           if (activeTool === 'pen') finalizePenPolygon();
         }}
+        onContextMenu={handleContextMenu}
         onMouseMove={() => {
+          if (marquee) {
+            setMarquee({ ...marquee, current: toArtboardPoint() });
+            return;
+          }
           if (drawPoints) {
             const point = toArtboardPoint();
             setDrawPoints([...drawPoints, point.x, point.y]);
@@ -596,6 +684,10 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
           setDraftShape({ ...draftShape, current: toArtboardPoint() });
         }}
         onMouseUp={() => {
+          if (marquee) {
+            commitMarquee();
+            return;
+          }
           if (drawPoints) {
             commitFreehand();
             return;
@@ -729,6 +821,19 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
               dash={[8 / zoom, 5 / zoom]}
             />
           ))}
+          {marquee && (
+            <Rect
+              x={Math.min(marquee.start.x, marquee.current.x)}
+              y={Math.min(marquee.start.y, marquee.current.y)}
+              width={Math.abs(marquee.current.x - marquee.start.x)}
+              height={Math.abs(marquee.current.y - marquee.start.y)}
+              fill="rgba(0,122,255,0.10)"
+              stroke="#007AFF"
+              strokeWidth={1 / zoom}
+              dash={[6 / zoom, 4 / zoom]}
+              listening={false}
+            />
+          )}
           {drawPoints && drawPoints.length >= 4 && (
             <Line
               points={drawPoints}
@@ -779,8 +884,10 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             // rotate handle further out so it can be grabbed like other shapes.
             padding={lineLikeSelection ? 14 / zoom : 0}
             rotateAnchorOffset={(lineLikeSelection ? 36 : 24) / zoom}
-            boundBoxFunc={(_, next) =>
-              next.width < 8 || next.height < 8 ? _ : next
+            boundBoxFunc={(oldBox, next) =>
+              // Lines/arrows are legitimately thin — never reject their box, or
+              // both rotation and resize get blocked. Other shapes keep a floor.
+              !lineLikeSelection && (next.width < 8 || next.height < 8) ? oldBox : next
             }
             anchorStroke="#007AFF"
             anchorFill="#FFFFFF"
@@ -804,6 +911,20 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             setEditingTextId(null);
           }}
           onCancel={() => setEditingTextId(null)}
+        />
+      )}
+      {contextMenu && (
+        <CanvasContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          canGroup={canGroup}
+          canUngroup={canUngroup}
+          hasSelection={selectedLayers.length > 0}
+          onGroup={() => groupSelectedLayers(project.id)}
+          onUngroup={() => ungroupSelected(project.id)}
+          onDuplicate={() => duplicateSelectedLayers(project.id)}
+          onDelete={() => deleteSelectedLayers(project.id)}
+          onClose={() => setContextMenu(null)}
         />
       )}
     </div>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   MousePointer2,
+  BoxSelect,
   Hand,
   Type,
   Square,
@@ -40,6 +41,7 @@ const POLYGON_IDS = new Set<EditorTool>(POLYGON_TOOLS.map((tool) => tool.id));
 
 const TOOLS: ToolDef[] = [
   { id: 'select', icon: MousePointer2, group: 'navigation', shortcut: 'V' },
+  { id: 'marquee', icon: BoxSelect, group: 'navigation', shortcut: 'M' },
   { id: 'pan', icon: Hand, group: 'navigation', shortcut: 'H' },
   { id: 'text', icon: Type, group: 'drawing', shortcut: 'T' },
   { id: 'rect', icon: Square, group: 'drawing', shortcut: 'R' },
