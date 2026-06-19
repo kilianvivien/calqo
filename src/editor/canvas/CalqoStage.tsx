@@ -38,6 +38,7 @@ type DraftShape = {
 type ShapeTool = 'rect' | 'ellipse' | 'line' | PolygonPreset;
 
 const SNAP_DISTANCE = 6;
+const TRANSFORMER_ANCHOR_SIZE = 5;
 const SHAPE_TOOLS = new Set<string>([
   'rect',
   'ellipse',
@@ -540,7 +541,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             }
             anchorStroke="#007AFF"
             anchorFill="#FFFFFF"
-            anchorSize={9 / zoom}
+            anchorSize={TRANSFORMER_ANCHOR_SIZE / zoom}
             borderStroke="#007AFF"
             borderDash={[6 / zoom, 4 / zoom]}
           />
