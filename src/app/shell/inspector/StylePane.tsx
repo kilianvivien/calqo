@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useActiveProject } from '@/lib/state/selectors';
 import { DocumentControls } from './PropertiesPane';
+import { ContentLocalesSection } from './ContentControls';
 
 /** Project-level style: artboard setup, background, and brand palette. */
 export function StylePane() {
@@ -33,6 +34,8 @@ export function StylePane() {
           ))}
         </div>
       </section>
+
+      <ContentLocalesSection />
     </div>
   );
 }

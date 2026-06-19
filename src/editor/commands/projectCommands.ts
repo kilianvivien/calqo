@@ -8,9 +8,14 @@ import {
   type CalqoLayer,
   type CalqoProject,
   type CreateProjectOptions,
+  type GlossaryEntry,
   type GroupLayer,
+  type LocaleCode,
   type ShapeLayer,
+  type TextLayer,
 } from '@/lib/schema';
+import type { TranslationResult } from '@/editor/ai/AIProvider';
+import { detectTextOverflow } from '@/editor/i18n-content/translationPipeline';
 import {
   ARTBOARD_PRESETS,
   type ArtboardPresetId,
@@ -867,6 +872,157 @@ function scaleLayerAroundOrigin(layer: CalqoLayer, scale: number): CalqoLayer {
   };
   apply(next);
   return next;
+}
+
+// --- Content locales & translation ---------------------------------------
+
+/** Walk every text layer in the project (recursing into groups). */
+function forEachTextLayer(
+  project: CalqoProject | Draft<CalqoProject>,
+  fn: (layer: TextLayer) => void,
+): void {
+  const visit = (layers: CalqoLayer[]) => {
+    for (const layer of layers) {
+      if (layer.type === 'text') fn(layer as TextLayer);
+      else if (isGroupLayer(layer)) visit(layer.children);
+    }
+  };
+  project.artboards.forEach((artboard) => visit(artboard.layers as CalqoLayer[]));
+}
+
+/** Switch the active content locale (drives canvas + inspector rendering). Not
+ * undoable — it's a view setting, like changing the active artboard. */
+export function setActiveContentLocale(
+  projectId: string,
+  locale: LocaleCode,
+): void {
+  editProject(projectId, (draft) => {
+    if (draft.contentLocales.includes(locale)) {
+      draft.activeContentLocale = locale;
+    }
+  });
+}
+
+/** Add a content locale, optionally seeding every text layer from a source
+ * locale, then switch to it (plan §13.1). */
+export function addContentLocale(
+  projectId: string,
+  locale: LocaleCode,
+  options: { copyFrom?: LocaleCode } = {},
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      if (!draft.contentLocales.includes(locale)) {
+        draft.contentLocales.push(locale);
+      }
+      if (options.copyFrom) {
+        const source = options.copyFrom;
+        forEachTextLayer(draft, (layer) => {
+          if (layer.text[source] !== undefined && layer.text[locale] === undefined) {
+            layer.text[locale] = layer.text[source];
+          }
+        });
+      }
+      draft.activeContentLocale = locale;
+    },
+    { undoable: true },
+  );
+}
+
+/** Remove a content locale and its per-layer text. Keeps at least one locale
+ * and reassigns the active locale if needed. */
+export function removeContentLocale(
+  projectId: string,
+  locale: LocaleCode,
+): void {
+  const project = projectStore.getState().projects[projectId];
+  if (!project || project.contentLocales.length <= 1) return;
+  editProject(
+    projectId,
+    (draft) => {
+      draft.contentLocales = draft.contentLocales.filter((l) => l !== locale);
+      forEachTextLayer(draft, (layer) => {
+        delete layer.text[locale];
+      });
+      if (draft.activeContentLocale === locale) {
+        draft.activeContentLocale = draft.contentLocales[0];
+      }
+    },
+    { undoable: true },
+  );
+}
+
+/** Set a single text layer's value for a specific locale (plan §13.1). */
+export function updateTextForLocale(
+  projectId: string,
+  layerId: string,
+  locale: LocaleCode,
+  value: string,
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      draft.artboards.forEach((artboard) => {
+        updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
+          if (layer.type === 'text') layer.text[locale] = value;
+        });
+      });
+    },
+    { undoable: true },
+  );
+}
+
+/** Replace the project glossary (translation dialog edits it inline). */
+export function updateGlossary(
+  projectId: string,
+  glossary: GlossaryEntry[],
+): void {
+  editProject(projectId, (draft) => {
+    draft.glossary = glossary;
+  });
+}
+
+/** Apply a reconciled translation result: write each item into its layer's
+ * target-locale text, register the locale, and refresh overflow flags
+ * (plan §13.4, §13.6). */
+export function applyTranslationResult(
+  projectId: string,
+  result: TranslationResult,
+): void {
+  if (result.items.length === 0) return;
+  editProject(
+    projectId,
+    (draft) => {
+      if (!draft.contentLocales.includes(result.targetLocale)) {
+        draft.contentLocales.push(result.targetLocale);
+      }
+      for (const item of result.items) {
+        const artboard = draft.artboards.find((ab) => ab.id === item.artboardId);
+        if (!artboard) continue;
+        updateLayer(artboard.layers as CalqoLayer[], item.layerId, (layer) => {
+          if (layer.type !== 'text') return;
+          layer.text[result.targetLocale] = item.translatedText;
+          const overflow = detectTextOverflow(layer as TextLayer, result.targetLocale);
+          if (overflow) layer.overflow = overflow;
+          else delete layer.overflow;
+        });
+      }
+    },
+    { undoable: true },
+  );
+}
+
+/** Recompute overflow flags for every text layer at the active locale. */
+export function recomputeOverflow(projectId: string): void {
+  editProject(projectId, (draft) => {
+    const locale = draft.activeContentLocale;
+    forEachTextLayer(draft, (layer) => {
+      const overflow = detectTextOverflow(layer, locale);
+      if (overflow) layer.overflow = overflow;
+      else delete layer.overflow;
+    });
+  });
 }
 
 /** Layers that fall outside their artboard bounds — surfaced as fit warnings

@@ -17,6 +17,10 @@ export interface CanvasGuide {
   position: number;
 }
 
+/** Which AI dialog is open. Held in the UI store so both the title bar and the
+ * inspector can trigger them without prop drilling. */
+export type AiDialog = 'none' | 'template' | 'translate';
+
 /** Style applied to the next shape a draw tool places — surfaced as the
  * tool-defaults inspector (GeoCarto's "Réglages {outil}" card). */
 export interface ShapeDefaults {
@@ -84,6 +88,7 @@ interface UiState {
   guides: CanvasGuide[];
   shapeDefaults: ShapeDefaults;
   fitRequest: number;
+  aiDialog: AiDialog;
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
   setTransparency: (mode: TransparencyMode) => void;
@@ -94,6 +99,7 @@ interface UiState {
   setGuides: (guides: CanvasGuide[]) => void;
   setShapeDefaults: (patch: Partial<ShapeDefaults>) => void;
   requestFit: () => void;
+  setAiDialog: (dialog: AiDialog) => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -106,6 +112,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   guides: [],
   shapeDefaults: { fill: '#FFFFFF', stroke: '#007AFF', strokeWidth: 2 },
   fitRequest: 0,
+  aiDialog: 'none',
   setTheme: (theme) => {
     safeSet(THEME_KEY, theme);
     applyUiAttributes(theme, get().transparency);
@@ -128,4 +135,5 @@ export const useUiStore = create<UiState>((set, get) => ({
   setShapeDefaults: (patch) =>
     set({ shapeDefaults: { ...get().shapeDefaults, ...patch } }),
   requestFit: () => set({ fitRequest: get().fitRequest + 1 }),
+  setAiDialog: (aiDialog) => set({ aiDialog }),
 }));

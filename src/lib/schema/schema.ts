@@ -223,6 +223,15 @@ export const projectMetadataSchema = z
   })
   .passthrough();
 
+/** A glossary entry constrains translation: terms to leave untouched, or a
+ * preferred rendering in target locales (plan §13.5). */
+export const glossaryEntrySchema = z.object({
+  source: z.string().min(1),
+  target: z.string().optional(),
+  mode: z.enum(['do-not-translate', 'preferred-translation']).default('do-not-translate'),
+  notes: z.string().optional(),
+});
+
 export const projectSchema = z.object({
   schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),
   id: z.string(),
@@ -234,6 +243,8 @@ export const projectSchema = z.object({
   palette: z.array(hexish).default([]),
   artboards: z.array(artboardSchema).min(1),
   assets: z.array(assetRefSchema).default([]),
+  /** Project-wide translation glossary / do-not-translate list (plan §13.5). */
+  glossary: z.array(glossaryEntrySchema).default([]),
   metadata: projectMetadataSchema.optional(),
 });
 
@@ -247,3 +258,7 @@ export type SvgLayer = z.infer<typeof svgLayerSchema>;
 export type BackgroundFill = z.infer<typeof backgroundFillSchema>;
 export type Fill = z.infer<typeof fillSchema>;
 export type LocaleCode = z.infer<typeof localeCodeSchema>;
+export type GlossaryEntry = z.infer<typeof glossaryEntrySchema>;
+export type TextOverflowState = z.infer<typeof textOverflowSchema>;
+export type TextStyle = z.infer<typeof textStyleSchema>;
+export type ShadowStyle = z.infer<typeof shadowSchema>;

@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
   Circle,
   Folder,
   Hand,
@@ -15,6 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { assetStorage } from '@/lib/adapters';
+import { BUNDLED_FONTS } from '@/lib/adapters/fonts/browserFontAdapter';
 import {
   updateLayerInActiveArtboard,
   editProject,
@@ -25,8 +30,9 @@ import { GlassSegmentedControl } from '@/components/glass';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore, type EditorTool } from '@/lib/state/uiStore';
-import type { CalqoLayer, Fill } from '@/lib/schema';
+import type { CalqoLayer, Fill, ShadowStyle, TextLayer } from '@/lib/schema';
 import { ColorPickerPopover } from './ColorPickerPopover';
+import { TextVariants } from './ContentControls';
 
 const LAYER_TYPE_ICON: Record<CalqoLayer['type'], LucideIcon> = {
   text: Type,
@@ -109,6 +115,7 @@ export function PropertiesPane() {
           projectId={project.id}
           layer={layer}
           locale={project.activeContentLocale}
+          locales={project.contentLocales}
         />
       </div>
     );
@@ -302,10 +309,12 @@ function LayerControls({
   projectId,
   layer,
   locale,
+  locales,
 }: {
   projectId: string;
   layer: CalqoLayer;
   locale: string;
+  locales: string[];
 }) {
   const { t } = useTranslation('editor');
   const update = (patch: Parameters<typeof updateLayerInActiveArtboard>[2]) =>
@@ -347,36 +356,32 @@ function LayerControls({
             }
           />
           <NumberField
-            label={t('properties.stroke')}
+            label={t('properties.strokeWidth')}
             value={layer.stroke?.width ?? 0}
             min={0}
             onChange={(width) =>
               update({ stroke: width > 0 ? { color: layer.stroke?.color ?? '#007AFF', width } : undefined })
             }
           />
+          {layer.shape === 'rect' && (
+            <NumberField
+              label={t('properties.cornerRadius')}
+              value={layer.cornerRadius ?? 0}
+              min={0}
+              onChange={(cornerRadius) => update({ cornerRadius })}
+            />
+          )}
         </Section>
       )}
 
-
       {layer.type === 'text' && (
-        <Section title={t('properties.text')}>
-          <textarea
-            value={layer.text[locale] ?? ''}
-            onChange={(event) => update({ text: { [locale]: event.target.value } })}
-            className="min-h-20 w-full resize-y rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 py-2 text-[12.5px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-2 focus:ring-[var(--calqo-accent-ring)]"
-          />
-          <NumberField
-            label={t('properties.size')}
-            value={layer.style.fontSize}
-            min={1}
-            onChange={(fontSize) => update({ style: { fontSize } })}
-          />
-          <ColorField
-            label={t('properties.color')}
-            value={layer.style.color}
-            onChange={(color) => update({ style: { color } })}
-          />
-        </Section>
+        <TextControls
+          projectId={projectId}
+          layer={layer}
+          locale={locale}
+          locales={locales}
+          update={update}
+        />
       )}
 
       {layer.type === 'image' && (
@@ -404,6 +409,167 @@ function LayerControls({
           <ReplaceAssetButton projectId={projectId} layer={layer} />
         </Section>
       )}
+    </>
+  );
+}
+
+const WEIGHT_OPTIONS = [
+  { value: '300', label: '300' },
+  { value: '400', label: '400' },
+  { value: '500', label: '500' },
+  { value: '600', label: '600' },
+  { value: '700', label: '700' },
+  { value: '800', label: '800' },
+];
+
+const DEFAULT_TEXT_SHADOW: ShadowStyle = {
+  color: '#000000',
+  blur: 8,
+  offsetX: 0,
+  offsetY: 4,
+  opacity: 0.35,
+};
+
+/** GeoCarto-style text inspector: full type controls plus per-locale variants. */
+function TextControls({
+  projectId,
+  layer,
+  locale,
+  locales,
+  update,
+}: {
+  projectId: string;
+  layer: TextLayer;
+  locale: string;
+  locales: string[];
+  update: (patch: Parameters<typeof updateLayerInActiveArtboard>[2]) => void;
+}) {
+  const { t } = useTranslation('editor');
+  const shadow = layer.style.shadow;
+  return (
+    <>
+      <Section title={t('properties.text')}>
+        <TextVariants
+          projectId={projectId}
+          layer={layer}
+          locales={locales}
+          activeLocale={locale}
+        />
+      </Section>
+
+      <Section title={t('properties.typography')}>
+        <SelectField
+          label={t('properties.font')}
+          value={layer.style.fontFamily}
+          options={BUNDLED_FONTS.map((f) => ({ value: f.family, label: f.family }))}
+          onChange={(fontFamily) => update({ style: { fontFamily } })}
+        />
+        <SelectField
+          label={t('properties.weight')}
+          value={String(layer.style.fontWeight)}
+          options={WEIGHT_OPTIONS}
+          onChange={(weight) => update({ style: { fontWeight: Number(weight) } })}
+        />
+        <NumberField
+          label={t('properties.size')}
+          value={layer.style.fontSize}
+          min={1}
+          onChange={(fontSize) => update({ style: { fontSize } })}
+        />
+        <AlignField
+          value={layer.style.align}
+          onChange={(align) => update({ style: { align } })}
+        />
+        <NumberField
+          label={t('properties.lineHeight')}
+          value={layer.style.lineHeight}
+          min={0}
+          onChange={(lineHeight) => update({ style: { lineHeight } })}
+        />
+        <NumberField
+          label={t('properties.letterSpacing')}
+          value={layer.style.letterSpacing}
+          onChange={(letterSpacing) => update({ style: { letterSpacing } })}
+        />
+        <ColorField
+          label={t('properties.color')}
+          value={layer.style.color}
+          onChange={(color) => update({ style: { color } })}
+        />
+      </Section>
+
+      <Section title={t('properties.stroke')}>
+        <ColorField
+          label={t('properties.color')}
+          value={layer.style.stroke?.color ?? '#000000'}
+          onChange={(color) =>
+            update({ style: { stroke: { color, width: layer.style.stroke?.width ?? 1 } } })
+          }
+        />
+        <NumberField
+          label={t('properties.strokeWidth')}
+          value={layer.style.stroke?.width ?? 0}
+          min={0}
+          onChange={(width) =>
+            update({
+              style: {
+                stroke:
+                  width > 0
+                    ? { color: layer.style.stroke?.color ?? '#000000', width }
+                    : undefined,
+              },
+            })
+          }
+        />
+      </Section>
+
+      <Section title={t('properties.shadow')}>
+        <label className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-[12px] text-[var(--calqo-text-2)]">
+          <input
+            type="checkbox"
+            checked={Boolean(shadow)}
+            onChange={(event) =>
+              update({ style: { shadow: event.target.checked ? DEFAULT_TEXT_SHADOW : undefined } })
+            }
+            className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
+          />
+          {t('properties.shadowEnable')}
+        </label>
+        {shadow && (
+          <>
+            <ColorField
+              label={t('properties.color')}
+              value={shadow.color}
+              onChange={(color) => update({ style: { shadow: { ...shadow, color } } })}
+            />
+            <NumberField
+              label={t('properties.blur')}
+              value={shadow.blur}
+              min={0}
+              onChange={(blur) => update({ style: { shadow: { ...shadow, blur } } })}
+            />
+            <NumberField
+              label="X"
+              value={shadow.offsetX}
+              onChange={(offsetX) => update({ style: { shadow: { ...shadow, offsetX } } })}
+            />
+            <NumberField
+              label="Y"
+              value={shadow.offsetY}
+              onChange={(offsetY) => update({ style: { shadow: { ...shadow, offsetY } } })}
+            />
+            <NumberField
+              label={t('properties.opacity')}
+              value={Math.round((shadow.opacity ?? 1) * 100)}
+              min={0}
+              max={100}
+              onChange={(opacity) =>
+                update({ style: { shadow: { ...shadow, opacity: opacity / 100 } } })
+              }
+            />
+          </>
+        )}
+      </Section>
     </>
   );
 }
@@ -503,6 +669,84 @@ function NumberField({
         className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[12.5px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-2 focus:ring-[var(--calqo-accent-ring)]"
       />
     </label>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
+      <span className="text-[var(--calqo-text-3)]">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 text-[12.5px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)]"
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+const ALIGN_OPTIONS: { value: TextLayer['style']['align']; icon: LucideIcon }[] = [
+  { value: 'left', icon: AlignLeft },
+  { value: 'center', icon: AlignCenter },
+  { value: 'right', icon: AlignRight },
+  { value: 'justify', icon: AlignJustify },
+];
+
+function AlignField({
+  value,
+  onChange,
+}: {
+  value: TextLayer['style']['align'];
+  onChange: (value: TextLayer['style']['align']) => void;
+}) {
+  const { t } = useTranslation('editor');
+  return (
+    <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
+      <span className="text-[var(--calqo-text-3)]">{t('properties.align')}</span>
+      <div
+        role="radiogroup"
+        aria-label={t('properties.align')}
+        className="glass-thin inline-flex gap-0.5 rounded-[var(--calqo-radius-sm)] p-0.5"
+      >
+        {ALIGN_OPTIONS.map(({ value: option, icon: Icon }) => {
+          const active = option === value;
+          return (
+            <button
+              key={option}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              aria-label={option}
+              onClick={() => onChange(option)}
+              className={[
+                'flex h-6 flex-1 items-center justify-center rounded-[6px] transition-colors duration-[var(--calqo-t-fast)]',
+                active
+                  ? 'bg-[var(--calqo-accent)] text-[var(--calqo-text-on-accent)]'
+                  : 'text-[var(--calqo-text-2)] hover:text-[var(--calqo-text)]',
+              ].join(' ')}
+            >
+              <Icon size={13} />
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

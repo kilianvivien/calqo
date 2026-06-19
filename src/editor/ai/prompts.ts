@@ -1,0 +1,79 @@
+import type { TemplatePromptInput, TranslationJob } from './AIProvider';
+
+/** A compact, model-facing summary of the project schema. Kept terse on purpose
+ * — enough to constrain output without pasting the full Zod definition. */
+const SCHEMA_SUMMARY = `Project JSON shape:
+{
+  "schemaVersion": 1,
+  "name": string,
+  "contentLocales": [localeCode],
+  "activeContentLocale": localeCode,
+  "palette": [hexColor],
+  "assets": [],
+  "glossary": [],
+  "artboards": [{
+    "name": string,
+    "preset": string,
+    "width": number, "height": number,
+    "background": { "type": "solid", "color": hexColor },
+    "layers": [Layer]
+  }]
+}
+Layer is one of:
+- text:  { "type":"text", "name":string, "x":num,"y":num,"w":num,"h":num, "rotation":0,"opacity":1,"visible":true,"locked":false, "text": { "<locale>": string }, "style": { "fontFamily":string,"fontSize":num,"fontWeight":400|700,"color":hex,"align":"left|center|right","lineHeight":num,"letterSpacing":0 } }
+- shape: { "type":"shape","shape":"rect|ellipse|line", ...box..., "fill": {"type":"solid","color":hex}, "stroke"?: {"color":hex,"width":num}, "cornerRadius"?:num }
+All coordinates are logical pixels inside the artboard box.`;
+
+/** Build the system+user messages for prompt-a-template (plan §14.5–14.7). */
+export function buildTemplatePrompt(input: TemplatePromptInput): {
+  system: string;
+  user: string;
+} {
+  const system = [
+    'You are a graphic-design assistant that outputs a single Calqo project as JSON.',
+    'Respond with JSON only — no markdown fences, no commentary.',
+    SCHEMA_SUMMARY,
+    'Rules:',
+    `- Emit exactly one artboard sized ${input.width}x${input.height} (preset "${input.preset}").`,
+    `- Write all text in locale "${input.locale}" keyed under that locale.`,
+    `- Use at most ${input.maxLayers} layers.`,
+    `- Only use these fonts: ${input.fonts.join(', ')}.`,
+    input.palette?.length
+      ? `- Prefer this palette: ${input.palette.join(', ')}.`
+      : '- Choose a tasteful, high-contrast palette.',
+    '- Keep every layer fully inside the artboard bounds.',
+    '- Do not reference external images or URLs.',
+  ].join('\n');
+
+  const user = `Design brief: ${input.prompt}`;
+  return { system, user };
+}
+
+/** Build the messages for a translation job (plan §13.3, §14.8). */
+export function buildTranslationPrompt(job: TranslationJob): {
+  system: string;
+  user: string;
+} {
+  const glossaryLines = job.glossary.map((entry) =>
+    entry.mode === 'do-not-translate'
+      ? `- Never translate: "${entry.source}"`
+      : `- Translate "${entry.source}" as "${entry.target ?? ''}"`,
+  );
+
+  const system = [
+    `You are a professional translator. Translate UI copy from "${job.sourceLocale}" to "${job.targetLocale}".`,
+    'Respond with JSON only in the shape: { "items": [{ "layerId": string, "translatedText": string }] }.',
+    'Preserve meaning and tone; keep translations concise so they fit the original layout.',
+    glossaryLines.length ? `Glossary:\n${glossaryLines.join('\n')}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const items = job.items.map((item) => ({
+    layerId: item.layerId,
+    sourceText: item.sourceText,
+    maxCharsHint: item.maxCharsHint,
+  }));
+  const user = JSON.stringify({ items }, null, 2);
+  return { system, user };
+}

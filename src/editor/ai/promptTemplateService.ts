@@ -1,0 +1,44 @@
+import { BUNDLED_FONTS } from '@/lib/adapters/fonts/browserFontAdapter';
+import { ARTBOARD_PRESETS, type ArtboardPresetId } from '@/lib/schema/presets';
+import type { LocaleCode } from '@/lib/schema';
+import type { AIProvider, TemplatePromptInput } from './AIProvider';
+import { validateTemplateResponse, type TemplateValidation } from './validation';
+
+/** Prototype cap on generated layers (plan §14.6). */
+export const MAX_TEMPLATE_LAYERS = 20;
+
+export interface TemplateRequest {
+  prompt: string;
+  preset: ArtboardPresetId;
+  locale: LocaleCode;
+  palette?: string[];
+}
+
+/** Expand a UI-level request into the full provider input, pinning canvas
+ * dimensions, the font allow-list, and the layer cap (plan §14.6–14.7). */
+export function buildTemplateInput(request: TemplateRequest): TemplatePromptInput {
+  const preset = ARTBOARD_PRESETS[request.preset];
+  return {
+    prompt: request.prompt,
+    preset: request.preset,
+    width: preset.width,
+    height: preset.height,
+    locale: request.locale,
+    palette: request.palette,
+    maxLayers: MAX_TEMPLATE_LAYERS,
+    fonts: BUNDLED_FONTS.map((f) => f.family),
+  };
+}
+
+/** Generate and validate a template project from a prompt (plan §14.5). The
+ * returned validation carries either the editable project or repair-friendly
+ * diagnostics plus the raw output. */
+export async function generateTemplate(
+  provider: AIProvider,
+  request: TemplateRequest,
+  signal?: AbortSignal,
+): Promise<TemplateValidation> {
+  const input = buildTemplateInput(request);
+  const result = await provider.generateTemplate(input, signal);
+  return validateTemplateResponse(result.raw, input);
+}

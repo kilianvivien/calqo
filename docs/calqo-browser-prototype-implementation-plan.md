@@ -180,6 +180,10 @@ Exit criterion:
 
 ### Phase E — Multilingual content and AI flows
 
+> **Status: COMPLETE (2026-06-19).** Content locales, translation pipeline, and a
+> provider-abstracted AI layer (mock + OpenAI-compatible/Ollama) are in. See the
+> detailed Phase E section for the banner and file map.
+
 Goal: implement Calqo’s differentiators at prototype quality.
 
 Deliverables:
@@ -2468,6 +2472,46 @@ Acceptance criteria:
 ---
 
 ## Phase E — Content locales and AI
+
+> **Status: COMPLETE (E1–E7), 2026-06-19.** Calqo's two differentiators ship at
+> prototype quality.
+>
+> - **Content locales (E1).** A new **Content** inspector tab manages the
+>   project's content locales (add with optional copy-from-source, remove,
+>   switch active) and edits per-locale text variants with fallback/overflow
+>   indicators. Active-locale switching re-renders the canvas. Helpers in
+>   `src/editor/i18n-content/contentLocaleService.ts`.
+> - **Translation pipeline (E2).** `translationPipeline.ts` extracts text items
+>   (active/all artboards, recursing groups), and overflow detection uses an
+>   offscreen Konva measure (`detectTextOverflow`) with a pure,
+>   unit-tested `overflowStateFromMeasurement`. New commands in
+>   `projectCommands.ts`: `setActiveContentLocale`, `addContentLocale`,
+>   `removeContentLocale`, `updateTextForLocale`, `updateGlossary`,
+>   `applyTranslationResult`, `recomputeOverflow`. The glossary lives on the
+>   project schema (`glossary: GlossaryEntry[]`, defaulted for back-compat).
+> - **Translate dialog (E3).** `TranslateDialog.tsx` — source/target locales,
+>   active/all scope, inline glossary editor (do-not-translate / preferred),
+>   editable preview table, apply.
+> - **Provider abstraction + settings (E4).** `src/editor/ai/AIProvider.ts`
+>   interface; `mockProvider` (default, offline, deterministic) and
+>   `openAICompatibleProvider` (E6 — also covers Ollama via base URL, with
+>   timeout/abort). Settings persist through a new dexie-backed
+>   `SettingsAdapter` (`appSettings`) + `useAiSettingsStore`, surfaced in the
+>   settings modal with a browser-key warning. The API key is only persisted on
+>   explicit opt-in.
+> - **Prompt-a-template (E5).** `PromptTemplateDialog.tsx` → `promptTemplateService`
+>   → provider → `validation.ts` (`repairJsonLikeResponse` strips fences,
+>   `normalizeTemplateDocument` fills the envelope/ids, `safeImportProject`
+>   validates). Valid output is adopted as a new project; invalid output shows
+>   diagnostics + copyable raw text.
+> - **Prompt hardening (E7).** `prompts.ts` pins canvas dimensions, a font
+>   allow-list, palette guidance, a 20-layer cap, and a compact schema summary;
+>   validation surfaces readable issue paths.
+>
+> Title bar gains **Prompt a template** + **Translate** actions; AI dialog state
+> lives in `uiStore` (`aiDialog`). Verified with `pnpm typecheck`, `pnpm lint`,
+> `pnpm test` (33 tests, incl. `tests/unit/phaseE.test.ts`), `pnpm build`, and
+> in-browser (generate → translate → second locale appears).
 
 ### E1. Content locale UI
 

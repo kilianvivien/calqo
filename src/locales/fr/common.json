@@ -25,7 +25,17 @@
     "appearance": "Apparence",
     "languageMode": "Langue de l'app",
     "autoLanguage": "Auto",
-    "autoLanguageHint": "Utilise la langue de votre navigateur si elle est prise en charge."
+    "autoLanguageHint": "Utilise la langue de votre navigateur si elle est prise en charge.",
+    "ai": {
+      "title": "Fournisseur IA",
+      "provider": "Fournisseur",
+      "mockHint": "Fonctionne hors ligne avec une sortie déterministe — aucune configuration requise.",
+      "baseUrl": "URL de base",
+      "model": "Modèle",
+      "apiKey": "Clé API",
+      "storeKey": "Mémoriser la clé API dans ce navigateur",
+      "keyWarning": "Le navigateur n'est pas un trousseau sécurisé. Les clés sont stockées en clair dans IndexedDB et visibles par les scripts de ce site. Préférez un point de terminaison local."
+    }
   },
   "theme": {
     "toggle": "Changer de thème",

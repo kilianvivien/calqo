@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassIconButton, GlassSegmentedControl } from '@/components/glass';
 import i18n, { type AppLanguage } from '@/lib/i18n';
@@ -9,6 +9,11 @@ import {
   type ThemeMode,
   type TransparencyMode,
 } from '@/lib/state/uiStore';
+import {
+  useAiSettingsStore,
+  PROVIDER_LIST,
+  PROVIDER_PRESETS,
+} from '@/editor/ai/aiSettings';
 
 type LanguageMode = 'auto' | AppLanguage;
 
@@ -59,6 +64,10 @@ export function AppSettingsModal({
   const setTheme = useUiStore((s) => s.setTheme);
   const transparency = useUiStore((s) => s.transparency);
   const setTransparency = useUiStore((s) => s.setTransparency);
+  const aiSettings = useAiSettingsStore((s) => s.settings);
+  const setProvider = useAiSettingsStore((s) => s.setProvider);
+  const setStoreKey = useAiSettingsStore((s) => s.setStoreKey);
+  const updateProviderConfig = useAiSettingsStore((s) => s.updateProviderConfig);
   const [languageMode, setLanguageModeState] = useState<LanguageMode>(
     getStoredLanguageMode,
   );
@@ -114,7 +123,7 @@ export function AppSettingsModal({
           </GlassIconButton>
         </header>
 
-        <div className="space-y-4">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto calqo-scroll pr-1">
           <section>
             <div className="mb-2">
               <span className="eyebrow">{t('settings.general')}</span>
@@ -173,6 +182,90 @@ export function AppSettingsModal({
               </SettingsRow>
             </div>
           </section>
+
+          <section>
+            <div className="mb-2">
+              <span className="eyebrow">{t('settings.ai.title')}</span>
+            </div>
+            <div className="glass-thin space-y-3 rounded-[var(--calqo-radius-md)] p-3">
+              <SettingsRow label={t('settings.ai.provider')}>
+                <select
+                  aria-label={t('settings.ai.provider')}
+                  value={aiSettings.providerId}
+                  onChange={(event) =>
+                    setProvider(event.target.value as typeof aiSettings.providerId)
+                  }
+                  className="h-8 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 text-[12px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
+                >
+                  {PROVIDER_LIST.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+              </SettingsRow>
+
+              {(() => {
+                const preset = PROVIDER_PRESETS[aiSettings.providerId];
+                if (!preset.remote) {
+                  return (
+                    <p className="text-[11px] text-[var(--calqo-text-3)]">
+                      {t('settings.ai.mockHint')}
+                    </p>
+                  );
+                }
+                const config = aiSettings.providers[aiSettings.providerId];
+                return (
+                  <div className="space-y-2 border-t border-[var(--calqo-divider)] pt-3">
+                    {preset.editableBaseUrl && (
+                      <TextSetting
+                        label={t('settings.ai.baseUrl')}
+                        value={config.baseUrl}
+                        placeholder={preset.baseUrl || 'https://…/v1'}
+                        onChange={(baseUrl) =>
+                          updateProviderConfig(aiSettings.providerId, { baseUrl })
+                        }
+                      />
+                    )}
+                    <TextSetting
+                      label={t('settings.ai.model')}
+                      value={config.model}
+                      placeholder={preset.defaultModel}
+                      onChange={(model) =>
+                        updateProviderConfig(aiSettings.providerId, { model })
+                      }
+                    />
+                    {preset.needsKey && (
+                      <>
+                        <TextSetting
+                          label={t('settings.ai.apiKey')}
+                          value={config.apiKey}
+                          type="password"
+                          placeholder="sk-…"
+                          onChange={(apiKey) =>
+                            updateProviderConfig(aiSettings.providerId, { apiKey })
+                          }
+                        />
+                        <label className="flex cursor-pointer items-center gap-2 text-[11.5px] text-[var(--calqo-text-2)]">
+                          <input
+                            type="checkbox"
+                            checked={aiSettings.storeKey}
+                            onChange={(event) => setStoreKey(event.target.checked)}
+                            className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
+                          />
+                          {t('settings.ai.storeKey')}
+                        </label>
+                        <p className="flex items-start gap-1.5 rounded-[var(--calqo-radius-sm)] bg-[#E8B339]/10 px-2.5 py-2 text-[11px] text-[#B7791F]">
+                          <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                          {t('settings.ai.keyWarning')}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          </section>
         </div>
       </section>
     </div>,
@@ -194,5 +287,36 @@ function SettingsRow({
       </span>
       {children}
     </div>
+  );
+}
+
+function TextSetting({
+  label,
+  value,
+  placeholder,
+  type = 'text',
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  type?: 'text' | 'password';
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="grid grid-cols-[96px_1fr] items-center gap-2">
+      <span className="text-[11.5px] font-medium text-[var(--calqo-text-2)]">
+        {label}
+      </span>
+      <input
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        spellCheck={false}
+        autoComplete="off"
+        onChange={(event) => onChange(event.target.value)}
+        className="h-8 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2.5 text-[12px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-2 focus:ring-[var(--calqo-accent-ring)]"
+      />
+    </label>
   );
 }

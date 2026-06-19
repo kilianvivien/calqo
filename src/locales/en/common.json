@@ -25,7 +25,17 @@
     "appearance": "Appearance",
     "languageMode": "App language",
     "autoLanguage": "Auto",
-    "autoLanguageHint": "Uses your browser language when supported."
+    "autoLanguageHint": "Uses your browser language when supported.",
+    "ai": {
+      "title": "AI provider",
+      "provider": "Provider",
+      "mockHint": "Works offline with deterministic output — no setup required.",
+      "baseUrl": "Base URL",
+      "model": "Model",
+      "apiKey": "API key",
+      "storeKey": "Remember API key in this browser",
+      "keyWarning": "The browser is not a secure keychain. Keys are stored in plain IndexedDB and visible to scripts on this site. Prefer a local endpoint."
+    }
   },
   "theme": {
     "toggle": "Toggle theme",

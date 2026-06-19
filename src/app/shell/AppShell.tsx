@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GlassPanel } from '@/components/glass';
 import { createProject } from '@/editor/commands/projectCommands';
+import { useAiSettingsStore } from '@/editor/ai/aiSettings';
 import { AppSettingsModal } from './AppSettingsModal';
 import { ExportDialog } from './ExportDialog';
 import { NewProjectModal } from './NewProjectModal';
+import { PromptTemplateDialog } from './PromptTemplateDialog';
+import { TranslateDialog } from './TranslateDialog';
 import { TitleBar } from './TitleBar';
 import { TabBar } from './TabBar';
 import { ToolRail } from './ToolRail';
@@ -20,6 +23,11 @@ export function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const loadAiSettings = useAiSettingsStore((s) => s.load);
+
+  useEffect(() => {
+    void loadAiSettings();
+  }, [loadAiSettings]);
 
   return (
     <div className="h-full w-full">
@@ -53,6 +61,8 @@ export function AppShell() {
         onClose={() => setSettingsOpen(false)}
       />
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
+      <PromptTemplateDialog />
+      <TranslateDialog />
       <NewProjectModal
         open={newProjectOpen}
         onClose={() => setNewProjectOpen(false)}

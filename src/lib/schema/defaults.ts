@@ -55,6 +55,7 @@ export function createDefaultProject(
     palette: [...DEFAULT_PALETTE],
     artboards: [createArtboard(preset)],
     assets: [],
+    glossary: [],
   };
 }
 

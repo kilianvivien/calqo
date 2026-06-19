@@ -17,6 +17,7 @@ export type LayerPatch = Partial<
   style?: Partial<TextLayer['style']>;
   fill?: Fill;
   stroke?: ShapeLayer['stroke'];
+  cornerRadius?: number;
   fit?: ImageLayer['fit'];
   /** Group-only: bake a Konva transform scale into the group's children. */
   groupScale?: { sx: number; sy: number };
@@ -107,6 +108,7 @@ export function applyLayerPatch(layer: CalqoLayer, patch: LayerPatch): void {
   if (layer.type === 'shape') {
     if (patch.fill) layer.fill = patch.fill;
     if (patch.stroke !== undefined) layer.stroke = patch.stroke;
+    if (patch.cornerRadius !== undefined) layer.cornerRadius = patch.cornerRadius;
   }
   if (layer.type === 'image' && patch.fit) layer.fit = patch.fit;
   if (isGroupLayer(layer) && patch.groupScale) {

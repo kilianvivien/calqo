@@ -12,6 +12,7 @@ export const fixtureProject: CalqoProject = {
   activeContentLocale: 'fr',
   palette: ['#0A2540', '#FFFFFF', '#E8B339'],
   assets: [],
+  glossary: [],
   artboards: [
     {
       id: 'ab_fixture',

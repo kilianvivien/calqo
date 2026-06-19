@@ -5,10 +5,12 @@ import {
   Download,
   FilePlus2,
   FolderOpen,
+  Languages,
   Moon,
   Redo2,
   Save,
   Share,
+  Sparkles,
   Sun,
   Undo2,
 } from 'lucide-react';
@@ -50,6 +52,7 @@ export function TitleBar({
   };
   const theme = useUiStore((s) => s.theme);
   const toggleTheme = useUiStore((s) => s.toggleTheme);
+  const setAiDialog = useUiStore((s) => s.setAiDialog);
   const activeProjectId = useWorkspaceStore((s) => s.activeProjectId);
   const activeProjectName = useProjectStore((s) =>
     activeProjectId ? s.projects[activeProjectId]?.name : null,
@@ -164,6 +167,20 @@ export function TitleBar({
           onClick={() => activeProjectId && void duplicateProject(activeProjectId)}
         >
           <Copy size={16} />
+        </GlassIconButton>
+        <span className="mx-1 h-5 w-px bg-[var(--calqo-divider)]" />
+        <GlassIconButton
+          label={t('editor:ai.promptTemplate')}
+          onClick={() => setAiDialog('template')}
+        >
+          <Sparkles size={16} />
+        </GlassIconButton>
+        <GlassIconButton
+          label={t('editor:ai.translate')}
+          disabled={!activeProjectId}
+          onClick={() => setAiDialog('translate')}
+        >
+          <Languages size={16} />
         </GlassIconButton>
         <span className="mx-1 h-5 w-px bg-[var(--calqo-divider)]" />
         <GlassIconButton
