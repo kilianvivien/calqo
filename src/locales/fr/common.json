@@ -29,6 +29,7 @@
     "redo": "Rétablir",
     "duplicate": "Dupliquer",
     "selectTool": "Outil sélection",
+    "marqueeTool": "Outil sélection rectangle",
     "panTool": "Outil main",
     "textTool": "Outil texte",
     "shapeTools": "Outils formes",

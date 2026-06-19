@@ -15,6 +15,7 @@ import {
   Layers,
   Minus,
   MousePointer2,
+  BoxSelect,
   MoveUpRight,
   PenTool,
   Pipette,
@@ -57,6 +58,7 @@ const LAYER_TYPE_ICON: Record<CalqoLayer['type'], LucideIcon> = {
 
 const TOOL_ICON: Record<EditorTool, LucideIcon> = {
   select: MousePointer2,
+  marquee: BoxSelect,
   pan: Hand,
   text: Type,
   rect: Square,
