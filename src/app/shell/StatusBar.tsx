@@ -41,7 +41,7 @@ export function StatusBar({
     <footer className="flex h-7 items-center justify-between border-t border-[var(--calqo-divider)] px-4 mono text-[10.5px] text-[var(--calqo-text-3)]">
       <div className="flex items-center gap-3">
         <span title={t('common:app.versionLabel', { version: APP_VERSION })}>
-          {t('common:app.version', { version: APP_VERSION })}
+          v{APP_VERSION}
         </span>
         <span className="h-3 w-px bg-[var(--calqo-divider)]" />
         <span className="flex items-center gap-1.5">

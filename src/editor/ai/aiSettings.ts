@@ -93,6 +93,11 @@ export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
 
 export const PROVIDER_LIST: ProviderPreset[] = Object.values(PROVIDER_PRESETS);
 
+const PREVIOUS_DEFAULT_MODELS: Partial<Record<AiProviderId, string[]>> = {
+  gemini: ['gemini-2.0-flash'],
+  mistral: ['mistral-small-latest'],
+};
+
 export interface AiProviderConfig {
   model: string;
   apiKey: string;
@@ -143,11 +148,15 @@ export function normalizeAiSettings(stored?: Partial<AiSettings> | null): AiSett
   for (const preset of PROVIDER_LIST) {
     const config = stored?.providers?.[preset.id];
     if (!config) continue;
+    const storedModel = config.model ?? providers[preset.id].model;
+    const model = PREVIOUS_DEFAULT_MODELS[preset.id]?.includes(storedModel)
+      ? preset.defaultModel
+      : storedModel;
     providers[preset.id] = {
       ...providers[preset.id],
       ...config,
       baseUrl: config.baseUrl ?? providers[preset.id].baseUrl,
-      model: config.model ?? providers[preset.id].model,
+      model,
       apiKey: config.apiKey ?? '',
     };
   }

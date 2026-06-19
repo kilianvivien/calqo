@@ -61,6 +61,7 @@
       "model": "Model",
       "apiKey": "API key",
       "storeKey": "Remember API key in this browser",
+      "storeKeyShort": "Remember key",
       "keyWarning": "The browser is not a secure keychain. If remembered, keys are stored in IndexedDB for this site and may be readable by scripts running here. Leave this off unless you accept that tradeoff.",
       "agentSkill": "AI agent skill",
       "agentSkillHint": "Download a SKILL.md guide for coding agents that generate editable .calqo files from prompts.",

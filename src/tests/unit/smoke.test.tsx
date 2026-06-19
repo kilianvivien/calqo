@@ -15,8 +15,10 @@ describe('App shell', () => {
 
     render(<App />);
 
-    expect(screen.getByText(`Calqo ${APP_VERSION}`)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Open GitHub repository' }));
+    expect(screen.getByText(`v${APP_VERSION}`)).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open GitHub repository' }),
+    );
     expect(open).toHaveBeenCalledWith(
       APP_REPOSITORY_URL,
       '_blank',

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {
   normalizeAiSettings,
   useAiSettingsStore,
@@ -104,7 +105,9 @@ describe('phase F — persistence hardening', () => {
     await vi.advanceTimersByTimeAsync(700);
 
     expect(adapterMocks.storage.saveProject).toHaveBeenCalledTimes(1);
-    expect(adapterMocks.storage.saveProject.mock.calls[0][0].name).toBe('Three');
+    expect(adapterMocks.storage.saveProject.mock.calls[0][0].name).toBe(
+      'Three',
+    );
     expect(projectStore.getState().saveState[project.id]).toBe('saved');
   });
 
@@ -119,7 +122,9 @@ describe('phase F — persistence hardening', () => {
     await closeProject(project.id);
 
     expect(adapterMocks.storage.saveProject).toHaveBeenCalledTimes(1);
-    expect(adapterMocks.storage.saveProject.mock.calls[0][0].name).toBe('Before close');
+    expect(adapterMocks.storage.saveProject.mock.calls[0][0].name).toBe(
+      'Before close',
+    );
     expect(workspaceStore.getState().openTabIds).toEqual([]);
     expect(projectStore.getState().projects[project.id]).toBeUndefined();
   });
@@ -134,7 +139,9 @@ describe('phase F — persistence hardening', () => {
     await flushPendingSaves();
 
     expect(adapterMocks.storage.saveProject).toHaveBeenCalledTimes(1);
-    expect(adapterMocks.storage.saveProject.mock.calls[0][0].name).toBe('Reload-safe');
+    expect(adapterMocks.storage.saveProject.mock.calls[0][0].name).toBe(
+      'Reload-safe',
+    );
     expect(projectStore.getState().saveState[project.id]).toBe('saved');
   });
 
@@ -182,7 +189,11 @@ describe('phase F — settings hardening', () => {
     const normalized = normalizeAiSettings({
       providerId: 'openai' as never,
       providers: {
-        openai: { model: 'gpt-4o', apiKey: 'old', baseUrl: 'https://api.openai.com/v1' },
+        openai: {
+          model: 'gpt-4o',
+          apiKey: 'old',
+          baseUrl: 'https://api.openai.com/v1',
+        },
       } as never,
     });
 
@@ -191,7 +202,7 @@ describe('phase F — settings hardening', () => {
     expect(normalized.providers.local).toBeDefined();
   });
 
-  it('opens the settings modal without crashing when loaded state is stale', () => {
+  it('opens the settings modal without crashing when loaded state is stale', async () => {
     useAiSettingsStore.setState({
       settings: {
         ...normalizeAiSettings(),
@@ -202,7 +213,10 @@ describe('phase F — settings hardening', () => {
 
     render(<AppSettingsModal open onClose={() => undefined} />);
 
-    expect(screen.getByRole('dialog', { name: /settings/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('dialog', { name: /settings/i }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: /ai provider/i }));
     expect(screen.getByText(/works offline/i)).toBeInTheDocument();
   });
 });

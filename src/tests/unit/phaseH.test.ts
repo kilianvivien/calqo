@@ -252,6 +252,32 @@ describe('phase H — provider settings', () => {
     );
     expect(getProvider(settings).id).toBe('gemini');
   });
+
+  it('migrates stale hosted default models without overwriting custom models', () => {
+    const settings = normalizeAiSettings({
+      providers: {
+        gemini: {
+          model: 'gemini-2.0-flash',
+          apiKey: '',
+          baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+        },
+        mistral: {
+          model: 'mistral-small-latest',
+          apiKey: '',
+          baseUrl: 'https://api.mistral.ai/v1',
+        },
+        custom: {
+          model: 'my-custom-model',
+          apiKey: '',
+          baseUrl: 'https://example.com/v1',
+        },
+      } as never,
+    });
+
+    expect(settings.providers.gemini.model).toBe('gemini-3.5-flash');
+    expect(settings.providers.mistral.model).toBe('mistral-medium-latest');
+    expect(settings.providers.custom.model).toBe('my-custom-model');
+  });
 });
 
 describe('phase H — downloadable agent skill', () => {
