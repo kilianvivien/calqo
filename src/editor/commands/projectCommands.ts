@@ -306,6 +306,8 @@ export interface ShapeStyleDefaults {
   strokeWidth: number;
 }
 
+export type PolygonPreset = 'triangle' | 'diamond' | 'badge' | 'star';
+
 export function createShapeLayer(
   shape: ShapeLayer['shape'],
   x: number,
@@ -328,6 +330,52 @@ export function createShapeLayer(
   if (shape === 'line') {
     layer.h = Math.max(1, h);
     layer.points = [0, 0, Math.max(1, w), Math.max(1, h)];
+  }
+  return layer;
+}
+
+export function polygonPoints(preset: PolygonPreset, w: number, h: number): number[] {
+  if (preset === 'triangle') return [w / 2, 0, w, h, 0, h];
+  if (preset === 'diamond') return [w / 2, 0, w, h / 2, w / 2, h, 0, h / 2];
+  if (preset === 'badge') {
+    const cutX = w * 0.18;
+    return [
+      cutX, 0,
+      w - cutX, 0,
+      w, h / 2,
+      w - cutX, h,
+      cutX, h,
+      0, h / 2,
+    ];
+  }
+  const cx = w / 2;
+  const cy = h / 2;
+  const outer = Math.min(w, h) / 2;
+  const inner = outer * 0.46;
+  return Array.from({ length: 10 }).flatMap((_, i) => {
+    const radius = i % 2 === 0 ? outer : inner;
+    const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+    return [cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius];
+  });
+}
+
+function polygonName(preset: PolygonPreset): string {
+  if (preset === 'badge') return 'Badge';
+  return preset.charAt(0).toUpperCase() + preset.slice(1);
+}
+
+export function createPolygonShapeLayer(
+  preset: PolygonPreset,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  defaults?: ShapeStyleDefaults,
+): CalqoLayer {
+  const layer = createShapeLayer('polygon', x, y, w, h, defaults);
+  if (layer.type === 'shape') {
+    layer.name = polygonName(preset);
+    layer.points = polygonPoints(preset, w, h);
   }
   return layer;
 }

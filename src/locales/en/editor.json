@@ -15,6 +15,11 @@
     "rect": "Rectangle",
     "ellipse": "Ellipse",
     "line": "Line",
+    "triangle": "Triangle",
+    "diamond": "Diamond",
+    "badge": "Badge",
+    "star": "Star",
+    "polygon": "Polygon",
     "image": "Image",
     "svg": "Icon / SVG"
   },
@@ -88,6 +93,14 @@
     "stretch": "Stretch",
     "svg": "SVG",
     "replaceAsset": "Replace asset"
+  },
+  "palette": {
+    "title": "Palette",
+    "add": "Add color",
+    "apply": "Apply",
+    "defaults": "Use next",
+    "background": "Background",
+    "remove": "Remove color"
   },
   "layersPanel": {
     "duplicate": "Duplicate",

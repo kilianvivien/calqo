@@ -5,7 +5,9 @@ import {
   AlignJustify,
   AlignLeft,
   AlignRight,
+  Badge,
   Circle,
+  Diamond,
   Folder,
   Hand,
   Image as ImageIcon,
@@ -15,12 +17,16 @@ import {
   Pipette,
   Shapes,
   Square,
+  Star,
+  Triangle,
   Type,
   type LucideIcon,
 } from 'lucide-react';
 import { assetStorage } from '@/lib/adapters';
 import { BUNDLED_FONTS } from '@/lib/adapters/fonts/browserFontAdapter';
 import {
+  polygonPoints,
+  type PolygonPreset,
   updateLayerInActiveArtboard,
   editProject,
   replaceLayerAsset,
@@ -49,11 +55,46 @@ const TOOL_ICON: Record<EditorTool, LucideIcon> = {
   rect: Square,
   ellipse: Circle,
   line: Minus,
+  triangle: Triangle,
+  diamond: Diamond,
+  badge: Badge,
+  star: Star,
   image: ImageIcon,
   svg: Shapes,
 };
 
-const DRAW_TOOLS: EditorTool[] = ['text', 'rect', 'ellipse', 'line', 'image', 'svg'];
+const DRAW_TOOLS: EditorTool[] = [
+  'text',
+  'rect',
+  'ellipse',
+  'line',
+  'triangle',
+  'diamond',
+  'badge',
+  'star',
+  'image',
+  'svg',
+];
+const SHAPE_TOOLS = new Set<EditorTool>([
+  'rect',
+  'ellipse',
+  'line',
+  'triangle',
+  'diamond',
+  'badge',
+  'star',
+]);
+type ShapeKind = 'rect' | 'ellipse' | 'line' | PolygonPreset;
+
+const SHAPE_KIND_OPTIONS: { value: ShapeKind; labelKey: string }[] = [
+  { value: 'rect', labelKey: 'tools.rect' },
+  { value: 'ellipse', labelKey: 'tools.ellipse' },
+  { value: 'line', labelKey: 'tools.line' },
+  { value: 'triangle', labelKey: 'tools.triangle' },
+  { value: 'diamond', labelKey: 'tools.diamond' },
+  { value: 'badge', labelKey: 'tools.badge' },
+  { value: 'star', labelKey: 'tools.star' },
+];
 
 const COLOR_SWATCHES = [
   '#007AFF',
@@ -65,6 +106,19 @@ const COLOR_SWATCHES = [
   '#FFFFFF',
   '#000000',
 ];
+
+function polygonKind(layer: Extract<CalqoLayer, { type: 'shape' }>): ShapeKind {
+  if (layer.shape !== 'polygon') return layer.shape;
+  const normalized = layer.name.toLowerCase().split(' ')[0];
+  if (normalized === 'triangle' || normalized === 'diamond' || normalized === 'badge' || normalized === 'star') {
+    return normalized;
+  }
+  return 'badge';
+}
+
+function polygonDisplayName(kind: PolygonPreset): string {
+  return kind === 'badge' ? 'Badge' : kind.charAt(0).toUpperCase() + kind.slice(1);
+}
 
 function measureImage(file: File): Promise<{ width?: number; height?: number }> {
   if (file.type === 'image/svg+xml') return Promise.resolve({});
@@ -142,6 +196,14 @@ function layerSubtitle(
   layer: CalqoLayer,
 ): string {
   if (layer.type === 'shape') {
+    if (layer.shape === 'polygon') {
+      const normalized = layer.name.toLowerCase().split(' ')[0];
+      if (normalized === 'triangle') return t('tools.triangle');
+      if (normalized === 'diamond') return t('tools.diamond');
+      if (normalized === 'badge') return t('tools.badge');
+      if (normalized === 'star') return t('tools.star');
+      return t('tools.polygon');
+    }
     const key =
       layer.shape === 'ellipse'
         ? 'tools.ellipse'
@@ -206,8 +268,7 @@ function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
     );
   }
 
-  const isShapeTool =
-    activeTool === 'rect' || activeTool === 'ellipse' || activeTool === 'line';
+  const isShapeTool = SHAPE_TOOLS.has(activeTool);
 
   return (
     <div className="flex flex-col gap-4">
@@ -343,6 +404,36 @@ function LayerControls({
 
       {layer.type === 'shape' && (
         <Section title={t('properties.shape')}>
+          <SelectField
+            label={t('properties.shape')}
+            value={polygonKind(layer)}
+            options={SHAPE_KIND_OPTIONS.map((option) => ({
+              value: option.value,
+              label: t(option.labelKey),
+            }))}
+            onChange={(value) => {
+              const kind = value as ShapeKind;
+              if (kind === 'triangle' || kind === 'diamond' || kind === 'badge' || kind === 'star') {
+                update({
+                  name: polygonDisplayName(kind),
+                  shape: 'polygon',
+                  points: polygonPoints(kind, layer.w, Math.max(1, Math.abs(layer.h))),
+                });
+                return;
+              }
+              update({
+                name:
+                  kind === 'line'
+                    ? 'Line'
+                    : kind === 'ellipse'
+                      ? 'Ellipse'
+                      : 'Rectangle',
+                shape: kind,
+                points: kind === 'line' ? [0, 0, layer.w, layer.h] : null,
+                cornerRadius: kind === 'rect' ? (layer.cornerRadius ?? 18) : 0,
+              });
+            }}
+          />
           <ColorField
             label={t('properties.fill')}
             value={layer.fill.type === 'solid' ? layer.fill.color : '#ffffff'}
@@ -750,7 +841,7 @@ function AlignField({
   );
 }
 
-function ColorField({
+export function ColorField({
   label,
   value,
   onChange,
@@ -760,6 +851,7 @@ function ColorField({
   onChange: (value: string) => void;
 }) {
   const { t } = useTranslation('editor');
+  const project = useActiveProject();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pipetteStatus, setPipetteStatus] = useState<string | null>(null);
   const pickerRef = useRef<HTMLButtonElement>(null);
@@ -767,9 +859,13 @@ function ColorField({
   const normalized = value.toUpperCase();
   // `<input type="color">` only accepts #rrggbb; fall back to black otherwise.
   const nativeColorValue = /^#[0-9a-f]{6}$/i.test(value) ? value : '#000000';
-  const swatches = COLOR_SWATCHES.includes(normalized)
-    ? COLOR_SWATCHES
-    : [normalized, ...COLOR_SWATCHES].slice(0, 8);
+  const baseSwatches = [
+    ...(project?.palette.map((color) => color.toUpperCase()) ?? []),
+    ...COLOR_SWATCHES,
+  ].filter((color, index, colors) => colors.indexOf(color) === index);
+  const swatches = baseSwatches.includes(normalized)
+    ? baseSwatches.slice(0, 10)
+    : [normalized, ...baseSwatches].slice(0, 10);
   const pickWithEyedropper = async () => {
     // Chromium: the in-page EyeDropper API samples anywhere on screen.
     if (window.EyeDropper) {

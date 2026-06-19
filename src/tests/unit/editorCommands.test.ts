@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   addLayerToActiveArtboard,
+  createPolygonShapeLayer,
   createShapeLayer,
   redoProject,
   undoProject,
@@ -61,5 +62,19 @@ describe('editor commands', () => {
     expect(updated?.x).toBe(44);
     expect(updated?.w).toBe(144);
     expect(historyStore.getState().histories[project.id].past).toHaveLength(1);
+  });
+
+  it('creates social preset polygon shapes with editable points', () => {
+    const triangle = createPolygonShapeLayer('triangle', 0, 0, 120, 90);
+    const star = createPolygonShapeLayer('star', 0, 0, 120, 120);
+
+    expect(triangle.type).toBe('shape');
+    expect(star.type).toBe('shape');
+    if (triangle.type !== 'shape' || star.type !== 'shape') return;
+    expect(triangle.shape).toBe('polygon');
+    expect(triangle.name).toBe('Triangle');
+    expect(triangle.points).toHaveLength(6);
+    expect(star.name).toBe('Star');
+    expect(star.points).toHaveLength(20);
   });
 });

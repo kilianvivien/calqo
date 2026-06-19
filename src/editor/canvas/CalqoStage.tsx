@@ -5,8 +5,11 @@ import { assetStorage } from '@/lib/adapters';
 import {
   addImportedAssetLayer,
   addLayerToActiveArtboard,
+  createPolygonShapeLayer,
   createShapeLayer,
   createTextLayer,
+  polygonPoints,
+  type PolygonPreset,
   updateLayerInActiveArtboard,
 } from '@/editor/commands/projectCommands';
 import { findLayerInArtboard, flattenLayers } from '@/editor/utils/layers';
@@ -27,12 +30,27 @@ interface StageSize {
 }
 
 type DraftShape = {
-  shape: 'rect' | 'ellipse' | 'line';
+  shape: ShapeTool;
   start: { x: number; y: number };
   current: { x: number; y: number };
 };
 
+type ShapeTool = 'rect' | 'ellipse' | 'line' | PolygonPreset;
+
 const SNAP_DISTANCE = 6;
+const SHAPE_TOOLS = new Set<string>([
+  'rect',
+  'ellipse',
+  'line',
+  'triangle',
+  'diamond',
+  'badge',
+  'star',
+]);
+
+function previewPolygonPoints(shape: PolygonPreset, w: number, h: number): number[] {
+  return polygonPoints(shape, Math.max(1, w), Math.max(1, h));
+}
 
 function backgroundColor(artboard: CalqoArtboard): string {
   return artboard.background.type === 'solid' ? artboard.background.color : '#FFFFFF';
@@ -229,8 +247,8 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       setActiveTool('select');
       return;
     }
-    if (activeTool === 'rect' || activeTool === 'ellipse' || activeTool === 'line') {
-      setDraftShape({ shape: activeTool, start: point, current: point });
+    if (SHAPE_TOOLS.has(activeTool)) {
+      setDraftShape({ shape: activeTool as ShapeTool, start: point, current: point });
       return;
     }
     if (activeTool === 'image' || activeTool === 'svg') {
@@ -311,6 +329,17 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       });
       return;
     }
+    if (layer.type === 'shape' && layer.points) {
+      updateLayerInActiveArtboard(project.id, layer.id, {
+        x: node.x(),
+        y: node.y(),
+        w: width,
+        h: height,
+        rotation: node.rotation(),
+        points: layer.points.map((value, i) => value * (i % 2 === 0 ? scaleX : scaleY)),
+      });
+      return;
+    }
     updateLayerInActiveArtboard(project.id, layer.id, {
       x: node.x(),
       y: node.y(),
@@ -328,14 +357,13 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     const moved = width > 4 || height > 4;
     const x = moved ? Math.min(start.x, current.x) : start.x;
     const y = moved ? Math.min(start.y, current.y) : start.y;
-    const layer = createShapeLayer(
-      shape,
-      x,
-      y,
-      moved ? Math.max(1, width) : 220,
-      shape === 'line' ? (moved ? current.y - start.y : 1) : moved ? Math.max(1, height) : 150,
-      shapeDefaults,
-    );
+    const nextW = moved ? Math.max(1, width) : 220;
+    const nextH =
+      shape === 'line' ? (moved ? current.y - start.y : 1) : moved ? Math.max(1, height) : 150;
+    const layer =
+      shape === 'rect' || shape === 'ellipse' || shape === 'line'
+        ? createShapeLayer(shape, x, y, nextW, nextH, shapeDefaults)
+        : createPolygonShapeLayer(shape, x, y, nextW, Math.max(1, Math.abs(nextH)), shapeDefaults);
     if (shape === 'line') {
       layer.x = start.x;
       layer.y = start.y;
@@ -464,7 +492,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
                 strokeWidth={2 / zoom}
                 lineCap="round"
               />
-            ) : (
+            ) : draftShape.shape === 'rect' ? (
               <Rect
                 x={Math.min(draftShape.start.x, draftShape.current.x)}
                 y={Math.min(draftShape.start.y, draftShape.current.y)}
@@ -472,6 +500,21 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
                 height={Math.abs(draftShape.current.y - draftShape.start.y)}
                 stroke="#007AFF"
                 dash={[8 / zoom, 5 / zoom]}
+              />
+            ) : (
+              <Line
+                x={Math.min(draftShape.start.x, draftShape.current.x)}
+                y={Math.min(draftShape.start.y, draftShape.current.y)}
+                points={previewPolygonPoints(
+                  draftShape.shape,
+                  Math.abs(draftShape.current.x - draftShape.start.x),
+                  Math.abs(draftShape.current.y - draftShape.start.y),
+                )}
+                closed
+                stroke="#007AFF"
+                strokeWidth={2 / zoom}
+                dash={[8 / zoom, 5 / zoom]}
+                lineJoin="round"
               />
             )
           )}

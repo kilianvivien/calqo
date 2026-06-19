@@ -15,6 +15,11 @@
     "rect": "Rectangle",
     "ellipse": "Ellipse",
     "line": "Ligne",
+    "triangle": "Triangle",
+    "diamond": "Losange",
+    "badge": "Badge",
+    "star": "Étoile",
+    "polygon": "Polygone",
     "image": "Image",
     "svg": "Icône / SVG"
   },
@@ -88,6 +93,14 @@
     "stretch": "Étirer",
     "svg": "SVG",
     "replaceAsset": "Remplacer la ressource"
+  },
+  "palette": {
+    "title": "Palette",
+    "add": "Ajouter une couleur",
+    "apply": "Appliquer",
+    "defaults": "Pour le prochain",
+    "background": "Arrière-plan",
+    "remove": "Retirer la couleur"
   },
   "layersPanel": {
     "duplicate": "Dupliquer",

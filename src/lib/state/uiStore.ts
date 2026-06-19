@@ -9,6 +9,10 @@ export type EditorTool =
   | 'rect'
   | 'ellipse'
   | 'line'
+  | 'triangle'
+  | 'diamond'
+  | 'badge'
+  | 'star'
   | 'image'
   | 'svg';
 
