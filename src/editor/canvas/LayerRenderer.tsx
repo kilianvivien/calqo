@@ -1,8 +1,12 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Arrow, Ellipse, Group, Image, Line, Rect, Text } from 'react-konva';
 import type Konva from 'konva';
-import type { CalqoLayer } from '@/lib/schema';
+import { Blur } from 'konva/lib/filters/Blur';
+import type { CalqoLayer, ImageLayer } from '@/lib/schema';
 import { fillProps, strokeProps } from './shapeStyle';
+import { buildImageFilterPipeline, coverCropRect } from './imageFilters';
+import { drawMaskPath } from './maskClip';
 import { useAssetImage } from './useAssetImage';
 
 export type NodeRegistry = Map<string, Konva.Node>;
@@ -62,6 +66,53 @@ function commonProps(
   };
 }
 
+/** Konva drop-shadow props for a schema layer effect. */
+function shadowProps(layer: CalqoLayer): Konva.ShapeConfig {
+  const shadow = layer.effects?.shadow;
+  if (!shadow) return {};
+  return {
+    shadowColor: shadow.color,
+    shadowBlur: shadow.blur,
+    shadowOffsetX: shadow.offsetX,
+    shadowOffsetY: shadow.offsetY,
+    shadowOpacity: shadow.opacity ?? 1,
+  };
+}
+
+/** Blend-mode prop (canvas composite op); `normal` is the implicit default. */
+function blendProps(layer: CalqoLayer): Konva.ShapeConfig {
+  if (!layer.blendMode || layer.blendMode === 'normal') return {};
+  return { globalCompositeOperation: layer.blendMode };
+}
+
+/** Apply / clear a cached Blur filter on a node so schema-backed `effects.blur`
+ * renders on the live canvas. Images manage their own filter pipeline. */
+function useLayerBlur(
+  nodeRefs: React.MutableRefObject<NodeRegistry>,
+  layer: CalqoLayer,
+  activeLocale: string,
+) {
+  useEffect(() => {
+    const node = nodeRefs.current.get(layer.id);
+    if (!node || layer.type === 'image') return;
+    const blur = layer.effects?.blur ?? 0;
+    try {
+      if (blur > 0) {
+        node.setAttr('blurRadius', blur);
+        node.filters([Blur]);
+        node.cache();
+      } else {
+        node.filters([]);
+        node.clearCache();
+      }
+      node.getLayer()?.batchDraw();
+    } catch {
+      /* no canvas (jsdom) — skip caching */
+    }
+    // Re-cache whenever the layer or its rendered text changes.
+  }, [nodeRefs, layer, activeLocale]);
+}
+
 export function LayerRenderer(props: LayerRendererProps) {
   const {
     layer,
@@ -75,6 +126,8 @@ export function LayerRenderer(props: LayerRendererProps) {
     onTextEdit,
   } = props;
 
+  useLayerBlur(nodeRefs, layer, activeLocale);
+
   if (!layer.visible) return null;
 
   if (layer.type === 'group') {
@@ -87,7 +140,7 @@ export function LayerRenderer(props: LayerRendererProps) {
       onTransformEnd,
     );
     return (
-      <Group {...groupProps}>
+      <Group {...groupProps} {...blendProps(layer)}>
         {layer.children.map((child) => (
           <LayerRenderer
             key={child.id}
@@ -113,6 +166,7 @@ export function LayerRenderer(props: LayerRendererProps) {
     return (
       <Text
         {...base}
+        {...blendProps(layer)}
         text={layer.text[activeLocale] ?? Object.values(layer.text)[0] ?? ''}
         fontFamily={layer.style.fontFamily}
         fontSize={layer.style.fontSize}
@@ -137,6 +191,7 @@ export function LayerRenderer(props: LayerRendererProps) {
 
   if (layer.type === 'shape') {
     const stroke = strokeProps(layer.stroke);
+    const effects = { ...shadowProps(layer), ...blendProps(layer) };
     const lineColor = layer.stroke?.color ?? '#111827';
     const lineWidth = layer.stroke?.width ?? 4;
     // Line-like shapes hit only along their thin stroke by default, which makes
@@ -147,6 +202,7 @@ export function LayerRenderer(props: LayerRendererProps) {
       return (
         <Ellipse
           {...base}
+          {...effects}
           x={layer.x + layer.w / 2}
           y={layer.y + layer.h / 2}
           radiusX={layer.w / 2}
@@ -160,6 +216,7 @@ export function LayerRenderer(props: LayerRendererProps) {
       return (
         <Arrow
           {...base}
+          {...effects}
           points={layer.points ?? [0, 0, layer.w, layer.h]}
           pointerAtBeginning={layer.arrow?.start ?? false}
           pointerAtEnding={layer.arrow?.end ?? true}
@@ -179,6 +236,7 @@ export function LayerRenderer(props: LayerRendererProps) {
       return (
         <Line
           {...base}
+          {...effects}
           points={layer.points ?? [0, 0, layer.w, layer.h]}
           tension={layer.tension ?? 0.4}
           stroke={lineColor}
@@ -195,6 +253,7 @@ export function LayerRenderer(props: LayerRendererProps) {
       return (
         <Line
           {...base}
+          {...effects}
           points={layer.points ?? [0, 0, layer.w, layer.h]}
           closed={isPolygon}
           {...(isPolygon ? fillProps(layer.fill, layer.w, layer.h) : {})}
@@ -210,6 +269,7 @@ export function LayerRenderer(props: LayerRendererProps) {
     return (
       <Rect
         {...base}
+        {...effects}
         {...fillProps(layer.fill, layer.w, layer.h)}
         {...stroke}
         cornerRadius={layer.cornerRadius ?? 0}
@@ -217,59 +277,27 @@ export function LayerRenderer(props: LayerRendererProps) {
     );
   }
 
-  if (layer.type === 'image' || layer.type === 'svg') {
-    return <AssetLayer layer={layer} base={base} />;
+  if (layer.type === 'image') {
+    return <ImageLayerNode layer={layer} base={base} />;
+  }
+
+  if (layer.type === 'svg') {
+    return <SvgLayerNode layer={layer} base={base} />;
   }
 
   return null;
 }
 
-function AssetLayer({
+function AssetPlaceholder({
   layer,
   base,
+  missing,
 }: {
   layer: Extract<CalqoLayer, { type: 'image' | 'svg' }>;
   base: ReturnType<typeof commonProps>;
+  missing: boolean;
 }) {
   const { t } = useTranslation('editor');
-  const { image, missing } = useAssetImage(layer.assetId);
-  if (image) {
-    if (layer.type === 'image' && layer.fit === 'cover') {
-      const imageRatio = image.width / image.height;
-      const layerRatio = layer.w / layer.h;
-      const cropByWidth = imageRatio > layerRatio;
-      const cropWidth = cropByWidth ? image.height * layerRatio : image.width;
-      const cropHeight = cropByWidth ? image.height : image.width / layerRatio;
-      return (
-        <Image
-          {...base}
-          image={image}
-          crop={{
-            x: (image.width - cropWidth) / 2,
-            y: (image.height - cropHeight) / 2,
-            width: cropWidth,
-            height: cropHeight,
-          }}
-        />
-      );
-    }
-    if (layer.type === 'image' && layer.fit === 'contain') {
-      const scale = Math.min(layer.w / image.width, layer.h / image.height);
-      const width = image.width * scale;
-      const height = image.height * scale;
-      return (
-        <Image
-          {...base}
-          image={image}
-          x={layer.x + (layer.w - width) / 2}
-          y={layer.y + (layer.h - height) / 2}
-          width={width}
-          height={height}
-        />
-      );
-    }
-    return <Image {...base} image={image} />;
-  }
   return (
     <Group {...base}>
       <Rect
@@ -292,4 +320,101 @@ function AssetLayer({
       />
     </Group>
   );
+}
+
+/** Image layer: a clip group (for masks) wrapping a single Image that carries
+ * the cover/contain/stretch crop, focal point, and a cached filter pipeline. */
+function ImageLayerNode({
+  layer,
+  base,
+}: {
+  layer: ImageLayer;
+  base: ReturnType<typeof commonProps>;
+}) {
+  const { image, missing } = useAssetImage(layer.assetId);
+  const imageRef = useRef<Konva.Image>(null);
+  const pipeline = buildImageFilterPipeline(layer.filters);
+
+  useEffect(() => {
+    const node = imageRef.current;
+    if (!node) return;
+    try {
+      if (pipeline.filters.length > 0) {
+        node.setAttr('brightness', pipeline.attrs.brightness);
+        node.setAttr('contrast', pipeline.attrs.contrast);
+        node.setAttr('saturation', pipeline.attrs.saturation);
+        node.setAttr('blurRadius', pipeline.attrs.blurRadius);
+        node.filters(pipeline.filters);
+        node.cache();
+      } else {
+        node.filters([]);
+        node.clearCache();
+      }
+      node.getLayer()?.batchDraw();
+    } catch {
+      /* no canvas (jsdom) — skip caching */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [image, layer]);
+
+  if (!image) return <AssetPlaceholder layer={layer} base={base} missing={missing} />;
+
+  // Crop geometry inside the local box (the clip group is positioned at x/y).
+  let imageProps: Konva.ImageConfig;
+  if (layer.crop) {
+    imageProps = {
+      image,
+      x: 0,
+      y: 0,
+      width: layer.w,
+      height: layer.h,
+      crop: { x: layer.crop.x, y: layer.crop.y, width: layer.crop.w, height: layer.crop.h },
+    };
+  } else if (layer.fit === 'cover') {
+    imageProps = {
+      image,
+      x: 0,
+      y: 0,
+      width: layer.w,
+      height: layer.h,
+      crop: coverCropRect(image.width, image.height, layer.w, layer.h, layer.focalPoint),
+    };
+  } else if (layer.fit === 'contain') {
+    const scale = Math.min(layer.w / image.width, layer.h / image.height);
+    const width = image.width * scale;
+    const height = image.height * scale;
+    imageProps = {
+      image,
+      x: (layer.w - width) / 2,
+      y: (layer.h - height) / 2,
+      width,
+      height,
+    };
+  } else {
+    imageProps = { image, x: 0, y: 0, width: layer.w, height: layer.h };
+  }
+
+  const clipFunc = layer.mask
+    ? (ctx: Konva.Context) =>
+        drawMaskPath(ctx as unknown as CanvasRenderingContext2D, layer.mask!, layer.w, layer.h)
+    : undefined;
+
+  return (
+    <Group {...base} {...shadowProps(layer)} {...blendProps(layer)} clipFunc={clipFunc}>
+      <Image ref={imageRef} {...imageProps} />
+    </Group>
+  );
+}
+
+/** SVG layer: a rasterised asset Image with optional shadow / blend mode. */
+function SvgLayerNode({
+  layer,
+  base,
+}: {
+  layer: Extract<CalqoLayer, { type: 'svg' }>;
+  base: ReturnType<typeof commonProps>;
+}) {
+  const { image, missing } = useAssetImage(layer.assetId);
+  if (!image) return <AssetPlaceholder layer={layer} base={base} missing={missing} />;
+  return <Image {...base} {...shadowProps(layer)} {...blendProps(layer)} image={image} />;
 }

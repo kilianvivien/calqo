@@ -538,8 +538,10 @@ export function replaceLayerAsset(
       updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
         if (layer.type === 'image' && asset.kind === 'raster') {
           layer.assetId = asset.id;
-          layer.w = asset.width ?? layer.w;
-          layer.h = asset.height ?? layer.h;
+          // Preserve the layer's box, fit, mask, focal point, and filters so a
+          // swap is non-destructive. The pixel-space crop is image-specific, so
+          // drop it — the fit/focal cover crop recomputes for the new image.
+          delete layer.crop;
         }
         if (layer.type === 'svg' && asset.kind === 'svg') {
           layer.assetId = asset.id;

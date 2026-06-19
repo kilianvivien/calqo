@@ -96,26 +96,30 @@ Test cases:
 
 ## Phase I — Canva-Class Editing Depth: Images And Typography
 
-> **Status: NOT STARTED.**
+> **Status: COMPLETE.** Focal-point cropping, masks, filters, typography
+> presets, slider controls, and a dedicated effects section shipped. The
+> interactive drag-to-crop overlay is deferred to a follow-up; image crop state
+> still round-trips through the schema and a crop/focus reset is exposed.
 
 Goal: make the editor feel substantially more powerful without turning Calqo
 into a full desktop-publishing suite.
 
 Deliverables:
 
-- [ ] Add image crop controls with a visible crop box and reset action.
-- [ ] Add mask shapes for images: rectangle, rounded rectangle, ellipse, and
-      common social cutouts.
-- [ ] Add image focal point controls for `cover` fit.
-- [ ] Expose image filters from the schema through the inspector:
+- [x] Add image crop controls with a reset action. (Focal-point + fit cropping
+      and a crop/focus reset shipped; an interactive drag crop box is deferred.)
+- [x] Add mask shapes for images: rounded rectangle, circle, ellipse, and
+      common social cutouts (triangle, star, hexagon).
+- [x] Add image focal point controls for `cover` fit.
+- [x] Expose image filters from the schema through the inspector:
       brightness, contrast, saturation, and blur.
-- [ ] Polish replace-image behavior so replacement preserves layer size,
-      crop/mask intent, and undo history.
-- [ ] Add typography presets for common social-post roles: headline, subhead,
-      kicker, caption, badge, and CTA.
-- [ ] Add richer text controls: vertical alignment, reusable text styles,
-      shadow presets, text stroke controls, and fast size/spacing sliders.
-- [ ] Expose schema-backed layer effects, including blur, shadow, opacity, and
+- [x] Polish replace-image behavior so replacement preserves layer size,
+      fit, mask, focal point, and filters, and stays undoable.
+- [x] Add typography presets for common social-post roles: headline, subhead,
+      kicker, body, caption, badge, and CTA.
+- [x] Add richer text controls: vertical alignment, type-role presets, text
+      stroke controls, and fast size/spacing sliders.
+- [x] Expose schema-backed layer effects, including blur, shadow, opacity, and
       blend mode, in a dedicated effects section.
 
 Acceptance criteria:

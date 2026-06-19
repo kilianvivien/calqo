@@ -40,11 +40,27 @@ import { GlassSegmentedControl } from '@/components/glass';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore, type EditorTool } from '@/lib/state/uiStore';
-import type { ArrowStyle, CalqoLayer, Fill, ShadowStyle, StrokeStyle, TextLayer } from '@/lib/schema';
+import type {
+  ArrowStyle,
+  CalqoLayer,
+  Fill,
+  ImageLayer,
+  ImageMask,
+  ShadowStyle,
+  StrokeStyle,
+  TextLayer,
+} from '@/lib/schema';
 import {
   isStageSamplerAvailable,
   sampleColorFromStage,
 } from '@/editor/canvas/stageSampler';
+import { FILTER_RANGES, hasActiveFilters } from '@/editor/canvas/imageFilters';
+import { MASK_SHAPES } from '@/editor/canvas/maskClip';
+import {
+  TEXT_PRESET_IDS,
+  textPresetStyle,
+  type TextPresetId,
+} from '@/editor/typography/textPresets';
 import { ColorPickerPopover } from './ColorPickerPopover';
 import { TextVariants } from './ContentControls';
 
@@ -728,23 +744,7 @@ function LayerControls({
       )}
 
       {layer.type === 'image' && (
-        <Section title={t('properties.image')}>
-          <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1.5 text-[12px]">
-            <span className="text-[var(--calqo-text-3)]">{t('properties.fit')}</span>
-            <GlassSegmentedControl
-              ariaLabel={t('properties.fit')}
-              className="flex w-full [&>button]:flex-1"
-              value={layer.fit}
-              onChange={(fit) => update({ fit })}
-              options={[
-                { value: 'cover', label: t('properties.cover') },
-                { value: 'contain', label: t('properties.contain') },
-                { value: 'stretch', label: t('properties.stretch') },
-              ]}
-            />
-          </div>
-          <ReplaceAssetButton projectId={projectId} layer={layer} />
-        </Section>
+        <ImageControls projectId={projectId} layer={layer} update={update} />
       )}
 
       {layer.type === 'svg' && (
@@ -752,7 +752,281 @@ function LayerControls({
           <ReplaceAssetButton projectId={projectId} layer={layer} />
         </Section>
       )}
+
+      <EffectsControls layer={layer} update={update} />
     </>
+  );
+}
+
+type LayerUpdate = (patch: Parameters<typeof updateLayerInActiveArtboard>[2]) => void;
+
+const MASK_LABEL_KEY: Record<ImageMask['shape'], string> = {
+  rounded: 'properties.maskRounded',
+  circle: 'properties.maskCircle',
+  ellipse: 'properties.maskEllipse',
+  triangle: 'properties.maskTriangle',
+  star: 'properties.maskStar',
+  hexagon: 'properties.maskHexagon',
+};
+
+/** Image inspector: fit, focal point, mask, non-destructive filters, replace. */
+function ImageControls({
+  projectId,
+  layer,
+  update,
+}: {
+  projectId: string;
+  layer: ImageLayer;
+  update: LayerUpdate;
+}) {
+  const { t } = useTranslation('editor');
+  const focal = layer.focalPoint ?? { x: 0.5, y: 0.5 };
+  const filters = layer.filters ?? {};
+  const setFilter = (key: keyof typeof FILTER_RANGES, value: number) =>
+    update({ filters: { ...filters, [key]: value } });
+  const maskShape = layer.mask?.shape ?? 'none';
+
+  return (
+    <>
+      <Section title={t('properties.image')}>
+        <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1.5 text-[12px]">
+          <span className="text-[var(--calqo-text-3)]">{t('properties.fit')}</span>
+          <GlassSegmentedControl
+            ariaLabel={t('properties.fit')}
+            className="flex w-full [&>button]:flex-1"
+            value={layer.fit}
+            onChange={(fit) => update({ fit })}
+            options={[
+              { value: 'cover', label: t('properties.cover') },
+              { value: 'contain', label: t('properties.contain') },
+              { value: 'stretch', label: t('properties.stretch') },
+            ]}
+          />
+        </div>
+        {layer.fit === 'cover' && !layer.crop && (
+          <>
+            <SliderField
+              label={t('properties.focalX')}
+              value={Math.round(focal.x * 100)}
+              min={0}
+              max={100}
+              onChange={(v) => update({ focalPoint: { x: v / 100, y: focal.y } })}
+            />
+            <SliderField
+              label={t('properties.focalY')}
+              value={Math.round(focal.y * 100)}
+              min={0}
+              max={100}
+              onChange={(v) => update({ focalPoint: { x: focal.x, y: v / 100 } })}
+            />
+          </>
+        )}
+        {(layer.crop || layer.focalPoint) && (
+          <InlineButton
+            label={t('properties.resetCrop')}
+            onClick={() => update({ crop: null, focalPoint: null })}
+          />
+        )}
+        <ReplaceAssetButton projectId={projectId} layer={layer} />
+      </Section>
+
+      <Section title={t('properties.mask')}>
+        <SelectField
+          label={t('properties.mask')}
+          value={maskShape}
+          options={[
+            { value: 'none', label: t('properties.maskNone') },
+            ...MASK_SHAPES.map((shape) => ({ value: shape, label: t(MASK_LABEL_KEY[shape]) })),
+          ]}
+          onChange={(value) => {
+            if (value === 'none') {
+              update({ mask: null });
+              return;
+            }
+            const shape = value as ImageMask['shape'];
+            update({
+              mask: {
+                shape,
+                radius: shape === 'rounded' ? (layer.mask?.radius ?? Math.min(layer.w, layer.h) * 0.12) : undefined,
+              },
+            });
+          }}
+        />
+        {layer.mask?.shape === 'rounded' && (
+          <SliderField
+            label={t('properties.maskRadius')}
+            value={Math.round(layer.mask.radius ?? 0)}
+            min={0}
+            max={Math.round(Math.min(layer.w, layer.h) / 2)}
+            onChange={(radius) => update({ mask: { shape: 'rounded', radius } })}
+          />
+        )}
+      </Section>
+
+      <Section title={t('properties.filters')}>
+        <SliderField
+          label={t('properties.brightness')}
+          value={Math.round((filters.brightness ?? 0) * 100)}
+          min={FILTER_RANGES.brightness.min * 100}
+          max={FILTER_RANGES.brightness.max * 100}
+          onChange={(v) => setFilter('brightness', v / 100)}
+        />
+        <SliderField
+          label={t('properties.contrast')}
+          value={Math.round(filters.contrast ?? 0)}
+          min={FILTER_RANGES.contrast.min}
+          max={FILTER_RANGES.contrast.max}
+          onChange={(v) => setFilter('contrast', v)}
+        />
+        <SliderField
+          label={t('properties.saturation')}
+          value={Math.round((filters.saturation ?? 0) * 100)}
+          min={FILTER_RANGES.saturation.min * 100}
+          max={FILTER_RANGES.saturation.max * 100}
+          onChange={(v) => setFilter('saturation', v / 100)}
+        />
+        <SliderField
+          label={t('properties.blur')}
+          value={Math.round(filters.blur ?? 0)}
+          min={FILTER_RANGES.blur.min}
+          max={FILTER_RANGES.blur.max}
+          onChange={(v) => setFilter('blur', v)}
+        />
+        {hasActiveFilters(layer.filters) && (
+          <InlineButton
+            label={t('properties.resetFilters')}
+            onClick={() => update({ filters: null })}
+          />
+        )}
+      </Section>
+    </>
+  );
+}
+
+const BLEND_OPTIONS: NonNullable<CalqoLayer['blendMode']>[] = [
+  'normal',
+  'multiply',
+  'screen',
+  'overlay',
+];
+
+const DEFAULT_EFFECT_SHADOW: ShadowStyle = {
+  color: '#000000',
+  blur: 16,
+  offsetX: 0,
+  offsetY: 8,
+  opacity: 0.3,
+};
+
+/** Recompute the effects object after a partial change, dropping it entirely
+ * when nothing is active so `.calqo` files stay clean. */
+function nextEffects(
+  current: CalqoLayer['effects'],
+  patch: Partial<NonNullable<CalqoLayer['effects']>>,
+): NonNullable<CalqoLayer['effects']> | null {
+  const merged = { ...current, ...patch };
+  const blur = (merged.blur ?? 0) > 0 ? merged.blur : undefined;
+  if (!merged.shadow && !blur) return null;
+  return { shadow: merged.shadow, blur };
+}
+
+/** Dedicated effects section: blur, drop shadow, and blend mode (plan Phase I).
+ * Text keeps its own type shadow in Typography, so only blur + blend show here. */
+function EffectsControls({
+  layer,
+  update,
+}: {
+  layer: CalqoLayer;
+  update: LayerUpdate;
+}) {
+  const { t } = useTranslation('editor');
+  const effects = layer.effects;
+  const shadow = effects?.shadow;
+  const showShadow = layer.type !== 'text';
+
+  return (
+    <Section title={t('properties.effects')}>
+      <SliderField
+        label={t('properties.blur')}
+        value={Math.round(effects?.blur ?? 0)}
+        min={0}
+        max={40}
+        onChange={(blur) => update({ effects: nextEffects(effects, { blur }) })}
+      />
+      <SelectField
+        label={t('properties.blendMode')}
+        value={layer.blendMode ?? 'normal'}
+        options={BLEND_OPTIONS.map((mode) => ({
+          value: mode,
+          label: t(`properties.blend_${mode}`),
+        }))}
+        onChange={(mode) => update({ blendMode: mode as CalqoLayer['blendMode'] })}
+      />
+      {showShadow && (
+        <>
+          <label className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-[12px] text-[var(--calqo-text-2)]">
+            <input
+              type="checkbox"
+              checked={Boolean(shadow)}
+              onChange={(event) =>
+                update({
+                  effects: nextEffects(effects, {
+                    shadow: event.target.checked ? DEFAULT_EFFECT_SHADOW : undefined,
+                  }),
+                })
+              }
+              className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
+            />
+            {t('properties.shadowEnable')}
+          </label>
+          {shadow && (
+            <>
+              <ColorField
+                label={t('properties.color')}
+                value={shadow.color}
+                onChange={(color) =>
+                  update({ effects: nextEffects(effects, { shadow: { ...shadow, color } }) })
+                }
+              />
+              <SliderField
+                label={t('properties.blur')}
+                value={Math.round(shadow.blur)}
+                min={0}
+                max={60}
+                onChange={(blur) =>
+                  update({ effects: nextEffects(effects, { shadow: { ...shadow, blur } }) })
+                }
+              />
+              <NumberField
+                label="X"
+                value={shadow.offsetX}
+                onChange={(offsetX) =>
+                  update({ effects: nextEffects(effects, { shadow: { ...shadow, offsetX } }) })
+                }
+              />
+              <NumberField
+                label="Y"
+                value={shadow.offsetY}
+                onChange={(offsetY) =>
+                  update({ effects: nextEffects(effects, { shadow: { ...shadow, offsetY } }) })
+                }
+              />
+              <SliderField
+                label={t('properties.opacity')}
+                value={Math.round((shadow.opacity ?? 1) * 100)}
+                min={0}
+                max={100}
+                onChange={(opacity) =>
+                  update({
+                    effects: nextEffects(effects, { shadow: { ...shadow, opacity: opacity / 100 } }),
+                  })
+                }
+              />
+            </>
+          )}
+        </>
+      )}
+    </Section>
   );
 }
 
@@ -800,6 +1074,12 @@ function TextControls({
         />
       </Section>
 
+      <Section title={t('properties.presets')}>
+        <TextPresetRow
+          onApply={(id) => update({ style: textPresetStyle(id) })}
+        />
+      </Section>
+
       <Section title={t('properties.typography')}>
         <SelectField
           label={t('properties.font')}
@@ -813,25 +1093,35 @@ function TextControls({
           options={WEIGHT_OPTIONS}
           onChange={(weight) => update({ style: { fontWeight: Number(weight) } })}
         />
-        <NumberField
+        <SliderField
           label={t('properties.size')}
           value={layer.style.fontSize}
-          min={1}
+          min={8}
+          max={240}
           onChange={(fontSize) => update({ style: { fontSize } })}
         />
         <AlignField
           value={layer.style.align}
           onChange={(align) => update({ style: { align } })}
         />
-        <NumberField
+        <VerticalAlignField
+          value={layer.style.verticalAlign ?? 'top'}
+          onChange={(verticalAlign) => update({ style: { verticalAlign } })}
+        />
+        <SliderField
           label={t('properties.lineHeight')}
           value={layer.style.lineHeight}
-          min={0}
+          min={0.8}
+          max={3}
+          step={0.05}
           onChange={(lineHeight) => update({ style: { lineHeight } })}
         />
-        <NumberField
+        <SliderField
           label={t('properties.letterSpacing')}
           value={layer.style.letterSpacing}
+          min={-10}
+          max={40}
+          step={0.5}
           onChange={(letterSpacing) => update({ style: { letterSpacing } })}
         />
         <ColorField
@@ -849,10 +1139,12 @@ function TextControls({
             update({ style: { stroke: { color, width: layer.style.stroke?.width ?? 1 } } })
           }
         />
-        <NumberField
+        <SliderField
           label={t('properties.strokeWidth')}
           value={layer.style.stroke?.width ?? 0}
           min={0}
+          max={20}
+          step={0.5}
           onChange={(width) =>
             update({
               style: {
@@ -1015,6 +1307,72 @@ function NumberField({
   );
 }
 
+/** Paired slider + number field for high-frequency numeric values. The slider
+ * gives a fast tactile sweep; the number keeps exact entry (plan Phase I/J). */
+function SliderField({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  onChange: (value: number) => void;
+}) {
+  const clamp = (next: number) => Math.min(max, Math.max(min, next));
+  const safe = Number.isFinite(value) ? value : min;
+  return (
+    <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
+      <span className="text-[var(--calqo-text-3)]">{label}</span>
+      <div className="flex min-w-0 items-center gap-2">
+        <input
+          type="range"
+          aria-label={label}
+          value={safe}
+          min={min}
+          max={max}
+          step={step}
+          onChange={(event) => onChange(clamp(Number(event.target.value)))}
+          className="h-1.5 min-w-0 flex-1 cursor-pointer accent-[var(--calqo-accent)]"
+        />
+        <input
+          type="number"
+          aria-label={`${label} value`}
+          value={Math.round(safe * 100) / 100}
+          min={min}
+          max={max}
+          step={step}
+          onChange={(event) => {
+            const next = Number(event.target.value);
+            if (Number.isFinite(next)) onChange(clamp(next));
+          }}
+          className="h-8 w-14 shrink-0 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 text-[12px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-2 focus:ring-[var(--calqo-accent-ring)]"
+        />
+      </div>
+    </div>
+  );
+}
+
+/** A quiet full-width text button used for inline reset actions. */
+function InlineButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <div className="px-2 py-1.5">
+      <button
+        type="button"
+        onClick={onClick}
+        className="h-8 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+      >
+        {label}
+      </button>
+    </div>
+  );
+}
+
 function SelectField({
   label,
   value,
@@ -1090,6 +1448,47 @@ function AlignField({
         })}
       </div>
     </div>
+  );
+}
+
+/** Headline / subhead / kicker … chips that retune a text layer's type style. */
+function TextPresetRow({ onApply }: { onApply: (id: TextPresetId) => void }) {
+  const { t } = useTranslation('editor');
+  return (
+    <div className="flex flex-wrap gap-1.5 px-2 py-1.5">
+      {TEXT_PRESET_IDS.map((id) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onApply(id)}
+          className="rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-2.5 py-1 text-[11.5px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+        >
+          {t(`properties.preset_${id}`)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function VerticalAlignField({
+  value,
+  onChange,
+}: {
+  value: NonNullable<TextLayer['style']['verticalAlign']>;
+  onChange: (value: NonNullable<TextLayer['style']['verticalAlign']>) => void;
+}) {
+  const { t } = useTranslation('editor');
+  return (
+    <SelectField
+      label={t('properties.verticalAlign')}
+      value={value}
+      options={[
+        { value: 'top', label: t('properties.valignTop') },
+        { value: 'middle', label: t('properties.valignMiddle') },
+        { value: 'bottom', label: t('properties.valignBottom') },
+      ]}
+      onChange={(v) => onChange(v as NonNullable<TextLayer['style']['verticalAlign']>)}
+    />
   );
 }
 

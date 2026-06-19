@@ -164,6 +164,12 @@ function serializeLayer(
       warnings.push(`Missing asset for layer "${layer.name}" was skipped.`);
       return '';
     }
+    if (layer.type === 'image' && layer.mask) {
+      warnings.push('Image masks are not applied in SVG export.');
+    }
+    if (layer.type === 'image' && layer.filters) {
+      warnings.push('Image filters (brightness, contrast, saturation, blur) are not applied in SVG export.');
+    }
     const aspect =
       layer.type === 'image' && layer.fit === 'contain'
         ? 'xMidYMid meet'

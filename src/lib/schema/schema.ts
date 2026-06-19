@@ -141,12 +141,22 @@ export const shapeLayerSchema = z.object({
   arrow: arrowStyleSchema.optional(),
 });
 
+/** Non-destructive image mask: the renderer clips the image to this shape.
+ * `radius` only applies to the rounded-rectangle mask. */
+export const imageMaskSchema = z.object({
+  shape: z.enum(['rounded', 'circle', 'ellipse', 'triangle', 'star', 'hexagon']),
+  radius: z.number().nonnegative().optional(),
+});
+
 export const imageLayerSchema = z.object({
   ...baseLayerShape,
   type: z.literal('image'),
   assetId: z.string(),
   fit: z.enum(['cover', 'contain', 'stretch']).default('cover'),
   crop: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }).optional(),
+  /** Where a `cover` crop is anchored, 0–1 on each axis (0.5 = centre). */
+  focalPoint: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) }).optional(),
+  mask: imageMaskSchema.optional(),
   filters: z
     .object({
       blur: z.number().optional(),
@@ -282,6 +292,8 @@ export type CalqoAssetRef = z.infer<typeof assetRefSchema>;
 export type TextLayer = z.infer<typeof textLayerSchema>;
 export type ShapeLayer = z.infer<typeof shapeLayerSchema>;
 export type ImageLayer = z.infer<typeof imageLayerSchema>;
+export type ImageMask = z.infer<typeof imageMaskSchema>;
+export type ImageFilters = NonNullable<ImageLayer['filters']>;
 export type SvgLayer = z.infer<typeof svgLayerSchema>;
 export type BackgroundFill = z.infer<typeof backgroundFillSchema>;
 export type Fill = z.infer<typeof fillSchema>;

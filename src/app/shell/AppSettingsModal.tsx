@@ -1,6 +1,14 @@
 import { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  FileCode2,
+  Palette,
+  Settings2,
+  Sparkles,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   GlassButton,
@@ -94,13 +102,14 @@ export function AppSettingsModal({
   );
   const tabOptions = useMemo(
     () => [
-      { id: 'general' as const, label: t('settings.general') },
-      { id: 'appearance' as const, label: t('settings.appearance') },
-      { id: 'ai' as const, label: t('settings.ai.title') },
-      { id: 'agent' as const, label: t('settings.ai.agentSkill') },
+      { id: 'general' as const, label: t('settings.general'), icon: Settings2 },
+      { id: 'appearance' as const, label: t('settings.appearance'), icon: Palette },
+      { id: 'ai' as const, label: t('settings.ai.title'), icon: Sparkles },
+      { id: 'agent' as const, label: t('settings.ai.agentSkill'), icon: FileCode2 },
     ],
     [t],
-  );
+  ) satisfies { id: SettingsTab; label: string; icon: LucideIcon }[];
+  const activeTabLabel = tabOptions.find((tab) => tab.id === activeTab)?.label ?? '';
 
   if (!open) return null;
 
@@ -118,56 +127,66 @@ export function AppSettingsModal({
         aria-modal="true"
         aria-labelledby="app-settings-title"
         tabIndex={-1}
-        className="glass glass-strong flex max-h-[80vh] w-[min(620px,100%)] flex-col rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
+        className="glass glass-strong flex max-h-[80vh] w-[min(760px,100%)] overflow-hidden rounded-[28px] border border-[var(--calqo-divider)] shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
       >
-        <header className="mb-4 flex items-start justify-between gap-4">
-          <div>
+        <nav
+          aria-label={t('settings.title')}
+          role="tablist"
+          className="flex w-[200px] shrink-0 flex-col gap-0.5 border-r border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-3"
+        >
+          <div className="mb-2 px-2 pt-1">
             <h2
               id="app-settings-title"
-              className="text-[16px] font-semibold text-[var(--calqo-text)]"
+              className="text-[15px] font-semibold text-[var(--calqo-text)]"
             >
               {t('settings.title')}
             </h2>
-            <p className="mt-0.5 text-[12px] text-[var(--calqo-text-3)]">
+            <p className="mt-0.5 text-[11.5px] leading-snug text-[var(--calqo-text-3)]">
               {t('settings.subtitle')}
             </p>
           </div>
-          <GlassIconButton
-            label={t('actions.close')}
-            showTitle={false}
-            onClick={onClose}
+          {tabOptions.map((tab) => {
+            const selected = activeTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setActiveTab(tab.id)}
+                className={[
+                  'flex items-center gap-2.5 rounded-[var(--calqo-radius-sm)] px-2.5 py-2 text-left text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--calqo-accent-ring)]',
+                  selected
+                    ? 'bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)] outline outline-[0.5px] outline-[var(--calqo-accent-ring)]'
+                    : 'text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]',
+                ].join(' ')}
+              >
+                <Icon size={15} className="shrink-0" />
+                <span className="min-w-0 truncate">{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex items-center justify-between gap-4 border-b border-[var(--calqo-divider)] px-5 py-3.5">
+            <h3 className="text-[14px] font-semibold text-[var(--calqo-text)]">
+              {activeTabLabel}
+            </h3>
+            <GlassIconButton
+              label={t('actions.close')}
+              showTitle={false}
+              onClick={onClose}
+            >
+              <X size={15} />
+            </GlassIconButton>
+          </header>
+
+          <div
+            role="tabpanel"
+            className="min-h-0 flex-1 overflow-y-auto calqo-scroll px-5 py-5"
           >
-            <X size={15} />
-          </GlassIconButton>
-        </header>
-
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <nav aria-label={t('settings.title')} role="tablist" className="mb-4">
-            <div className="flex gap-1 rounded-[var(--calqo-radius-sm)] bg-[var(--calqo-glass-thin)] p-0.5">
-              {tabOptions.map((tab) => {
-                const selected = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={selected}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={[
-                      'min-w-0 flex-1 rounded-[8px] px-2 py-1.5 text-[12px] font-medium outline-none transition-colors focus:ring-2 focus:ring-[var(--calqo-accent-ring)]',
-                      selected
-                        ? 'bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]'
-                        : 'text-[var(--calqo-text-2)] hover:text-[var(--calqo-text)]',
-                    ].join(' ')}
-                  >
-                    <span className="block truncate">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
-
-          <div className="min-h-0 max-h-[58vh] overflow-y-auto calqo-scroll">
             {activeTab === 'general' && (
               <section className="space-y-5">
                 <SettingsRow

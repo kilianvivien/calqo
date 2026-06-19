@@ -12,7 +12,7 @@ import type {
 } from '@/lib/schema';
 
 export type LayerPatch = Partial<
-  Omit<CalqoLayer, 'id' | 'type' | 'children'>
+  Omit<CalqoLayer, 'id' | 'type' | 'children' | 'effects'>
 > & {
   text?: TextLayer['text'];
   style?: Partial<TextLayer['style']>;
@@ -24,6 +24,14 @@ export type LayerPatch = Partial<
   tension?: number;
   arrow?: ArrowStyle;
   fit?: ImageLayer['fit'];
+  /** Image non-destructive edits. `null` clears the field. */
+  focalPoint?: ImageLayer['focalPoint'] | null;
+  mask?: ImageLayer['mask'] | null;
+  filters?: ImageLayer['filters'] | null;
+  crop?: ImageLayer['crop'] | null;
+  /** Shared layer effects / blend mode. `null` clears effects. */
+  effects?: CalqoLayer['effects'] | null;
+  blendMode?: CalqoLayer['blendMode'];
   /** Group-only: bake a Konva transform scale into the group's children. */
   groupScale?: { sx: number; sy: number };
 };
@@ -122,7 +130,30 @@ export function applyLayerPatch(layer: CalqoLayer, patch: LayerPatch): void {
     if (patch.tension !== undefined) layer.tension = patch.tension;
     if (patch.arrow !== undefined) layer.arrow = patch.arrow;
   }
-  if (layer.type === 'image' && patch.fit) layer.fit = patch.fit;
+  if (patch.blendMode !== undefined) layer.blendMode = patch.blendMode;
+  if (patch.effects !== undefined) {
+    if (patch.effects === null) delete layer.effects;
+    else layer.effects = patch.effects;
+  }
+  if (layer.type === 'image') {
+    if (patch.fit) layer.fit = patch.fit;
+    if (patch.focalPoint !== undefined) {
+      if (patch.focalPoint === null) delete layer.focalPoint;
+      else layer.focalPoint = patch.focalPoint;
+    }
+    if (patch.mask !== undefined) {
+      if (patch.mask === null) delete layer.mask;
+      else layer.mask = patch.mask;
+    }
+    if (patch.filters !== undefined) {
+      if (patch.filters === null) delete layer.filters;
+      else layer.filters = patch.filters;
+    }
+    if (patch.crop !== undefined) {
+      if (patch.crop === null) delete layer.crop;
+      else layer.crop = patch.crop;
+    }
+  }
   if (isGroupLayer(layer) && patch.groupScale) {
     const { sx, sy } = patch.groupScale;
     layer.children.forEach((child) => scaleLayerTree(child, sx, sy));
