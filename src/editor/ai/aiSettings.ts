@@ -3,10 +3,9 @@ import { appSettings } from '@/lib/adapters';
 
 const SETTINGS_KEY = 'ai.settings';
 
-/** Selectable AI providers (plan §14.2). All remote providers speak the
- * OpenAI-compatible chat-completions protocol — Gemini via its OpenAI endpoint,
- * Mistral/OpenRouter natively, Ollama for local — so a single adapter backs
- * them, varying only base URL / model / key. */
+/** Selectable AI providers (plan §14.2). Gemini uses its provider-specific
+ * GenAI adapter; the others speak OpenAI-compatible chat completions by varying
+ * base URL / model / key. */
 export type AiProviderId =
   | 'mock'
   | 'local'
@@ -25,6 +24,8 @@ export interface ProviderPreset {
   editableBaseUrl: boolean;
   /** Whether the provider makes network calls (mock does not). */
   remote: boolean;
+  /** Settings copy can distinguish official adapters from compatible endpoints. */
+  adapterKind: 'mock' | 'official' | 'compatible';
 }
 
 export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
@@ -36,6 +37,7 @@ export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
     needsKey: false,
     editableBaseUrl: false,
     remote: false,
+    adapterKind: 'mock',
   },
   local: {
     id: 'local',
@@ -45,24 +47,27 @@ export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
     needsKey: false,
     editableBaseUrl: true,
     remote: true,
+    adapterKind: 'compatible',
   },
   gemini: {
     id: 'gemini',
     label: 'Google Gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    defaultModel: 'gemini-2.0-flash',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    defaultModel: 'gemini-3.5-flash',
     needsKey: true,
     editableBaseUrl: false,
     remote: true,
+    adapterKind: 'official',
   },
   mistral: {
     id: 'mistral',
     label: 'Mistral AI',
     baseUrl: 'https://api.mistral.ai/v1',
-    defaultModel: 'mistral-small-latest',
+    defaultModel: 'mistral-medium-latest',
     needsKey: true,
     editableBaseUrl: false,
     remote: true,
+    adapterKind: 'compatible',
   },
   openrouter: {
     id: 'openrouter',
@@ -72,6 +77,7 @@ export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
     needsKey: true,
     editableBaseUrl: false,
     remote: true,
+    adapterKind: 'compatible',
   },
   custom: {
     id: 'custom',
@@ -81,6 +87,7 @@ export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
     needsKey: true,
     editableBaseUrl: true,
     remote: true,
+    adapterKind: 'compatible',
   },
 };
 

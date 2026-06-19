@@ -1,10 +1,12 @@
 import {
   CURRENT_SCHEMA_VERSION,
   safeImportProject,
+  type BackgroundFill,
+  type CalqoLayer,
   type CalqoProject,
 } from '@/lib/schema';
 import { createId } from '@/lib/utils/ids';
-import type { TemplatePromptInput } from './AIProvider';
+import type { AIProviderDiagnostics, TemplatePromptInput } from './AIProvider';
 
 export interface JsonRepairResult {
   value?: unknown;
@@ -100,21 +102,192 @@ export function normalizeTemplateDocument(
 }
 
 export type TemplateValidation =
-  | { ok: true; project: CalqoProject }
-  | { ok: false; error: string; issues?: string[]; raw: string };
+  | { ok: true; project: CalqoProject; warnings?: string[]; diagnostics?: AIProviderDiagnostics }
+  | {
+      ok: false;
+      error: string;
+      issues?: string[];
+      raw: string;
+      diagnostics?: AIProviderDiagnostics;
+    };
+
+interface TemplateQualityResult {
+  issues: string[];
+  warnings: string[];
+}
+
+function diagnosticBase(diagnostics?: AIProviderDiagnostics): AIProviderDiagnostics {
+  return diagnostics ?? { providerId: 'unknown' };
+}
+
+function walkLayers(
+  layers: CalqoLayer[],
+  visit: (layer: CalqoLayer, parentX: number, parentY: number) => void,
+  parentX = 0,
+  parentY = 0,
+): void {
+  for (const layer of layers) {
+    visit(layer, parentX, parentY);
+    if (layer.type === 'group') {
+      walkLayers(layer.children, visit, parentX + layer.x, parentY + layer.y);
+    }
+  }
+}
+
+function countLayers(layers: CalqoLayer[]): number {
+  let count = 0;
+  walkLayers(layers, () => {
+    count += 1;
+  });
+  return count;
+}
+
+function isHexColor(color: string): boolean {
+  return /^#[0-9a-f]{6}$/i.test(color);
+}
+
+function parseHex(color: string): [number, number, number] | null {
+  if (!isHexColor(color)) return null;
+  return [
+    Number.parseInt(color.slice(1, 3), 16),
+    Number.parseInt(color.slice(3, 5), 16),
+    Number.parseInt(color.slice(5, 7), 16),
+  ];
+}
+
+function luminance(channel: number): number {
+  const value = channel / 255;
+  return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+}
+
+function contrastRatio(foreground: string, background: string): number | null {
+  const fg = parseHex(foreground);
+  const bg = parseHex(background);
+  if (!fg || !bg) return null;
+  const fgL = 0.2126 * luminance(fg[0]) + 0.7152 * luminance(fg[1]) + 0.0722 * luminance(fg[2]);
+  const bgL = 0.2126 * luminance(bg[0]) + 0.7152 * luminance(bg[1]) + 0.0722 * luminance(bg[2]);
+  const lighter = Math.max(fgL, bgL);
+  const darker = Math.min(fgL, bgL);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function solidBackgroundColor(background: BackgroundFill): string | null {
+  return background.type === 'solid' ? background.color : null;
+}
+
+/** Product-level checks for AI templates after the schema contract passes. */
+export function checkTemplateQuality(
+  project: CalqoProject,
+  input: TemplatePromptInput,
+): TemplateQualityResult {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+
+  const totalLayers = project.artboards.reduce(
+    (sum, artboard) => sum + countLayers(artboard.layers),
+    0,
+  );
+  if (totalLayers > input.maxLayers) {
+    issues.push(`Layer count ${totalLayers} exceeds requested cap ${input.maxLayers}.`);
+  }
+
+  if (project.assets.length > 0) {
+    issues.push('AI templates cannot include external asset records.');
+  }
+
+  for (const artboard of project.artboards) {
+    if (artboard.background.type === 'image') {
+      issues.push(`${artboard.name}: image backgrounds are not allowed in AI output.`);
+    }
+    const bgColor = solidBackgroundColor(artboard.background);
+    if (!bgColor || !isHexColor(bgColor)) {
+      warnings.push(`${artboard.name}: background should be a solid hex color for reliable export.`);
+    }
+
+    walkLayers(artboard.layers, (layer, parentX, parentY) => {
+      const x = parentX + layer.x;
+      const y = parentY + layer.y;
+      if (layer.type === 'image' || layer.type === 'svg') {
+        issues.push(`${layer.name}: external asset layers are not allowed in AI output.`);
+      }
+      if (layer.type === 'shape' && layer.fill.type === 'image') {
+        issues.push(`${layer.name}: image fills are not allowed in AI output.`);
+      }
+      if (x < 0 || y < 0 || x + layer.w > artboard.width || y + layer.h > artboard.height) {
+        warnings.push(`${layer.name}: layer falls outside the artboard bounds.`);
+      }
+      if (layer.type === 'text' && bgColor && isHexColor(layer.style.color)) {
+        const ratio = contrastRatio(layer.style.color, bgColor);
+        if (ratio !== null && ratio < 4.5) {
+          warnings.push(`${layer.name}: text contrast is low against the artboard background.`);
+        }
+      }
+    });
+  }
+
+  return { issues, warnings };
+}
 
 /** Run the full parse → repair → normalize → validate pipeline for a raw
  * template response. */
 export function validateTemplateResponse(
   raw: string,
   input: TemplatePromptInput,
+  diagnostics?: AIProviderDiagnostics,
 ): TemplateValidation {
   const repaired = repairJsonLikeResponse(raw);
   if (repaired.error || repaired.value === undefined) {
-    return { ok: false, error: repaired.error ?? 'Unparseable response.', raw };
+    const error = repaired.error ?? 'Unparseable response.';
+    return {
+      ok: false,
+      error,
+      raw,
+      diagnostics: {
+        ...diagnosticBase(diagnostics),
+        parseFailure: error,
+        rawOutput: raw,
+      },
+    };
   }
   const normalized = normalizeTemplateDocument(repaired.value, input);
   const result = safeImportProject(normalized);
-  if (result.ok) return { ok: true, project: result.project };
-  return { ok: false, error: result.error, issues: result.issues, raw };
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: result.error,
+      issues: result.issues,
+      raw,
+      diagnostics: {
+        ...diagnosticBase(diagnostics),
+        validationFailure: result.error,
+        rawOutput: raw,
+      },
+    };
+  }
+  const quality = checkTemplateQuality(result.project, input);
+  if (quality.issues.length > 0) {
+    const error = 'Generated project failed AI template quality checks.';
+    return {
+      ok: false,
+      error,
+      issues: quality.issues,
+      raw,
+      diagnostics: {
+        ...diagnosticBase(diagnostics),
+        validationFailure: error,
+        rawOutput: raw,
+        warnings: quality.warnings,
+      },
+    };
+  }
+  return {
+    ok: true,
+    project: result.project,
+    warnings: quality.warnings,
+    diagnostics: {
+      ...diagnosticBase(diagnostics),
+      rawOutput: raw,
+      warnings: quality.warnings,
+    },
+  };
 }

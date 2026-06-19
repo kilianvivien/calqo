@@ -17,6 +17,7 @@ import { adoptProject } from '@/editor/commands/projectCommands';
 import { useActiveProject } from '@/lib/state/selectors';
 import { useUiStore } from '@/lib/state/uiStore';
 import type { LocaleCode } from '@/lib/schema';
+import type { AIProviderDiagnostics } from '@/editor/ai/AIProvider';
 
 export function PromptTemplateDialog() {
   const aiDialog = useUiStore((s) => s.aiDialog);
@@ -28,6 +29,7 @@ interface FailState {
   error: string;
   issues?: string[];
   raw: string;
+  diagnostics?: AIProviderDiagnostics;
 }
 
 function PromptTemplateDialogInner() {
@@ -105,6 +107,7 @@ function PromptTemplateDialogInner() {
           error: validation.error,
           issues: validation.issues,
           raw: validation.raw,
+          diagnostics: validation.diagnostics,
         });
       }
     } catch (error) {
@@ -277,6 +280,26 @@ function PromptTemplateDialogInner() {
                     </li>
                   ))}
                 </ul>
+              )}
+              {failure.diagnostics && (
+                <dl className="mt-2 grid grid-cols-[76px_1fr] gap-x-2 gap-y-1 rounded-[var(--calqo-radius-sm)] bg-[var(--calqo-glass-thin)] p-2 text-[10.5px]">
+                  <dt className="text-[var(--calqo-text-3)]">{t('promptTemplate.provider')}</dt>
+                  <dd className="mono truncate text-[var(--calqo-text-2)]">
+                    {failure.diagnostics.providerId}
+                  </dd>
+                  {failure.diagnostics.modelId && (
+                    <>
+                      <dt className="text-[var(--calqo-text-3)]">{t('promptTemplate.model')}</dt>
+                      <dd className="mono truncate text-[var(--calqo-text-2)]">
+                        {failure.diagnostics.modelId}
+                      </dd>
+                    </>
+                  )}
+                  <dt className="text-[var(--calqo-text-3)]">{t('promptTemplate.retries')}</dt>
+                  <dd className="mono text-[var(--calqo-text-2)]">
+                    {failure.diagnostics.retryCount ?? 0}
+                  </dd>
+                </dl>
               )}
               <button
                 type="button"

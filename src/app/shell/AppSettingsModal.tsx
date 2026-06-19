@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { GlassIconButton, GlassSegmentedControl } from '@/components/glass';
+import { GlassButton, GlassIconButton, GlassSegmentedControl } from '@/components/glass';
 import i18n, { type AppLanguage } from '@/lib/i18n';
 import {
   useUiStore,
@@ -14,6 +14,7 @@ import {
   PROVIDER_LIST,
   PROVIDER_PRESETS,
 } from '@/editor/ai/aiSettings';
+import { downloadCalqoAgentSkill } from '@/editor/ai/agentSkillFile';
 import { useFocusTrap } from './useFocusTrap';
 
 type LanguageMode = 'auto' | AppLanguage;
@@ -214,6 +215,11 @@ export function AppSettingsModal({
                 const config = aiSettings.providers[providerId];
                 return (
                   <div className="space-y-2 border-t border-[var(--calqo-divider)] pt-3">
+                    <p className="text-[11px] text-[var(--calqo-text-3)]">
+                      {preset.adapterKind === 'official'
+                        ? t('settings.ai.officialHint')
+                        : t('settings.ai.compatibleHint')}
+                    </p>
                     {preset.editableBaseUrl && (
                       <TextSetting
                         label={t('settings.ai.baseUrl')}
@@ -261,6 +267,22 @@ export function AppSettingsModal({
                   </div>
                 );
               })()}
+
+              <div className="border-t border-[var(--calqo-divider)] pt-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-medium text-[var(--calqo-text-2)]">
+                      {t('settings.ai.agentSkill')}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-[var(--calqo-text-3)]">
+                      {t('settings.ai.agentSkillHint')}
+                    </p>
+                  </div>
+                  <GlassButton onClick={() => void downloadCalqoAgentSkill()}>
+                    {t('settings.ai.downloadSkill')}
+                  </GlassButton>
+                </div>
+              </div>
             </div>
           </section>
         </div>

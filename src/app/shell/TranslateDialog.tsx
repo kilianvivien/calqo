@@ -25,6 +25,7 @@ type Preview = {
   result: TranslationResult;
   rows: { layerId: string; source: string; target: string }[];
   unchanged: number;
+  missing: number;
 };
 
 export function TranslateDialog() {
@@ -82,7 +83,7 @@ function TranslateDialogInner() {
     setPreview(null);
     try {
       const provider = getProvider(settings);
-      const { job, result, unchanged } = await runTranslation(
+      const { job, result, unchanged, missingLayerIds } = await runTranslation(
         provider,
         { ...project, glossary },
         { sourceLocale: source, targetLocale: target, scope, activeArtboardId },
@@ -93,7 +94,7 @@ function TranslateDialogInner() {
         source: sourceById.get(item.layerId) ?? '',
         target: item.translatedText,
       }));
-      setPreview({ result, rows, unchanged });
+      setPreview({ result, rows, unchanged, missing: missingLayerIds.length });
       if (rows.length === 0) setStatus(t('translate.noText'));
     } catch (error) {
       console.error('[Calqo] translation failed', error);
@@ -198,6 +199,11 @@ function TranslateDialogInner() {
                 {preview.unchanged > 0 && (
                   <span className="text-[11px] text-[#B7791F]">
                     {t('translate.unchanged', { count: preview.unchanged })}
+                  </span>
+                )}
+                {preview.missing > 0 && (
+                  <span className="text-[11px] text-[#B7791F]">
+                    {t('translate.missing', { count: preview.missing })}
                   </span>
                 )}
               </div>

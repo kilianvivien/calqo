@@ -26,6 +26,17 @@ export function sanitizeSvg(raw: string): string {
   return svg.trim();
 }
 
+/** Detect constructs Calqo refuses from AI-generated SVG before sanitising, so
+ * unsafe provider output is visible instead of silently rewritten. */
+export function hasDisallowedSvgMarkup(raw: string): boolean {
+  return (
+    /<\s*(script|foreignObject|iframe)[\s>/]/i.test(raw) ||
+    /\son\w+\s*=/i.test(raw) ||
+    /javascript:/i.test(raw) ||
+    /(href|xlink:href)\s*=\s*["'](?!#)[^"']+["']/i.test(raw)
+  );
+}
+
 /** Returns true when the string looks like usable SVG markup. */
 export function looksLikeSvg(raw: string): boolean {
   return /<svg[\s>]/i.test(raw) && /<\/svg>/i.test(raw);

@@ -44,7 +44,22 @@ export function buildTemplatePrompt(input: TemplatePromptInput): {
     ...styleReferenceLines(input),
     '- Keep every layer fully inside the artboard bounds.',
     '- Do not reference external images or URLs.',
-  ].join('\n');
+    input.repair
+      ? [
+          'Repair retry:',
+          '- The previous response failed validation. Return a corrected full project JSON.',
+          `- Failure: ${input.repair.error}`,
+          input.repair.issues?.length
+            ? `- Issues: ${input.repair.issues.slice(0, 8).join('; ')}`
+            : '',
+          '- Do not explain the fix; output JSON only.',
+        ]
+          .filter(Boolean)
+          .join('\n')
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   const user = `Design brief: ${input.prompt}`;
   return { system, user };

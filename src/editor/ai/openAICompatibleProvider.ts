@@ -1,4 +1,5 @@
 import type {
+  AIProviderDiagnostics,
   AIProvider,
   SvgPromptInput,
   SvgPromptResult,
@@ -20,6 +21,7 @@ export interface OpenAICompatibleConfig {
   label?: string;
   /** Request timeout in ms. */
   timeoutMs?: number;
+  providerId?: string;
 }
 
 interface ChatMessage {
@@ -29,6 +31,42 @@ interface ChatMessage {
 
 const DEFAULT_TIMEOUT = 45_000;
 
+export function parseTranslationResponse(
+  raw: string,
+  job: TranslationJob,
+  diagnostics: AIProviderDiagnostics,
+): TranslationResult {
+  const repaired = repairJsonLikeResponse(raw);
+  const parsed = repaired.value as
+    | { items?: { layerId?: string; translatedText?: string }[] }
+    | undefined;
+  const byLayer = new Map<string, string>();
+  for (const item of parsed?.items ?? []) {
+    if (typeof item.layerId === 'string' && typeof item.translatedText === 'string') {
+      byLayer.set(item.layerId, item.translatedText);
+    }
+  }
+  const missingLayerIds = job.items
+    .filter((item) => !byLayer.has(item.layerId))
+    .map((item) => item.layerId);
+
+  return {
+    targetLocale: job.targetLocale,
+    items: job.items.map((item) => ({
+      layerId: item.layerId,
+      artboardId: item.artboardId,
+      translatedText: byLayer.get(item.layerId) ?? item.sourceText,
+      notes: byLayer.has(item.layerId) ? undefined : 'missing-provider-output',
+    })),
+    diagnostics: {
+      ...diagnostics,
+      parseFailure: repaired.error,
+      rawOutput: raw,
+      missingLayerIds,
+    },
+  };
+}
+
 /** A single OpenAI-style /chat/completions implementation that also covers
  * Ollama and other local endpoints by varying the base URL (plan §14.2, §14.6).
  * Lives entirely behind the AIProvider interface so the editor never depends on
@@ -36,6 +74,15 @@ const DEFAULT_TIMEOUT = 45_000;
 export function createOpenAICompatibleProvider(
   config: OpenAICompatibleConfig,
 ): AIProvider {
+  const providerId = config.providerId ?? 'openai-compatible';
+  const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT;
+  const baseDiagnostics: AIProviderDiagnostics = {
+    providerId,
+    providerLabel: config.label ?? 'OpenAI-compatible endpoint',
+    modelId: config.model,
+    timeoutMs,
+  };
+
   async function chat(
     messages: ChatMessage[],
     signal?: AbortSignal,
@@ -43,10 +90,7 @@ export function createOpenAICompatibleProvider(
   ): Promise<string> {
     const base = config.baseUrl.replace(/\/+$/, '');
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      config.timeoutMs ?? DEFAULT_TIMEOUT,
-    );
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     // Chain the caller's abort signal into our timeout controller.
     if (signal) {
       if (signal.aborted) controller.abort();
@@ -83,13 +127,18 @@ export function createOpenAICompatibleProvider(
         throw new Error('Provider returned no message content.');
       }
       return content;
+    } catch (err) {
+      if (controller.signal.aborted) {
+        throw new Error(`Provider timed out after ${timeoutMs}ms.`);
+      }
+      throw err;
     } finally {
       clearTimeout(timeout);
     }
   }
 
   return {
-    id: 'openai-compatible',
+    id: providerId,
     label: config.label ?? 'OpenAI-compatible endpoint',
     capabilities: { structuredJson: true, translation: true },
 
@@ -105,7 +154,7 @@ export function createOpenAICompatibleProvider(
         ],
         signal,
       );
-      return { raw };
+      return { raw, diagnostics: { ...baseDiagnostics, rawOutput: raw } };
     },
 
     async generateSvg(
@@ -121,7 +170,7 @@ export function createOpenAICompatibleProvider(
         signal,
         false,
       );
-      return { raw };
+      return { raw, diagnostics: { ...baseDiagnostics, rawOutput: raw } };
     },
 
     async translate(
@@ -136,26 +185,9 @@ export function createOpenAICompatibleProvider(
         ],
         signal,
       );
-      const repaired = repairJsonLikeResponse(raw);
-      const parsed = repaired.value as
-        | { items?: { layerId?: string; translatedText?: string }[] }
-        | undefined;
-      const byLayer = new Map<string, string>();
-      for (const item of parsed?.items ?? []) {
-        if (typeof item.layerId === 'string' && typeof item.translatedText === 'string') {
-          byLayer.set(item.layerId, item.translatedText);
-        }
-      }
       // Map back onto the requested items; fall back to source text so a partial
-      // response never drops a layer (the service flags unchanged entries).
-      return {
-        targetLocale: job.targetLocale,
-        items: job.items.map((item) => ({
-          layerId: item.layerId,
-          artboardId: item.artboardId,
-          translatedText: byLayer.get(item.layerId) ?? item.sourceText,
-        })),
-      };
+      // response never drops a layer (the service reports missing entries).
+      return parseTranslationResponse(raw, job, baseDiagnostics);
     },
   };
 }

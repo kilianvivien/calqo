@@ -47,31 +47,31 @@ area.
 
 ## Phase H — AI Reliability And GenAI Provider Upgrade
 
-> **Status: NOT STARTED.**
+> **Status: COMPLETE.**
 
 Goal: make prompt-a-template, translation, and AI SVG generation reliable enough
 for real providers, starting with Gemini.
 
 Deliverables:
 
-- [ ] Add provider-specific AI adapters while preserving the existing
+- [x] Add provider-specific AI adapters while preserving the existing
       `AIProvider` interface.
-- [ ] Replace Gemini's current generic OpenAI-compatible path with an official
+- [x] Replace Gemini's current generic OpenAI-compatible path with an official
       Gemini/GenAI implementation.
-- [ ] Keep OpenAI-compatible, Ollama/local, Mistral, OpenRouter, custom, and mock
+- [x] Keep OpenAI-compatible, Ollama/local, Mistral, OpenRouter, custom, and mock
       providers available.
-- [ ] Add structured-output request shaping for template generation and
+- [x] Add structured-output request shaping for template generation and
       translation where the selected provider supports it.
-- [ ] Add provider diagnostics: model id, provider id, timeout, parse failure,
+- [x] Add provider diagnostics: model id, provider id, timeout, parse failure,
       validation failure, retry count, and raw-output capture for user repair.
-- [ ] Add one repair retry for prompt-a-template before surfacing failure.
-- [ ] Add template quality checks after schema validation:
+- [x] Add one repair retry for prompt-a-template before surfacing failure.
+- [x] Add template quality checks after schema validation:
       - layer count at or below the requested cap;
       - every layer fully inside artboard bounds or intentionally warned;
       - usable artboard background;
       - readable text contrast warnings where color data is available;
       - no external asset references from AI output.
-- [ ] Improve settings copy so users understand browser key storage limits and
+- [x] Improve settings copy so users understand browser key storage limits and
       which providers are official vs compatible.
 
 Acceptance criteria:

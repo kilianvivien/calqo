@@ -1,4 +1,4 @@
-import { looksLikeSvg, sanitizeSvg } from '@/lib/utils/svg';
+import { hasDisallowedSvgMarkup, looksLikeSvg, sanitizeSvg } from '@/lib/utils/svg';
 import type { AIProvider, SvgPromptInput } from './AIProvider';
 
 export type SvgGeneration =
@@ -22,6 +22,13 @@ export async function generateSvgMark(
     raw = result.raw;
   } catch (err) {
     return { ok: false, error: (err as Error).message };
+  }
+  if (hasDisallowedSvgMarkup(raw)) {
+    return {
+      ok: false,
+      error: 'The response contained disallowed SVG markup.',
+      raw,
+    };
   }
   const svg = sanitizeSvg(raw);
   if (!looksLikeSvg(svg)) {

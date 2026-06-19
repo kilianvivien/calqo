@@ -55,11 +55,16 @@
       "title": "AI provider",
       "provider": "Provider",
       "mockHint": "Works offline with deterministic output — no setup required.",
+      "officialHint": "Official provider adapter with structured-output requests where supported.",
+      "compatibleHint": "OpenAI-compatible endpoint. Availability of JSON mode and retries depends on that provider.",
       "baseUrl": "Base URL",
       "model": "Model",
       "apiKey": "API key",
       "storeKey": "Remember API key in this browser",
-      "keyWarning": "The browser is not a secure keychain. Keys are stored in plain IndexedDB and visible to scripts on this site. Prefer a local endpoint."
+      "keyWarning": "The browser is not a secure keychain. If remembered, keys are stored in IndexedDB for this site and may be readable by scripts running here. Leave this off unless you accept that tradeoff.",
+      "agentSkill": "AI agent skill",
+      "agentSkillHint": "Download a SKILL.md guide for coding agents that generate editable .calqo files from prompts.",
+      "downloadSkill": "Download skill"
     }
   },
   "theme": {

@@ -35,17 +35,40 @@ export function buildTranslationJob(
 export function reconcileTranslation(
   job: TranslationJob,
   result: TranslationResult,
-): { result: TranslationResult; accepted: number; unchanged: number } {
+): {
+  result: TranslationResult;
+  accepted: number;
+  unchanged: number;
+  missingLayerIds: string[];
+} {
   const known = new Map(job.items.map((item) => [item.layerId, item]));
-  const items = result.items.filter((item) => known.has(item.layerId));
+  const seen = new Set<string>();
+  for (const item of result.items) {
+    if (known.has(item.layerId)) seen.add(item.layerId);
+  }
+  const items = job.items.map((item) => {
+    const translated = result.items.find((candidate) => candidate.layerId === item.layerId);
+    return translated
+      ? { ...translated, artboardId: item.artboardId }
+      : {
+          layerId: item.layerId,
+          artboardId: item.artboardId,
+          translatedText: item.sourceText,
+          notes: 'missing-provider-output',
+        };
+  });
+  const missingLayerIds =
+    result.diagnostics?.missingLayerIds ??
+    job.items.filter((item) => !seen.has(item.layerId)).map((item) => item.layerId);
   let unchanged = 0;
   for (const item of items) {
     if (item.translatedText === known.get(item.layerId)?.sourceText) unchanged += 1;
   }
   return {
-    result: { targetLocale: result.targetLocale, items },
+    result: { targetLocale: result.targetLocale, items, diagnostics: result.diagnostics },
     accepted: items.length,
     unchanged,
+    missingLayerIds,
   };
 }
 
@@ -60,9 +83,10 @@ export async function runTranslation(
   result: TranslationResult;
   accepted: number;
   unchanged: number;
+  missingLayerIds: string[];
 }> {
   const job = buildTranslationJob(project, request);
   const raw = await provider.translate(job, signal);
-  const { result, accepted, unchanged } = reconcileTranslation(job, raw);
-  return { job, result, accepted, unchanged };
+  const { result, accepted, unchanged, missingLayerIds } = reconcileTranslation(job, raw);
+  return { job, result, accepted, unchanged, missingLayerIds };
 }

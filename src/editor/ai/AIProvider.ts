@@ -29,6 +29,12 @@ export interface TemplatePromptInput {
   maxLayers: number;
   /** Allowed font families the model may use. */
   fonts: string[];
+  /** Optional second-pass repair context after parse/schema/quality failure. */
+  repair?: {
+    error: string;
+    issues?: string[];
+    raw: string;
+  };
 }
 
 /** Input for AI SVG generation. */
@@ -43,6 +49,7 @@ export interface SvgPromptInput {
 export interface SvgPromptResult {
   /** Raw text returned by the provider (expected to contain `<svg>…</svg>`). */
   raw: string;
+  diagnostics?: AIProviderDiagnostics;
 }
 
 /** Raw provider output for a template request — kept as text so the caller can
@@ -50,6 +57,7 @@ export interface SvgPromptResult {
 export interface TemplatePromptResult {
   /** Raw text returned by the provider (may include fences/prose). */
   raw: string;
+  diagnostics?: AIProviderDiagnostics;
 }
 
 /** A single string to translate, traced back to its layer/artboard. */
@@ -81,6 +89,20 @@ export interface TranslationResultItem {
 export interface TranslationResult {
   targetLocale: LocaleCode;
   items: TranslationResultItem[];
+  diagnostics?: AIProviderDiagnostics;
+}
+
+export interface AIProviderDiagnostics {
+  providerId: string;
+  providerLabel?: string;
+  modelId?: string;
+  timeoutMs?: number;
+  retryCount?: number;
+  parseFailure?: string;
+  validationFailure?: string;
+  rawOutput?: string;
+  missingLayerIds?: string[];
+  warnings?: string[];
 }
 
 /** The provider abstraction shared by mock and real backends (plan §14.1).

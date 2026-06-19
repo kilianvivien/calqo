@@ -42,5 +42,31 @@ export async function generateTemplate(
 ): Promise<TemplateValidation> {
   const input = buildTemplateInput(request);
   const result = await provider.generateTemplate(input, signal);
-  return validateTemplateResponse(result.raw, input);
+  const validation = validateTemplateResponse(result.raw, input, result.diagnostics);
+  if (validation.ok) return validation;
+
+  const retryInput: TemplatePromptInput = {
+    ...input,
+    repair: {
+      error: validation.error,
+      issues: validation.issues,
+      raw: result.raw,
+    },
+  };
+  const retry = await provider.generateTemplate(retryInput, signal);
+  const retryValidation = validateTemplateResponse(retry.raw, retryInput, {
+    providerId: provider.id,
+    ...retry.diagnostics,
+    retryCount: 1,
+  });
+  if (retryValidation.ok) return retryValidation;
+  return {
+    ...retryValidation,
+    diagnostics: {
+      providerId: provider.id,
+      ...retryValidation.diagnostics,
+      retryCount: 1,
+      rawOutput: retry.raw,
+    },
+  };
 }

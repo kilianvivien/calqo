@@ -18,9 +18,10 @@ for the detailed build plan.
 
 ## Status
 
-**Shareable browser prototype complete through Phase F.** The app is still a
-browser prototype, but the core edit/save/export/multilingual/AI flows are now
-implemented behind the adapter boundary.
+**Shareable browser prototype complete through post-prototype Phase H.** The app
+is still browser-first, but the core edit/save/export/multilingual/AI flows are
+now implemented behind the adapter boundary with provider-specific Gemini
+support.
 
 - [x] Vite + React + TypeScript project
 - [x] Tailwind v4 + Liquid Glass design tokens & primitives
@@ -34,6 +35,7 @@ implemented behind the adapter boundary.
 - [x] Layers, artboards, export (Phases C–D)
 - [x] Multilingual content + AI flows (Phase E)
 - [x] Prototype hardening pass (Phase F)
+- [x] Gemini/GenAI provider reliability pass (Phase H)
 
 ## Tech stack
 
@@ -72,11 +74,12 @@ collisions, and save-error surfacing.
 
 ## AI providers
 
-Mock mode is the default and works offline. The settings modal can point Calqo
-at OpenAI-compatible endpoints such as local Ollama, Gemini's OpenAI-compatible
-endpoint, Mistral, OpenRouter, or a custom base URL/model. Browser API keys are
-only persisted after explicit opt-in and are stored in plain IndexedDB; prefer a
-local endpoint for real keys until the Tauri keychain adapter exists.
+Mock mode is the default and works offline. Gemini uses a provider-specific
+GenAI adapter with structured JSON requests for templates and translations.
+Local Ollama, Mistral, OpenRouter, and custom endpoints continue through the
+OpenAI-compatible adapter. Browser API keys are only persisted after explicit
+opt-in and are stored in IndexedDB for this site; prefer a local endpoint for
+real keys until the Tauri keychain adapter exists.
 
 ## Browser compatibility
 
