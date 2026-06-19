@@ -40,7 +40,8 @@
   "title": {
     "rename": "Rename project",
     "saveFile": "Save .calqo file",
-    "share": "Share (AirDrop…)"
+    "share": "Share (AirDrop…)",
+    "github": "Open GitHub repository"
   },
   "canvas": {
     "missingAsset": "Missing asset",

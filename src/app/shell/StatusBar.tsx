@@ -5,6 +5,7 @@ import { useActiveSaveState } from '@/lib/state/selectors';
 import type { SaveState } from '@/lib/state/projectStore';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
+import { APP_VERSION } from '@/lib/appInfo';
 
 const DOT_COLOR: Record<SaveState, string> = {
   saved: '#28c840',
@@ -39,6 +40,10 @@ export function StatusBar({
   return (
     <footer className="flex h-7 items-center justify-between border-t border-[var(--calqo-divider)] px-4 mono text-[10.5px] text-[var(--calqo-text-3)]">
       <div className="flex items-center gap-3">
+        <span title={t('common:app.versionLabel', { version: APP_VERSION })}>
+          {t('common:app.version', { version: APP_VERSION })}
+        </span>
+        <span className="h-3 w-px bg-[var(--calqo-divider)]" />
         <span className="flex items-center gap-1.5">
           <span
             className="h-1.5 w-1.5 rounded-full"

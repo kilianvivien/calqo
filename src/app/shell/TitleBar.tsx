@@ -5,6 +5,7 @@ import {
   Download,
   FilePlus2,
   FolderOpen,
+  Github,
   Languages,
   Moon,
   Redo2,
@@ -28,6 +29,7 @@ import {
 } from '@/editor/commands/projectCommands';
 import { exportProjectFile, importProjectFile } from '@/editor/export/calqoFile';
 import { shareArtboardPng } from '@/editor/export/share';
+import { APP_REPOSITORY_URL } from '@/lib/appInfo';
 
 /** Top chrome: Tauri-ready drag region with a centered document title and
  * global action cluster. */
@@ -49,6 +51,9 @@ export function TitleBar({
     void shareArtboardPng(project, artboard).catch((error) => {
       console.error('[Calqo] share failed', error);
     });
+  };
+  const openRepository = () => {
+    window.open(APP_REPOSITORY_URL, '_blank', 'noopener,noreferrer');
   };
   const theme = useUiStore((s) => s.theme);
   const toggleTheme = useUiStore((s) => s.toggleTheme);
@@ -202,6 +207,9 @@ export function TitleBar({
           <Download size={15} />
           {t('actions.export')}
         </GlassButton>
+        <GlassIconButton label={t('editor:title.github')} onClick={openRepository}>
+          <Github size={16} />
+        </GlassIconButton>
       </div>
     </header>
   );

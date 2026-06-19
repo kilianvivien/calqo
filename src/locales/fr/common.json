@@ -2,7 +2,9 @@
   "app": {
     "name": "Calqo",
     "webName": "Calqo Web",
-    "tagline": "Un créateur de visuels sociaux, simple et tout en verre"
+    "tagline": "Un créateur de visuels sociaux, simple et tout en verre",
+    "version": "Calqo {{version}}",
+    "versionLabel": "Version Calqo {{version}}"
   },
   "actions": {
     "new": "Nouveau",

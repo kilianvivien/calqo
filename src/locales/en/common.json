@@ -2,7 +2,9 @@
   "app": {
     "name": "Calqo",
     "webName": "Calqo Web",
-    "tagline": "A simple, glass-native social visual maker"
+    "tagline": "A simple, glass-native social visual maker",
+    "version": "Calqo {{version}}",
+    "versionLabel": "Calqo version {{version}}"
   },
   "actions": {
     "new": "New",
