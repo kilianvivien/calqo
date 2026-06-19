@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Settings } from 'lucide-react';
+import { CircleHelp, Settings } from 'lucide-react';
 import { GlassIconButton } from '@/components/glass';
 import { useActiveSaveState } from '@/lib/state/selectors';
 import type { SaveState } from '@/lib/state/projectStore';
@@ -21,7 +21,13 @@ const STATUS_KEY: Record<SaveState, string> = {
 };
 
 /** Bottom status bar — mono meta in the calm GeoCarto register. */
-export function StatusBar({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function StatusBar({
+  onOpenSettings,
+  onOpenShortcuts,
+}: {
+  onOpenSettings: () => void;
+  onOpenShortcuts: () => void;
+}) {
   const { t } = useTranslation(['common', 'editor']);
   const save = useActiveSaveState();
   const selectedCount = useSelectionStore((s) => s.selectedLayerIds.length);
@@ -61,6 +67,14 @@ export function StatusBar({ onOpenSettings }: { onOpenSettings: () => void }) {
         <span>
           {t('editor:status.zoom')}: {Math.round(zoom * 100)}%
         </span>
+        <GlassIconButton
+          label={t('common:shortcuts.open')}
+          size={22}
+          shortcut="?"
+          onClick={onOpenShortcuts}
+        >
+          <CircleHelp size={13} />
+        </GlassIconButton>
         <GlassIconButton
           label={t('common:settings.open')}
           size={22}

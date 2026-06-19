@@ -21,4 +21,20 @@ export const browserClipboardAdapter: ClipboardAdapter = {
       return false;
     }
   },
+
+  async writeText(text): Promise<boolean> {
+    if (
+      typeof navigator === 'undefined' ||
+      !('clipboard' in navigator) ||
+      typeof navigator.clipboard.writeText !== 'function'
+    ) {
+      return false;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return false;
+    }
+  },
 };

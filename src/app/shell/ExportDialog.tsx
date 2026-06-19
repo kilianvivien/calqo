@@ -164,8 +164,8 @@ export function ExportDialog({
         height: artboard.height,
         pngDataUrl,
       });
-      await navigator.clipboard.writeText(html);
-      setStatus(t('export.copied'));
+      const ok = await clipboard.writeText(html);
+      setStatus(ok ? t('export.copied') : t('export.copyUnsupported'));
     } catch {
       setStatus(t('export.copyUnsupported'));
     } finally {

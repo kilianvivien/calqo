@@ -98,6 +98,10 @@ export function App() {
       if (key === 'e') useUiStore.getState().setActiveTool('ellipse');
       if (key === 'l') useUiStore.getState().setActiveTool('line');
       if (key === 'i') useUiStore.getState().setActiveTool('image');
+      if (key === '?' || (e.shiftKey && key === '/')) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('calqo:open-shortcuts'));
+      }
       if (key === 'delete' || key === 'backspace') {
         e.preventDefault();
         if (id) deleteSelectedLayers(id);

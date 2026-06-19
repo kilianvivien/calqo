@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,7 @@ import {
   PROVIDER_LIST,
   PROVIDER_PRESETS,
 } from '@/editor/ai/aiSettings';
+import { useFocusTrap } from './useFocusTrap';
 
 type LanguageMode = 'auto' | AppLanguage;
 
@@ -68,18 +69,11 @@ export function AppSettingsModal({
   const setProvider = useAiSettingsStore((s) => s.setProvider);
   const setStoreKey = useAiSettingsStore((s) => s.setStoreKey);
   const updateProviderConfig = useAiSettingsStore((s) => s.updateProviderConfig);
+  const dialogRef = useRef<HTMLElement>(null);
   const [languageMode, setLanguageModeState] = useState<LanguageMode>(
     getStoredLanguageMode,
   );
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose, open]);
+  useFocusTrap(dialogRef, open, onClose);
 
   const languageOptions = useMemo(
     () => [
@@ -101,9 +95,11 @@ export function AppSettingsModal({
       }}
     >
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="app-settings-title"
+        tabIndex={-1}
         className="glass glass-strong w-[min(520px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
       >
         <header className="mb-5 flex items-start justify-between gap-4">
@@ -206,7 +202,7 @@ export function AppSettingsModal({
               </SettingsRow>
 
               {(() => {
-                const preset = PROVIDER_PRESETS[aiSettings.providerId];
+                const preset = PROVIDER_PRESETS[aiSettings.providerId] ?? PROVIDER_PRESETS.mock;
                 if (!preset.remote) {
                   return (
                     <p className="text-[11px] text-[var(--calqo-text-3)]">
@@ -214,7 +210,8 @@ export function AppSettingsModal({
                     </p>
                   );
                 }
-                const config = aiSettings.providers[aiSettings.providerId];
+                const providerId = preset.id;
+                const config = aiSettings.providers[providerId];
                 return (
                   <div className="space-y-2 border-t border-[var(--calqo-divider)] pt-3">
                     {preset.editableBaseUrl && (
@@ -223,7 +220,7 @@ export function AppSettingsModal({
                         value={config.baseUrl}
                         placeholder={preset.baseUrl || 'https://…/v1'}
                         onChange={(baseUrl) =>
-                          updateProviderConfig(aiSettings.providerId, { baseUrl })
+                          updateProviderConfig(providerId, { baseUrl })
                         }
                       />
                     )}
@@ -232,7 +229,7 @@ export function AppSettingsModal({
                       value={config.model}
                       placeholder={preset.defaultModel}
                       onChange={(model) =>
-                        updateProviderConfig(aiSettings.providerId, { model })
+                        updateProviderConfig(providerId, { model })
                       }
                     />
                     {preset.needsKey && (
@@ -243,7 +240,7 @@ export function AppSettingsModal({
                           type="password"
                           placeholder="sk-…"
                           onChange={(apiKey) =>
-                            updateProviderConfig(aiSettings.providerId, { apiKey })
+                            updateProviderConfig(providerId, { apiKey })
                           }
                         />
                         <label className="flex cursor-pointer items-center gap-2 text-[11.5px] text-[var(--calqo-text-2)]">

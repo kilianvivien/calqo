@@ -17,6 +17,28 @@
     "rename": "Rename",
     "close": "Close"
   },
+  "shortcuts": {
+    "open": "Open keyboard shortcuts",
+    "title": "Keyboard shortcuts",
+    "subtitle": "Major workspace controls available outside direct canvas dragging.",
+    "file": "File",
+    "tools": "Tools",
+    "layers": "Layers",
+    "save": "Save",
+    "undo": "Undo",
+    "redo": "Redo",
+    "duplicate": "Duplicate",
+    "selectTool": "Select tool",
+    "panTool": "Pan tool",
+    "textTool": "Text tool",
+    "shapeTools": "Shape tools",
+    "imageTool": "Image tool",
+    "selectAll": "Select all layers",
+    "group": "Group",
+    "ungroup": "Ungroup",
+    "order": "Move layer order",
+    "delete": "Delete selection"
+  },
   "settings": {
     "open": "Open settings",
     "title": "Settings",

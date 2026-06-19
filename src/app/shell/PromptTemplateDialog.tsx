@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Copy, Sparkles, X } from 'lucide-react';
 import { GlassButton, GlassIconButton } from '@/components/glass';
+import { clipboard } from '@/lib/adapters';
 import {
   COMMON_CONTENT_LOCALES,
   localeLabel,
@@ -194,7 +195,7 @@ function PromptTemplateDialogInner() {
               )}
               <button
                 type="button"
-                onClick={() => void navigator.clipboard?.writeText(failure.raw)}
+                onClick={() => void clipboard.writeText(failure.raw)}
                 className="mt-2 flex items-center gap-1 text-[11px] font-medium text-[var(--calqo-accent)] hover:underline"
               >
                 <Copy size={12} />

@@ -6,6 +6,7 @@ import { AppSettingsModal } from './AppSettingsModal';
 import { ExportDialog } from './ExportDialog';
 import { NewProjectModal } from './NewProjectModal';
 import { PromptTemplateDialog } from './PromptTemplateDialog';
+import { ShortcutHelpModal } from './ShortcutHelpModal';
 import { TranslateDialog } from './TranslateDialog';
 import { TitleBar } from './TitleBar';
 import { TabBar } from './TabBar';
@@ -21,6 +22,7 @@ export function AppShell() {
   const openTabCount = useWorkspaceStore((s) => s.openTabIds.length);
   const showTabs = openTabCount > 1;
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const loadAiSettings = useAiSettingsStore((s) => s.load);
@@ -28,6 +30,12 @@ export function AppShell() {
   useEffect(() => {
     void loadAiSettings();
   }, [loadAiSettings]);
+
+  useEffect(() => {
+    const openShortcuts = () => setShortcutsOpen(true);
+    window.addEventListener('calqo:open-shortcuts', openShortcuts);
+    return () => window.removeEventListener('calqo:open-shortcuts', openShortcuts);
+  }, []);
 
   return (
     <div className="h-full w-full">
@@ -54,7 +62,10 @@ export function AppShell() {
           <Inspector />
         </div>
 
-        <StatusBar onOpenSettings={() => setSettingsOpen(true)} />
+        <StatusBar
+          onOpenSettings={() => setSettingsOpen(true)}
+          onOpenShortcuts={() => setShortcutsOpen(true)}
+        />
       </GlassPanel>
       <AppSettingsModal
         open={settingsOpen}
@@ -62,6 +73,10 @@ export function AppShell() {
       />
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <PromptTemplateDialog />
+      <ShortcutHelpModal
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+      />
       <TranslateDialog />
       <NewProjectModal
         open={newProjectOpen}

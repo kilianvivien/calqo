@@ -18,7 +18,9 @@ for the detailed build plan.
 
 ## Status
 
-**Phase A (browser foundation) complete.** Next: the Konva canvas editor (Phase B).
+**Shareable browser prototype complete through Phase F.** The app is still a
+browser prototype, but the core edit/save/export/multilingual/AI flows are now
+implemented behind the adapter boundary.
 
 - [x] Vite + React + TypeScript project
 - [x] Tailwind v4 + Liquid Glass design tokens & primitives
@@ -28,9 +30,10 @@ for the detailed build plan.
 - [x] Zod project schema (versioned, migration-ready) + Dexie persistence
 - [x] Browser adapter layer (storage, assets, file, clipboard, fonts)
 - [x] Multi-project tab workspace with autosave + reload restore
-- [ ] Konva canvas editor (Phase B)
-- [ ] Layers, artboards, export (Phases C–D)
-- [ ] Multilingual content + AI flows (Phase E)
+- [x] Konva canvas editor (Phase B)
+- [x] Layers, artboards, export (Phases C–D)
+- [x] Multilingual content + AI flows (Phase E)
+- [x] Prototype hardening pass (Phase F)
 
 ## Tech stack
 
@@ -41,11 +44,56 @@ Dexie · Zod · react-i18next · lucide-react.
 
 ```bash
 pnpm install
-pnpm dev        # start the dev server
-pnpm build      # type-check and build
-pnpm test       # run unit tests
-pnpm lint       # lint
+pnpm dev         # Vite dev server on http://localhost:5173
+pnpm typecheck   # TypeScript only
+pnpm test        # Vitest unit tests
+pnpm lint        # ESLint
+pnpm build       # type-check and production build
 ```
+
+Before committing, run `pnpm typecheck` and `pnpm test`.
+
+## Architecture notes
+
+App/editor code stays behind adapters in `src/lib/adapters/` for storage,
+assets, files, clipboard, fonts, and app settings. That keeps browser-only
+IndexedDB, Blob, and Clipboard API behavior out of editor components and leaves
+room for Tauri implementations later.
+
+Project JSON is the product contract. The Zod schema in `src/lib/schema/`
+validates persisted documents, `.calqo` imports, and AI-generated templates via
+`safeImportProject`. Imported projects always receive a fresh project id so they
+do not overwrite open tabs.
+
+Mutations flow through `src/editor/commands/projectCommands.ts`, which marks
+projects dirty, schedules autosave, and coordinates selection/history cleanup.
+Phase F adds tests around autosave coalescing, close/reload flushing, import id
+collisions, and save-error surfacing.
+
+## AI providers
+
+Mock mode is the default and works offline. The settings modal can point Calqo
+at OpenAI-compatible endpoints such as local Ollama, Gemini's OpenAI-compatible
+endpoint, Mistral, OpenRouter, or a custom base URL/model. Browser API keys are
+only persisted after explicit opt-in and are stored in plain IndexedDB; prefer a
+local endpoint for real keys until the Tauri keychain adapter exists.
+
+## Browser compatibility
+
+The core path is intended for current Chrome and Safari: create/edit, local
+save/reload, `.calqo` import/export, raster export, HTML wrapper export, and mock
+AI flows. Firefox should handle core editing, but image clipboard writes and
+some export/clipboard permissions can be limited by browser support; Calqo now
+reports unsupported copy operations instead of throwing.
+
+## Known limitations
+
+- Tauri shell, native menus, keychain, packaging, and macOS vibrancy are deferred.
+- The first prototype focuses on static social visuals, not animation/video.
+- SVG export is intentionally limited and warns for unsupported fidelity.
+- Clipboard behavior depends on browser permissions and feature support.
+- Advanced typography, complex vector editing, and phone-first editing remain
+  post-prototype work.
 
 ## Design language
 

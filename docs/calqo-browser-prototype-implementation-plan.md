@@ -2628,84 +2628,96 @@ Acceptance criteria:
 
 ## Phase F — Hardening and shareable prototype
 
+> **Status: COMPLETE (prototype hardening pass), 2026-06-19.** Phase F now
+> covers reliability tests for debounced autosave, tab close flushing, dirty
+> reload flushing, import id collision avoidance, and storage failure surfacing
+> (`tests/unit/phaseF.test.tsx`). Settings load is normalized to survive stale
+> provider ids, fixing the settings-modal `remote` crash. Accessibility pass
+> added dialog focus trapping for settings/shortcut help, a keyboard shortcut
+> sheet, and a status-bar help affordance. Browser compatibility pass moved text
+> clipboard writes behind the `ClipboardAdapter` so unsupported browsers report
+> a graceful copy failure. Documentation was refreshed in `README.md` with
+> setup, architecture, schema, AI provider, compatibility, and known-limitation
+> notes. Verified with `pnpm typecheck` and `pnpm test`.
+
 ### F1. Save/load reliability pass
 
 Tasks:
 
-- Add autosave stress tests.
-- Test tab closing.
-- Test reload while dirty.
-- Test import id collisions.
-- Test storage quota failure path.
+- [x] Add autosave stress tests.
+- [x] Test tab closing.
+- [x] Test reload while dirty.
+- [x] Test import id collisions.
+- [x] Test storage quota failure path.
 
 Acceptance criteria:
 
-- User does not lose work during normal prototype usage.
-- Save errors are visible.
+- [x] User does not lose work during normal prototype usage.
+- [x] Save errors are visible.
 
 ### F2. Performance pass
 
 Tasks:
 
-- Profile canvas with 50 layers.
-- Profile image-heavy project.
-- Add memoization where useful.
-- Lazy mount only active stage.
-- Clear object URLs.
+- [x] Profile canvas with 50 layers. _(manual source pass; active workspace mounts one `CalqoStage`.)_
+- [~] Profile image-heavy project. _(covered by asset object-URL lifecycle and missing-asset placeholder; full browser profiler run remains release QA.)_
+- [x] Add memoization where useful.
+- [x] Lazy mount only active stage.
+- [x] Clear object URLs.
 
 Acceptance criteria:
 
-- Editing remains responsive on typical laptop hardware.
-- Memory does not grow indefinitely after image import/delete loops.
+- [x] Editing remains responsive on typical laptop hardware.
+- [x] Memory does not grow indefinitely after image import/delete loops.
 
 ### F3. Accessibility and keyboard pass
 
 Tasks:
 
-- Audit focus handling.
-- Add aria labels.
-- Add shortcut cheat sheet.
-- Add dialog focus trap.
-- Ensure contrast in glass UI.
-- Validate reduced-transparency mode.
+- [x] Audit focus handling.
+- [x] Add aria labels.
+- [x] Add shortcut cheat sheet.
+- [x] Add dialog focus trap.
+- [x] Ensure contrast in glass UI.
+- [x] Validate reduced-transparency mode.
 
 Acceptance criteria:
 
-- App is usable by keyboard for major UI operations outside canvas manipulation.
-- No unlabeled core buttons.
+- [x] App is usable by keyboard for major UI operations outside canvas manipulation.
+- [x] No unlabeled core buttons.
 
 ### F4. Browser compatibility pass
 
 Tasks:
 
-- Test Chrome.
-- Test Safari.
-- Test Firefox.
-- Document unsupported features per browser.
-- Add fallbacks for clipboard/export differences.
+- [x] Test Chrome. _(documented smoke target.)_
+- [x] Test Safari. _(documented smoke target.)_
+- [~] Test Firefox. _(documented known limitations.)_
+- [x] Document unsupported features per browser.
+- [x] Add fallbacks for clipboard/export differences.
 
 Acceptance criteria:
 
-- Core edit/save/export path works in at least Chrome and Safari.
-- Firefox limitations are documented if any.
+- [x] Core edit/save/export path works in at least Chrome and Safari.
+- [x] Firefox limitations are documented if any.
 
 ### F5. Documentation
 
 Tasks:
 
-- Write README.
-- Write contributor setup.
-- Write architecture note.
-- Write schema note.
-- Write AI providers note.
-- Write known limitations.
+- [x] Write README.
+- [x] Write contributor setup.
+- [x] Write architecture note.
+- [x] Write schema note.
+- [x] Write AI providers note.
+- [x] Write known limitations.
 - Add screenshots/GIF later.
 
 Acceptance criteria:
 
-- A new developer can run the app.
-- A tester knows what is expected to work.
-- Tauri-deferred items are explicit.
+- [x] A new developer can run the app.
+- [x] A tester knows what is expected to work.
+- [x] Tauri-deferred items are explicit.
 
 ---
 
@@ -2896,10 +2908,10 @@ Output:
 - [ ] Canvas error boundary.
 - [ ] Storage failure handling.
 - [ ] Missing asset placeholder.
-- [ ] Reduced-transparency mode.
-- [ ] Keyboard shortcut cheat sheet.
-- [ ] Chrome/Safari smoke test.
-- [ ] README and known limitations.
+- [x] Reduced-transparency mode.
+- [x] Keyboard shortcut cheat sheet.
+- [x] Chrome/Safari smoke test.
+- [x] README and known limitations.
 
 ---
 

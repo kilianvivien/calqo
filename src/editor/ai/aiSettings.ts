@@ -126,6 +126,31 @@ function toPersisted(settings: AiSettings): AiSettings {
   return { ...settings, providers };
 }
 
+function isProviderId(value: unknown): value is AiProviderId {
+  return typeof value === 'string' && value in PROVIDER_PRESETS;
+}
+
+export function normalizeAiSettings(stored?: Partial<AiSettings> | null): AiSettings {
+  const providerId = isProviderId(stored?.providerId) ? stored.providerId : 'mock';
+  const providers = defaultProviders();
+  for (const preset of PROVIDER_LIST) {
+    const config = stored?.providers?.[preset.id];
+    if (!config) continue;
+    providers[preset.id] = {
+      ...providers[preset.id],
+      ...config,
+      baseUrl: config.baseUrl ?? providers[preset.id].baseUrl,
+      model: config.model ?? providers[preset.id].model,
+      apiKey: config.apiKey ?? '',
+    };
+  }
+  return {
+    providerId,
+    storeKey: Boolean(stored?.storeKey),
+    providers,
+  };
+}
+
 interface AiSettingsState {
   settings: AiSettings;
   loaded: boolean;
@@ -151,12 +176,7 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
       const stored = await appSettings.get<Partial<AiSettings>>(SETTINGS_KEY);
       if (stored) {
         set({
-          settings: {
-            ...DEFAULT_AI_SETTINGS,
-            ...stored,
-            // Merge per-provider config so new presets always have an entry.
-            providers: { ...defaultProviders(), ...(stored.providers ?? {}) },
-          },
+          settings: normalizeAiSettings(stored),
           loaded: true,
         });
         return;
@@ -168,6 +188,7 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
   },
 
   setProvider: (providerId) => {
+    if (!isProviderId(providerId)) providerId = 'mock';
     const next = { ...get().settings, providerId };
     set({ settings: next });
     persist(next);
@@ -180,6 +201,7 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
   },
 
   updateProviderConfig: (id, patch) => {
+    if (!isProviderId(id)) return;
     const current = get().settings;
     const next: AiSettings = {
       ...current,

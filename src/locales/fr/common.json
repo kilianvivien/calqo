@@ -17,6 +17,28 @@
     "rename": "Renommer",
     "close": "Fermer"
   },
+  "shortcuts": {
+    "open": "Ouvrir les raccourcis clavier",
+    "title": "Raccourcis clavier",
+    "subtitle": "Les principales commandes du workspace, hors manipulation directe du canevas.",
+    "file": "Fichier",
+    "tools": "Outils",
+    "layers": "Calques",
+    "save": "Enregistrer",
+    "undo": "Annuler",
+    "redo": "Rétablir",
+    "duplicate": "Dupliquer",
+    "selectTool": "Outil sélection",
+    "panTool": "Outil main",
+    "textTool": "Outil texte",
+    "shapeTools": "Outils formes",
+    "imageTool": "Outil image",
+    "selectAll": "Sélectionner tous les calques",
+    "group": "Grouper",
+    "ungroup": "Dégrouper",
+    "order": "Déplacer dans l'ordre",
+    "delete": "Supprimer la sélection"
+  },
   "settings": {
     "open": "Ouvrir les réglages",
     "title": "Réglages",
