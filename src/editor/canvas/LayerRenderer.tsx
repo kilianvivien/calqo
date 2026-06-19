@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Ellipse, Group, Image, Line, Rect, Text } from 'react-konva';
+import { Arrow, Ellipse, Group, Image, Line, Rect, Text } from 'react-konva';
 import type Konva from 'konva';
-import type { CalqoLayer, ShapeLayer } from '@/lib/schema';
+import type { CalqoLayer } from '@/lib/schema';
+import { fillProps, strokeProps } from './shapeStyle';
 import { useAssetImage } from './useAssetImage';
 
 export type NodeRegistry = Map<string, Konva.Node>;
@@ -16,11 +17,6 @@ interface LayerRendererProps {
   onDragEnd: (layer: CalqoLayer, node: Konva.Node) => void;
   onTransformEnd: (layer: CalqoLayer, node: Konva.Node) => void;
   onTextEdit: (layer: CalqoLayer) => void;
-}
-
-function solidColor(fill: ShapeLayer['fill']): string | undefined {
-  if (fill.type === 'solid') return fill.color;
-  return '#FFFFFF';
 }
 
 function commonProps(
@@ -140,6 +136,10 @@ export function LayerRenderer(props: LayerRendererProps) {
   }
 
   if (layer.type === 'shape') {
+    const stroke = strokeProps(layer.stroke);
+    const lineColor = layer.stroke?.color ?? '#111827';
+    const lineWidth = layer.stroke?.width ?? 4;
+
     if (layer.shape === 'ellipse') {
       return (
         <Ellipse
@@ -148,21 +148,54 @@ export function LayerRenderer(props: LayerRendererProps) {
           y={layer.y + layer.h / 2}
           radiusX={layer.w / 2}
           radiusY={layer.h / 2}
-          fill={solidColor(layer.fill)}
-          stroke={layer.stroke?.color}
-          strokeWidth={layer.stroke?.width ?? 0}
+          {...fillProps(layer.fill, layer.w, layer.h, true)}
+          {...stroke}
         />
       );
     }
-    if (layer.shape === 'line' || layer.shape === 'polygon') {
+    if (layer.shape === 'arrow') {
+      return (
+        <Arrow
+          {...base}
+          points={layer.points ?? [0, 0, layer.w, layer.h]}
+          pointerAtBeginning={layer.arrow?.start ?? false}
+          pointerAtEnding={layer.arrow?.end ?? true}
+          pointerLength={layer.arrow?.pointerLength ?? 16}
+          pointerWidth={layer.arrow?.pointerWidth ?? 16}
+          fill={lineColor}
+          stroke={lineColor}
+          strokeWidth={lineWidth}
+          dash={stroke.dash as number[] | undefined}
+          lineCap="round"
+          lineJoin="round"
+        />
+      );
+    }
+    if (layer.shape === 'freehand') {
       return (
         <Line
           {...base}
           points={layer.points ?? [0, 0, layer.w, layer.h]}
-          closed={layer.shape === 'polygon'}
-          fill={layer.shape === 'polygon' ? solidColor(layer.fill) : undefined}
-          stroke={layer.stroke?.color ?? solidColor(layer.fill)}
-          strokeWidth={layer.stroke?.width ?? 4}
+          tension={layer.tension ?? 0.4}
+          stroke={lineColor}
+          strokeWidth={lineWidth}
+          dash={stroke.dash as number[] | undefined}
+          lineCap="round"
+          lineJoin="round"
+        />
+      );
+    }
+    if (layer.shape === 'line' || layer.shape === 'polygon') {
+      const isPolygon = layer.shape === 'polygon';
+      return (
+        <Line
+          {...base}
+          points={layer.points ?? [0, 0, layer.w, layer.h]}
+          closed={isPolygon}
+          {...(isPolygon ? fillProps(layer.fill, layer.w, layer.h) : {})}
+          stroke={lineColor}
+          strokeWidth={lineWidth}
+          dash={stroke.dash as number[] | undefined}
           lineCap="round"
           lineJoin="round"
         />
@@ -171,9 +204,8 @@ export function LayerRenderer(props: LayerRendererProps) {
     return (
       <Rect
         {...base}
-        fill={solidColor(layer.fill)}
-        stroke={layer.stroke?.color}
-        strokeWidth={layer.stroke?.width ?? 0}
+        {...fillProps(layer.fill, layer.w, layer.h)}
+        {...stroke}
         cornerRadius={layer.cornerRadius ?? 0}
       />
     );

@@ -1,4 +1,4 @@
-import type { TemplatePromptInput, TranslationJob } from './AIProvider';
+import type { SvgPromptInput, TemplatePromptInput, TranslationJob } from './AIProvider';
 
 /** A compact, model-facing summary of the project schema. Kept terse on purpose
  * — enough to constrain output without pasting the full Zod definition. */
@@ -41,11 +41,45 @@ export function buildTemplatePrompt(input: TemplatePromptInput): {
     input.palette?.length
       ? `- Prefer this palette: ${input.palette.join(', ')}.`
       : '- Choose a tasteful, high-contrast palette.',
+    ...styleReferenceLines(input),
     '- Keep every layer fully inside the artboard bounds.',
     '- Do not reference external images or URLs.',
   ].join('\n');
 
   const user = `Design brief: ${input.prompt}`;
+  return { system, user };
+}
+
+/** Rules describing a style reference the model should imitate (sample image /
+ * URL / extracted palette), if one was provided. */
+function styleReferenceLines(input: TemplatePromptInput): string[] {
+  const ref = input.styleReference;
+  if (!ref) return [];
+  const lines: string[] = [];
+  if (ref.palette?.length) {
+    lines.push(`- Mimic the colour mood of this reference palette: ${ref.palette.join(', ')}.`);
+  }
+  if (ref.url) {
+    lines.push(`- Imitate the visual style of the reference image at ${ref.url} (composition, mood, contrast).`);
+  }
+  if (ref.note?.trim()) {
+    lines.push(`- Style note: ${ref.note.trim()}.`);
+  }
+  return lines;
+}
+
+/** Build the messages for AI SVG generation. */
+export function buildSvgPrompt(input: SvgPromptInput): { system: string; user: string } {
+  const system = [
+    'You are an icon designer. Output a single, valid, self-contained SVG.',
+    'Respond with SVG markup only — no markdown fences, no commentary.',
+    'Rules:',
+    '- Use a 0 0 24 24 viewBox and width/height of 24.',
+    '- No <script>, <foreignObject>, external images, or event handlers.',
+    `- Use the colour ${input.color ?? '#111827'} for the primary fill/stroke.`,
+    '- Keep it clean and legible at small sizes (flat, minimal).',
+  ].join('\n');
+  const user = `Draw: ${input.prompt}`;
   return { system, user };
 }
 

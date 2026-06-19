@@ -1,7 +1,7 @@
 import { BUNDLED_FONTS } from '@/lib/adapters/fonts/browserFontAdapter';
 import { ARTBOARD_PRESETS, type ArtboardPresetId } from '@/lib/schema/presets';
 import type { LocaleCode } from '@/lib/schema';
-import type { AIProvider, TemplatePromptInput } from './AIProvider';
+import type { AIProvider, StyleReference, TemplatePromptInput } from './AIProvider';
 import { validateTemplateResponse, type TemplateValidation } from './validation';
 
 /** Prototype cap on generated layers (plan §14.6). */
@@ -12,6 +12,7 @@ export interface TemplateRequest {
   preset: ArtboardPresetId;
   locale: LocaleCode;
   palette?: string[];
+  styleReference?: StyleReference;
 }
 
 /** Expand a UI-level request into the full provider input, pinning canvas
@@ -25,6 +26,7 @@ export function buildTemplateInput(request: TemplateRequest): TemplatePromptInpu
     height: preset.height,
     locale: request.locale,
     palette: request.palette,
+    styleReference: request.styleReference,
     maxLayers: MAX_TEMPLATE_LAYERS,
     fonts: BUNDLED_FONTS.map((f) => f.family),
   };

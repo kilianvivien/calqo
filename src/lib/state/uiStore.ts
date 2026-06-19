@@ -9,10 +9,13 @@ export type EditorTool =
   | 'rect'
   | 'ellipse'
   | 'line'
+  | 'arrow'
   | 'triangle'
   | 'diamond'
   | 'badge'
   | 'star'
+  | 'pen'
+  | 'brush'
   | 'image'
   | 'svg';
 
@@ -31,6 +34,8 @@ export interface ShapeDefaults {
   fill: string;
   stroke: string;
   strokeWidth: number;
+  strokeStyle: 'solid' | 'dashed' | 'dotted';
+  brushSize: number;
 }
 
 const THEME_KEY = 'calqo-theme';
@@ -93,6 +98,8 @@ interface UiState {
   shapeDefaults: ShapeDefaults;
   fitRequest: number;
   aiDialog: AiDialog;
+  /** Whether the insert-SVG dialog (library / AI / upload) is open. */
+  svgDialog: boolean;
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
   setTransparency: (mode: TransparencyMode) => void;
@@ -104,6 +111,7 @@ interface UiState {
   setShapeDefaults: (patch: Partial<ShapeDefaults>) => void;
   requestFit: () => void;
   setAiDialog: (dialog: AiDialog) => void;
+  setSvgDialog: (open: boolean) => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -114,9 +122,16 @@ export const useUiStore = create<UiState>((set, get) => ({
   pan: { x: 0, y: 0 },
   snapEnabled: true,
   guides: [],
-  shapeDefaults: { fill: '#FFFFFF', stroke: '#007AFF', strokeWidth: 2 },
+  shapeDefaults: {
+    fill: '#FFFFFF',
+    stroke: '#007AFF',
+    strokeWidth: 2,
+    strokeStyle: 'solid',
+    brushSize: 6,
+  },
   fitRequest: 0,
   aiDialog: 'none',
+  svgDialog: false,
   setTheme: (theme) => {
     safeSet(THEME_KEY, theme);
     applyUiAttributes(theme, get().transparency);
@@ -140,4 +155,5 @@ export const useUiStore = create<UiState>((set, get) => ({
     set({ shapeDefaults: { ...get().shapeDefaults, ...patch } }),
   requestFit: () => set({ fitRequest: get().fitRequest + 1 }),
   setAiDialog: (aiDialog) => set({ aiDialog }),
+  setSvgDialog: (svgDialog) => set({ svgDialog }),
 }));

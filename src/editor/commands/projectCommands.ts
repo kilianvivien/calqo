@@ -304,9 +304,22 @@ export interface ShapeStyleDefaults {
   fill: string;
   stroke: string;
   strokeWidth: number;
+  strokeStyle?: 'solid' | 'dashed' | 'dotted';
+  brushSize?: number;
 }
 
 export type PolygonPreset = 'triangle' | 'diamond' | 'badge' | 'star';
+
+/** Strokes whose width should default to a thicker, line-like weight. */
+const LINE_LIKE = new Set<ShapeLayer['shape']>(['line', 'arrow', 'freehand']);
+
+function shapeName(shape: ShapeLayer['shape']): string {
+  if (shape === 'line') return 'Line';
+  if (shape === 'arrow') return 'Arrow';
+  if (shape === 'freehand') return 'Drawing';
+  if (shape === 'ellipse') return 'Ellipse';
+  return 'Rectangle';
+}
 
 export function createShapeLayer(
   shape: ShapeLayer['shape'],
@@ -318,18 +331,100 @@ export function createShapeLayer(
 ): CalqoLayer {
   const fill = defaults?.fill ?? '#FFFFFF';
   const strokeColor = defaults?.stroke ?? '#007AFF';
-  const strokeWidth = defaults?.strokeWidth ?? 2;
+  const baseWidth = defaults?.strokeWidth ?? 2;
+  const strokeWidth = LINE_LIKE.has(shape) ? Math.max(baseWidth, 4) : baseWidth;
   const layer: ShapeLayer = {
-    ...baseLayer(shape === 'line' ? 'Line' : shape === 'ellipse' ? 'Ellipse' : 'Rectangle', x, y, w, h),
+    ...baseLayer(shapeName(shape), x, y, w, h),
     type: 'shape',
     shape,
-    fill: { type: 'solid', color: shape === 'line' ? 'transparent' : fill },
-    stroke: { color: strokeColor, width: shape === 'line' ? Math.max(strokeWidth, 4) : strokeWidth },
+    fill: { type: 'solid', color: LINE_LIKE.has(shape) ? 'transparent' : fill },
+    stroke: {
+      color: strokeColor,
+      width: strokeWidth,
+      ...(defaults?.strokeStyle && defaults.strokeStyle !== 'solid'
+        ? { style: defaults.strokeStyle }
+        : {}),
+    },
     cornerRadius: shape === 'rect' ? 18 : undefined,
   };
-  if (shape === 'line') {
+  if (shape === 'line' || shape === 'arrow') {
     layer.h = Math.max(1, h);
     layer.points = [0, 0, Math.max(1, w), Math.max(1, h)];
+  }
+  if (shape === 'arrow') {
+    layer.arrow = { start: false, end: true, pointerLength: 16, pointerWidth: 16 };
+  }
+  return layer;
+}
+
+/** Build an arrow layer between two artboard points (drag interaction). */
+export function createArrowLayer(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  defaults?: ShapeStyleDefaults,
+): CalqoLayer {
+  const layer = createShapeLayer('arrow', x1, y1, Math.max(1, Math.abs(x2 - x1)), Math.max(1, Math.abs(y2 - y1)), defaults);
+  if (layer.type === 'shape') {
+    layer.points = [0, 0, x2 - x1, y2 - y1];
+  }
+  return layer;
+}
+
+/** Build a freehand stroke from a flat list of absolute artboard points,
+ * normalised to a layer box (brush / hand-drawing tool). */
+export function createFreehandLayer(
+  absolutePoints: number[],
+  defaults?: ShapeStyleDefaults,
+): CalqoLayer | null {
+  if (absolutePoints.length < 4) return null;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < absolutePoints.length; i += 2) {
+    minX = Math.min(minX, absolutePoints[i]);
+    maxX = Math.max(maxX, absolutePoints[i]);
+    minY = Math.min(minY, absolutePoints[i + 1]);
+    maxY = Math.max(maxY, absolutePoints[i + 1]);
+  }
+  const relative = absolutePoints.map((value, i) => (i % 2 === 0 ? value - minX : value - minY));
+  const layer = createShapeLayer('freehand', minX, minY, Math.max(1, maxX - minX), Math.max(1, maxY - minY), defaults);
+  if (layer.type === 'shape') {
+    layer.points = relative;
+    layer.tension = 0.4;
+    layer.fill = { type: 'solid', color: 'transparent' };
+    layer.stroke = {
+      color: defaults?.stroke ?? '#111827',
+      width: defaults?.brushSize ?? 6,
+      cap: 'round',
+    };
+  }
+  return layer;
+}
+
+/** Build a closed custom polygon from absolute artboard points (pen tool). */
+export function createCustomPolygonLayer(
+  absolutePoints: number[],
+  defaults?: ShapeStyleDefaults,
+): CalqoLayer | null {
+  if (absolutePoints.length < 6) return null;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < absolutePoints.length; i += 2) {
+    minX = Math.min(minX, absolutePoints[i]);
+    maxX = Math.max(maxX, absolutePoints[i]);
+    minY = Math.min(minY, absolutePoints[i + 1]);
+    maxY = Math.max(maxY, absolutePoints[i + 1]);
+  }
+  const relative = absolutePoints.map((value, i) => (i % 2 === 0 ? value - minX : value - minY));
+  const layer = createShapeLayer('polygon', minX, minY, Math.max(1, maxX - minX), Math.max(1, maxY - minY), defaults);
+  if (layer.type === 'shape') {
+    layer.name = 'Polygon';
+    layer.points = relative;
   }
   return layer;
 }
@@ -544,6 +639,29 @@ export function duplicateSelectedLayers(projectId: string): void {
     { undoable: true },
   );
   selectionStore.getState().setSelection(copies.map((copy) => copy.id));
+}
+
+/** Duplicate a single layer by id (per-row action in the layers panel). */
+export function duplicateLayerById(projectId: string, layerId: string): void {
+  const project = projectStore.getState().projects[projectId];
+  const artboardId = project ? activeArtboardId(project) : null;
+  const artboard = project?.artboards.find((candidate) => candidate.id === artboardId);
+  if (!artboard) return;
+  const source = findLayer(artboard.layers, layerId);
+  if (!source) return;
+  const copy = cloneLayerWithNewIds(source);
+  copy.name = `${source.name} copy`;
+  copy.x = source.x + 24;
+  copy.y = source.y + 24;
+  editProject(
+    projectId,
+    (draft) => {
+      const target = getArtboard(draft, artboard.id);
+      target?.layers.push(copy);
+    },
+    { undoable: true },
+  );
+  selectionStore.getState().selectOne(copy.id);
 }
 
 // --- Layer ordering -------------------------------------------------------

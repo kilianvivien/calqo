@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Layer, Line, Rect, Stage, Transformer } from 'react-konva';
+import { Arrow, Circle, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import { assetStorage } from '@/lib/adapters';
 import {
   addImportedAssetLayer,
   addLayerToActiveArtboard,
+  createArrowLayer,
+  createCustomPolygonLayer,
+  createFreehandLayer,
   createPolygonShapeLayer,
   createShapeLayer,
   createTextLayer,
@@ -35,7 +38,7 @@ type DraftShape = {
   current: { x: number; y: number };
 };
 
-type ShapeTool = 'rect' | 'ellipse' | 'line' | PolygonPreset;
+type ShapeTool = 'rect' | 'ellipse' | 'line' | 'arrow' | PolygonPreset;
 
 const SNAP_DISTANCE = 6;
 const TRANSFORMER_ANCHOR_SIZE = 5;
@@ -43,6 +46,7 @@ const SHAPE_TOOLS = new Set<string>([
   'rect',
   'ellipse',
   'line',
+  'arrow',
   'triangle',
   'diamond',
   'badge',
@@ -99,6 +103,11 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const [pendingAssetPoint, setPendingAssetPoint] = useState({ x: 96, y: 96 });
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [draftShape, setDraftShape] = useState<DraftShape | null>(null);
+  // Pen tool: a growing list of committed vertices plus a live cursor point.
+  const [penPoints, setPenPoints] = useState<number[]>([]);
+  const [penCursor, setPenCursor] = useState<{ x: number; y: number } | null>(null);
+  // Brush tool: the in-progress freehand path (null when not drawing).
+  const [drawPoints, setDrawPoints] = useState<number[] | null>(null);
   const stageWidth = size.width;
   const stageHeight = size.height;
 
@@ -195,6 +204,35 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selectedLayers]);
 
+  // Pen/brush drafts are tool-scoped; drop them when switching tools.
+  useEffect(() => {
+    if (activeTool !== 'pen') {
+      setPenPoints([]);
+      setPenCursor(null);
+    }
+    if (activeTool !== 'brush') setDrawPoints(null);
+  }, [activeTool]);
+
+  useEffect(() => {
+    if (activeTool !== 'pen') return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) {
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        finalizePenPolygon();
+      } else if (event.key === 'Escape') {
+        setPenPoints([]);
+        setPenCursor(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTool, penPoints]);
+
   const toArtboardPoint = () => {
     const stage = stageRef.current;
     const pointer = stage?.getPointerPosition();
@@ -240,6 +278,15 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       point.y > artboard.height
     ) {
       clearSelection();
+      return;
+    }
+    if (activeTool === 'pen') {
+      setPenPoints((prev) => [...prev, point.x, point.y]);
+      setPenCursor(point);
+      return;
+    }
+    if (activeTool === 'brush') {
+      setDrawPoints([point.x, point.y]);
       return;
     }
     if (activeTool === 'text') {
@@ -356,6 +403,18 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     const width = Math.abs(current.x - start.x);
     const height = Math.abs(current.y - start.y);
     const moved = width > 4 || height > 4;
+
+    if (shape === 'arrow') {
+      const end = moved ? current : { x: start.x + 220, y: start.y };
+      addLayerToActiveArtboard(
+        project.id,
+        createArrowLayer(start.x, start.y, end.x, end.y, shapeDefaults),
+      );
+      setDraftShape(null);
+      setActiveTool('select');
+      return;
+    }
+
     const x = moved ? Math.min(start.x, current.x) : start.x;
     const y = moved ? Math.min(start.y, current.y) : start.y;
     const nextW = moved ? Math.max(1, width) : 220;
@@ -377,6 +436,31 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     addLayerToActiveArtboard(project.id, layer);
     setDraftShape(null);
     setActiveTool('select');
+  };
+
+  const commitFreehand = () => {
+    if (!drawPoints) return;
+    const layer = createFreehandLayer(drawPoints, shapeDefaults);
+    setDrawPoints(null);
+    if (layer) {
+      addLayerToActiveArtboard(project.id, layer);
+      setActiveTool('select');
+    }
+  };
+
+  const finalizePenPolygon = () => {
+    if (penPoints.length < 6) {
+      setPenPoints([]);
+      setPenCursor(null);
+      return;
+    }
+    const layer = createCustomPolygonLayer(penPoints, shapeDefaults);
+    setPenPoints([]);
+    setPenCursor(null);
+    if (layer) {
+      addLayerToActiveArtboard(project.id, layer);
+      setActiveTool('select');
+    }
   };
 
   return (
@@ -415,11 +499,29 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
         height={size.height}
         draggable={activeTool === 'pan'}
         onMouseDown={handleStagePointerDown}
+        onDblClick={() => {
+          if (activeTool === 'pen') finalizePenPolygon();
+        }}
         onMouseMove={() => {
+          if (drawPoints) {
+            const point = toArtboardPoint();
+            setDrawPoints([...drawPoints, point.x, point.y]);
+            return;
+          }
+          if (activeTool === 'pen' && penPoints.length > 0) {
+            setPenCursor(toArtboardPoint());
+            return;
+          }
           if (!draftShape) return;
           setDraftShape({ ...draftShape, current: toArtboardPoint() });
         }}
-        onMouseUp={commitDraftShape}
+        onMouseUp={() => {
+          if (drawPoints) {
+            commitFreehand();
+            return;
+          }
+          commitDraftShape();
+        }}
         onDragEnd={(event) => {
           if (activeTool !== 'pan') return;
           setPan({ x: pan.x + event.target.x(), y: pan.y + event.target.y() });
@@ -502,6 +604,21 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
                 stroke="#007AFF"
                 dash={[8 / zoom, 5 / zoom]}
               />
+            ) : draftShape.shape === 'arrow' ? (
+              <Arrow
+                points={[
+                  draftShape.start.x,
+                  draftShape.start.y,
+                  draftShape.current.x,
+                  draftShape.current.y,
+                ]}
+                stroke="#007AFF"
+                fill="#007AFF"
+                strokeWidth={3 / zoom}
+                pointerLength={14 / zoom}
+                pointerWidth={14 / zoom}
+                lineCap="round"
+              />
             ) : (
               <Line
                 x={Math.min(draftShape.start.x, draftShape.current.x)}
@@ -532,6 +649,47 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
               dash={[8 / zoom, 5 / zoom]}
             />
           ))}
+          {drawPoints && drawPoints.length >= 4 && (
+            <Line
+              points={drawPoints}
+              stroke={shapeDefaults.stroke}
+              strokeWidth={shapeDefaults.brushSize}
+              tension={0.4}
+              lineCap="round"
+              lineJoin="round"
+              listening={false}
+            />
+          )}
+          {penPoints.length > 0 && (
+            <>
+              <Line
+                points={penCursor ? [...penPoints, penCursor.x, penCursor.y] : penPoints}
+                stroke="#007AFF"
+                strokeWidth={1.5 / zoom}
+                dash={[6 / zoom, 4 / zoom]}
+                lineCap="round"
+                lineJoin="round"
+                listening={false}
+              />
+              {penPoints
+                .reduce<{ x: number; y: number }[]>((acc, value, i) => {
+                  if (i % 2 === 0) acc.push({ x: value, y: penPoints[i + 1] });
+                  return acc;
+                }, [])
+                .map((vertex, i) => (
+                  <Circle
+                    key={i}
+                    x={vertex.x}
+                    y={vertex.y}
+                    radius={3 / zoom}
+                    fill="#FFFFFF"
+                    stroke="#007AFF"
+                    strokeWidth={1.5 / zoom}
+                    listening={false}
+                  />
+                ))}
+            </>
+          )}
           <Transformer
             ref={transformerRef}
             rotateEnabled

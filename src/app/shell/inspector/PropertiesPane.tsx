@@ -6,6 +6,7 @@ import {
   AlignLeft,
   AlignRight,
   Badge,
+  Brush,
   Circle,
   Diamond,
   Folder,
@@ -14,6 +15,8 @@ import {
   Layers,
   Minus,
   MousePointer2,
+  MoveUpRight,
+  PenTool,
   Pipette,
   Shapes,
   Square,
@@ -36,7 +39,7 @@ import { GlassSegmentedControl } from '@/components/glass';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore, type EditorTool } from '@/lib/state/uiStore';
-import type { CalqoLayer, Fill, ShadowStyle, TextLayer } from '@/lib/schema';
+import type { ArrowStyle, CalqoLayer, Fill, ShadowStyle, StrokeStyle, TextLayer } from '@/lib/schema';
 import { ColorPickerPopover } from './ColorPickerPopover';
 import { TextVariants } from './ContentControls';
 
@@ -55,10 +58,13 @@ const TOOL_ICON: Record<EditorTool, LucideIcon> = {
   rect: Square,
   ellipse: Circle,
   line: Minus,
+  arrow: MoveUpRight,
   triangle: Triangle,
   diamond: Diamond,
   badge: Badge,
   star: Star,
+  pen: PenTool,
+  brush: Brush,
   image: ImageIcon,
   svg: Shapes,
 };
@@ -68,10 +74,13 @@ const DRAW_TOOLS: EditorTool[] = [
   'rect',
   'ellipse',
   'line',
+  'arrow',
   'triangle',
   'diamond',
   'badge',
   'star',
+  'pen',
+  'brush',
   'image',
   'svg',
 ];
@@ -79,6 +88,7 @@ const SHAPE_TOOLS = new Set<EditorTool>([
   'rect',
   'ellipse',
   'line',
+  'arrow',
   'triangle',
   'diamond',
   'badge',
@@ -107,17 +117,206 @@ const COLOR_SWATCHES = [
   '#000000',
 ];
 
-function polygonKind(layer: Extract<CalqoLayer, { type: 'shape' }>): ShapeKind {
-  if (layer.shape !== 'polygon') return layer.shape;
-  const normalized = layer.name.toLowerCase().split(' ')[0];
-  if (normalized === 'triangle' || normalized === 'diamond' || normalized === 'badge' || normalized === 'star') {
-    return normalized;
-  }
-  return 'badge';
-}
-
 function polygonDisplayName(kind: PolygonPreset): string {
   return kind === 'badge' ? 'Badge' : kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+type ShapeLayerT = Extract<CalqoLayer, { type: 'shape' }>;
+
+/** The shape-kind shown in the convert dropdown, or null for shapes that should
+ * not be reshaped through it (arrows, freehand strokes, custom polygons). */
+function convertibleKind(layer: ShapeLayerT): ShapeKind | null {
+  if (layer.shape === 'rect' || layer.shape === 'ellipse' || layer.shape === 'line') {
+    return layer.shape;
+  }
+  if (layer.shape === 'polygon') {
+    const normalized = layer.name.toLowerCase().split(' ')[0];
+    if (normalized === 'triangle' || normalized === 'diamond' || normalized === 'badge' || normalized === 'star') {
+      return normalized;
+    }
+  }
+  return null;
+}
+
+/** Shapes that paint an interior fill (everything except open strokes). */
+function isFilledShape(layer: ShapeLayerT): boolean {
+  return layer.shape !== 'line' && layer.shape !== 'arrow' && layer.shape !== 'freehand';
+}
+
+const FILL_TYPE_OPTIONS = ['solid', 'linear', 'radial', 'pattern'] as const;
+type FillType = (typeof FILL_TYPE_OPTIONS)[number];
+
+const PATTERN_OPTIONS: { value: Extract<Fill, { type: 'pattern' }>['pattern']; labelKey: string }[] = [
+  { value: 'dots', labelKey: 'properties.patternDots' },
+  { value: 'grid', labelKey: 'properties.patternGrid' },
+  { value: 'hatch', labelKey: 'properties.patternHatch' },
+  { value: 'cross-hatch', labelKey: 'properties.patternCrossHatch' },
+  { value: 'checker', labelKey: 'properties.patternChecker' },
+];
+
+/** First solid-ish colour of a fill, for seeding type switches. */
+function fillBaseColor(fill: Fill): string {
+  if (fill.type === 'solid') return fill.color;
+  if (fill.type === 'linear' || fill.type === 'radial') return fill.stops[0]?.color ?? '#007AFF';
+  if (fill.type === 'pattern') return fill.color;
+  return '#007AFF';
+}
+
+/** Construct a sensible default fill when switching the fill type. */
+function fillForType(type: FillType, current: Fill): Fill {
+  const base = fillBaseColor(current);
+  if (type === 'solid') return { type: 'solid', color: base };
+  if (type === 'linear') {
+    return { type: 'linear', angle: 90, stops: [{ offset: 0, color: base }, { offset: 1, color: '#FFFFFF' }] };
+  }
+  if (type === 'radial') {
+    return { type: 'radial', stops: [{ offset: 0, color: '#FFFFFF' }, { offset: 1, color: base }] };
+  }
+  return { type: 'pattern', pattern: 'dots', color: base, background: '#FFFFFF', scale: 1, angle: 0 };
+}
+
+/** Full fill editor: type switch plus solid/gradient/pattern sub-controls. */
+function FillField({ fill, onChange }: { fill: Fill; onChange: (fill: Fill) => void }) {
+  const { t } = useTranslation('editor');
+  const type: FillType = fill.type === 'image' ? 'solid' : fill.type;
+  return (
+    <div className="space-y-1">
+      <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
+        <span className="text-[var(--calqo-text-3)]">{t('properties.fill')}</span>
+        <GlassSegmentedControl
+          ariaLabel={t('properties.fill')}
+          className="flex w-full [&>button]:flex-1 [&>button]:px-1"
+          value={type}
+          onChange={(next) => onChange(fillForType(next as FillType, fill))}
+          options={FILL_TYPE_OPTIONS.map((value) => ({
+            value,
+            label: t(`properties.fill_${value}`),
+          }))}
+        />
+      </div>
+      {fill.type === 'solid' && (
+        <ColorField
+          label={t('properties.color')}
+          value={fill.color}
+          onChange={(color) => onChange({ type: 'solid', color })}
+        />
+      )}
+      {(fill.type === 'linear' || fill.type === 'radial') && (
+        <>
+          <ColorField
+            label={t('properties.gradientStart')}
+            value={fill.stops[0]?.color ?? '#007AFF'}
+            onChange={(color) =>
+              onChange({ ...fill, stops: [{ offset: 0, color }, fill.stops[1] ?? { offset: 1, color: '#FFFFFF' }] })
+            }
+          />
+          <ColorField
+            label={t('properties.gradientEnd')}
+            value={fill.stops[1]?.color ?? '#FFFFFF'}
+            onChange={(color) =>
+              onChange({ ...fill, stops: [fill.stops[0] ?? { offset: 0, color: '#007AFF' }, { offset: 1, color }] })
+            }
+          />
+          {fill.type === 'linear' && (
+            <NumberField
+              label={t('properties.gradientAngle')}
+              value={fill.angle ?? 0}
+              onChange={(angle) => onChange({ ...fill, angle })}
+            />
+          )}
+        </>
+      )}
+      {fill.type === 'pattern' && (
+        <>
+          <SelectField
+            label={t('properties.pattern')}
+            value={fill.pattern}
+            options={PATTERN_OPTIONS.map((option) => ({ value: option.value, label: t(option.labelKey) }))}
+            onChange={(pattern) => onChange({ ...fill, pattern: pattern as typeof fill.pattern })}
+          />
+          <ColorField label={t('properties.color')} value={fill.color} onChange={(color) => onChange({ ...fill, color })} />
+          <ColorField
+            label={t('properties.background')}
+            value={fill.background}
+            onChange={(background) => onChange({ ...fill, background })}
+          />
+          <NumberField
+            label={t('properties.patternScale')}
+            value={fill.scale}
+            min={0.25}
+            max={6}
+            onChange={(scale) => onChange({ ...fill, scale })}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+const STROKE_STYLE_OPTIONS: { value: NonNullable<StrokeStyle['style']>; labelKey: string }[] = [
+  { value: 'solid', labelKey: 'properties.styleSolid' },
+  { value: 'dashed', labelKey: 'properties.styleDashed' },
+  { value: 'dotted', labelKey: 'properties.styleDotted' },
+];
+
+function StrokeStyleField({
+  value,
+  onChange,
+}: {
+  value: NonNullable<StrokeStyle['style']>;
+  onChange: (value: NonNullable<StrokeStyle['style']>) => void;
+}) {
+  const { t } = useTranslation('editor');
+  return (
+    <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
+      <span className="text-[var(--calqo-text-3)]">{t('properties.strokeStyle')}</span>
+      <GlassSegmentedControl
+        ariaLabel={t('properties.strokeStyle')}
+        className="flex w-full [&>button]:flex-1"
+        value={value}
+        onChange={(next) => onChange(next as NonNullable<StrokeStyle['style']>)}
+        options={STROKE_STYLE_OPTIONS.map((option) => ({ value: option.value, label: t(option.labelKey) }))}
+      />
+    </div>
+  );
+}
+
+const DEFAULT_ARROW: ArrowStyle = { start: false, end: true, pointerLength: 16, pointerWidth: 16 };
+
+function ArrowHeadField({
+  value,
+  onChange,
+}: {
+  value: ArrowStyle | undefined;
+  onChange: (value: ArrowStyle) => void;
+}) {
+  const { t } = useTranslation('editor');
+  const arrow = value ?? DEFAULT_ARROW;
+  return (
+    <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1.5 text-[12px]">
+      <span className="text-[var(--calqo-text-3)]">{t('properties.arrowHeads')}</span>
+      <div className="flex gap-3">
+        <label className="flex cursor-pointer items-center gap-1.5 text-[var(--calqo-text-2)]">
+          <input
+            type="checkbox"
+            checked={arrow.start}
+            onChange={(event) => onChange({ ...arrow, start: event.target.checked })}
+            className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
+          />
+          {t('properties.arrowStart')}
+        </label>
+        <label className="flex cursor-pointer items-center gap-1.5 text-[var(--calqo-text-2)]">
+          <input
+            type="checkbox"
+            checked={arrow.end}
+            onChange={(event) => onChange({ ...arrow, end: event.target.checked })}
+            className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
+          />
+          {t('properties.arrowEnd')}
+        </label>
+      </div>
+    </div>
+  );
 }
 
 function measureImage(file: File): Promise<{ width?: number; height?: number }> {
@@ -269,6 +468,9 @@ function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
   }
 
   const isShapeTool = SHAPE_TOOLS.has(activeTool);
+  const isPen = activeTool === 'pen';
+  const isBrush = activeTool === 'brush';
+  const hasFill = (isShapeTool && activeTool !== 'line' && activeTool !== 'arrow') || isPen;
 
   return (
     <div className="flex flex-col gap-4">
@@ -277,9 +479,9 @@ function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
         title={t('properties.toolDefaults', { tool: t(`tools.${activeTool}`) })}
         subtitle={t('properties.toolDefaultsHint')}
       />
-      {isShapeTool && (
+      {(isShapeTool || isPen) && (
         <Section title={t('properties.shape')}>
-          {activeTool !== 'line' && (
+          {hasFill && (
             <ColorField
               label={t('properties.fill')}
               value={shapeDefaults.fill}
@@ -292,10 +494,30 @@ function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
             onChange={(stroke) => setShapeDefaults({ stroke })}
           />
           <NumberField
-            label={t('properties.stroke')}
+            label={t('properties.strokeWidth')}
             value={shapeDefaults.strokeWidth}
             min={0}
             onChange={(strokeWidth) => setShapeDefaults({ strokeWidth })}
+          />
+          <StrokeStyleField
+            value={shapeDefaults.strokeStyle}
+            onChange={(strokeStyle) => setShapeDefaults({ strokeStyle })}
+          />
+        </Section>
+      )}
+      {isBrush && (
+        <Section title={t('properties.brush')}>
+          <ColorField
+            label={t('properties.stroke')}
+            value={shapeDefaults.stroke}
+            onChange={(stroke) => setShapeDefaults({ stroke })}
+          />
+          <NumberField
+            label={t('properties.brushSize')}
+            value={shapeDefaults.brushSize}
+            min={1}
+            max={80}
+            onChange={(brushSize) => setShapeDefaults({ brushSize })}
           />
         </Section>
       )}
@@ -404,46 +626,46 @@ function LayerControls({
 
       {layer.type === 'shape' && (
         <Section title={t('properties.shape')}>
-          <SelectField
-            label={t('properties.shape')}
-            value={polygonKind(layer)}
-            options={SHAPE_KIND_OPTIONS.map((option) => ({
-              value: option.value,
-              label: t(option.labelKey),
-            }))}
-            onChange={(value) => {
-              const kind = value as ShapeKind;
-              if (kind === 'triangle' || kind === 'diamond' || kind === 'badge' || kind === 'star') {
+          {convertibleKind(layer) && (
+            <SelectField
+              label={t('properties.shape')}
+              value={convertibleKind(layer) as string}
+              options={SHAPE_KIND_OPTIONS.map((option) => ({
+                value: option.value,
+                label: t(option.labelKey),
+              }))}
+              onChange={(value) => {
+                const kind = value as ShapeKind;
+                if (kind === 'triangle' || kind === 'diamond' || kind === 'badge' || kind === 'star') {
+                  update({
+                    name: polygonDisplayName(kind),
+                    shape: 'polygon',
+                    points: polygonPoints(kind, layer.w, Math.max(1, Math.abs(layer.h))),
+                  });
+                  return;
+                }
                 update({
-                  name: polygonDisplayName(kind),
-                  shape: 'polygon',
-                  points: polygonPoints(kind, layer.w, Math.max(1, Math.abs(layer.h))),
+                  name:
+                    kind === 'line'
+                      ? 'Line'
+                      : kind === 'ellipse'
+                        ? 'Ellipse'
+                        : 'Rectangle',
+                  shape: kind,
+                  points: kind === 'line' ? [0, 0, layer.w, layer.h] : null,
+                  cornerRadius: kind === 'rect' ? (layer.cornerRadius ?? 18) : 0,
                 });
-                return;
-              }
-              update({
-                name:
-                  kind === 'line'
-                    ? 'Line'
-                    : kind === 'ellipse'
-                      ? 'Ellipse'
-                      : 'Rectangle',
-                shape: kind,
-                points: kind === 'line' ? [0, 0, layer.w, layer.h] : null,
-                cornerRadius: kind === 'rect' ? (layer.cornerRadius ?? 18) : 0,
-              });
-            }}
-          />
-          <ColorField
-            label={t('properties.fill')}
-            value={layer.fill.type === 'solid' ? layer.fill.color : '#ffffff'}
-            onChange={(color) => update({ fill: { type: 'solid', color } satisfies Fill })}
-          />
+              }}
+            />
+          )}
+          {isFilledShape(layer) && (
+            <FillField fill={layer.fill} onChange={(fill) => update({ fill })} />
+          )}
           <ColorField
             label={t('properties.stroke')}
             value={layer.stroke?.color ?? '#007AFF'}
             onChange={(color) =>
-              update({ stroke: { color, width: layer.stroke?.width ?? 2 } })
+              update({ stroke: { ...layer.stroke, color, width: layer.stroke?.width ?? 2 } })
             }
           />
           <NumberField
@@ -451,9 +673,33 @@ function LayerControls({
             value={layer.stroke?.width ?? 0}
             min={0}
             onChange={(width) =>
-              update({ stroke: width > 0 ? { color: layer.stroke?.color ?? '#007AFF', width } : undefined })
+              update({
+                stroke:
+                  width > 0
+                    ? { ...layer.stroke, color: layer.stroke?.color ?? '#007AFF', width }
+                    : undefined,
+              })
             }
           />
+          <StrokeStyleField
+            value={layer.stroke?.style ?? 'solid'}
+            onChange={(style) =>
+              update({
+                stroke: {
+                  ...layer.stroke,
+                  color: layer.stroke?.color ?? '#007AFF',
+                  width: layer.stroke?.width ?? 2,
+                  style,
+                },
+              })
+            }
+          />
+          {layer.shape === 'arrow' && (
+            <ArrowHeadField
+              value={layer.arrow}
+              onChange={(arrow) => update({ arrow })}
+            />
+          )}
           {layer.shape === 'rect' && (
             <NumberField
               label={t('properties.cornerRadius')}

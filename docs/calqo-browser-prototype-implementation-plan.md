@@ -223,6 +223,42 @@ Exit criterion:
 
 - The browser app can be deployed as a static site and used without local dev knowledge.
 
+### Phase G — Graphics editing expansion
+
+> **Status: COMPLETE (2026-06-19).** A post-prototype enrichment of the editing
+> surface, landed behind the existing schema/command/adapter boundaries. Verified
+> with `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`.
+
+Goal: deepen the creative toolkit beyond the prototype baseline.
+
+Deliverables:
+
+- **More drawing tools** — arrow tool (with start/end head toggles), a pen tool
+  for click-to-place custom polygons, and a freehand brush tool (Konva line with
+  tension). New `EditorTool`s + tool-rail entries + canvas interactions.
+- **Richer shape styling** — gradient (linear/radial) and pattern fills
+  (dots / grid / hatch / cross-hatch / checker, generated as cached canvas tiles)
+  plus named stroke styles (solid / dashed / dotted). Schema-backed and rendered
+  through a shared `shapeStyle` helper.
+- **Duplicate a layer** — per-row duplicate action in the layers panel
+  (`duplicateLayerById`) alongside the existing multi-select duplicate.
+- **AI style reference** — prompt-a-template now accepts a sample image (a brand
+  palette is sampled client-side) and/or an image URL the model is asked to
+  mimic (`StyleReference`).
+- **AI SVG generation** — providers gained an optional `generateSvg` capability
+  (mock + OpenAI-compatible); output is sanitised before insertion as an asset.
+- **Prebuilt SVG library** — a bundled set of common social-post marks, surfaced
+  in a new insert-SVG dialog (Library / AI / Upload tabs) opened from the SVG
+  tool.
+
+File map: `lib/schema/schema.ts` (pattern fills, stroke styles, arrow/freehand
+shapes), `editor/canvas/shapeStyle.ts`, `editor/canvas/LayerRenderer.tsx`,
+`editor/canvas/CalqoStage.tsx`, `editor/commands/projectCommands.ts`,
+`editor/ai/{AIProvider,prompts,mockProvider,openAICompatibleProvider,svgService}.ts`,
+`editor/assets/svgLibrary.ts`, `lib/utils/{svg,palette}.ts`,
+`app/shell/{SvgLibraryDialog,PromptTemplateDialog}.tsx`,
+`app/shell/inspector/{PropertiesPane,LayersPane}.tsx`, `app/shell/ToolRail.tsx`.
+
 ---
 
 ## 2. Repository setup
