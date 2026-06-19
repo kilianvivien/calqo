@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2 } from 'lucide-react';
+import { Brush, PaintBucket, Plus, Trash2 } from 'lucide-react';
 import { editProject } from '@/editor/commands/projectCommands';
 import { updateLayer } from '@/editor/utils/layers';
 import { useActiveArtboard, useActiveProject } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
 import type { CalqoLayer } from '@/lib/schema';
-import { DocumentControls, ColorField } from './PropertiesPane';
+import { DocumentControls } from './PropertiesPane';
+import { ColorSwatchButton } from './ColorSwatchButton';
 import { ContentLocalesSection } from './ContentControls';
 
 /** Project-level style: artboard setup, background, and brand palette. */
@@ -82,41 +83,51 @@ export function StylePane() {
         <div className="mb-2">
           <span className="eyebrow">{t('palette.title')}</span>
         </div>
-        <div className="glass-thin space-y-2 rounded-[var(--calqo-radius-sm)] p-2">
-          {project.palette.map((color, i) => (
-            <div
-              key={`${color}-${i}`}
-              className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-1.5"
-            >
-              <ColorField
-                label={`${i + 1}`}
-                value={color}
-                onChange={(next) => updatePaletteColor(i, next)}
-              />
-              <button
-                type="button"
-                onClick={() => applyColor(color)}
-                className="h-8 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-2 text-[11px] text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)]"
-              >
-                {selectedIds.length > 0 ? t('palette.apply') : t('palette.defaults')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setBackground(color)}
-                className="h-8 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-2 text-[11px] text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)]"
-              >
-                {t('palette.background')}
-              </button>
-              <button
-                type="button"
-                aria-label={t('palette.remove')}
-                onClick={() => removePaletteColor(i)}
-                className="flex h-8 w-8 items-center justify-center rounded-[var(--calqo-radius-sm)] text-[var(--calqo-text-3)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
+        <div className="glass-thin space-y-1.5 rounded-[var(--calqo-radius-sm)] p-2">
+          {project.palette.map((color, i) => {
+            const applyLabel =
+              selectedIds.length > 0 ? t('palette.apply') : t('palette.defaults');
+            return (
+              <div key={`${color}-${i}`} className="flex items-center gap-1.5">
+                <ColorSwatchButton
+                  value={color}
+                  onChange={(next) => updatePaletteColor(i, next)}
+                  label={`${t('palette.title')} ${i + 1}`}
+                  size={26}
+                />
+                <span className="mono min-w-0 flex-1 truncate text-[11px] uppercase tracking-wide text-[var(--calqo-text-2)]">
+                  {color}
+                </span>
+                <button
+                  type="button"
+                  title={applyLabel}
+                  aria-label={applyLabel}
+                  onClick={() => applyColor(color)}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+                >
+                  <Brush size={13} />
+                </button>
+                <button
+                  type="button"
+                  title={t('palette.background')}
+                  aria-label={t('palette.background')}
+                  onClick={() => setBackground(color)}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+                >
+                  <PaintBucket size={13} />
+                </button>
+                <button
+                  type="button"
+                  title={t('palette.remove')}
+                  aria-label={t('palette.remove')}
+                  onClick={() => removePaletteColor(i)}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--calqo-radius-sm)] text-[var(--calqo-text-3)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            );
+          })}
           <button
             type="button"
             onClick={addPaletteColor}

@@ -14,6 +14,7 @@ import {
   type SvgLibraryItem,
 } from '@/editor/assets/svgLibrary';
 import { extractSvgSize, looksLikeSvg, sanitizeSvg } from '@/lib/utils/svg';
+import { ColorSwatchButton } from './inspector/ColorSwatchButton';
 import { useActiveArtboard, useActiveProject } from '@/lib/state/selectors';
 import { useUiStore } from '@/lib/state/uiStore';
 
@@ -229,15 +230,18 @@ function SvgLibraryDialogInner() {
                 onChange={(event) => setAiPrompt(event.target.value)}
                 className="min-h-20 w-full resize-y rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 py-2.5 text-[13px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
               />
-              <label className="flex items-center gap-2 text-[12px] text-[var(--calqo-text-2)]">
-                {t('svgLibrary.color')}
-                <input
-                  type="color"
+              <div className="flex items-center gap-2 text-[12px] text-[var(--calqo-text-2)]">
+                <span>{t('svgLibrary.color')}</span>
+                <ColorSwatchButton
                   value={/^#[0-9a-f]{6}$/i.test(aiColor) ? aiColor : '#111827'}
-                  onChange={(event) => setAiColor(event.target.value)}
-                  className="h-7 w-10 cursor-pointer rounded border border-[var(--calqo-divider)] bg-transparent"
+                  onChange={setAiColor}
+                  label={t('svgLibrary.color')}
+                  size={26}
                 />
-              </label>
+                <span className="mono text-[11px] uppercase tracking-wide text-[var(--calqo-text-3)]">
+                  {aiColor}
+                </span>
+              </div>
               {aiPreview && (
                 <div className="flex items-center gap-3 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] p-3">
                   <span
