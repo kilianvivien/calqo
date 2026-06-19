@@ -13,7 +13,7 @@ import {
   SVG_LIBRARY,
   type SvgLibraryItem,
 } from '@/editor/assets/svgLibrary';
-import { extractSvgSize, looksLikeSvg, sanitizeSvg } from '@/lib/utils/svg';
+import { extractSvgSize, looksLikeSvg, recolorSvg, sanitizeSvg } from '@/lib/utils/svg';
 import { ColorSwatchButton } from './inspector/ColorSwatchButton';
 import { useActiveArtboard, useActiveProject } from '@/lib/state/selectors';
 import { useUiStore } from '@/lib/state/uiStore';
@@ -38,6 +38,7 @@ function SvgLibraryDialogInner() {
   const [search, setSearch] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiColor, setAiColor] = useState(project?.palette[0] ?? '#111827');
+  const [libColor, setLibColor] = useState(project?.palette[0] ?? '#111827');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiPreview, setAiPreview] = useState<string | null>(null);
@@ -52,7 +53,7 @@ function SvgLibraryDialogInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const insertSvg = async (svg: string, name: string) => {
+  const insertSvg = async (svg: string, name: string, color?: string) => {
     if (!project || !artboard) return;
     const { width, height } = extractSvgSize(svg);
     const ratio = width / height;
@@ -66,7 +67,13 @@ function SvgLibraryDialogInner() {
       width: Math.round(w),
       height: Math.round(h),
     });
-    addImportedAssetLayer(project.id, asset, (artboard.width - w) / 2, (artboard.height - h) / 2);
+    addImportedAssetLayer(
+      project.id,
+      asset,
+      (artboard.width - w) / 2,
+      (artboard.height - h) / 2,
+      color,
+    );
     close();
   };
 
@@ -118,13 +125,13 @@ function SvgLibraryDialogInner() {
         key={item.id}
         type="button"
         title={name}
-        onClick={() => void insertSvg(item.svg, name)}
+        onClick={() => void insertSvg(item.svg, name, libColor)}
         className="group flex flex-col items-center gap-1.5"
       >
         <span
           className="flex aspect-square w-full items-center justify-center rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-white p-3 transition-all group-hover:-translate-y-0.5 group-hover:border-[var(--calqo-accent)] group-hover:shadow-[0_6px_18px_rgba(0,0,0,0.12)]"
-          // Library SVGs are bundled and trusted.
-          dangerouslySetInnerHTML={{ __html: item.svg }}
+          // Library SVGs are bundled and trusted; recoloured for preview.
+          dangerouslySetInnerHTML={{ __html: recolorSvg(item.svg, libColor) }}
         />
         <span className="w-full truncate text-center text-[10.5px] leading-tight text-[var(--calqo-text-3)] group-hover:text-[var(--calqo-text-2)]">
           {name}
@@ -195,13 +202,24 @@ function SvgLibraryDialogInner() {
         <div className="min-h-0 flex-1 overflow-y-auto calqo-scroll">
           {tab === 'library' && (
             <div className="space-y-3">
-              <input
-                type="search"
-                value={search}
-                placeholder={t('svgLibrary.search')}
-                onChange={(event) => setSearch(event.target.value)}
-                className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[12.5px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="search"
+                  value={search}
+                  placeholder={t('svgLibrary.search')}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className="h-9 min-w-0 flex-1 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[12.5px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
+                />
+                <span className="flex shrink-0 items-center gap-1.5 text-[12px] text-[var(--calqo-text-2)]">
+                  {t('svgLibrary.color')}
+                  <ColorSwatchButton
+                    value={/^#[0-9a-f]{6}$/i.test(libColor) ? libColor : '#111827'}
+                    onChange={setLibColor}
+                    label={t('svgLibrary.color')}
+                    size={26}
+                  />
+                </span>
+              </div>
               {sections.length === 0 ? (
                 <p className="py-8 text-center text-[12.5px] text-[var(--calqo-text-3)]">
                   {t('svgLibrary.noResults')}
@@ -251,7 +269,7 @@ function SvgLibraryDialogInner() {
                   />
                   <GlassButton
                     variant="primary"
-                    onClick={() => void insertSvg(aiPreview, aiPrompt.slice(0, 32) || 'AI SVG')}
+                    onClick={() => void insertSvg(aiPreview, aiPrompt.slice(0, 32) || 'AI SVG', aiColor)}
                   >
                     {t('svgLibrary.insert')}
                   </GlassButton>

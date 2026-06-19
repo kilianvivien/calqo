@@ -26,6 +26,25 @@ export function sanitizeSvg(raw: string): string {
   return svg.trim();
 }
 
+/** Re-tint an SVG to a single colour: every concrete `fill`/`stroke` value (and
+ * `currentColor`) is swapped for `color`, while `none`/`transparent` are left
+ * untouched so outline vs. filled marks keep their structure. Non-destructive —
+ * always applied to the original markup. */
+export function recolorSvg(svg: string, color: string): string {
+  return svg
+    .replace(/(fill|stroke)\s*=\s*"([^"]*)"/gi, (match, attr: string, value: string) => {
+      const v = value.trim().toLowerCase();
+      if (v === 'none' || v === 'transparent') return match;
+      return `${attr}="${color}"`;
+    })
+    .replace(/(fill|stroke)\s*=\s*'([^']*)'/gi, (match, attr: string, value: string) => {
+      const v = value.trim().toLowerCase();
+      if (v === 'none' || v === 'transparent') return match;
+      return `${attr}="${color}"`;
+    })
+    .replace(/currentColor/gi, color);
+}
+
 /** Detect constructs Calqo refuses from AI-generated SVG before sanitising, so
  * unsafe provider output is visible instead of silently rewritten. */
 export function hasDisallowedSvgMarkup(raw: string): boolean {

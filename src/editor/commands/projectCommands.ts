@@ -306,6 +306,7 @@ export interface ShapeStyleDefaults {
   strokeWidth: number;
   strokeStyle?: 'solid' | 'dashed' | 'dotted';
   brushSize?: number;
+  brushStyle?: 'smooth' | 'marker' | 'highlighter' | 'dashed';
 }
 
 export type PolygonPreset = 'triangle' | 'diamond' | 'badge' | 'star';
@@ -392,17 +393,38 @@ export function createFreehandLayer(
   const relative = absolutePoints.map((value, i) => (i % 2 === 0 ? value - minX : value - minY));
   const layer = createShapeLayer('freehand', minX, minY, Math.max(1, maxX - minX), Math.max(1, maxY - minY), defaults);
   if (layer.type === 'shape') {
+    const brush = BRUSH_STYLES[defaults?.brushStyle ?? 'smooth'];
     layer.points = relative;
-    layer.tension = 0.4;
+    layer.tension = brush.tension;
+    layer.opacity = brush.opacity;
+    if (brush.blendMode) layer.blendMode = brush.blendMode;
     layer.fill = { type: 'solid', color: 'transparent' };
     layer.stroke = {
       color: defaults?.stroke ?? '#111827',
       width: defaults?.brushSize ?? 6,
-      cap: 'round',
+      cap: brush.cap,
+      ...(brush.style ? { style: brush.style } : {}),
     };
   }
   return layer;
 }
+
+/** Freehand feel per brush style: smoothing, line cap, opacity, blend, dashing. */
+const BRUSH_STYLES: Record<
+  NonNullable<ShapeStyleDefaults['brushStyle']>,
+  {
+    tension: number;
+    cap: 'round' | 'square';
+    opacity: number;
+    blendMode?: 'multiply';
+    style?: 'dashed';
+  }
+> = {
+  smooth: { tension: 0.4, cap: 'round', opacity: 1 },
+  marker: { tension: 0.18, cap: 'round', opacity: 1 },
+  highlighter: { tension: 0, cap: 'square', opacity: 0.4, blendMode: 'multiply' },
+  dashed: { tension: 0.4, cap: 'round', opacity: 1, style: 'dashed' },
+};
 
 /** Build a closed custom polygon from absolute artboard points (pen tool). */
 export function createCustomPolygonLayer(
@@ -479,6 +501,7 @@ export function createAssetLayer(
   asset: CalqoAssetRef,
   x: number,
   y: number,
+  color?: string,
 ): CalqoLayer {
   const w = asset.width ?? 360;
   const h = asset.height ?? 240;
@@ -487,6 +510,7 @@ export function createAssetLayer(
       ...baseLayer(asset.name, x, y, w, h),
       type: 'svg',
       assetId: asset.id,
+      ...(color ? { color } : {}),
     };
   }
   return {
@@ -502,8 +526,9 @@ export function addImportedAssetLayer(
   asset: CalqoAssetRef,
   x: number,
   y: number,
+  color?: string,
 ): void {
-  const layer = createAssetLayer(asset, x, y);
+  const layer = createAssetLayer(asset, x, y, color);
   editProject(
     projectId,
     (draft) => {

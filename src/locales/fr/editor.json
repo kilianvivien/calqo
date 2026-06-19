@@ -104,6 +104,11 @@
     "arrowEnd": "Fin",
     "brush": "Pinceau",
     "brushSize": "Taille du pinceau",
+    "brushStyle": "Style",
+    "brushStyle_smooth": "Lisse",
+    "brushStyle_marker": "Marqueur",
+    "brushStyle_highlighter": "Surligneur",
+    "brushStyle_dashed": "Tirets",
     "cornerRadius": "Rayon des coins",
     "text": "Texte",
     "typography": "Typographie",
@@ -125,6 +130,7 @@
     "focalPoint": "Point focal",
     "focalX": "Focal X",
     "focalY": "Focal Y",
+    "cropImage": "Recadrer l'image",
     "resetCrop": "Réinitialiser le cadrage",
     "mask": "Masque",
     "maskNone": "Aucun",
@@ -140,6 +146,7 @@
     "contrast": "Contraste",
     "saturation": "Saturation",
     "resetFilters": "Réinitialiser les filtres",
+    "resetColor": "Réinitialiser la couleur",
     "effects": "Effets",
     "blendMode": "Mode de fusion",
     "blend_normal": "Normal",
@@ -158,6 +165,11 @@
     "preset_caption": "Légende",
     "preset_badge": "Badge",
     "preset_cta": "CTA"
+  },
+  "crop": {
+    "hint": "Glissez pour repositionner · molette pour zoomer",
+    "apply": "Appliquer le recadrage",
+    "cancel": "Annuler"
   },
   "palette": {
     "title": "Palette",

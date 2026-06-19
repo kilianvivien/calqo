@@ -24,6 +24,8 @@ export type LayerPatch = Partial<
   tension?: number;
   arrow?: ArrowStyle;
   fit?: ImageLayer['fit'];
+  /** SVG-only tint colour. `null` clears it. */
+  color?: SvgLayer['color'] | null;
   /** Image non-destructive edits. `null` clears the field. */
   focalPoint?: ImageLayer['focalPoint'] | null;
   mask?: ImageLayer['mask'] | null;
@@ -153,6 +155,10 @@ export function applyLayerPatch(layer: CalqoLayer, patch: LayerPatch): void {
       if (patch.crop === null) delete layer.crop;
       else layer.crop = patch.crop;
     }
+  }
+  if (layer.type === 'svg' && patch.color !== undefined) {
+    if (patch.color === null) delete layer.color;
+    else layer.color = patch.color;
   }
   if (isGroupLayer(layer) && patch.groupScale) {
     const { sx, sy } = patch.groupScale;

@@ -21,6 +21,7 @@ interface LayerRendererProps {
   onDragEnd: (layer: CalqoLayer, node: Konva.Node) => void;
   onTransformEnd: (layer: CalqoLayer, node: Konva.Node) => void;
   onTextEdit: (layer: CalqoLayer) => void;
+  onImageCrop?: (layer: CalqoLayer) => void;
 }
 
 function commonProps(
@@ -124,6 +125,7 @@ export function LayerRenderer(props: LayerRendererProps) {
     onDragEnd,
     onTransformEnd,
     onTextEdit,
+    onImageCrop,
   } = props;
 
   useLayerBlur(nodeRefs, layer, activeLocale);
@@ -243,7 +245,7 @@ export function LayerRenderer(props: LayerRendererProps) {
           strokeWidth={lineWidth}
           hitStrokeWidth={lineHitWidth}
           dash={stroke.dash as number[] | undefined}
-          lineCap="round"
+          lineCap={layer.stroke?.cap ?? 'round'}
           lineJoin="round"
         />
       );
@@ -278,7 +280,12 @@ export function LayerRenderer(props: LayerRendererProps) {
   }
 
   if (layer.type === 'image') {
-    return <ImageLayerNode layer={layer} base={base} />;
+    const imageBase = {
+      ...base,
+      onDblClick: () => onImageCrop?.(layer),
+      onDblTap: () => onImageCrop?.(layer),
+    };
+    return <ImageLayerNode layer={layer} base={imageBase} />;
   }
 
   if (layer.type === 'svg') {
@@ -329,7 +336,10 @@ function ImageLayerNode({
   base,
 }: {
   layer: ImageLayer;
-  base: ReturnType<typeof commonProps>;
+  base: ReturnType<typeof commonProps> & {
+    onDblClick?: () => void;
+    onDblTap?: () => void;
+  };
 }) {
   const { image, missing } = useAssetImage(layer.assetId);
   const imageRef = useRef<Konva.Image>(null);
@@ -414,7 +424,7 @@ function SvgLayerNode({
   layer: Extract<CalqoLayer, { type: 'svg' }>;
   base: ReturnType<typeof commonProps>;
 }) {
-  const { image, missing } = useAssetImage(layer.assetId);
+  const { image, missing } = useAssetImage(layer.assetId, layer.color);
   if (!image) return <AssetPlaceholder layer={layer} base={base} missing={missing} />;
   return <Image {...base} {...shadowProps(layer)} {...blendProps(layer)} image={image} />;
 }

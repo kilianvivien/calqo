@@ -29,6 +29,9 @@ export interface CanvasGuide {
  * inspector can trigger them without prop drilling. */
 export type AiDialog = 'none' | 'template' | 'translate';
 
+/** Brush feel for the freehand tool. */
+export type BrushStyle = 'smooth' | 'marker' | 'highlighter' | 'dashed';
+
 /** Style applied to the next shape a draw tool places — surfaced as the
  * tool-defaults inspector (GeoCarto's "Réglages {outil}" card). */
 export interface ShapeDefaults {
@@ -37,6 +40,7 @@ export interface ShapeDefaults {
   strokeWidth: number;
   strokeStyle: 'solid' | 'dashed' | 'dotted';
   brushSize: number;
+  brushStyle: BrushStyle;
 }
 
 const THEME_KEY = 'calqo-theme';
@@ -101,6 +105,8 @@ interface UiState {
   aiDialog: AiDialog;
   /** Whether the insert-SVG dialog (library / AI / upload) is open. */
   svgDialog: boolean;
+  /** Image layer currently in interactive crop mode, or null. */
+  croppingLayerId: string | null;
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
   setTransparency: (mode: TransparencyMode) => void;
@@ -113,6 +119,7 @@ interface UiState {
   requestFit: () => void;
   setAiDialog: (dialog: AiDialog) => void;
   setSvgDialog: (open: boolean) => void;
+  setCroppingLayerId: (id: string | null) => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -129,10 +136,12 @@ export const useUiStore = create<UiState>((set, get) => ({
     strokeWidth: 2,
     strokeStyle: 'solid',
     brushSize: 6,
+    brushStyle: 'smooth',
   },
   fitRequest: 0,
   aiDialog: 'none',
   svgDialog: false,
+  croppingLayerId: null,
   setTheme: (theme) => {
     safeSet(THEME_KEY, theme);
     applyUiAttributes(theme, get().transparency);
@@ -157,4 +166,5 @@ export const useUiStore = create<UiState>((set, get) => ({
   requestFit: () => set({ fitRequest: get().fitRequest + 1 }),
   setAiDialog: (aiDialog) => set({ aiDialog }),
   setSvgDialog: (svgDialog) => set({ svgDialog }),
+  setCroppingLayerId: (croppingLayerId) => set({ croppingLayerId }),
 }));

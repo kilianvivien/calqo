@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { assetStorage } from '@/lib/adapters';
+import { recolorSvg } from '@/lib/utils/svg';
 
-export function useAssetImage(assetId: string | null): {
+export function useAssetImage(
+  assetId: string | null,
+  /** When set and the asset is an SVG, re-tint its fills/strokes before render. */
+  tint?: string,
+): {
   image: HTMLImageElement | null;
   missing: boolean;
 } {
@@ -15,13 +20,23 @@ export function useAssetImage(assetId: string | null): {
     setMissing(false);
     if (!assetId) return undefined;
 
-    void assetStorage.getAssetBlob(assetId).then((blob) => {
+    void assetStorage.getAssetBlob(assetId).then(async (blob) => {
       if (!alive) return;
       if (!blob) {
         setMissing(true);
         return;
       }
-      url = URL.createObjectURL(blob);
+      let source = blob;
+      if (tint && blob.type.includes('svg')) {
+        try {
+          const text = await blob.text();
+          source = new Blob([recolorSvg(text, tint)], { type: 'image/svg+xml' });
+        } catch {
+          source = blob;
+        }
+        if (!alive) return;
+      }
+      url = URL.createObjectURL(source);
       const next = new Image();
       next.onload = () => {
         if (alive) setImage(next);
@@ -36,7 +51,7 @@ export function useAssetImage(assetId: string | null): {
       alive = false;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [assetId]);
+  }, [assetId, tint]);
 
   return { image, missing };
 }

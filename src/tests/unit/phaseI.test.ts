@@ -14,6 +14,15 @@ import {
 import { maskPolygonPoints, MASK_SHAPES } from '@/editor/canvas/maskClip';
 import { TEXT_PRESET_IDS, textPresetStyle } from '@/editor/typography/textPresets';
 import { applyLayerPatch } from '@/editor/utils/layers';
+import { recolorSvg } from '@/lib/utils/svg';
+import type { SvgLayer } from '@/lib/schema';
+import {
+  clampCropView,
+  initCropView,
+  minCoverScale,
+  viewToCropRect,
+  zoomCropView,
+} from '@/editor/canvas/cropGeometry';
 
 function baseImageLayer(): ImageLayer {
   return {
@@ -133,6 +142,78 @@ describe('phase I — layer patch effects & image fields', () => {
     expect(img.mask).toBeUndefined();
     expect(img.filters).toBeUndefined();
     expect(layer.effects).toBeUndefined();
+  });
+});
+
+describe('phase I — SVG recolour', () => {
+  it('recolours concrete fills and strokes but leaves none/transparent', () => {
+    const outline = recolorSvg(
+      '<svg fill="none" stroke="#111827"><path d="M0 0"/></svg>',
+      '#FF0000',
+    );
+    expect(outline).toContain('stroke="#FF0000"');
+    expect(outline).toContain('fill="none"');
+
+    const solid = recolorSvg('<svg fill="#111827"><path/></svg>', '#00FF00');
+    expect(solid).toContain('fill="#00FF00"');
+
+    expect(recolorSvg('<path fill="currentColor"/>', '#123456')).toContain('fill="#123456"');
+  });
+
+  it('sets and clears an SVG layer tint through the patch path', () => {
+    const layer: SvgLayer = {
+      id: 'svg1',
+      name: 'Icon',
+      type: 'svg',
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 100,
+      rotation: 0,
+      opacity: 1,
+      visible: true,
+      locked: false,
+      assetId: 'a1',
+    };
+    applyLayerPatch(layer, { color: '#FF9500' });
+    expect(layer.color).toBe('#FF9500');
+    applyLayerPatch(layer, { color: null });
+    expect(layer.color).toBeUndefined();
+  });
+});
+
+describe('phase I — crop geometry', () => {
+  const frame = { x: 100, y: 100, w: 200, h: 200 };
+
+  it('round-trips a crop rect through init and viewToCropRect', () => {
+    const crop = { x: 50, y: 60, w: 300, h: 300 };
+    const view = initCropView(800, 600, frame, crop);
+    const back = viewToCropRect(view, frame, 800, 600);
+    expect(back.x).toBeCloseTo(crop.x, 3);
+    expect(back.y).toBeCloseTo(crop.y, 3);
+    expect(back.w).toBeCloseTo(crop.w, 3);
+    expect(back.h).toBeCloseTo(crop.h, 3);
+  });
+
+  it('never lets the image scale below cover', () => {
+    const min = minCoverScale(800, 600, frame); // 200/600
+    const clamped = clampCropView({ scale: 0.01, x: 0, y: 0 }, 800, 600, frame);
+    expect(clamped.scale).toBeCloseTo(min, 5);
+  });
+
+  it('keeps the image covering the frame after clamping', () => {
+    const view = clampCropView({ scale: 1, x: 9999, y: 9999 }, 800, 600, frame);
+    expect(view.x).toBeLessThanOrEqual(frame.x);
+    expect(view.y).toBeLessThanOrEqual(frame.y);
+    expect(view.x + 800 * view.scale).toBeGreaterThanOrEqual(frame.x + frame.w - 0.001);
+  });
+
+  it('zoom raises the scale but stays clamped to cover', () => {
+    const start = initCropView(800, 600, frame);
+    const zoomed = zoomCropView(start, frame, 1.5, 800, 600);
+    expect(zoomed.scale).toBeGreaterThan(start.scale);
+    const out = zoomCropView(start, frame, 0.01, 800, 600);
+    expect(out.scale).toBeCloseTo(minCoverScale(800, 600, frame), 5);
   });
 });
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Arrow, Circle, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
+import { Arrow, Circle, Image as KonvaImage, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
 import type Konva from 'konva';
+import { useTranslation } from 'react-i18next';
 import { assetStorage } from '@/lib/adapters';
 import {
   addImportedAssetLayer,
@@ -27,6 +28,15 @@ import { TextEditOverlay } from './TextEditOverlay';
 import { LayerRenderer, type NodeRegistry } from './LayerRenderer';
 import { CanvasContextMenu } from './CanvasContextMenu';
 import { registerStageSampler } from './stageSampler';
+import { useAssetImage } from './useAssetImage';
+import {
+  clampCropView,
+  initCropView,
+  viewToCropRect,
+  zoomCropView,
+  type CropFrame,
+  type CropView,
+} from './cropGeometry';
 
 interface CalqoStageProps {
   project: CalqoProject;
@@ -146,6 +156,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const stageWidth = size.width;
   const stageHeight = size.height;
 
+  const { t } = useTranslation('editor');
   const activeTool = useUiStore((s) => s.activeTool);
   const zoom = useUiStore((s) => s.zoom);
   const pan = useUiStore((s) => s.pan);
@@ -163,6 +174,23 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const toggleSelection = useSelectionStore((s) => s.toggleSelection);
   const clearSelection = useSelectionStore((s) => s.clearSelection);
   const setActiveArtboard = useSelectionStore((s) => s.setActiveArtboard);
+  const croppingLayerId = useUiStore((s) => s.croppingLayerId);
+  const setCroppingLayerId = useUiStore((s) => s.setCroppingLayerId);
+
+  // Interactive image crop: the targeted image layer, its source bitmap, and the
+  // live view (image position/scale behind the fixed crop frame).
+  const croppingLayer = useMemo(() => {
+    if (!croppingLayerId) return null;
+    const found = findLayerInArtboard(artboard, croppingLayerId);
+    return found && found.type === 'image' ? found : null;
+  }, [artboard, croppingLayerId]);
+  const { image: cropImage } = useAssetImage(croppingLayer?.assetId ?? null);
+  const [cropView, setCropView] = useState<CropView | null>(null);
+  const cropFrame: CropFrame | null = croppingLayer
+    ? { x: croppingLayer.x, y: croppingLayer.y, w: croppingLayer.w, h: croppingLayer.h }
+    : null;
+  const cropIw = cropImage?.naturalWidth ?? 0;
+  const cropIh = cropImage?.naturalHeight ?? 0;
 
   const artboardX = (stageWidth - artboard.width * zoom) / 2 + pan.x;
   const artboardY = (stageHeight - artboard.height * zoom) / 2 + pan.y;
@@ -218,13 +246,51 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   useEffect(() => {
     const transformer = transformerRef.current;
     if (!transformer) return;
-    const nodes = selectedLayers
-      .filter((layer) => !layer.locked && layer.visible)
-      .map((layer) => nodeRefs.current.get(layer.id))
-      .filter((node): node is Konva.Node => Boolean(node));
+    // No transform handles while cropping — the crop editor owns interaction.
+    const nodes = croppingLayerId
+      ? []
+      : selectedLayers
+          .filter((layer) => !layer.locked && layer.visible)
+          .map((layer) => nodeRefs.current.get(layer.id))
+          .filter((node): node is Konva.Node => Boolean(node));
     transformer.nodes(nodes);
     transformer.getLayer()?.batchDraw();
-  }, [selectedLayers]);
+  }, [selectedLayers, croppingLayerId]);
+
+  // Seed the crop view when entering crop mode (or when the bitmap loads).
+  useEffect(() => {
+    if (!croppingLayerId || !cropImage || !cropFrame) {
+      setCropView(null);
+      return;
+    }
+    setCropView(initCropView(cropIw, cropIh, cropFrame, croppingLayer?.crop));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [croppingLayerId, cropImage]);
+
+  const commitCrop = () => {
+    if (croppingLayer && cropView && cropFrame) {
+      const crop = viewToCropRect(cropView, cropFrame, cropIw, cropIh);
+      updateLayerInActiveArtboard(project.id, croppingLayer.id, { crop });
+    }
+    setCroppingLayerId(null);
+  };
+  const cancelCrop = () => setCroppingLayerId(null);
+
+  useEffect(() => {
+    if (!croppingLayerId) return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commitCrop();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        cancelCrop();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [croppingLayerId, cropView, cropImage]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -369,6 +435,8 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const handleStagePointerDown = (event: Konva.KonvaEventObject<MouseEvent>) => {
     // A left-click anywhere dismisses an open context menu.
     if (event.evt.button === 0) setContextMenu(null);
+    // While cropping, the crop editor owns all canvas interaction.
+    if (croppingLayerId) return;
     // Sampling intercepts every click (including over shapes) before any tool.
     if (sampling) {
       event.evt.preventDefault();
@@ -701,6 +769,11 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
         }}
         onWheel={(event) => {
           event.evt.preventDefault();
+          if (croppingLayerId && cropView && cropFrame) {
+            const factor = event.evt.deltaY > 0 ? 0.94 : 1.06;
+            setCropView(zoomCropView(cropView, cropFrame, factor, cropIw, cropIh));
+            return;
+          }
           const direction = event.evt.deltaY > 0 ? -1 : 1;
           setZoom(zoom * (direction > 0 ? 1.08 : 0.92));
         }}
@@ -740,6 +813,12 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
                 if (layerToEdit.type === 'text' && !layerToEdit.locked) {
                   setSelection([layerToEdit.id]);
                   setEditingTextId(layerToEdit.id);
+                }
+              }}
+              onImageCrop={(layerToCrop) => {
+                if (layerToCrop.type === 'image' && !layerToCrop.locked) {
+                  setSelection([layerToCrop.id]);
+                  setCroppingLayerId(layerToCrop.id);
                 }
               }}
             />
@@ -875,6 +954,84 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
                 ))}
             </>
           )}
+          {croppingLayerId && cropImage && cropView && cropFrame && (
+            <>
+              <KonvaImage
+                image={cropImage}
+                x={cropView.x}
+                y={cropView.y}
+                width={cropIw * cropView.scale}
+                height={cropIh * cropView.scale}
+                draggable
+                onDragMove={(event) => {
+                  const node = event.target;
+                  const next = clampCropView(
+                    { scale: cropView.scale, x: node.x(), y: node.y() },
+                    cropIw,
+                    cropIh,
+                    cropFrame,
+                  );
+                  node.position({ x: next.x, y: next.y });
+                }}
+                onDragEnd={(event) => {
+                  const node = event.target;
+                  setCropView(
+                    clampCropView(
+                      { scale: cropView.scale, x: node.x(), y: node.y() },
+                      cropIw,
+                      cropIh,
+                      cropFrame,
+                    ),
+                  );
+                }}
+              />
+              <Rect x={0} y={0} width={artboard.width} height={Math.max(0, cropFrame.y)} fill="rgba(0,0,0,0.55)" listening={false} />
+              <Rect
+                x={0}
+                y={cropFrame.y + cropFrame.h}
+                width={artboard.width}
+                height={Math.max(0, artboard.height - cropFrame.y - cropFrame.h)}
+                fill="rgba(0,0,0,0.55)"
+                listening={false}
+              />
+              <Rect x={0} y={cropFrame.y} width={Math.max(0, cropFrame.x)} height={cropFrame.h} fill="rgba(0,0,0,0.55)" listening={false} />
+              <Rect
+                x={cropFrame.x + cropFrame.w}
+                y={cropFrame.y}
+                width={Math.max(0, artboard.width - cropFrame.x - cropFrame.w)}
+                height={cropFrame.h}
+                fill="rgba(0,0,0,0.55)"
+                listening={false}
+              />
+              {[1, 2].map((i) => (
+                <Line
+                  key={`v${i}`}
+                  points={[cropFrame.x + (cropFrame.w * i) / 3, cropFrame.y, cropFrame.x + (cropFrame.w * i) / 3, cropFrame.y + cropFrame.h]}
+                  stroke="rgba(255,255,255,0.4)"
+                  strokeWidth={1 / zoom}
+                  listening={false}
+                />
+              ))}
+              {[1, 2].map((i) => (
+                <Line
+                  key={`h${i}`}
+                  points={[cropFrame.x, cropFrame.y + (cropFrame.h * i) / 3, cropFrame.x + cropFrame.w, cropFrame.y + (cropFrame.h * i) / 3]}
+                  stroke="rgba(255,255,255,0.4)"
+                  strokeWidth={1 / zoom}
+                  listening={false}
+                />
+              ))}
+              <Rect
+                x={cropFrame.x}
+                y={cropFrame.y}
+                width={cropFrame.w}
+                height={cropFrame.h}
+                stroke="#FFFFFF"
+                strokeWidth={1.5 / zoom}
+                listening={false}
+              />
+            </>
+          )}
           <Transformer
             ref={transformerRef}
             rotateEnabled
@@ -912,6 +1069,25 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
           }}
           onCancel={() => setEditingTextId(null)}
         />
+      )}
+      {croppingLayerId && cropImage && (
+        <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-full glass px-3 py-2 shadow-[0_8px_28px_rgba(0,0,0,0.22)]">
+          <span className="text-[11.5px] text-[var(--calqo-text-2)]">{t('crop.hint')}</span>
+          <button
+            type="button"
+            onClick={cancelCrop}
+            className="rounded-full px-3 py-1 text-[12px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+          >
+            {t('crop.cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={commitCrop}
+            className="rounded-full bg-[var(--calqo-accent)] px-3 py-1 text-[12px] font-medium text-[var(--calqo-text-on-accent)] transition-transform active:scale-[0.97]"
+          >
+            {t('crop.apply')}
+          </button>
+        </div>
       )}
       {contextMenu && (
         <CanvasContextMenu

@@ -171,6 +171,9 @@ export const svgLayerSchema = z.object({
   ...baseLayerShape,
   type: z.literal('svg'),
   assetId: z.string(),
+  /** Optional tint re-applied to the asset's fills/strokes at render time so
+   * the original SVG stays editable (non-destructive recolour). */
+  color: hexish.optional(),
 });
 
 /** Layers form a discriminated union; groups nest recursively. Typed explicitly

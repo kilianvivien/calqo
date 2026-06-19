@@ -39,7 +39,7 @@ import { findLayerInArtboard } from '@/editor/utils/layers';
 import { GlassSegmentedControl } from '@/components/glass';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
-import { useUiStore, type EditorTool } from '@/lib/state/uiStore';
+import { useUiStore, type BrushStyle, type EditorTool } from '@/lib/state/uiStore';
 import type {
   ArrowStyle,
   CalqoLayer,
@@ -164,6 +164,8 @@ function convertibleKind(layer: ShapeLayerT): ShapeKind | null {
 function isFilledShape(layer: ShapeLayerT): boolean {
   return layer.shape !== 'line' && layer.shape !== 'arrow' && layer.shape !== 'freehand';
 }
+
+const BRUSH_STYLE_OPTIONS: BrushStyle[] = ['smooth', 'marker', 'highlighter', 'dashed'];
 
 const FILL_TYPE_OPTIONS = ['solid', 'linear', 'radial', 'pattern'] as const;
 type FillType = (typeof FILL_TYPE_OPTIONS)[number];
@@ -529,12 +531,23 @@ function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
       )}
       {isBrush && (
         <Section title={t('properties.brush')}>
+          <SelectField
+            label={t('properties.brushStyle')}
+            value={shapeDefaults.brushStyle}
+            options={BRUSH_STYLE_OPTIONS.map((style) => ({
+              value: style,
+              label: t(`properties.brushStyle_${style}`),
+            }))}
+            onChange={(brushStyle) =>
+              setShapeDefaults({ brushStyle: brushStyle as BrushStyle })
+            }
+          />
           <ColorField
             label={t('properties.stroke')}
             value={shapeDefaults.stroke}
             onChange={(stroke) => setShapeDefaults({ stroke })}
           />
-          <NumberField
+          <SliderField
             label={t('properties.brushSize')}
             value={shapeDefaults.brushSize}
             min={1}
@@ -749,6 +762,17 @@ function LayerControls({
 
       {layer.type === 'svg' && (
         <Section title={t('properties.svg')}>
+          <ColorField
+            label={t('properties.fill')}
+            value={layer.color ?? '#111827'}
+            onChange={(color) => update({ color })}
+          />
+          {layer.color && (
+            <InlineButton
+              label={t('properties.resetColor')}
+              onClick={() => update({ color: null })}
+            />
+          )}
           <ReplaceAssetButton projectId={projectId} layer={layer} />
         </Section>
       )}
@@ -780,6 +804,7 @@ function ImageControls({
   update: LayerUpdate;
 }) {
   const { t } = useTranslation('editor');
+  const setCroppingLayerId = useUiStore((s) => s.setCroppingLayerId);
   const focal = layer.focalPoint ?? { x: 0.5, y: 0.5 };
   const filters = layer.filters ?? {};
   const setFilter = (key: keyof typeof FILTER_RANGES, value: number) =>
@@ -821,6 +846,10 @@ function ImageControls({
             />
           </>
         )}
+        <InlineButton
+          label={t('properties.cropImage')}
+          onClick={() => setCroppingLayerId(layer.id)}
+        />
         {(layer.crop || layer.focalPoint) && (
           <InlineButton
             label={t('properties.resetCrop')}

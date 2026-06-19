@@ -3,6 +3,7 @@ import { Sparkles } from 'lucide-react';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
 import { createProject } from '@/editor/commands/projectCommands';
 import { CalqoStage } from '@/editor/canvas/CalqoStage';
+import { ArtboardDots } from './ArtboardDots';
 import { FormatGrid } from './NewProjectModal';
 import { ZoomControl } from './ZoomControl';
 
@@ -39,6 +40,7 @@ export function Workspace() {
       ) : (
         <>
           <CalqoStage project={project} artboard={artboard} />
+          <ArtboardDots />
           <ZoomControl />
         </>
       )}

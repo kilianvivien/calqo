@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
+  Download,
   FileCode2,
   Palette,
   Settings2,
@@ -340,15 +341,25 @@ export function AppSettingsModal({
             )}
 
             {activeTab === 'agent' && (
-              <section className="space-y-5">
-                <SettingsRow
-                  label={t('settings.ai.agentSkill')}
-                  hint={t('settings.ai.agentSkillHint')}
+              <section className="flex flex-col items-start gap-4 rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-5">
+                <span className="flex h-11 w-11 items-center justify-center rounded-[var(--calqo-radius-sm)] bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]">
+                  <FileCode2 size={22} />
+                </span>
+                <div className="space-y-1.5">
+                  <p className="text-[14px] font-semibold text-[var(--calqo-text)]">
+                    {t('settings.ai.agentSkill')}
+                  </p>
+                  <p className="max-w-md text-[12.5px] leading-relaxed text-[var(--calqo-text-3)]">
+                    {t('settings.ai.agentSkillHint')}
+                  </p>
+                </div>
+                <GlassButton
+                  variant="primary"
+                  onClick={() => void downloadCalqoAgentSkill()}
                 >
-                  <GlassButton onClick={() => void downloadCalqoAgentSkill()}>
-                    {t('settings.ai.downloadSkill')}
-                  </GlassButton>
-                </SettingsRow>
+                  <Download size={14} />
+                  {t('settings.ai.downloadSkill')}
+                </GlassButton>
               </section>
             )}
           </div>
