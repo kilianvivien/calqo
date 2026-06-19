@@ -1,11 +1,13 @@
 import type {
   AIProvider,
+  SvgPromptInput,
+  SvgPromptResult,
   TemplatePromptInput,
   TemplatePromptResult,
   TranslationJob,
   TranslationResult,
 } from './AIProvider';
-import { buildTemplatePrompt, buildTranslationPrompt } from './prompts';
+import { buildSvgPrompt, buildTemplatePrompt, buildTranslationPrompt } from './prompts';
 import { repairJsonLikeResponse } from './validation';
 
 export interface OpenAICompatibleConfig {
@@ -37,6 +39,7 @@ export function createOpenAICompatibleProvider(
   async function chat(
     messages: ChatMessage[],
     signal?: AbortSignal,
+    jsonMode = true,
   ): Promise<string> {
     const base = config.baseUrl.replace(/\/+$/, '');
     const controller = new AbortController();
@@ -62,7 +65,7 @@ export function createOpenAICompatibleProvider(
           messages,
           temperature: 0.4,
           // Ask for JSON where the backend supports it; ignored otherwise.
-          response_format: { type: 'json_object' },
+          ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
         }),
         signal: controller.signal,
       });
@@ -101,6 +104,22 @@ export function createOpenAICompatibleProvider(
           { role: 'user', content: user },
         ],
         signal,
+      );
+      return { raw };
+    },
+
+    async generateSvg(
+      input: SvgPromptInput,
+      signal?: AbortSignal,
+    ): Promise<SvgPromptResult> {
+      const { system, user } = buildSvgPrompt(input);
+      const raw = await chat(
+        [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        signal,
+        false,
       );
       return { raw };
     },

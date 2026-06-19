@@ -6,6 +6,7 @@ import { AppSettingsModal } from './AppSettingsModal';
 import { ExportDialog } from './ExportDialog';
 import { NewProjectModal } from './NewProjectModal';
 import { PromptTemplateDialog } from './PromptTemplateDialog';
+import { SvgLibraryDialog } from './SvgLibraryDialog';
 import { ShortcutHelpModal } from './ShortcutHelpModal';
 import { TranslateDialog } from './TranslateDialog';
 import { TitleBar } from './TitleBar';
@@ -73,6 +74,7 @@ export function AppShell() {
       />
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <PromptTemplateDialog />
+      <SvgLibraryDialog />
       <ShortcutHelpModal
         open={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}

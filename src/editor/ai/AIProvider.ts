@@ -1,5 +1,16 @@
 import type { GlossaryEntry, LocaleCode } from '@/lib/schema';
 
+/** A style reference the model should mimic: a sample image URL and/or a palette
+ * extracted from an uploaded sample, plus a free-text note. */
+export interface StyleReference {
+  /** URL of a reference image to imitate the look of. */
+  url?: string;
+  /** Colours sampled from an uploaded reference image. */
+  palette?: string[];
+  /** Free-text style note (e.g. "match this brand's mood"). */
+  note?: string;
+}
+
 /** Input for prompt-a-template generation (plan §14.5). */
 export interface TemplatePromptInput {
   /** Natural-language description of the visual to generate. */
@@ -12,10 +23,26 @@ export interface TemplatePromptInput {
   locale: LocaleCode;
   /** Optional brand palette the model is asked to use. */
   palette?: string[];
+  /** Optional style reference (sample image / URL) to mimic. */
+  styleReference?: StyleReference;
   /** Hard cap on layers the model may emit (plan §14.6). */
   maxLayers: number;
   /** Allowed font families the model may use. */
   fonts: string[];
+}
+
+/** Input for AI SVG generation. */
+export interface SvgPromptInput {
+  /** Natural-language description of the icon/graphic to draw. */
+  prompt: string;
+  /** Primary colour hint for the generated mark. */
+  color?: string;
+}
+
+/** Raw provider output for an SVG request. */
+export interface SvgPromptResult {
+  /** Raw text returned by the provider (expected to contain `<svg>…</svg>`). */
+  raw: string;
 }
 
 /** Raw provider output for a template request — kept as text so the caller can
@@ -75,4 +102,10 @@ export interface AIProvider {
     input: TranslationJob,
     signal?: AbortSignal,
   ): Promise<TranslationResult>;
+  /** Generate a standalone SVG mark from a prompt. Optional capability — callers
+   * must fall back when a provider does not implement it. */
+  generateSvg?(
+    input: SvgPromptInput,
+    signal?: AbortSignal,
+  ): Promise<SvgPromptResult>;
 }

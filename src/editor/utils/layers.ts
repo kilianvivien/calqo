@@ -1,5 +1,6 @@
 import { createId } from '@/lib/utils/ids';
 import type {
+  ArrowStyle,
   CalqoArtboard,
   CalqoLayer,
   Fill,
@@ -20,6 +21,8 @@ export type LayerPatch = Partial<
   stroke?: ShapeLayer['stroke'];
   cornerRadius?: number;
   points?: ShapeLayer['points'] | null;
+  tension?: number;
+  arrow?: ArrowStyle;
   fit?: ImageLayer['fit'];
   /** Group-only: bake a Konva transform scale into the group's children. */
   groupScale?: { sx: number; sy: number };
@@ -116,6 +119,8 @@ export function applyLayerPatch(layer: CalqoLayer, patch: LayerPatch): void {
       if (patch.points === null) delete layer.points;
       else layer.points = patch.points;
     }
+    if (patch.tension !== undefined) layer.tension = patch.tension;
+    if (patch.arrow !== undefined) layer.arrow = patch.arrow;
   }
   if (layer.type === 'image' && patch.fit) layer.fit = patch.fit;
   if (isGroupLayer(layer) && patch.groupScale) {

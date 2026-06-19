@@ -7,6 +7,9 @@ import {
   Circle,
   Diamond,
   Minus,
+  MoveUpRight,
+  PenTool,
+  Brush,
   Star,
   Triangle,
   Badge,
@@ -20,7 +23,7 @@ import { useUiStore, type EditorTool } from '@/lib/state/uiStore';
 interface ToolDef {
   id: EditorTool;
   icon: LucideIcon;
-  group: 'navigation' | 'drawing';
+  group: 'navigation' | 'drawing' | 'freeform';
   shortcut?: string;
 }
 
@@ -31,12 +34,15 @@ const TOOLS: ToolDef[] = [
   { id: 'rect', icon: Square, group: 'drawing', shortcut: 'R' },
   { id: 'ellipse', icon: Circle, group: 'drawing', shortcut: 'E' },
   { id: 'line', icon: Minus, group: 'drawing', shortcut: 'L' },
+  { id: 'arrow', icon: MoveUpRight, group: 'drawing', shortcut: 'A' },
   { id: 'triangle', icon: Triangle, group: 'drawing' },
   { id: 'diamond', icon: Diamond, group: 'drawing' },
   { id: 'badge', icon: Badge, group: 'drawing' },
   { id: 'star', icon: Star, group: 'drawing' },
-  { id: 'image', icon: ImageIcon, group: 'drawing', shortcut: 'I' },
-  { id: 'svg', icon: Shapes, group: 'drawing' },
+  { id: 'pen', icon: PenTool, group: 'freeform', shortcut: 'P' },
+  { id: 'brush', icon: Brush, group: 'freeform', shortcut: 'B' },
+  { id: 'image', icon: ImageIcon, group: 'freeform', shortcut: 'I' },
+  { id: 'svg', icon: Shapes, group: 'freeform' },
 ];
 
 /** Vertical tool rail; tool selection drives the canvas and inspector. */
@@ -44,6 +50,17 @@ export function ToolRail() {
   const { t } = useTranslation('editor');
   const active = useUiStore((s) => s.activeTool);
   const setActive = useUiStore((s) => s.setActiveTool);
+  const setSvgDialog = useUiStore((s) => s.setSvgDialog);
+
+  // The SVG tool opens the insert dialog (library / AI / upload) rather than
+  // arming a canvas placement mode.
+  const handleSelect = (tool: EditorTool) => {
+    if (tool === 'svg') {
+      setSvgDialog(true);
+      return;
+    }
+    setActive(tool);
+  };
 
   return (
     <nav
@@ -71,7 +88,7 @@ export function ToolRail() {
                   ? 'bg-[var(--calqo-accent)] text-[var(--calqo-text-on-accent)] shadow-[0_4px_14px_var(--calqo-accent-ring)]'
                   : undefined
               }
-              onClick={() => setActive(tool.id)}
+              onClick={() => handleSelect(tool.id)}
             >
               <Icon size={18} />
             </GlassIconButton>

@@ -17,6 +17,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   ChevronDown,
   ChevronRight,
+  Copy,
   Eye,
   EyeOff,
   Folder,
@@ -34,6 +35,7 @@ import {
 } from 'lucide-react';
 import {
   deleteSelectedLayers,
+  duplicateLayerById,
   duplicateSelectedLayers,
   groupSelectedLayers,
   setGroupExpanded,
@@ -288,6 +290,14 @@ function LayerRow({
             <span className="truncate">{layer.name}</span>
           </button>
         )}
+        <button
+          type="button"
+          className="text-[var(--calqo-text-3)] opacity-0 hover:text-[var(--calqo-text)] group-hover:opacity-70"
+          title={t('layersPanel.duplicate')}
+          onClick={() => duplicateLayerById(projectId, layer.id)}
+        >
+          <Copy size={13} />
+        </button>
         <button
           type="button"
           className="text-[var(--calqo-text-3)] opacity-70 hover:text-[var(--calqo-text)]"

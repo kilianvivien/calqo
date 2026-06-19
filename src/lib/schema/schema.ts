@@ -18,15 +18,30 @@ const shadowSchema = z.object({
   opacity: z.number().min(0).max(1).default(1),
 });
 
+/** Stroke supports either an explicit dash array or a named style (`dashed` /
+ * `dotted`) the renderer expands from the width, plus an optional line cap. */
 const strokeSchema = z.object({
   color: hexish,
   width: z.number().nonnegative(),
   dash: z.array(z.number()).optional(),
+  style: z.enum(['solid', 'dashed', 'dotted']).optional(),
+  cap: z.enum(['butt', 'round', 'square']).optional(),
 });
 
 const gradientStopSchema = z.object({
   offset: z.number().min(0).max(1),
   color: hexish,
+});
+
+/** A repeating pattern fill (dots / hatch / grid …) rendered from a generated
+ * tile so shapes can carry texture, not just flat colour. */
+const patternFillSchema = z.object({
+  type: z.literal('pattern'),
+  pattern: z.enum(['dots', 'grid', 'hatch', 'cross-hatch', 'checker']),
+  color: hexish,
+  background: hexish.default('#FFFFFF'),
+  scale: z.number().positive().default(1),
+  angle: z.number().default(0),
 });
 
 export const fillSchema = z.discriminatedUnion('type', [
@@ -40,6 +55,7 @@ export const fillSchema = z.discriminatedUnion('type', [
     type: z.literal('radial'),
     stops: z.array(gradientStopSchema).min(2),
   }),
+  patternFillSchema,
   z.object({
     type: z.literal('image'),
     assetId: z.string(),
@@ -103,14 +119,26 @@ export const textLayerSchema = z.object({
   overflow: textOverflowSchema.optional(),
 });
 
+/** Arrow head configuration for `shape: 'arrow'` layers. */
+const arrowStyleSchema = z.object({
+  start: z.boolean().default(false),
+  end: z.boolean().default(true),
+  pointerLength: z.number().positive().default(16),
+  pointerWidth: z.number().positive().default(16),
+});
+
 export const shapeLayerSchema = z.object({
   ...baseLayerShape,
   type: z.literal('shape'),
-  shape: z.enum(['rect', 'ellipse', 'line', 'polygon']),
+  shape: z.enum(['rect', 'ellipse', 'line', 'polygon', 'arrow', 'freehand']),
   fill: fillSchema,
   stroke: strokeSchema.optional(),
   cornerRadius: z.number().nonnegative().optional(),
   points: z.array(z.number()).optional(),
+  /** Smoothing for freehand strokes (Konva line tension). */
+  tension: z.number().optional(),
+  /** Head configuration for arrow shapes. */
+  arrow: arrowStyleSchema.optional(),
 });
 
 export const imageLayerSchema = z.object({
@@ -257,6 +285,8 @@ export type ImageLayer = z.infer<typeof imageLayerSchema>;
 export type SvgLayer = z.infer<typeof svgLayerSchema>;
 export type BackgroundFill = z.infer<typeof backgroundFillSchema>;
 export type Fill = z.infer<typeof fillSchema>;
+export type StrokeStyle = z.infer<typeof strokeSchema>;
+export type ArrowStyle = z.infer<typeof arrowStyleSchema>;
 export type LocaleCode = z.infer<typeof localeCodeSchema>;
 export type GlossaryEntry = z.infer<typeof glossaryEntrySchema>;
 export type TextOverflowState = z.infer<typeof textOverflowSchema>;

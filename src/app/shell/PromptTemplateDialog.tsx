@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Copy, Sparkles, X } from 'lucide-react';
+import { Copy, ImagePlus, Sparkles, X } from 'lucide-react';
 import { GlassButton, GlassIconButton } from '@/components/glass';
 import { clipboard } from '@/lib/adapters';
+import { extractPalette } from '@/lib/utils/palette';
 import {
   COMMON_CONTENT_LOCALES,
   localeLabel,
@@ -44,8 +45,24 @@ function PromptTemplateDialogInner() {
   const [usePalette, setUsePalette] = useState(
     (project?.palette.length ?? 0) > 0,
   );
+  const [referenceUrl, setReferenceUrl] = useState('');
+  const [referencePalette, setReferencePalette] = useState<string[]>([]);
+  const [referenceName, setReferenceName] = useState<string | null>(null);
+  const referenceInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailState | null>(null);
+
+  const onPickReference = async (file: File) => {
+    setReferenceName(file.name);
+    const palette = await extractPalette(file);
+    setReferencePalette(palette);
+  };
+
+  const clearReference = () => {
+    setReferenceName(null);
+    setReferencePalette([]);
+    setReferenceUrl('');
+  };
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -62,11 +79,23 @@ function PromptTemplateDialogInner() {
     setFailure(null);
     try {
       const provider = getProvider(settings);
+      const hasReference = referencePalette.length > 0 || referenceUrl.trim().length > 0;
+      const effectivePalette = referencePalette.length
+        ? referencePalette
+        : usePalette
+          ? project?.palette
+          : undefined;
       const validation = await generateTemplate(provider, {
         prompt: prompt.trim(),
         preset,
         locale,
-        palette: usePalette ? project?.palette : undefined,
+        palette: effectivePalette,
+        styleReference: hasReference
+          ? {
+              url: referenceUrl.trim() || undefined,
+              palette: referencePalette.length ? referencePalette : undefined,
+            }
+          : undefined,
       });
       if (validation.ok) {
         await adoptProject(validation.project);
@@ -175,6 +204,62 @@ function PromptTemplateDialogInner() {
               </span>
             </label>
           )}
+
+          <div className="space-y-2 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] p-2.5">
+            <p className="text-[11.5px] font-medium text-[var(--calqo-text-2)]">
+              {t('promptTemplate.styleReference')}
+            </p>
+            <input
+              ref={referenceInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void onPickReference(file);
+                event.currentTarget.value = '';
+              }}
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => referenceInputRef.current?.click()}
+                className="flex h-8 items-center gap-1.5 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-2.5 text-[11.5px] text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)]"
+              >
+                <ImagePlus size={13} />
+                {t('promptTemplate.referenceImage')}
+              </button>
+              {referenceName && (
+                <span className="flex min-w-0 items-center gap-1.5">
+                  {referencePalette.map((c, i) => (
+                    <span
+                      key={`${c}-${i}`}
+                      className="h-3.5 w-3.5 rounded-full ring-1 ring-black/10"
+                      style={{ background: c }}
+                    />
+                  ))}
+                  <span className="truncate text-[11px] text-[var(--calqo-text-3)]">
+                    {referenceName}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={t('promptTemplate.removeReference')}
+                    onClick={clearReference}
+                    className="text-[var(--calqo-text-3)] hover:text-[var(--calqo-text)]"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+            </div>
+            <input
+              type="url"
+              value={referenceUrl}
+              placeholder={t('promptTemplate.referenceUrl')}
+              onChange={(event) => setReferenceUrl(event.target.value)}
+              className="h-8 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2.5 text-[12px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
+            />
+          </div>
 
           {failure && (
             <div className="rounded-[var(--calqo-radius-sm)] border border-[#FF5F57]/40 bg-[#FF5F57]/10 p-3">

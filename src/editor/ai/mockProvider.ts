@@ -2,6 +2,8 @@ import { CURRENT_SCHEMA_VERSION } from '@/lib/schema';
 import { createId } from '@/lib/utils/ids';
 import type {
   AIProvider,
+  SvgPromptInput,
+  SvgPromptResult,
   TemplatePromptInput,
   TemplatePromptResult,
   TranslationJob,
@@ -165,12 +167,34 @@ function buildTemplate(input: TemplatePromptInput): string {
   return JSON.stringify(project, null, 2);
 }
 
+/** Deterministic mock SVG: picks a primitive from the prompt keywords so the
+ * insert-SVG flow is exercisable offline with predictable output. */
+function buildMockSvg(input: SvgPromptInput): string {
+  const color = input.color ?? '#111827';
+  const p = input.prompt.toLowerCase();
+  let body: string;
+  if (/star|rate|favou?rite/.test(p)) {
+    body = `<path d="M12 2l2.95 6.18 6.8.78-5 4.62 1.34 6.7L12 17.77 5.91 21.1l1.34-6.7-5-4.62 6.8-.78z" fill="${color}"/>`;
+  } else if (/heart|love|like/.test(p)) {
+    body = `<path d="M12 21s-7.5-4.6-10-9.2C.2 8.6 1.8 5 5.2 5c2 0 3.3 1.1 4 2.1.7-1 2-2.1 4-2.1 3.4 0 5 3.6 3.2 6.8C19.5 16.4 12 21 12 21z" fill="${color}"/>`;
+  } else if (/circle|dot|round/.test(p)) {
+    body = `<circle cx="12" cy="12" r="9" fill="${color}"/>`;
+  } else {
+    body = `<path d="M12 2l1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6z" fill="${color}"/>`;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">${body}</svg>`;
+}
+
 /** The default, always-available provider (plan §14.3). Requires no setup and
  * exercises the real validation/insertion path with deterministic output. */
 export const mockProvider: AIProvider = {
   id: 'mock',
   label: 'Mock (offline)',
   capabilities: { structuredJson: true, translation: true },
+
+  async generateSvg(input): Promise<SvgPromptResult> {
+    return { raw: buildMockSvg(input) };
+  },
 
   async generateTemplate(input): Promise<TemplatePromptResult> {
     // A magic prompt lets tests/devs exercise the repair/error path.
