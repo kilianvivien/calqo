@@ -25,14 +25,27 @@ template with selectable layers. It can also keep per-language text variants in 
 project and translate a design in place without rebuilding the layout.
 
 Calqo (from _calque_, the French word for a design "layer") ships as a browser
-React app and now has a macOS-first Tauri desktop shell.
+React app and now has a first macOS Tauri desktop release.
+
+## Download
+
+The first public alpha is available as
+[Calqo v0.1.0](https://github.com/kilianvivien/calqo/releases/tag/v0.1.0).
+
+- macOS Apple Silicon: `Calqo_0.1.0_aarch64.dmg`
+- SHA-256:
+  `13092e817aa2d5c8173d9c9a155da1dc66e5d5992af38d2a5b8e3d39d25b30cf`
+
+The desktop build is currently unsigned and not notarized. On first launch,
+macOS Gatekeeper may require approving the app manually.
 
 ## Status
 
-**Browser-first public alpha with native desktop foundation.** The core editor
-is implemented and usable locally: create projects, edit multi-artboard social
-visuals, save in the browser, export files, translate content, and generate
-editable AI templates. The Tauri shell now adds localized native menus, native
+**Public alpha with a first macOS desktop release.** The core editor is
+implemented and usable locally: create projects, edit multi-artboard social
+visuals, save in the browser or native desktop shell, export files, translate
+content, and generate editable AI templates. Calqo v0.1.0 adds the first
+published Tauri DMG for Apple Silicon Macs, with localized native menus, native
 `.calqo` open/save flows, secure desktop AI key storage, native clipboard/image
 drop support, local font discovery, and macOS `.app`/`.dmg` packaging.
 
@@ -56,6 +69,7 @@ drop support, local font discovery, and macOS `.app`/`.dmg` packaging.
 - [x] GitHub chrome button and version metadata (Phase L implementation)
 - [x] Public alpha docs, E2E smoke tests, sample project, diagnostics (Phase N)
 - [x] Tauri desktop foundation: native menus, file flows, secure settings, packaging (Phase O)
+- [x] First GitHub release with Apple Silicon macOS DMG (`v0.1.0`)
 
 ## What you can make
 
@@ -103,6 +117,10 @@ Dexie · Zod · react-i18next · lucide-react.
 ## Getting started
 
 Calqo uses `pnpm`.
+
+To try the packaged desktop alpha, download the DMG from the
+[latest release](https://github.com/kilianvivien/calqo/releases/latest). To run
+from source:
 
 ```bash
 pnpm install
@@ -160,8 +178,8 @@ reports unsupported copy operations instead of throwing.
 
 ## Known limitations
 
-- Desktop release signing and notarization are not configured yet; local macOS
-  `.app` and `.dmg` artifacts build with `pnpm tauri:build`.
+- The macOS DMG is currently Apple Silicon only and is not signed or notarized
+  yet, so Gatekeeper may require manual approval on first launch.
 - Calqo focuses on static social visuals, not animation/video.
 - SVG export is intentionally limited and warns for unsupported fidelity.
 - Clipboard behavior depends on browser permissions and feature support.
