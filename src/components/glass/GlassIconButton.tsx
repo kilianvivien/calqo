@@ -1,4 +1,10 @@
-import { useId, useRef, useState, type ButtonHTMLAttributes } from 'react';
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils/cn';
 
@@ -41,6 +47,7 @@ export function GlassIconButton({
 }: GlassIconButtonProps) {
   const [tip, setTip] = useState<TipState | null>(null);
   const ref = useRef<HTMLButtonElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const tooltipId = useId();
 
   const open = () => {
@@ -56,6 +63,49 @@ export function GlassIconButton({
     }
   };
   const close = () => setTip(null);
+
+  useLayoutEffect(() => {
+    const tooltip = tooltipRef.current;
+    if (!tip || !tooltip) return;
+
+    const rect = tooltip.getBoundingClientRect();
+    const margin = 8;
+    let nextTop = tip.top;
+    let nextLeft = tip.left;
+
+    if (tip.transform.includes('translateX')) {
+      nextLeft = Math.min(
+        Math.max(tip.left, rect.width / 2 + margin),
+        window.innerWidth - rect.width / 2 - margin,
+      );
+    } else {
+      nextLeft = Math.min(
+        Math.max(tip.left, margin),
+        window.innerWidth - rect.width - margin,
+      );
+    }
+
+    if (tip.transform.includes('translateY')) {
+      nextTop = Math.min(
+        Math.max(tip.top, rect.height / 2 + margin),
+        window.innerHeight - rect.height / 2 - margin,
+      );
+    } else if (tip.transform.includes('-100%')) {
+      nextTop = Math.min(
+        Math.max(tip.top, rect.height + margin),
+        window.innerHeight - margin,
+      );
+    } else {
+      nextTop = Math.min(
+        Math.max(tip.top, margin),
+        window.innerHeight - rect.height - margin,
+      );
+    }
+
+    if (Math.abs(nextLeft - tip.left) > 0.5 || Math.abs(nextTop - tip.top) > 0.5) {
+      setTip({ ...tip, left: nextLeft, top: nextTop });
+    }
+  }, [tip, label, shortcut]);
 
   return (
     <>
@@ -84,7 +134,9 @@ export function GlassIconButton({
           onPointerLeave?.(e);
         }}
         onFocus={(e) => {
-          if (showTitle) open();
+          // Only on keyboard focus — not the programmatic focus a modal's focus
+          // trap puts on its first button, which would flash the tooltip on open.
+          if (showTitle && e.currentTarget.matches(':focus-visible')) open();
           onFocus?.(e);
         }}
         onBlur={(e) => {
@@ -98,9 +150,10 @@ export function GlassIconButton({
       {showTitle && tip && typeof document !== 'undefined'
         ? createPortal(
             <div
+              ref={tooltipRef}
               id={tooltipId}
               role="tooltip"
-              className="glass pointer-events-none fixed z-[200] flex items-center gap-2 whitespace-nowrap rounded-[12px] border border-[var(--calqo-divider)] px-2.5 py-1.5 text-[11.5px] font-medium text-[var(--calqo-text)] shadow-[0_10px_32px_rgba(0,0,0,0.24)] backdrop-blur-2xl"
+              className="glass pointer-events-none fixed z-[200] flex max-w-[calc(100vw-16px)] items-center gap-2 whitespace-nowrap rounded-[12px] border border-[var(--calqo-divider)] px-2.5 py-1.5 text-[11.5px] font-medium text-[var(--calqo-text)] shadow-[0_10px_32px_rgba(0,0,0,0.24)] backdrop-blur-2xl"
               style={{ top: tip.top, left: tip.left, transform: tip.transform }}
             >
               {label}

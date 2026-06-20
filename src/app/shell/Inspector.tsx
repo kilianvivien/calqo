@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Activity,
   SlidersHorizontal,
   Layers,
   Palette,
@@ -11,29 +10,20 @@ import { cn } from '@/lib/utils/cn';
 import { PropertiesPane } from './inspector/PropertiesPane';
 import { LayersPane } from './inspector/LayersPane';
 import { StylePane } from './inspector/StylePane';
-import { DiagnosticsPane } from './inspector/DiagnosticsPane';
 
-type PaneId = 'properties' | 'layers' | 'style' | 'diagnostics';
+type PaneId = 'properties' | 'layers' | 'style';
 
 /** The single right-hand inspector (GeoCarto §4.4): a 3-tab panel with a
  * persistent header. Layers + artboards live in the Layers tab — there is no
- * separate left dock. */
+ * separate left dock. Diagnostics lives in the Settings modal. */
 export function Inspector() {
   const { t } = useTranslation('editor');
   const [pane, setPane] = useState<PaneId>('properties');
-
-  useEffect(() => {
-    const openDiagnostics = () => setPane('diagnostics');
-    window.addEventListener('calqo:open-diagnostics', openDiagnostics);
-    return () =>
-      window.removeEventListener('calqo:open-diagnostics', openDiagnostics);
-  }, []);
 
   const tabs: { id: PaneId; icon: LucideIcon; label: string }[] = [
     { id: 'properties', icon: SlidersHorizontal, label: t('panels.properties') },
     { id: 'layers', icon: Layers, label: t('panels.layers') },
     { id: 'style', icon: Palette, label: t('panels.style') },
-    { id: 'diagnostics', icon: Activity, label: t('panels.diagnostics') },
   ];
 
   return (
@@ -70,7 +60,6 @@ export function Inspector() {
         {pane === 'properties' && <PropertiesPane />}
         {pane === 'layers' && <LayersPane />}
         {pane === 'style' && <StylePane />}
-        {pane === 'diagnostics' && <DiagnosticsPane />}
       </div>
     </aside>
   );

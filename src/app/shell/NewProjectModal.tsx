@@ -1,8 +1,6 @@
-import { useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
-import { GlassIconButton } from '@/components/glass';
+import { GlassIconButton, ModalOverlay } from '@/components/glass';
 import { ARTBOARD_PRESET_LIST, type ArtboardPresetId } from '@/lib/schema/presets';
 
 /** Proportional preset cards for choosing a social-media format. Shared by the
@@ -58,32 +56,14 @@ export function NewProjectModal({
 }) {
   const { t } = useTranslation('editor');
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose, open]);
-
-  if (!open) return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-[rgba(0,0,0,0.45)] p-6 backdrop-blur-md"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+  return (
+    <ModalOverlay
+      open={open}
+      onClose={onClose}
+      labelledBy="new-project-title"
+      className="glass glass-strong w-[min(620px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
     >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="new-project-title"
-        className="glass glass-strong w-[min(620px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
-      >
-        <header className="mb-5 flex items-start justify-between gap-4">
+      <header className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2
               id="new-project-title"
@@ -98,10 +78,8 @@ export function NewProjectModal({
           <GlassIconButton label={t('export.close')} onClick={onClose}>
             <X size={15} />
           </GlassIconButton>
-        </header>
-        <FormatGrid onSelect={onSelect} />
-      </section>
-    </div>,
-    document.body,
+      </header>
+      <FormatGrid onSelect={onSelect} />
+    </ModalOverlay>
   );
 }

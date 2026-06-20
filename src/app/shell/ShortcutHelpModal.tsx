@@ -1,9 +1,7 @@
-import { useMemo, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import { useMemo } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { GlassIconButton } from '@/components/glass';
-import { useFocusTrap } from './useFocusTrap';
+import { GlassIconButton, ModalOverlay } from '@/components/glass';
 
 export function ShortcutHelpModal({
   open,
@@ -13,8 +11,6 @@ export function ShortcutHelpModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation('common');
-  const dialogRef = useRef<HTMLElement>(null);
-  useFocusTrap(dialogRef, open, onClose);
   const groups = useMemo(
     () => [
       {
@@ -54,25 +50,14 @@ export function ShortcutHelpModal({
     [t],
   );
 
-  if (!open) return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-[rgba(0,0,0,0.45)] p-6 backdrop-blur-md"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+  return (
+    <ModalOverlay
+      open={open}
+      onClose={onClose}
+      labelledBy="shortcut-help-title"
+      className="glass glass-strong w-[min(560px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
     >
-      <section
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="shortcut-help-title"
-        tabIndex={-1}
-        className="glass glass-strong w-[min(560px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
-      >
-        <header className="mb-5 flex items-start justify-between gap-4">
+      <header className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2
               id="shortcut-help-title"
@@ -115,8 +100,6 @@ export function ShortcutHelpModal({
             </section>
           ))}
         </div>
-      </section>
-    </div>,
-    document.body,
+    </ModalOverlay>
   );
 }

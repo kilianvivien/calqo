@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  Activity,
   AlertTriangle,
   Download,
   FileCode2,
@@ -15,6 +15,7 @@ import {
   GlassButton,
   GlassIconButton,
   GlassSegmentedControl,
+  ModalOverlay,
 } from '@/components/glass';
 import i18n, { type AppLanguage } from '@/lib/i18n';
 import {
@@ -31,10 +32,15 @@ import {
   downloadCalqoAgentSkill,
   downloadClaudeAgentSkill,
 } from '@/editor/ai/agentSkillFile';
-import { useFocusTrap } from './useFocusTrap';
+import { DiagnosticsPane } from './inspector/DiagnosticsPane';
 
 type LanguageMode = 'auto' | AppLanguage;
-type SettingsTab = 'general' | 'appearance' | 'ai' | 'agent';
+export type SettingsTab =
+  | 'general'
+  | 'appearance'
+  | 'ai'
+  | 'agent'
+  | 'diagnostics';
 
 const LANGUAGE_KEY = 'calqo-language';
 
@@ -74,9 +80,11 @@ function setLanguageMode(mode: LanguageMode): void {
 export function AppSettingsModal({
   open,
   onClose,
+  initialTab = 'general',
 }: {
   open: boolean;
   onClose: () => void;
+  initialTab?: SettingsTab;
 }) {
   const { t } = useTranslation('common');
   const theme = useUiStore((s) => s.theme);
@@ -89,12 +97,15 @@ export function AppSettingsModal({
   const updateProviderConfig = useAiSettingsStore(
     (s) => s.updateProviderConfig,
   );
-  const dialogRef = useRef<HTMLElement>(null);
   const [languageMode, setLanguageModeState] = useState<LanguageMode>(
     getStoredLanguageMode,
   );
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
-  useFocusTrap(dialogRef, open, onClose);
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+
+  // Deep-link to a tab each time the modal opens (e.g. Help ▸ Diagnostics).
+  useEffect(() => {
+    if (open) setActiveTab(initialTab);
+  }, [open, initialTab]);
 
   const languageOptions = useMemo(
     () => [
@@ -110,29 +121,19 @@ export function AppSettingsModal({
       { id: 'appearance' as const, label: t('settings.appearance'), icon: Palette },
       { id: 'ai' as const, label: t('settings.ai.title'), icon: Sparkles },
       { id: 'agent' as const, label: t('settings.ai.agentSkill'), icon: FileCode2 },
+      { id: 'diagnostics' as const, label: t('settings.diagnostics'), icon: Activity },
     ],
     [t],
   ) satisfies { id: SettingsTab; label: string; icon: LucideIcon }[];
   const activeTabLabel = tabOptions.find((tab) => tab.id === activeTab)?.label ?? '';
 
-  if (!open) return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-[rgba(0,0,0,0.45)] p-6 backdrop-blur-md"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+  return (
+    <ModalOverlay
+      open={open}
+      onClose={onClose}
+      labelledBy="app-settings-title"
+      className="glass glass-strong flex max-h-[80vh] w-[min(760px,100%)] overflow-hidden rounded-[28px] border border-[var(--calqo-divider)] shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
     >
-      <section
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="app-settings-title"
-        tabIndex={-1}
-        className="glass glass-strong flex max-h-[80vh] w-[min(760px,100%)] overflow-hidden rounded-[28px] border border-[var(--calqo-divider)] shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
-      >
         <nav
           aria-label={t('settings.title')}
           role="tablist"
@@ -371,11 +372,11 @@ export function AppSettingsModal({
                 </div>
               </section>
             )}
+
+            {activeTab === 'diagnostics' && <DiagnosticsPane />}
           </div>
         </div>
-      </section>
-    </div>,
-    document.body,
+    </ModalOverlay>
   );
 }
 

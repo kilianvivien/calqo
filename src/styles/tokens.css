@@ -37,6 +37,10 @@
   --calqo-blur-window: 40px;
   --calqo-blur-md: 30px;
   --calqo-blur-sm: 20px;
+
+  /* Leading inset of the title bar's content. Bumped under Tauri so the toolbar
+     clears the native macOS traffic lights (matches GeoCarto's 84px). */
+  --calqo-titlebar-leading: 84px;
 }
 
 /* Light theme */

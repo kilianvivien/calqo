@@ -1,7 +1,6 @@
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Download, X } from 'lucide-react';
-import { GlassButton, GlassIconButton } from '@/components/glass';
+import { GlassButton, GlassIconButton, ModalOverlay } from '@/components/glass';
 import { files } from '@/lib/adapters';
 
 export interface ImportRecovery {
@@ -37,15 +36,14 @@ export function ImportRecoveryModal({
     );
   };
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 grid place-items-center bg-[rgba(0,0,0,0.45)] p-6 backdrop-blur-md">
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="import-recovery-title"
-        className="glass glass-strong w-[min(520px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
-      >
-        <header className="mb-4 flex items-start justify-between gap-4">
+  return (
+    <ModalOverlay
+      open={failure !== null}
+      onClose={onClose}
+      labelledBy="import-recovery-title"
+      className="glass glass-strong w-[min(520px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
+    >
+      <header className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2
               id="import-recovery-title"
@@ -76,8 +74,6 @@ export function ImportRecoveryModal({
             {t('recovery.exportRaw')}
           </GlassButton>
         </footer>
-      </section>
-    </div>,
-    document.body,
+    </ModalOverlay>
   );
 }

@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, Sparkles, Upload, X } from 'lucide-react';
-import { GlassButton, GlassIconButton } from '@/components/glass';
+import { GlassButton, GlassIconButton, ModalOverlay } from '@/components/glass';
 import { assetStorage, clipboard } from '@/lib/adapters';
 import { addImportedAssetLayer, setListMarker } from '@/editor/commands/projectCommands';
 import { generateSvgMark } from '@/editor/ai/svgService';
@@ -48,15 +47,6 @@ function SvgLibraryDialogInner() {
   const [error, setError] = useState<string | null>(null);
   const [aiPreview, setAiPreview] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const insertSvg = async (svg: string, name: string, color?: string) => {
     if (!project) return;
@@ -160,21 +150,14 @@ function SvgLibraryDialogInner() {
     { id: 'upload', label: t('svgLibrary.tabUpload') },
   ];
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-[rgba(0,0,0,0.45)] p-6 backdrop-blur-md"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) close();
-      }}
+  return (
+    <ModalOverlay
+      open
+      onClose={close}
+      labelledBy="svg-library-title"
+      className="glass glass-strong flex max-h-[80vh] w-[min(620px,100%)] flex-col rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
     >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="svg-library-title"
-        className="glass glass-strong flex max-h-[80vh] w-[min(620px,100%)] flex-col rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
-      >
-        <header className="mb-4 flex items-start justify-between gap-4">
+      <header className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2
               id="svg-library-title"
@@ -344,8 +327,6 @@ function SvgLibraryDialogInner() {
             </GlassButton>
           )}
         </footer>
-      </section>
-    </div>,
-    document.body,
+    </ModalOverlay>
   );
 }

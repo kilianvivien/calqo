@@ -5,7 +5,6 @@ import {
   appCommandDefinitions,
   getAppCommandState,
 } from '@/app/commands/appCommands';
-import { MENU_SECTIONS } from '@/app/commands/nativeMenu';
 import {
   DEFAULT_AI_SETTINGS,
   toPersistedAiSettings,
@@ -70,17 +69,7 @@ describe('phase O — Tauri foundation contracts', () => {
     );
   });
 
-  it('has localized labels for every native menu command in English and French', () => {
-    const commandIds = new Set(appCommandDefinitions.map((definition) => definition.id));
-
-    for (const section of MENU_SECTIONS) {
-      expect(i18n.exists(section.titleKey, { lng: 'en' })).toBe(true);
-      expect(i18n.exists(section.titleKey, { lng: 'fr' })).toBe(true);
-      for (const command of section.commands) {
-        expect(commandIds.has(command)).toBe(true);
-      }
-    }
-
+  it('has localized labels for every app command in English and French', () => {
     for (const lng of SUPPORTED_LANGUAGES) {
       for (const definition of appCommandDefinitions) {
         expect(i18n.exists(definition.labelKey, { lng })).toBe(true);

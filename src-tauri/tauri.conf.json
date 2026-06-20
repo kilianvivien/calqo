@@ -10,7 +10,6 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "macOSPrivateApi": true,
     "security": {
       "csp": null
     },
@@ -22,17 +21,12 @@
         "height": 840,
         "minWidth": 980,
         "minHeight": 680,
+        "visible": false,
         "decorations": true,
-        "transparent": true,
         "hiddenTitle": true,
         "titleBarStyle": "Overlay",
-        "dragDropEnabled": true,
-        "backgroundColor": "#00000000",
-        "windowEffects": {
-          "effects": ["hudWindow", "underWindowBackground"],
-          "state": "followsWindowActiveState",
-          "radius": 18
-        }
+        "trafficLightPosition": { "x": 18, "y": 25 },
+        "dragDropEnabled": true
       }
     ]
   },
@@ -50,7 +44,7 @@
     ],
     "macOS": {
       "minimumSystemVersion": "11.0",
-      "signingIdentity": null
+      "signingIdentity": "-"
     }
   }
 }

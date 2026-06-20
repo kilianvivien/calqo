@@ -7,145 +7,77 @@ import {
   type AppCommandId,
 } from './appCommands';
 
-type MenuModule = typeof import('@tauri-apps/api/menu');
+// The native menu bar is built in Rust (src-tauri/src/lib.rs) so it has the
+// standard macOS App/Edit/Window submenus, predefined items, and a native About.
+// This module is the thin web side of that contract: it routes menu selections
+// back into the command router, pushes the resolved app locale (Rust rebuilds the
+// menu in that language), and keeps each item's enabled state in sync.
 
-interface MenuSection {
-  titleKey: string;
-  commands: AppCommandId[];
+let enabledTimer: ReturnType<typeof window.setTimeout> | null = null;
+
+async function tauriInvoke(
+  command: string,
+  args?: Record<string, unknown>,
+): Promise<void> {
+  const { invoke } = await import('@tauri-apps/api/core');
+  await invoke(command, args);
 }
 
-const MENU_SECTIONS: MenuSection[] = [
-  {
-    titleKey: 'common:menu.groups.calqo',
-    commands: ['app.about', 'app.settings', 'app.quit'],
-  },
-  {
-    titleKey: 'common:menu.groups.file',
-    commands: [
-      'file.new',
-      'file.open',
-      'file.save',
-      'file.saveAs',
-      'file.close',
-      'file.export',
-      'file.share',
-    ],
-  },
-  {
-    titleKey: 'common:menu.groups.edit',
-    commands: [
-      'edit.undo',
-      'edit.redo',
-      'edit.copy',
-      'edit.paste',
-      'edit.selectAll',
-      'edit.duplicate',
-      'edit.delete',
-    ],
-  },
-  {
-    titleKey: 'common:menu.groups.insert',
-    commands: [
-      'insert.text',
-      'insert.list',
-      'insert.image',
-      'insert.imageFromClipboard',
-      'insert.svg',
-    ],
-  },
-  {
-    titleKey: 'common:menu.groups.object',
-    commands: [
-      'object.group',
-      'object.ungroup',
-      'object.forward',
-      'object.backward',
-      'object.front',
-      'object.back',
-    ],
-  },
-  {
-    titleKey: 'common:menu.groups.view',
-    commands: [
-      'view.zoomIn',
-      'view.zoomOut',
-      'view.fit',
-      'view.toggleSnap',
-      'view.theme',
-      'view.transparencyAuto',
-      'view.transparencyGlass',
-      'view.transparencySolid',
-    ],
-  },
-  {
-    titleKey: 'common:menu.groups.ai',
-    commands: ['ai.promptTemplate', 'ai.translate'],
-  },
-  {
-    titleKey: 'common:menu.groups.window',
-    commands: ['window.shortcuts'],
-  },
-  {
-    titleKey: 'common:menu.groups.help',
-    commands: ['help.github', 'help.diagnostics'],
-  },
-];
-
-const definitions = new Map(appCommandDefinitions.map((item) => [item.id, item]));
-let rebuildTimer: ReturnType<typeof window.setTimeout> | null = null;
-
-function t(key: string): string {
-  return i18n.t(key);
+async function pushMenuEnabled(): Promise<void> {
+  const states: Record<string, boolean> = {};
+  for (const definition of appCommandDefinitions) {
+    states[definition.id] = getAppCommandState(definition.id).enabled;
+  }
+  await tauriInvoke('set_menu_enabled', { states });
 }
 
-async function makeMenuItem(menu: MenuModule, id: AppCommandId) {
-  const definition = definitions.get(id);
-  if (!definition) throw new Error(`Missing menu command definition: ${id}`);
-  return menu.MenuItem.new({
-    id,
-    text: t(definition.labelKey),
-    accelerator: definition.accelerator,
-    enabled: getAppCommandState(id).enabled,
-    action: () => invokeAppCommandSync(id),
-  });
-}
-
-async function buildNativeMenu(): Promise<void> {
-  if (!platformRuntime.capabilities.nativeMenus) return;
-  const menu = await import('@tauri-apps/api/menu');
-  const sections = await Promise.all(
-    MENU_SECTIONS.map(async (section) =>
-      menu.Submenu.new({
-        text: t(section.titleKey),
-        items: await Promise.all(
-          section.commands.map((command) => makeMenuItem(menu, command)),
-        ),
-      }),
-    ),
-  );
-  await (await menu.Menu.new({ items: sections })).setAsAppMenu();
+async function pushMenuLocale(): Promise<void> {
+  await tauriInvoke('set_menu_locale', { locale: i18n.language });
+  // Rebuilding the menu resets every item to enabled, so re-apply state.
+  await pushMenuEnabled();
 }
 
 export function scheduleNativeMenuRefresh(): void {
   if (!platformRuntime.capabilities.nativeMenus) return;
-  if (rebuildTimer) window.clearTimeout(rebuildTimer);
-  rebuildTimer = window.setTimeout(() => {
-    rebuildTimer = null;
-    void buildNativeMenu().catch((error) => {
-      console.error('[Calqo] failed to rebuild native menu', error);
+  if (enabledTimer) window.clearTimeout(enabledTimer);
+  enabledTimer = window.setTimeout(() => {
+    enabledTimer = null;
+    void pushMenuEnabled().catch((error) => {
+      console.error('[Calqo] failed to update native menu state', error);
     });
   }, 50);
 }
 
 export function installNativeMenus(): () => void {
   if (!platformRuntime.capabilities.nativeMenus) return () => {};
-  scheduleNativeMenuRefresh();
-  i18n.on('languageChanged', scheduleNativeMenuRefresh);
+
+  let unlisten: (() => void) | null = null;
+  let disposed = false;
+
+  void (async () => {
+    const { listen } = await import('@tauri-apps/api/event');
+    const dispose = await listen<AppCommandId>('calqo-menu', (event) => {
+      invokeAppCommandSync(event.payload);
+    });
+    if (disposed) dispose();
+    else unlisten = dispose;
+  })();
+
+  const onLanguageChanged = () => {
+    void pushMenuLocale().catch((error) => {
+      console.error('[Calqo] failed to localize native menu', error);
+    });
+  };
+
+  void pushMenuLocale().catch((error) => {
+    console.error('[Calqo] failed to localize native menu', error);
+  });
+  i18n.on('languageChanged', onLanguageChanged);
+
   return () => {
-    i18n.off('languageChanged', scheduleNativeMenuRefresh);
-    if (rebuildTimer) window.clearTimeout(rebuildTimer);
+    disposed = true;
+    unlisten?.();
+    i18n.off('languageChanged', onLanguageChanged);
+    if (enabledTimer) window.clearTimeout(enabledTimer);
   };
 }
-
-export { MENU_SECTIONS };
-

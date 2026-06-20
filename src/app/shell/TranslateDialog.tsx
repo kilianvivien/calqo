@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Check, Languages, Plus, Trash2, X } from 'lucide-react';
-import { GlassButton, GlassIconButton, GlassSegmentedControl } from '@/components/glass';
+import {
+  GlassButton,
+  GlassIconButton,
+  GlassSegmentedControl,
+  ModalOverlay,
+} from '@/components/glass';
 import {
   COMMON_CONTENT_LOCALES,
   localeLabel,
@@ -56,15 +60,6 @@ function TranslateDialogInner() {
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Targets: existing locales plus any common locale not yet in the project.
   const targetOptions = useMemo(() => {
@@ -126,21 +121,14 @@ function TranslateDialogInner() {
     setPreview({ ...preview, rows, result });
   };
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-[rgba(0,0,0,0.45)] p-6 backdrop-blur-md"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) close();
-      }}
+  return (
+    <ModalOverlay
+      open
+      onClose={close}
+      labelledBy="translate-title"
+      className="glass glass-strong flex max-h-[88vh] w-[min(680px,100%)] flex-col rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
     >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="translate-title"
-        className="glass glass-strong flex max-h-[88vh] w-[min(680px,100%)] flex-col rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
-      >
-        <header className="mb-4 flex items-start justify-between gap-4">
+      <header className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2
               id="translate-title"
@@ -245,9 +233,7 @@ function TranslateDialogInner() {
             </GlassButton>
           </div>
         </footer>
-      </section>
-    </div>,
-    document.body,
+    </ModalOverlay>
   );
 }
 

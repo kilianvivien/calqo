@@ -3,8 +3,9 @@ import { GlassPanel } from '@/components/glass';
 import { createProject } from '@/editor/commands/projectCommands';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
 import { registerAppCommandHandlers } from '@/app/commands/appCommands';
+import { isTauri } from '@/lib/platform/runtime';
 import { installNativeMenus, scheduleNativeMenuRefresh } from '@/app/commands/nativeMenu';
-import { AppSettingsModal } from './AppSettingsModal';
+import { AppSettingsModal, type SettingsTab } from './AppSettingsModal';
 import { ExportDialog } from './ExportDialog';
 import { NewProjectModal } from './NewProjectModal';
 import { PromptTemplateDialog } from './PromptTemplateDialog';
@@ -32,6 +33,7 @@ export function AppShell() {
   const histories = useHistoryStore((s) => s.histories);
   const showTabs = openTabCount > 1;
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('general');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
@@ -45,15 +47,37 @@ export function AppShell() {
     const unregister = registerAppCommandHandlers({
       openNewProject: () => setNewProjectOpen(true),
       openExport: () => setExportOpen(true),
-      openSettings: () => setSettingsOpen(true),
+      openSettings: () => {
+        setSettingsTab('general');
+        setSettingsOpen(true);
+      },
       openShortcuts: () => setShortcutsOpen(true),
-      openDiagnostics: () =>
-        window.dispatchEvent(new CustomEvent('calqo:open-diagnostics')),
+      openDiagnostics: () => {
+        setSettingsTab('diagnostics');
+        setSettingsOpen(true);
+      },
     });
     return unregister;
   }, []);
 
   useEffect(() => installNativeMenus(), []);
+
+  // No-flash startup: the desktop window is created hidden (tauri.conf.json
+  // `visible: false`) and revealed here once the glass UI has mounted, so the
+  // user never sees the empty native window frame. show() must run directly in
+  // the effect — NOT inside requestAnimationFrame, whose callbacks are paused
+  // while the window is hidden, which would deadlock the reveal.
+  useEffect(() => {
+    if (!isTauri) return;
+    void (async () => {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().show();
+      } catch {
+        // Window/show unavailable — nothing more we can do to reveal it.
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     scheduleNativeMenuRefresh();
@@ -88,13 +112,17 @@ export function AppShell() {
         </div>
 
         <StatusBar
-          onOpenSettings={() => setSettingsOpen(true)}
+          onOpenSettings={() => {
+            setSettingsTab('general');
+            setSettingsOpen(true);
+          }}
           onOpenShortcuts={() => setShortcutsOpen(true)}
         />
       </GlassPanel>
       <AppSettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+        initialTab={settingsTab}
       />
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <PromptTemplateDialog />

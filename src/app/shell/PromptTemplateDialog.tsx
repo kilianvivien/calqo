@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, ImagePlus, Sparkles, X } from 'lucide-react';
-import { GlassButton, GlassIconButton } from '@/components/glass';
+import { GlassButton, GlassIconButton, ModalOverlay } from '@/components/glass';
 import { clipboard } from '@/lib/adapters';
 import { extractPalette } from '@/lib/utils/palette';
 import {
@@ -66,15 +65,6 @@ function PromptTemplateDialogInner() {
     setReferenceUrl('');
   };
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const generate = async () => {
     if (!prompt.trim()) return;
     setBusy(true);
@@ -118,21 +108,14 @@ function PromptTemplateDialogInner() {
     }
   };
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-[rgba(0,0,0,0.45)] p-6 backdrop-blur-md"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) close();
-      }}
+  return (
+    <ModalOverlay
+      open
+      onClose={close}
+      labelledBy="prompt-template-title"
+      className="glass glass-strong w-[min(560px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
     >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="prompt-template-title"
-        className="glass glass-strong w-[min(560px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
-      >
-        <header className="mb-4 flex items-start justify-between gap-4">
+      <header className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2
               id="prompt-template-title"
@@ -320,9 +303,7 @@ function PromptTemplateDialogInner() {
             {busy ? t('promptTemplate.generating') : t('promptTemplate.generate')}
           </GlassButton>
         </footer>
-      </section>
-    </div>,
-    document.body,
+    </ModalOverlay>
   );
 }
 

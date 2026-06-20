@@ -16,6 +16,7 @@ import {
   Undo2,
 } from 'lucide-react';
 import { GlassButton, GlassIconButton } from '@/components/glass';
+import { isTauri } from '@/lib/platform/runtime';
 import { invokeAppCommandSync } from '@/app/commands/appCommands';
 import { useHistoryStore } from '@/lib/state/historyStore';
 import { useProjectStore } from '@/lib/state/projectStore';
@@ -57,24 +58,27 @@ export function TitleBar() {
 
   return (
     <header
-      className="flex h-11 items-center gap-3 border-b border-[var(--calqo-divider)] px-3"
+      className="flex h-11 items-center gap-3 border-b border-[var(--calqo-divider)] pr-3"
+      style={{ paddingLeft: isTauri ? 'var(--calqo-titlebar-leading)' : '12px' }}
       data-tauri-drag-region
     >
-      <div className="flex shrink-0 items-center gap-2 pl-1">
-        <img
-          src="/calqo-icon.png"
-          srcSet="/calqo-icon.png 1x, /calqo-icon@2x.png 2x"
-          alt=""
-          width={22}
-          height={22}
-          className="rounded-[6px]"
-        />
-        <span className="text-[13px] font-semibold tracking-tight text-[var(--calqo-text)]">
-          {t('app.webName')}
-        </span>
-      </div>
+      {!isTauri && (
+        <div className="flex shrink-0 items-center gap-2" data-tauri-drag-region>
+          <img
+            src="/calqo-icon.png"
+            srcSet="/calqo-icon.png 1x, /calqo-icon@2x.png 2x"
+            alt=""
+            width={22}
+            height={22}
+            className="rounded-[6px]"
+          />
+          <span className="text-[13px] font-semibold tracking-tight text-[var(--calqo-text)]">
+            {t('app.webName')}
+          </span>
+        </div>
+      )}
 
-      <div className="flex min-w-0 flex-1 justify-center">
+      <div className="flex min-w-0 flex-1 justify-center" data-tauri-drag-region>
         {editingName && activeProjectId ? (
           <input
             autoFocus
@@ -105,7 +109,10 @@ export function TitleBar() {
       </div>
 
       {/* Global actions. */}
-      <div className="flex shrink-0 items-center justify-end gap-1">
+      <div
+        className="flex shrink-0 items-center justify-end gap-1"
+        data-tauri-drag-region
+      >
         <GlassIconButton
           label={t('actions.new')}
           onClick={() => invokeAppCommandSync('file.new')}
@@ -201,7 +208,7 @@ export function TitleBar() {
         </GlassIconButton>
         <GlassButton
           variant="primary"
-          className="ml-1"
+          className="ml-1 shadow-none"
           disabled={!activeProjectId}
           onClick={() => invokeAppCommandSync('file.export')}
         >

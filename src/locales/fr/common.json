@@ -85,6 +85,7 @@
     "subtitle": "Préférences générales de l'app",
     "general": "Général",
     "appearance": "Apparence",
+    "diagnostics": "Diagnostic",
     "languageMode": "Langue de l'app",
     "autoLanguage": "Auto",
     "autoLanguageHint": "Utilise la langue de votre navigateur si elle est prise en charge.",
