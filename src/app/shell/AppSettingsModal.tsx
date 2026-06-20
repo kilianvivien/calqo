@@ -27,7 +27,10 @@ import {
   PROVIDER_LIST,
   PROVIDER_PRESETS,
 } from '@/editor/ai/aiSettings';
-import { downloadCalqoAgentSkill } from '@/editor/ai/agentSkillFile';
+import {
+  downloadCalqoAgentSkill,
+  downloadClaudeAgentSkill,
+} from '@/editor/ai/agentSkillFile';
 import { useFocusTrap } from './useFocusTrap';
 
 type LanguageMode = 'auto' | AppLanguage;
@@ -353,13 +356,19 @@ export function AppSettingsModal({
                     {t('settings.ai.agentSkillHint')}
                   </p>
                 </div>
-                <GlassButton
-                  variant="primary"
-                  onClick={() => void downloadCalqoAgentSkill()}
-                >
-                  <Download size={14} />
-                  {t('settings.ai.downloadSkill')}
-                </GlassButton>
+                <div className="flex flex-wrap gap-2">
+                  <GlassButton
+                    variant="primary"
+                    onClick={() => void downloadCalqoAgentSkill()}
+                  >
+                    <Download size={14} />
+                    {t('settings.ai.downloadSkill')}
+                  </GlassButton>
+                  <GlassButton onClick={() => void downloadClaudeAgentSkill()}>
+                    <Download size={14} />
+                    {t('settings.ai.downloadClaudeSkill')}
+                  </GlassButton>
+                </div>
               </section>
             )}
           </div>

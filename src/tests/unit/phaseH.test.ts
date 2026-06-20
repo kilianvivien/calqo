@@ -10,7 +10,10 @@ import {
 import { generateSvgMark } from '@/editor/ai/svgService';
 import { normalizeAiSettings, PROVIDER_PRESETS } from '@/editor/ai/aiSettings';
 import { getProvider } from '@/editor/ai/providerRegistry';
-import { CALQO_AGENT_SKILL_CONTENT } from '@/editor/ai/agentSkillFile';
+import {
+  CALQO_AGENT_SKILL_CONTENT,
+  CLAUDE_AGENT_SKILL_FILENAME,
+} from '@/editor/ai/agentSkillFile';
 import { createDefaultProject } from '@/lib/schema';
 
 function geminiResponse(text: string) {
@@ -287,5 +290,9 @@ describe('phase H — downloadable agent skill', () => {
     expect(CALQO_AGENT_SKILL_CONTENT).toContain('"formatVersion": 1');
     expect(CALQO_AGENT_SKILL_CONTENT).toContain('Text must be Calqo text layers');
     expect(CALQO_AGENT_SKILL_CONTENT).toContain('writeFileSync("generated-design.calqo"');
+  });
+
+  it('exposes the Claude .skill package filename', () => {
+    expect(CLAUDE_AGENT_SKILL_FILENAME).toBe('calqo-project-maker.skill');
   });
 });

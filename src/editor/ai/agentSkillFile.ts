@@ -1,6 +1,8 @@
 import { files } from '@/lib/adapters';
+import claudeAgentSkillUrl from '../../../docs/calqo-project-maker.skill?url';
 
 export const CALQO_AGENT_SKILL_FILENAME = 'calqo-project-maker-SKILL.md';
+export const CLAUDE_AGENT_SKILL_FILENAME = 'calqo-project-maker.skill';
 
 export const CALQO_AGENT_SKILL_CONTENT = `---
 name: calqo-project-maker
@@ -272,4 +274,12 @@ export async function downloadCalqoAgentSkill(): Promise<void> {
     type: 'text/markdown;charset=utf-8',
   });
   await files.downloadBlob(blob, CALQO_AGENT_SKILL_FILENAME);
+}
+
+export async function downloadClaudeAgentSkill(): Promise<void> {
+  const response = await fetch(claudeAgentSkillUrl);
+  if (!response.ok) {
+    throw new Error('Unable to load Claude skill package.');
+  }
+  await files.downloadBlob(await response.blob(), CLAUDE_AGENT_SKILL_FILENAME);
 }
