@@ -28,7 +28,7 @@ Calqo (from _calque_, the French word for a design "layer") ships as a browser
 React app and now has a first macOS Tauri desktop release.
 
 <p align="center">
-  <img src="public/screen@0.5x" alt="Calqo app screen shot" width="1392" height="952" />
+  <img src="public/screen.png" alt="Calqo app screen shot" width="1392" height="952" />
 </p>
 
 ## Download
