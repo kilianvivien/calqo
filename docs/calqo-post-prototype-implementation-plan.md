@@ -223,7 +223,8 @@ Test cases:
 
 ## Phase L — Top/Bottom Chrome Polish
 
-> **Status: IN PROGRESS.**
+> **Status: COMPLETE.** GitHub repository chrome, localized labels, and package
+> version metadata are implemented and covered by the Phase N readiness checks.
 
 Goal: add the small product polish requested after prototype completion.
 
@@ -252,7 +253,11 @@ Test cases:
 
 ## Phase M — Other Improvement Avenues
 
-> **Status: NOT STARTED.**
+> **Status: SKIPPED / DEFERRED.** Phase N intentionally moves ahead of this
+> grab-bag phase because these items are not essential for the app at the public
+> alpha stage. Relevant pieces were split forward: project QA/diagnostics lands
+> in Phase N, Tauri/keychain planning moves to Phase O, and brand/template
+> production workflows are deferred to Phase R.
 
 Goal: keep a clear queue of product directions that are valuable but secondary
 to AI reliability and core editing depth.

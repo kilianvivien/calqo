@@ -5,6 +5,7 @@
     "inspector": "Inspecteur",
     "properties": "Propriétés",
     "style": "Style",
+    "diagnostics": "Diagnostic",
     "content": "Contenu",
     "assets": "Ressources"
   },
@@ -41,6 +42,9 @@
   "newProject": {
     "title": "Choisissez un format",
     "subtitle": "Choisissez une taille de réseau social pour démarrer votre projet."
+  },
+  "sample": {
+    "open": "Ouvrir l'exemple"
   },
   "title": {
     "rename": "Renommer le projet",
@@ -263,6 +267,35 @@
     "failed": "Échec de l'export.",
     "copied": "Copié dans le presse-papiers.",
     "copyUnsupported": "La copie n'est pas prise en charge dans ce navigateur."
+  },
+  "recovery": {
+    "title": "Récupération d'import",
+    "subtitle": "{{filename}} n'a pas pu être ouvert, mais vous pouvez enregistrer le JSON brut pour le diagnostic.",
+    "exportRaw": "Exporter le JSON brut",
+    "dismiss": "Fermer"
+  },
+  "diagnostics": {
+    "title": "Diagnostic du projet",
+    "empty": "Ouvrez un projet pour voir le schéma, les calques, les ressources, les alertes et le fournisseur.",
+    "exportJson": "Exporter JSON",
+    "exported": "Diagnostic exporté.",
+    "schema": "Schéma",
+    "artboards": "Plans",
+    "assets": "Ressources",
+    "locales": "Langues",
+    "warnings": "Alertes",
+    "glossary": "Glossaire",
+    "provider": "Fournisseur",
+    "providerDetails": "{{mode}} · {{key}}",
+    "keyConfigured": "clé configurée",
+    "keyMissing": "aucune clé",
+    "mode": {
+      "offline": "hors ligne",
+      "remote": "distant"
+    },
+    "artboardDetails": "Détails des plans",
+    "layers": "calques",
+    "layerMix": "{{text}} texte/liste · {{shape}} forme · {{media}} média"
   },
   "ai": {
     "promptTemplate": "Générer un modèle",

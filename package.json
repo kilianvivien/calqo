@@ -50,6 +50,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.18",
+    "fake-indexeddb": "^6.2.5",
     "globals": "^15.14.0",
     "jsdom": "^26.0.0",
     "prettier": "^3.4.2",

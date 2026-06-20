@@ -20,10 +20,12 @@ Observed status:
 - Browser foundation through the prototype plan is implemented.
 - Post-prototype Phases H, I, J, and K are implemented and have matching unit
   tests.
-- Phase L's requested work appears implemented in code (`APP_VERSION`,
-  repository URL, GitHub toolbar button, status-bar version, localized labels),
-  but the source plan still marks Phase L as in progress.
-- Phase M is not started in `calqo-post-prototype-implementation-plan.md`.
+- Phase L's requested work is implemented in code (`APP_VERSION`, repository
+  URL, GitHub toolbar button, status-bar version, localized labels), and the
+  source plan now marks Phase L complete.
+- Phase M is explicitly skipped/deferred in
+  `calqo-post-prototype-implementation-plan.md` because it does not contain
+  essential public-alpha features for Calqo at this stage.
 - `pnpm typecheck` passes.
 - `pnpm test` passes: 13 files, 119 tests. The run is noisy because jsdom lacks
   real canvas and IndexedDB APIs in several tests.
@@ -39,7 +41,7 @@ Observed status:
 - Storage, assets, files, clipboard, fonts, settings, and dialogs already sit
   behind adapters in `src/lib/adapters/`.
 
-Before starting this plan, finish Phase M or explicitly split it:
+Phase M has been explicitly split/deferred before starting this plan:
 
 - Brand kits have a schema/storage decision.
 - Template gallery has a local, editable representation.
@@ -93,47 +95,48 @@ the pieces into repeatable workflows. Phase T packages and documents the release
 
 ## Phase N - Public Alpha Readiness
 
-> **Status: NOT STARTED.**
+> **Status: COMPLETE.** Public alpha documentation, E2E smoke coverage, visual
+> checkpoints, deterministic unit-test shims, sample project entry, diagnostics,
+> and import recovery are implemented.
 
 Goal: make the current browser app trustworthy enough for public testers before
 adding larger platform surfaces.
 
 ### Deliverables
 
-- [ ] Reconcile documentation status.
-  - Update `README.md` from "through Phase H" to the actual implemented phase.
-  - Update Phase L status once its test coverage is confirmed.
-  - Keep Phase M as the only active pre-post-M track until it lands.
-- [ ] Add a browser E2E smoke suite under `e2e/`.
-  - Launch the app.
-  - Create a project from a preset.
-  - Add text, a shape, and an image-like placeholder.
-  - Rename/reorder at least one layer.
-  - Switch locale and run mock translation.
-  - Run mock prompt-a-template.
-  - Export a PNG and reload the project list.
-- [ ] Add deterministic test environment shims.
-  - Provide a canvas mock or test-safe measurement path to quiet expected jsdom
-    canvas warnings.
-  - Provide a fake IndexedDB setup for tests that expect persistence behavior.
-  - Keep real-browser coverage for behaviors the mocks cannot prove.
-- [ ] Add visual smoke checkpoints.
-  - Capture the empty workspace.
-  - Capture a sample project with selected layers.
-  - Capture light, dark, and reduced-transparency modes.
-  - Capture EN and FR chrome for key dialogs.
-- [ ] Add first-run sample project handling.
-  - Create one bundled editable sample project that demonstrates text, images,
+- [x] Reconcile documentation status.
+  - Updated README status to public alpha readiness and actual implemented
+    phases.
+  - Updated Phase L status after coverage confirmation.
+  - Marked Phase M skipped/deferred and split its relevant work forward.
+- [x] Add a browser E2E smoke suite under `e2e/`.
+  - Launches the app.
+  - Creates a project from a preset.
+  - Adds text, a shape, and an image placeholder.
+  - Renames a layer.
+  - Switches locale and runs mock translation.
+  - Runs mock prompt-a-template.
+  - Exports a PNG and reloads the project list.
+- [x] Add deterministic test environment shims.
+  - Provides canvas and IndexedDB-safe shims for Vitest/jsdom.
+  - Keeps Playwright coverage for browser-only behaviors.
+- [x] Add visual smoke checkpoints.
+  - Captures the empty workspace.
+  - Captures a sample project with selected layers.
+  - Captures light, dark, and reduced-transparency modes.
+  - Captures EN and FR chrome for the translation dialog.
+- [x] Add first-run sample project handling.
+  - Created one bundled editable sample project that demonstrates text, images,
     multilingual variants, and export warnings.
-  - Offer it from the empty state without forcing it into every user's storage.
-- [ ] Add project health diagnostics.
-  - Expose a read-only project diagnostics panel or exportable diagnostics JSON.
-  - Include schema version, layer counts, artboard sizes, asset counts, warning
-    counts, and provider diagnostics when available.
-- [ ] Harden error boundaries and recovery.
-  - Ensure project load/import failures surface a user-facing recovery path.
-  - Offer "export raw project JSON" when a document cannot fully open.
-  - Keep failed projects from blocking the rest of the workspace.
+  - Offered it from the empty state without forcing it into every user's storage.
+- [x] Add project health diagnostics.
+  - Added a read-only project diagnostics inspector tab and exportable JSON.
+  - Includes schema version, layer counts, artboard sizes, asset counts, warning
+    counts, and provider diagnostics.
+- [x] Harden error boundaries and recovery.
+  - Import failures now surface a user-facing recovery modal.
+  - Offers "export raw project JSON" when a document cannot fully open.
+  - Failed imports do not block the rest of the workspace.
 
 ### Acceptance Criteria
 
@@ -641,4 +644,3 @@ These are intentionally outside the post-M release path:
 - `pnpm lint` passes.
 - New risky behavior has focused tests.
 - Known limitations are updated instead of hidden.
-

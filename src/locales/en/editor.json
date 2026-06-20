@@ -5,6 +5,7 @@
     "inspector": "Inspector",
     "properties": "Properties",
     "style": "Style",
+    "diagnostics": "Diagnostics",
     "content": "Content",
     "assets": "Assets"
   },
@@ -41,6 +42,9 @@
   "newProject": {
     "title": "Choose a format",
     "subtitle": "Pick a social-media size to start your new project."
+  },
+  "sample": {
+    "open": "Open sample project"
   },
   "title": {
     "rename": "Rename project",
@@ -263,6 +267,35 @@
     "failed": "Export failed.",
     "copied": "Copied to clipboard.",
     "copyUnsupported": "Copy is not supported in this browser."
+  },
+  "recovery": {
+    "title": "Import recovery",
+    "subtitle": "{{filename}} could not be opened, but you can save the raw JSON for debugging.",
+    "exportRaw": "Export raw JSON",
+    "dismiss": "Dismiss"
+  },
+  "diagnostics": {
+    "title": "Project diagnostics",
+    "empty": "Open a project to see schema, layer, asset, warning, and provider details.",
+    "exportJson": "Export JSON",
+    "exported": "Diagnostics exported.",
+    "schema": "Schema",
+    "artboards": "Artboards",
+    "assets": "Assets",
+    "locales": "Locales",
+    "warnings": "Warnings",
+    "glossary": "Glossary",
+    "provider": "Provider",
+    "providerDetails": "{{mode}} · {{key}}",
+    "keyConfigured": "key configured",
+    "keyMissing": "no key",
+    "mode": {
+      "offline": "offline",
+      "remote": "remote"
+    },
+    "artboardDetails": "Artboard details",
+    "layers": "layers",
+    "layerMix": "{{text}} text/list · {{shape}} shape · {{media}} media"
   },
   "ai": {
     "promptTemplate": "Prompt a template",

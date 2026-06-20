@@ -30,6 +30,10 @@ import {
 import { exportProjectFile, importProjectFile } from '@/editor/export/calqoFile';
 import { shareArtboardPng } from '@/editor/export/share';
 import { APP_REPOSITORY_URL } from '@/lib/appInfo';
+import {
+  ImportRecoveryModal,
+  type ImportRecovery,
+} from './ImportRecoveryModal';
 
 /** Top chrome: Tauri-ready drag region with a centered document title and
  * global action cluster. */
@@ -43,6 +47,7 @@ export function TitleBar({
   const { t } = useTranslation(['common', 'editor']);
   const importInputRef = useRef<HTMLInputElement>(null);
   const [editingName, setEditingName] = useState(false);
+  const [importFailure, setImportFailure] = useState<ImportRecovery | null>(null);
   const project = useActiveProject();
   const artboard = useActiveArtboard();
 
@@ -130,9 +135,17 @@ export function TitleBar({
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) {
-              void importProjectFile(file).catch((error) => {
+              void importProjectFile(file).catch(async (error) => {
                 console.error('[Calqo] import failed', error);
-                window.alert(t('editor:export.importFailed'));
+                const rawText = await file.text().catch(() => '');
+                setImportFailure({
+                  filename: file.name,
+                  rawText,
+                  message:
+                    error instanceof Error
+                      ? error.message
+                      : t('editor:export.importFailed'),
+                });
               });
             }
             event.currentTarget.value = '';
@@ -211,6 +224,10 @@ export function TitleBar({
           <Github size={16} />
         </GlassIconButton>
       </div>
+      <ImportRecoveryModal
+        failure={importFailure}
+        onClose={() => setImportFailure(null)}
+      />
     </header>
   );
 }

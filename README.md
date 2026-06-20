@@ -53,7 +53,7 @@ still planned work.
 - [x] Faster inspector controls and multi-selection edits (Phase J)
 - [x] Align/distribute/stack tools, smart guides, export readiness polish (Phase K)
 - [x] GitHub chrome button and version metadata (Phase L implementation)
-- [ ] Public alpha docs, E2E smoke tests, sample project, diagnostics (Phase N)
+- [x] Public alpha docs, E2E smoke tests, sample project, diagnostics (Phase N)
 
 ## What you can make
 
@@ -107,6 +107,7 @@ pnpm install
 pnpm dev         # Vite dev server on http://localhost:5173
 pnpm typecheck   # TypeScript only
 pnpm test        # Vitest unit tests
+pnpm e2e         # Playwright public-alpha smoke tests
 pnpm lint        # ESLint
 pnpm build       # type-check and production build
 ```

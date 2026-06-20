@@ -1,12 +1,19 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SlidersHorizontal, Layers, Palette, type LucideIcon } from 'lucide-react';
+import {
+  Activity,
+  SlidersHorizontal,
+  Layers,
+  Palette,
+  type LucideIcon,
+} from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { PropertiesPane } from './inspector/PropertiesPane';
 import { LayersPane } from './inspector/LayersPane';
 import { StylePane } from './inspector/StylePane';
+import { DiagnosticsPane } from './inspector/DiagnosticsPane';
 
-type PaneId = 'properties' | 'layers' | 'style';
+type PaneId = 'properties' | 'layers' | 'style' | 'diagnostics';
 
 /** The single right-hand inspector (GeoCarto §4.4): a 3-tab panel with a
  * persistent header. Layers + artboards live in the Layers tab — there is no
@@ -19,6 +26,7 @@ export function Inspector() {
     { id: 'properties', icon: SlidersHorizontal, label: t('panels.properties') },
     { id: 'layers', icon: Layers, label: t('panels.layers') },
     { id: 'style', icon: Palette, label: t('panels.style') },
+    { id: 'diagnostics', icon: Activity, label: t('panels.diagnostics') },
   ];
 
   return (
@@ -55,6 +63,7 @@ export function Inspector() {
         {pane === 'properties' && <PropertiesPane />}
         {pane === 'layers' && <LayersPane />}
         {pane === 'style' && <StylePane />}
+        {pane === 'diagnostics' && <DiagnosticsPane />}
       </div>
     </aside>
   );

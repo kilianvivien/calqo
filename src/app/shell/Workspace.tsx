@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Sparkles } from 'lucide-react';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
-import { createProject } from '@/editor/commands/projectCommands';
+import { adoptProject, createProject } from '@/editor/commands/projectCommands';
 import { CalqoStage } from '@/editor/canvas/CalqoStage';
+import { createSampleProject } from '@/lib/schema/sampleProject';
+import { GlassButton } from '@/components/glass';
 import { ArtboardDots } from './ArtboardDots';
 import { FormatGrid } from './NewProjectModal';
 import { ZoomControl } from './ZoomControl';
@@ -33,6 +35,13 @@ export function Workspace() {
               </p>
             </div>
           </div>
+          <GlassButton
+            variant="primary"
+            onClick={() => void adoptProject(createSampleProject())}
+          >
+            <Sparkles size={14} />
+            {t('sample.open')}
+          </GlassButton>
           <div className="w-full max-w-[560px]">
             <FormatGrid onSelect={(preset) => void createProject({ preset })} />
           </div>
