@@ -8,6 +8,7 @@ import { Text } from 'konva/lib/shapes/Text';
 import { Image as KonvaImage } from 'konva/lib/shapes/Image';
 import { Ellipse } from 'konva/lib/shapes/Ellipse';
 import { Line } from 'konva/lib/shapes/Line';
+import { Arrow } from 'konva/lib/shapes/Arrow';
 import type { Shape } from 'konva/lib/Shape';
 import { assetStorage } from '@/lib/adapters';
 import { isGroupLayer } from '@/editor/utils/layers';
@@ -140,6 +141,10 @@ function buildNode(
   }
 
   if (layer.type === 'shape') {
+    // Line-like shapes share the canvas renderer's defaults.
+    const lineColor = layer.stroke?.color ?? '#111827';
+    const lineWidth = layer.stroke?.width ?? 4;
+
     if (layer.shape === 'ellipse') {
       return new Ellipse({
         ...base,
@@ -152,14 +157,41 @@ function buildNode(
         strokeWidth: layer.stroke?.width ?? 0,
       });
     }
-    if (layer.shape === 'line' || layer.shape === 'polygon') {
+    if (layer.shape === 'arrow') {
+      return new Arrow({
+        ...base,
+        points: layer.points ?? [0, 0, layer.w, layer.h],
+        pointerAtBeginning: layer.arrow?.start ?? false,
+        pointerAtEnding: layer.arrow?.end ?? true,
+        pointerLength: layer.arrow?.pointerLength ?? 16,
+        pointerWidth: layer.arrow?.pointerWidth ?? 16,
+        fill: lineColor,
+        stroke: lineColor,
+        strokeWidth: lineWidth,
+        lineCap: 'round',
+        lineJoin: 'round',
+      });
+    }
+    if (layer.shape === 'freehand') {
       return new Line({
         ...base,
         points: layer.points ?? [0, 0, layer.w, layer.h],
-        closed: layer.shape === 'polygon',
-        fill: layer.shape === 'polygon' ? solidFill(layer.fill) : undefined,
-        stroke: layer.stroke?.color ?? solidFill(layer.fill),
-        strokeWidth: layer.stroke?.width ?? 4,
+        tension: layer.tension ?? 0.4,
+        stroke: lineColor,
+        strokeWidth: lineWidth,
+        lineCap: layer.stroke?.cap ?? 'round',
+        lineJoin: 'round',
+      });
+    }
+    if (layer.shape === 'line' || layer.shape === 'polygon') {
+      const isPolygon = layer.shape === 'polygon';
+      return new Line({
+        ...base,
+        points: layer.points ?? [0, 0, layer.w, layer.h],
+        closed: isPolygon,
+        fill: isPolygon ? solidFill(layer.fill) : undefined,
+        stroke: lineColor,
+        strokeWidth: lineWidth,
         lineCap: 'round',
         lineJoin: 'round',
       });

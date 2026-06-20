@@ -50,4 +50,26 @@ describe('phase D — export helpers', () => {
     expect(svg).toContain('<text');
     expect(warnings).toEqual([]);
   });
+
+  it('exports freehand and arrow shapes as curves/heads, not rectangles', async () => {
+    const artboard = createArtboard('ig-square');
+
+    const freehand = createShapeLayer('freehand', 0, 0, 100, 100);
+    if (freehand.type === 'shape') {
+      freehand.points = [0, 0, 40, 60, 90, 20, 100, 100];
+      freehand.tension = 0.4;
+    }
+    artboard.layers.push(freehand);
+
+    const arrow = createShapeLayer('arrow', 0, 0, 120, 0);
+    if (arrow.type === 'shape') arrow.points = [0, 0, 120, 0];
+    artboard.layers.push(arrow);
+
+    const { svg } = await exportArtboardSvg(artboard, 'en');
+
+    // Freehand renders as a smoothed path (cubic segments), never a <rect>.
+    expect(svg).toMatch(/<path d="M [^"]*C /);
+    // Arrow renders a shaft path plus a triangular head polygon.
+    expect(svg).toContain('<polygon');
+  });
 });

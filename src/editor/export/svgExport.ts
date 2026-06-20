@@ -84,6 +84,61 @@ function transform(layer: CalqoLayer): string {
   return parts.join(' ');
 }
 
+// --- Cardinal-spline helpers, mirroring konva/lib/shapes/Line so freehand and
+// tensioned strokes export with the same curvature the canvas draws. ---
+
+function controlPoints(
+  x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, t: number,
+): [number, number, number, number] {
+  const d01 = Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2);
+  const d12 = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+  const fa = (t * d01) / (d01 + d12);
+  const fb = (t * d12) / (d01 + d12);
+  return [x1 - fa * (x2 - x0), y1 - fa * (y2 - y0), x1 + fb * (x2 - x0), y1 + fb * (y2 - y0)];
+}
+
+function expandTensionPoints(p: number[], tension: number): number[] {
+  const out: number[] = [];
+  for (let n = 2; n < p.length - 2; n += 2) {
+    const cp = controlPoints(p[n - 2], p[n - 1], p[n], p[n + 1], p[n + 2], p[n + 3], tension);
+    if (Number.isNaN(cp[0])) continue;
+    out.push(cp[0], cp[1], p[n], p[n + 1], cp[2], cp[3]);
+  }
+  return out;
+}
+
+/** Build an SVG path `d` for a (optionally tensioned) open polyline, matching
+ * Konva.Line's `_sceneFunc`. */
+function strokePathData(points: number[], tension: number): string {
+  const length = points.length;
+  if (length < 2) return '';
+  let d = `M ${round(points[0])} ${round(points[1])}`;
+  if (tension !== 0 && length > 4) {
+    const tp = expandTensionPoints(points, tension);
+    d += ` Q ${round(tp[0])} ${round(tp[1])} ${round(tp[2])} ${round(tp[3])}`;
+    let n = 4;
+    while (n < tp.length - 2) {
+      d += ` C ${round(tp[n++])} ${round(tp[n++])} ${round(tp[n++])} ${round(tp[n++])} ${round(tp[n++])} ${round(tp[n++])}`;
+    }
+    d += ` Q ${round(tp[tp.length - 2])} ${round(tp[tp.length - 1])} ${round(points[length - 2])} ${round(points[length - 1])}`;
+  } else {
+    for (let n = 2; n < length; n += 2) d += ` L ${round(points[n])} ${round(points[n + 1])}`;
+  }
+  return d;
+}
+
+/** The three corners of a Konva arrowhead triangle at a tip, pointing along
+ * `radians`. */
+function arrowHeadPoints(
+  tipX: number, tipY: number, radians: number, length: number, width: number,
+): string {
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const corner = (lx: number, ly: number): string =>
+    `${round(tipX + lx * cos - ly * sin)},${round(tipY + lx * sin + ly * cos)}`;
+  return `${corner(0, 0)} ${corner(-length, width / 2)} ${corner(-length, -width / 2)}`;
+}
+
 function serializeLayer(
   layer: CalqoLayer,
   assets: Map<string, string>,
@@ -112,15 +167,41 @@ function serializeLayer(
     if (layer.shape === 'ellipse') {
       return `${open}<ellipse cx="${layer.w / 2}" cy="${layer.h / 2}" rx="${layer.w / 2}" ry="${layer.h / 2}" fill="${solidFill(layer.fill, warnings)}"${stroke} />${close}`;
     }
+    // Line-like shapes share the canvas renderer's defaults.
+    const lineColor = layer.stroke?.color ?? '#111827';
+    const lineWidth = layer.stroke?.width ?? 4;
+    if (layer.shape === 'freehand') {
+      const pts = layer.points ?? [0, 0, layer.w, layer.h];
+      const d = strokePathData(pts, layer.tension ?? 0.4);
+      const cap = layer.stroke?.cap ?? 'round';
+      return `${open}<path d="${d}" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="${cap}" stroke-linejoin="round" />${close}`;
+    }
+    if (layer.shape === 'arrow') {
+      const pts = layer.points ?? [0, 0, layer.w, layer.h];
+      const n = pts.length;
+      const headLength = layer.arrow?.pointerLength ?? 16;
+      const headWidth = layer.arrow?.pointerWidth ?? 16;
+      const head = `fill="${lineColor}" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linejoin="round"`;
+      const parts = [
+        `<path d="${strokePathData(pts, layer.tension ?? 0)}" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" />`,
+      ];
+      if ((layer.arrow?.end ?? true) && n >= 4) {
+        const radians = Math.atan2(pts[n - 1] - pts[n - 3], pts[n - 2] - pts[n - 4]);
+        parts.push(`<polygon points="${arrowHeadPoints(pts[n - 2], pts[n - 1], radians, headLength, headWidth)}" ${head} />`);
+      }
+      if ((layer.arrow?.start ?? false) && n >= 4) {
+        const radians = Math.atan2(pts[1] - pts[3], pts[0] - pts[2]);
+        parts.push(`<polygon points="${arrowHeadPoints(pts[0], pts[1], radians, headLength, headWidth)}" ${head} />`);
+      }
+      return `${open}${parts.join('')}${close}`;
+    }
     if (layer.shape === 'line' || layer.shape === 'polygon') {
       const pts = layer.points ?? [0, 0, layer.w, layer.h];
       const pairs: string[] = [];
       for (let i = 0; i < pts.length; i += 2) pairs.push(`${pts[i]},${pts[i + 1]}`);
       const tag = layer.shape === 'polygon' ? 'polygon' : 'polyline';
       const fill = layer.shape === 'polygon' ? solidFill(layer.fill, warnings) : 'none';
-      const strokeColor = layer.stroke?.color ?? solidFill(layer.fill, warnings);
-      const strokeWidth = layer.stroke?.width ?? 4;
-      return `${open}<${tag} points="${pairs.join(' ')}" fill="${fill}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" />${close}`;
+      return `${open}<${tag} points="${pairs.join(' ')}" fill="${fill}" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" />${close}`;
     }
     const radius = layer.cornerRadius ? ` rx="${layer.cornerRadius}"` : '';
     return `${open}<rect width="${layer.w}" height="${layer.h}"${radius} fill="${solidFill(layer.fill, warnings)}"${stroke} />${close}`;
