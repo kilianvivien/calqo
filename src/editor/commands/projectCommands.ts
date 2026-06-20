@@ -208,6 +208,28 @@ export function renameProject(id: string, name: string): void {
   });
 }
 
+/** Rename a project whether it is already open in memory or only persisted in
+ * local storage. Project managers use this because their rows come from the
+ * storage summary list, not necessarily from open tabs. */
+export async function renameStoredProject(id: string, name: string): Promise<void> {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+
+  if (projectStore.getState().projects[id]) {
+    renameProject(id, trimmed);
+    await saveProject(id);
+    return;
+  }
+
+  const project = await storage.getProject(id);
+  if (!project) return;
+  await storage.saveProject({
+    ...project,
+    name: trimmed,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 /** Deep-copy a project under a new id and open it. Assets are shared by id for
  * now (no images until Phase B); asset duplication lands with the image layer. */
 export async function duplicateProject(id: string): Promise<string | null> {
@@ -1136,6 +1158,23 @@ export function pasteLayers(projectId: string): void {
 export function setActiveArtboard(artboardId: string): void {
   selectionStore.getState().setActiveArtboard(artboardId);
   selectionStore.getState().clearSelection();
+}
+
+/** Set a solid background colour on an artboard (phone quick-edit / inspector).
+ * Replaces any gradient/image background with a flat fill. */
+export function setArtboardBackgroundColor(
+  projectId: string,
+  artboardId: string,
+  color: string,
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      const target = draft.artboards.find((candidate) => candidate.id === artboardId);
+      if (target) target.background = { type: 'solid', color };
+    },
+    { undoable: true },
+  );
 }
 
 export function addArtboard(

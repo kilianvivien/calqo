@@ -15,10 +15,13 @@ const NUDGE_SMALL = 1;
 const NUDGE_LARGE = 10;
 import { ErrorBoundary } from './ErrorBoundary';
 import { AppShell } from './shell/AppShell';
+import { MobileShell } from './mobile/MobileShell';
+import { usePhoneLayout } from '@/lib/hooks/useResponsiveMode';
 
 export function App() {
   const theme = useUiStore((s) => s.theme);
   const transparency = useUiStore((s) => s.transparency);
+  const phone = usePhoneLayout();
 
   // Keep the document attributes in sync with the resolved initial preferences
   // (the store only writes them on user changes).
@@ -152,7 +155,7 @@ export function App() {
 
   return (
     <ErrorBoundary>
-      <AppShell />
+      {phone ? <MobileShell /> : <AppShell />}
     </ErrorBoundary>
   );
 }

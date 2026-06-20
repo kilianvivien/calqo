@@ -37,6 +37,7 @@ export type AppCommandId =
   | 'app.quit'
   | 'file.new'
   | 'file.open'
+  | 'file.manage'
   | 'file.save'
   | 'file.saveAs'
   | 'file.close'
@@ -76,6 +77,7 @@ export type AppCommandId =
 
 interface CommandContext {
   openNewProject: () => void;
+  openProjects: () => void;
   openExport: () => void;
   openSettings: () => void;
   openShortcuts: () => void;
@@ -94,6 +96,7 @@ export const appCommandDefinitions: CommandDefinition[] = [
   { id: 'app.quit', labelKey: 'common:menu.app.quit', accelerator: 'CmdOrCtrl+Q' },
   { id: 'file.new', labelKey: 'common:actions.new', accelerator: 'CmdOrCtrl+N' },
   { id: 'file.open', labelKey: 'common:actions.open', accelerator: 'CmdOrCtrl+O' },
+  { id: 'file.manage', labelKey: 'editor:projects.menu', accelerator: 'CmdOrCtrl+Shift+O' },
   { id: 'file.save', labelKey: 'common:actions.save', accelerator: 'CmdOrCtrl+S' },
   { id: 'file.saveAs', labelKey: 'common:menu.file.saveAs', accelerator: 'CmdOrCtrl+Shift+S' },
   { id: 'file.close', labelKey: 'common:actions.close', accelerator: 'CmdOrCtrl+W' },
@@ -177,7 +180,9 @@ export function getAppCommandState(id: AppCommandId): { enabled: boolean } {
     id.startsWith('ai.') ||
     id === 'help.diagnostics'
   ) {
-    if (id === 'file.new' || id === 'file.open') return { enabled: true };
+    if (id === 'file.new' || id === 'file.open' || id === 'file.manage') {
+      return { enabled: true };
+    }
     if (!project) return { enabled: false };
   }
   if (id === 'object.group') return { enabled: selectedCount >= 2 };
@@ -263,6 +268,9 @@ export async function invokeAppCommand(id: AppCommandId): Promise<void> {
     case 'file.open':
       if (isTauri) await openNativeProjectFile();
       else window.dispatchEvent(new CustomEvent('calqo:open-import'));
+      return;
+    case 'file.manage':
+      context?.openProjects();
       return;
     case 'file.save':
       if (!projectId) return;

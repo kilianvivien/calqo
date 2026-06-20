@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { GlassPanel } from '@/components/glass';
 import { createProject } from '@/editor/commands/projectCommands';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
-import { registerAppCommandHandlers } from '@/app/commands/appCommands';
+import { registerAppCommandHandlers, invokeAppCommandSync } from '@/app/commands/appCommands';
 import { isTauri } from '@/lib/platform/runtime';
 import { installNativeMenus, scheduleNativeMenuRefresh } from '@/app/commands/nativeMenu';
 import { AppSettingsModal, type SettingsTab } from './AppSettingsModal';
 import { ExportDialog } from './ExportDialog';
 import { NewProjectModal } from './NewProjectModal';
+import { ProjectManagerModal } from './ProjectManagerModal';
 import { PromptTemplateDialog } from './PromptTemplateDialog';
 import { SvgLibraryDialog } from './SvgLibraryDialog';
 import { ShortcutHelpModal } from './ShortcutHelpModal';
@@ -37,6 +38,7 @@ export function AppShell() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [projectsOpen, setProjectsOpen] = useState(false);
   const loadAiSettings = useAiSettingsStore((s) => s.load);
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export function AppShell() {
   useEffect(() => {
     const unregister = registerAppCommandHandlers({
       openNewProject: () => setNewProjectOpen(true),
+      openProjects: () => setProjectsOpen(true),
       openExport: () => setExportOpen(true),
       openSettings: () => {
         setSettingsTab('general');
@@ -140,6 +143,12 @@ export function AppShell() {
           setNewProjectOpen(false);
           scheduleNativeMenuRefresh();
         }}
+      />
+      <ProjectManagerModal
+        open={projectsOpen}
+        onClose={() => setProjectsOpen(false)}
+        onNew={() => setNewProjectOpen(true)}
+        onImport={() => invokeAppCommandSync('file.open')}
       />
     </div>
   );

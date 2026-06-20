@@ -465,5 +465,126 @@
     "fitToScreen": "Ajuster à l'écran",
     "zoomIn": "Zoom avant",
     "zoomOut": "Zoom arrière"
+  },
+  "projects": {
+    "menu": "Ouvrir des projets…",
+    "title": "Projets",
+    "subtitle": "Ouvrir ou supprimer un projet stocké localement.",
+    "empty": "Aucun projet. Créez-en un pour commencer.",
+    "updated": "Modifié le {{date}}",
+    "delete": "Supprimer le projet",
+    "deleteTitle": "Supprimer le projet",
+    "deleteMessage": "Supprimer « {{name}} » ? Cette action est irréversible.",
+    "import": "Ouvrir un fichier…",
+    "new": "Nouveau projet",
+    "rename": "Renommer le projet"
+  },
+  "mobile": {
+    "common": {
+      "done": "Terminé"
+    },
+    "browser": {
+      "title": "Projets",
+      "emptyTitle": "Aucun projet",
+      "emptyHint": "Créez-en un sur un écran plus grand, ou partez de l'exemple.",
+      "updated": "Modifié le {{date}}",
+      "newProject": "Nouveau projet",
+      "rename": "Renommer le projet",
+      "delete": "Supprimer le projet",
+      "deleteTitle": "Supprimer le projet",
+      "deleteMessage": "Supprimer « {{name}} » ? Cette action est irréversible."
+    },
+    "toolbar": {
+      "add": "Ajouter",
+      "text": "Texte",
+      "replace": "Remplacer",
+      "color": "Couleur",
+      "arrange": "Disposer",
+      "duplicate": "Dupliquer",
+      "delete": "Supprimer",
+      "layers": "Calques",
+      "translate": "Traduire",
+      "background": "Fond",
+      "workspace": "Espace",
+      "export": "Exporter"
+    },
+    "add": {
+      "title": "Ajouter un élément"
+    },
+    "brush": {
+      "done": "Terminer le dessin"
+    },
+    "text": {
+      "title": "Modifier le texte",
+      "editingLocale": "Édition de {{locale}}",
+      "placeholder": "Saisissez votre texte…",
+      "listHint": "Un élément par ligne.",
+      "overflow": "Le texte peut dépasser sa zone.",
+      "style": "Style",
+      "font": "Police",
+      "size": "Taille",
+      "sizeUp": "Augmenter la taille",
+      "sizeDown": "Diminuer la taille",
+      "weight": "Graisse",
+      "align": "Alignement"
+    },
+    "translate": {
+      "subtitle": "Traduire le texte de ce plan de travail."
+    },
+    "color": {
+      "title": "Couleurs",
+      "element": "Élément",
+      "background": "Fond",
+      "custom": "Personnalisée"
+    },
+    "layers": {
+      "empty": "Aucun calque.",
+      "show": "Afficher le calque",
+      "hide": "Masquer le calque",
+      "forward": "Avancer",
+      "backward": "Reculer",
+      "delete": "Supprimer le calque"
+    },
+    "workspace": {
+      "title": "Espace de travail",
+      "subtitle": "Gérer les vues sociales de ce projet.",
+      "duplicateFormat": "Adapter",
+      "addBlank": "Vue vide",
+      "views": "Vues du projet",
+      "rename": "Renommer la vue"
+    },
+    "files": {
+      "title": "Importer / exporter",
+      "subtitle": "Déplacer des projets Calqo complets entre appareils.",
+      "import": "Importer un fichier .calqo",
+      "export": "Exporter un fichier .calqo",
+      "hint": "Les fichiers .calqo incluent le JSON du projet et ses ressources.",
+      "imported": "Projet importé",
+      "exported": "Fichier projet téléchargé",
+      "importFailed": "Échec de l'import",
+      "exportFailed": "Échec de l'export"
+    },
+    "arrange": {
+      "title": "Disposer",
+      "step": "Pas",
+      "fine": "1 px",
+      "coarse": "10 px",
+      "up": "Décaler vers le haut",
+      "down": "Décaler vers le bas",
+      "left": "Décaler à gauche",
+      "right": "Décaler à droite",
+      "forward": "Avancer",
+      "backward": "Reculer"
+    },
+    "export": {
+      "title": "Exporter et partager",
+      "scale": "Échelle",
+      "transparent": "Fond transparent",
+      "share": "Partager",
+      "download": "Télécharger le PNG",
+      "shared": "Partagé",
+      "downloaded": "Enregistré sur l'appareil",
+      "failed": "Échec de l'export"
+    }
   }
 }

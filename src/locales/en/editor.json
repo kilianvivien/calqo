@@ -465,5 +465,126 @@
     "fitToScreen": "Fit to screen",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out"
+  },
+  "projects": {
+    "menu": "Open projects…",
+    "title": "Projects",
+    "subtitle": "Open or remove a locally stored project.",
+    "empty": "No projects yet. Create one to get started.",
+    "updated": "Updated {{date}}",
+    "delete": "Delete project",
+    "deleteTitle": "Delete project",
+    "deleteMessage": "Delete “{{name}}”? This cannot be undone.",
+    "import": "Open file…",
+    "new": "New project",
+    "rename": "Rename project"
+  },
+  "mobile": {
+    "common": {
+      "done": "Done"
+    },
+    "browser": {
+      "title": "Projects",
+      "emptyTitle": "No projects yet",
+      "emptyHint": "Create one on a larger screen, or start from the sample.",
+      "updated": "Updated {{date}}",
+      "newProject": "New project",
+      "rename": "Rename project",
+      "delete": "Delete project",
+      "deleteTitle": "Delete project",
+      "deleteMessage": "Delete “{{name}}”? This cannot be undone."
+    },
+    "toolbar": {
+      "add": "Add",
+      "text": "Text",
+      "replace": "Replace",
+      "color": "Color",
+      "arrange": "Arrange",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "layers": "Layers",
+      "translate": "Translate",
+      "background": "Background",
+      "workspace": "Workspace",
+      "export": "Export"
+    },
+    "add": {
+      "title": "Add element"
+    },
+    "brush": {
+      "done": "Done drawing"
+    },
+    "text": {
+      "title": "Edit text",
+      "editingLocale": "Editing {{locale}}",
+      "placeholder": "Type your text…",
+      "listHint": "One item per line.",
+      "overflow": "Text may overflow its box.",
+      "style": "Style",
+      "font": "Font",
+      "size": "Size",
+      "sizeUp": "Increase size",
+      "sizeDown": "Decrease size",
+      "weight": "Weight",
+      "align": "Align"
+    },
+    "translate": {
+      "subtitle": "Translate the text on this artboard."
+    },
+    "color": {
+      "title": "Colors",
+      "element": "Element",
+      "background": "Background",
+      "custom": "Custom"
+    },
+    "layers": {
+      "empty": "No layers yet.",
+      "show": "Show layer",
+      "hide": "Hide layer",
+      "forward": "Bring forward",
+      "backward": "Send backward",
+      "delete": "Delete layer"
+    },
+    "workspace": {
+      "title": "Workspace",
+      "subtitle": "Manage social views for this project.",
+      "duplicateFormat": "Adapt view",
+      "addBlank": "Blank view",
+      "views": "Project views",
+      "rename": "Rename view"
+    },
+    "files": {
+      "title": "Import / export",
+      "subtitle": "Move complete Calqo projects between devices.",
+      "import": "Import .calqo file",
+      "export": "Export .calqo file",
+      "hint": ".calqo files include the project JSON and its assets.",
+      "imported": "Project imported",
+      "exported": "Project file downloaded",
+      "importFailed": "Import failed",
+      "exportFailed": "Export failed"
+    },
+    "arrange": {
+      "title": "Arrange",
+      "step": "Step",
+      "fine": "1 px",
+      "coarse": "10 px",
+      "up": "Nudge up",
+      "down": "Nudge down",
+      "left": "Nudge left",
+      "right": "Nudge right",
+      "forward": "Forward",
+      "backward": "Backward"
+    },
+    "export": {
+      "title": "Export & share",
+      "scale": "Scale",
+      "transparent": "Transparent background",
+      "share": "Share",
+      "download": "Download PNG",
+      "shared": "Shared",
+      "downloaded": "Saved to your device",
+      "failed": "Export failed"
+    }
   }
 }

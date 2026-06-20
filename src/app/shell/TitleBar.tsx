@@ -4,6 +4,7 @@ import {
   Copy,
   Download,
   FilePlus2,
+  Files,
   FolderOpen,
   Github,
   Languages,
@@ -118,6 +119,12 @@ export function TitleBar() {
           onClick={() => invokeAppCommandSync('file.new')}
         >
           <FilePlus2 size={16} />
+        </GlassIconButton>
+        <GlassIconButton
+          label={t('editor:projects.title')}
+          onClick={() => invokeAppCommandSync('file.manage')}
+        >
+          <Files size={16} />
         </GlassIconButton>
         <input
           ref={importInputRef}

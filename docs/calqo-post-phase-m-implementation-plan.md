@@ -289,10 +289,14 @@ raster wrapper export as the reliable fallback.
 
 ## Phase Q - Responsive Phone Quick-Edit Interface
 
-> **Status: NOT STARTED.**
-
-Goal: deliver PRD 5.9: a touch-first phone interface for quick edits and
-sharing of existing designs, not full authoring.
+> **Status: COMPLETE (browser).** A phone-only responsive shell (auto below
+> 640px, hard-gated off in Tauri via `usePhoneLayout`) swaps the desktop
+> titlebar/docks/inspector for a project browser and a touch-first editor:
+> a single-artboard Konva stage with finger-sized handles, new bottom-sheet
+> primitives, and quick-edit flows for text, locale/translation, image
+> replacement, recolour/palette, layer actions, arrange/nudge, and
+> export/share. EN/FR strings, focused tests, and a phone-viewport visual check
+> all land. Phase P (editable HTML/CSS export) remains deferred.
 
 ### Scope
 
@@ -317,50 +321,43 @@ Out of scope:
 
 ### Deliverables
 
-- [ ] Add responsive shell breakpoint.
-  - Replace desktop titlebar/docks/inspector with a compact top bar, canvas
-    viewport, contextual toolbar, and bottom sheets.
-  - Preserve desktop/tablet layout above the breakpoint.
-  - Respect reduced-transparency mode.
-- [ ] Add phone project browser.
-  - List local projects.
-  - Open project and choose artboard.
-  - Show recent export/share state if available.
-- [ ] Add mobile canvas interaction mode.
-  - Render only the active artboard stage.
-  - Use touch handles sized for fingers.
-  - Support select, move, resize, rotate if stable enough, and nudge controls.
-  - Avoid hover-only affordances.
-- [ ] Add text quick-edit flow.
-  - Select a text/list layer.
-  - Edit active locale text in a bottom sheet.
-  - Show overflow warnings and quick actions.
-  - Preserve per-locale variants.
-- [ ] Add locale and translation flow.
-  - Switch content locale.
-  - Add target locale.
-  - Run translation with the configured provider.
-  - Surface missing/partial translation diagnostics.
-- [ ] Add image replacement flow.
-  - Pick from camera roll.
-  - Capture from camera where browser support allows.
-  - Preserve layer size, fit, crop, mask, focal point, and filters.
-- [ ] Add color and palette quick controls.
-  - Recolor selected shape/text/SVG.
-  - Change artboard background.
-  - Apply project/brand palette swatches.
-- [ ] Add basic layer actions.
-  - Show/hide.
-  - Lock/unlock view if needed.
-  - Move forward/backward or reorder in a simple list.
-- [ ] Add mobile export/share.
-  - Export PNG to download.
-  - Use Web Share API where supported.
-  - Fall back to download with clear localized messaging.
-- [ ] Add mobile performance guardrails.
-  - Lazy mount only active artboard.
-  - Warn or degrade for very large raster assets.
-  - Avoid mounting heavy desktop panels offscreen.
+- [x] Add responsive shell breakpoint.
+  - Replaced desktop titlebar/docks/inspector with a compact top bar, canvas
+    viewport, contextual toolbar, and bottom sheets (`src/app/mobile/`).
+  - Preserves desktop/tablet layout above the 640px breakpoint
+    (`usePhoneLayout`), and is hard-gated off in Tauri.
+  - Reuses the `.glass` recipe so reduced-transparency mode is respected.
+- [x] Add phone project browser.
+  - Lists local projects via the storage adapter (`MobileProjectBrowser`).
+  - Opens a project and the active artboard; offers the bundled sample.
+  - (Recent export/share state surface deferred — not tracked yet.)
+- [x] Add mobile canvas interaction mode.
+  - Renders only the active artboard stage (`MobileStage`), reusing the desktop
+    `LayerRenderer`.
+  - Finger-sized transform handles; tap-select, drag-move, resize, rotate.
+  - No hover-only affordances; nudge lives in the Arrange sheet.
+- [x] Add text quick-edit flow.
+  - Select a text/list layer; edit the active-locale text in a bottom sheet.
+  - Shows overflow warnings; preserves per-locale variants with locale chips.
+- [x] Add locale and translation flow.
+  - Switches content locale; adds target locales from the common list.
+  - Runs translation with the configured provider; surfaces missing counts.
+- [x] Add image replacement flow.
+  - Picks from camera roll / camera (`accept="image/*"`).
+  - Reuses `replaceLayerAsset`, preserving box, fit, mask, focal point, filters.
+- [x] Add color and palette quick controls.
+  - Recolours selected text/list/shape/SVG and the artboard background.
+  - Applies project palette swatches (`ColorSheet`).
+- [x] Add basic layer actions.
+  - Show/hide, reorder forward/backward, select, and delete (`LayersSheet`).
+- [x] Add mobile export/share.
+  - Exports PNG to download; uses the Web Share API where supported with a
+    localized download fallback (`ExportSheet`, reusing `share.ts`).
+- [x] Add mobile performance guardrails.
+  - Lazily mounts only the active artboard; heavy desktop panels are never
+    mounted (shell-level swap, not hidden offscreen).
+  - (Dedicated large-raster warning still relies on the existing export
+    warnings rather than a phone-specific check.)
 
 ### Acceptance Criteria
 
