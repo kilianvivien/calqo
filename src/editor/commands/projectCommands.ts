@@ -1,5 +1,5 @@
 import type { Draft } from 'immer';
-import { storage } from '@/lib/adapters';
+import { dialog, storage } from '@/lib/adapters';
 import {
   createArtboard,
   createDefaultProject,
@@ -43,6 +43,16 @@ import {
   updateLayer,
   type LayerPatch,
 } from '@/editor/utils/layers';
+import {
+  alignBoxes,
+  arrangeableBoxes,
+  boundsOf,
+  distributeBoxes,
+  stackBoxes,
+  type AlignMode,
+  type Axis,
+  type Box,
+} from '@/editor/utils/arrange';
 
 const AUTOSAVE_DELAY = 700;
 const pendingSaves = new Map<string, ReturnType<typeof setTimeout>>();
@@ -233,6 +243,27 @@ export async function openProject(id: string): Promise<void> {
   workspaceStore.getState().openTab(id, true);
   selectionStore.getState().setActiveArtboard(project.artboards[0]?.id ?? null);
   selectionStore.getState().clearSelection();
+}
+
+/** Whether a project has edits that have not yet been persisted. */
+export function isProjectDirty(id: string): boolean {
+  const state = projectStore.getState().saveState[id];
+  return state === 'unsaved' || state === 'saving';
+}
+
+/** Close a tab, but warn via a native dialog first when the project has unsaved
+ * changes. Returns whether the project was closed. The confirmation text is
+ * passed in so the caller owns localization. */
+export async function requestCloseProject(
+  id: string,
+  prompt?: { title?: string; message: string },
+): Promise<boolean> {
+  if (prompt && isProjectDirty(id)) {
+    const confirmed = await dialog.confirm(prompt);
+    if (!confirmed) return false;
+  }
+  await closeProject(id);
+  return true;
 }
 
 /** Close a tab, flushing any pending save first so nothing is lost. */
@@ -695,6 +726,87 @@ export function updateLayersInActiveArtboard(
   );
 }
 
+/** Default gap (artboard px) used by the quick stack commands. */
+export const STACK_GAP = 24;
+
+/** Resolve the arrangeable boxes for the current selection in the active
+ * artboard — selected, unlocked, visible layers only. */
+function selectedArrangeBoxes(projectId: string): { boxes: Box[]; artboardId: string } | null {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return null;
+  const artboardId = activeArtboardId(project);
+  const artboard = project.artboards.find((ab) => ab.id === artboardId);
+  if (!artboard || !artboardId) return null;
+  const selectedIds = new Set(selectionStore.getState().selectedLayerIds);
+  const selected = artboard.layers.filter((layer) => selectedIds.has(layer.id));
+  return { boxes: arrangeableBoxes(selected), artboardId };
+}
+
+/** Apply per-layer x/y position patches in a single undoable step. */
+function applyPositionPatches(
+  projectId: string,
+  patches: { id: string; x?: number; y?: number }[],
+): void {
+  if (patches.length === 0) return;
+  editProject(
+    projectId,
+    (draft) => {
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      if (!artboard) return;
+      patches.forEach(({ id, x, y }) => {
+        updateLayer(artboard.layers as CalqoLayer[], id, (layer) => {
+          if (x !== undefined) layer.x = x;
+          if (y !== undefined) layer.y = y;
+        });
+      });
+    },
+    { undoable: true },
+  );
+}
+
+/** Align the selected layers to their shared bounding box (plan Phase K). */
+export function alignSelectedLayers(projectId: string, mode: AlignMode): void {
+  const resolved = selectedArrangeBoxes(projectId);
+  if (!resolved || resolved.boxes.length < 2) return;
+  const reference = boundsOf(resolved.boxes);
+  applyPositionPatches(projectId, alignBoxes(resolved.boxes, mode, reference));
+}
+
+/** Distribute the selected layers with equal gaps along an axis (≥3 layers). */
+export function distributeSelectedLayers(projectId: string, axis: Axis): void {
+  const resolved = selectedArrangeBoxes(projectId);
+  if (!resolved || resolved.boxes.length < 3) return;
+  applyPositionPatches(projectId, distributeBoxes(resolved.boxes, axis));
+}
+
+/** Stack the selected layers into a tidy row/column with a fixed gap. */
+export function stackSelectedLayers(
+  projectId: string,
+  axis: Axis,
+  gap = STACK_GAP,
+): void {
+  const resolved = selectedArrangeBoxes(projectId);
+  if (!resolved || resolved.boxes.length < 2) return;
+  applyPositionPatches(projectId, stackBoxes(resolved.boxes, axis, gap));
+}
+
+/** Nudge every selected (unlocked) layer by a pixel delta in one undoable step.
+ * Arrow keys use a small step; Shift+Arrow a large one (plan Phase K). */
+export function nudgeSelectedLayers(projectId: string, dx: number, dy: number): void {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return;
+  const artboardId = activeArtboardId(project);
+  const artboard = project.artboards.find((ab) => ab.id === artboardId);
+  if (!artboard) return;
+  const selectedIds = new Set(selectionStore.getState().selectedLayerIds);
+  const patches = artboard.layers
+    .filter((layer) => selectedIds.has(layer.id) && !layer.locked)
+    .map((layer) => ({ id: layer.id, x: layer.x + dx, y: layer.y + dy }));
+  applyPositionPatches(projectId, patches);
+}
+
 export function renameLayer(
   projectId: string,
   layerId: string,
@@ -1092,10 +1204,10 @@ export function duplicateArtboard(
   projectId: string,
   artboardId: string,
   targetPreset?: ArtboardPresetId,
-): void {
+): string | null {
   const project = projectStore.getState().projects[projectId];
   const source = project?.artboards.find((ab) => ab.id === artboardId);
-  if (!source) return;
+  if (!source) return null;
   const preset = targetPreset ? ARTBOARD_PRESETS[targetPreset] : null;
   const newWidth = preset?.width ?? source.width;
   const newHeight = preset?.height ?? source.height;
@@ -1128,6 +1240,7 @@ export function duplicateArtboard(
     { undoable: true },
   );
   setActiveArtboard(copy.id);
+  return copy.id;
 }
 
 /** Scale a layer (and group children) about the artboard origin by a factor. */

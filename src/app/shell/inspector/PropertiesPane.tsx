@@ -2,13 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlignCenter,
+  AlignCenterHorizontal,
+  AlignCenterVertical,
+  AlignEndHorizontal,
+  AlignEndVertical,
+  AlignHorizontalDistributeCenter,
   AlignJustify,
   AlignLeft,
   AlignRight,
+  AlignStartHorizontal,
+  AlignStartVertical,
+  AlignVerticalDistributeCenter,
   AlertTriangle,
   ArrowDown,
   ArrowUp,
   Badge,
+  Columns3,
+  Rows3,
   Brush,
   Circle,
   Diamond,
@@ -43,6 +53,9 @@ import {
   type PolygonPreset,
   updateLayerInActiveArtboard,
   updateLayersInActiveArtboard,
+  alignSelectedLayers,
+  distributeSelectedLayers,
+  stackSelectedLayers,
   beginHistoryCoalescing,
   endHistoryCoalescing,
   editProject,
@@ -612,6 +625,9 @@ function MultiControls({
 
   const allVisible = layers.every((l) => l.visible);
   const allLocked = layers.every((l) => l.locked);
+  // Arrange acts on the unlocked, visible subset — distribute needs ≥3.
+  const arrangeableCount = layers.filter((l) => !l.locked && l.visible).length;
+  const canDistribute = arrangeableCount >= 3;
   const first = layers[0];
   const shapeFirst = shapeLayers[0];
   const textFirst = textLayers[0];
@@ -653,6 +669,67 @@ function MultiControls({
           </button>
         </div>
       </Section>
+
+      {arrangeableCount >= 2 && (
+        <Section title={t('properties.arrange')}>
+          <div className="grid grid-cols-6 gap-1 p-1">
+            <ArrangeButton
+              icon={AlignStartVertical}
+              label={t('properties.alignLeft')}
+              onClick={() => alignSelectedLayers(projectId, 'left')}
+            />
+            <ArrangeButton
+              icon={AlignCenterVertical}
+              label={t('properties.alignCenterH')}
+              onClick={() => alignSelectedLayers(projectId, 'center-h')}
+            />
+            <ArrangeButton
+              icon={AlignEndVertical}
+              label={t('properties.alignRight')}
+              onClick={() => alignSelectedLayers(projectId, 'right')}
+            />
+            <ArrangeButton
+              icon={AlignStartHorizontal}
+              label={t('properties.alignTop')}
+              onClick={() => alignSelectedLayers(projectId, 'top')}
+            />
+            <ArrangeButton
+              icon={AlignCenterHorizontal}
+              label={t('properties.alignMiddle')}
+              onClick={() => alignSelectedLayers(projectId, 'middle')}
+            />
+            <ArrangeButton
+              icon={AlignEndHorizontal}
+              label={t('properties.alignBottom')}
+              onClick={() => alignSelectedLayers(projectId, 'bottom')}
+            />
+          </div>
+          <div className="grid grid-cols-4 gap-1 px-1 pb-1">
+            <ArrangeButton
+              icon={AlignHorizontalDistributeCenter}
+              label={t('properties.distributeH')}
+              disabled={!canDistribute}
+              onClick={() => distributeSelectedLayers(projectId, 'horizontal')}
+            />
+            <ArrangeButton
+              icon={AlignVerticalDistributeCenter}
+              label={t('properties.distributeV')}
+              disabled={!canDistribute}
+              onClick={() => distributeSelectedLayers(projectId, 'vertical')}
+            />
+            <ArrangeButton
+              icon={Columns3}
+              label={t('properties.stackH')}
+              onClick={() => stackSelectedLayers(projectId, 'horizontal')}
+            />
+            <ArrangeButton
+              icon={Rows3}
+              label={t('properties.stackV')}
+              onClick={() => stackSelectedLayers(projectId, 'vertical')}
+            />
+          </div>
+        </Section>
+      )}
 
       {shapeFirst && (
         <Section title={t('properties.appearance')}>
@@ -2059,6 +2136,32 @@ function SliderField({
         />
       </div>
     </div>
+  );
+}
+
+/** Square icon button for the multi-selection align/distribute/stack grid. */
+function ArrangeButton({
+  icon: Icon,
+  label,
+  onClick,
+  disabled,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className="flex h-8 items-center justify-center rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+    >
+      <Icon size={14} />
+    </button>
   );
 }
 

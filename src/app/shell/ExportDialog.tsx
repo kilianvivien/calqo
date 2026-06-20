@@ -8,7 +8,6 @@ import {
   GlassSegmentedControl,
 } from '@/components/glass';
 import { clipboard, files } from '@/lib/adapters';
-import { artboardOverflowLayerIds } from '@/editor/commands/projectCommands';
 import {
   exportArtboardRaster,
   rasterFilename,
@@ -16,8 +15,12 @@ import {
 } from '@/editor/export/rasterExport';
 import { exportArtboardSvg } from '@/editor/export/svgExport';
 import { htmlSnippet, htmlStandalone } from '@/editor/export/htmlExport';
+import {
+  collectExportWarnings,
+  uniqueArtboardStems,
+} from '@/editor/export/exportReadiness';
 import { useActiveArtboard, useActiveProject } from '@/lib/state/selectors';
-import type { CalqoArtboard, CalqoProject } from '@/lib/schema';
+import type { CalqoArtboard } from '@/lib/schema';
 
 type Format = RasterFormat | 'svg' | 'html';
 type Scope = 'active' | 'all';
@@ -64,7 +67,11 @@ export function ExportDialog({
     return scope === 'all' ? project.artboards : [artboard];
   }, [project, artboard, scope]);
 
-  const warnings = useMemo(() => collectWarnings(project, targets, t), [project, targets, t]);
+  const warnings = useMemo(
+    () =>
+      collectExportWarnings({ project, targets, exportingAll: scope === 'all' }, t),
+    [project, targets, scope, t],
+  );
 
   if (!open || !project || !artboard) return null;
 
@@ -90,28 +97,32 @@ export function ExportDialog({
   const handleExport = async () => {
     setBusy(true);
     setStatus(null);
+    // Collision-free stems so a batch with duplicate artboard names never
+    // overwrites earlier files (plan Phase K).
+    const stems = uniqueArtboardStems(targets, slug);
+    const projectSlug = slug(project.name);
+    const scaleSuffix = pixelRatio > 1 ? `@${pixelRatio}x` : '';
     try {
       if (isRaster(format)) {
-        for (const target of targets) {
-          const blob = await renderRaster(target, format);
-          await files.downloadBlob(
-            blob,
-            rasterFilename(project.name, target.name, format, pixelRatio),
-          );
+        const ext = format === 'jpeg' ? 'jpg' : format;
+        for (let i = 0; i < targets.length; i++) {
+          const blob = await renderRaster(targets[i], format);
+          await files.downloadBlob(blob, `${projectSlug}-${stems[i]}${scaleSuffix}.${ext}`);
           if (targets.length > 1) await delay(250);
         }
       } else if (format === 'svg') {
-        for (const target of targets) {
-          const { svg } = await exportArtboardSvg(target, project.activeContentLocale);
+        for (let i = 0; i < targets.length; i++) {
+          const { svg } = await exportArtboardSvg(targets[i], project.activeContentLocale);
           await files.downloadBlob(
             new Blob([svg], { type: 'image/svg+xml' }),
-            `${slug(project.name)}-${slug(target.name)}.svg`,
+            `${projectSlug}-${stems[i]}.svg`,
           );
           if (targets.length > 1) await delay(250);
         }
       } else {
         // HTML wrapper — always a PNG of the chosen scope's artboards.
-        for (const target of targets) {
+        for (let i = 0; i < targets.length; i++) {
+          const target = targets[i];
           const blob = await renderRaster(target, 'png');
           const pngDataUrl = await blobToDataUrl(blob);
           const input = {
@@ -123,7 +134,7 @@ export function ExportDialog({
           const html = htmlMode === 'snippet' ? htmlSnippet(input) : htmlStandalone(input);
           await files.downloadBlob(
             new Blob([html], { type: 'text/html' }),
-            `${slug(project.name)}-${slug(target.name)}.html`,
+            `${projectSlug}-${stems[i]}.html`,
           );
           if (targets.length > 1) await delay(250);
         }
@@ -360,26 +371,4 @@ function slug(value: string): string {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'calqo'
   );
-}
-
-/** Per-artboard fit/missing-asset warnings shown before export (plan §11.4). */
-function collectWarnings(
-  project: CalqoProject | null,
-  targets: CalqoArtboard[],
-  t: (key: string, opts?: Record<string, unknown>) => string,
-): string[] {
-  if (!project) return [];
-  const messages: string[] = [];
-  const assetIds = new Set(project.assets.map((a) => a.id));
-  for (const artboard of targets) {
-    if (artboardOverflowLayerIds(artboard).length > 0) {
-      messages.push(t('export.warnOverflow', { name: artboard.name }));
-    }
-    const missing = artboard.layers.some(
-      (layer) =>
-        (layer.type === 'image' || layer.type === 'svg') && !assetIds.has(layer.assetId),
-    );
-    if (missing) messages.push(t('export.warnMissingAsset', { name: artboard.name }));
-  }
-  return [...new Set(messages)];
 }

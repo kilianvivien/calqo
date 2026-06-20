@@ -41,7 +41,9 @@
     "group": "Group",
     "ungroup": "Ungroup",
     "order": "Move layer order",
-    "delete": "Delete selection"
+    "delete": "Delete selection",
+    "nudge": "Nudge 1px",
+    "nudgeLarge": "Nudge 10px"
   },
   "settings": {
     "open": "Open settings",

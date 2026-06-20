@@ -5,7 +5,7 @@ import { useWorkspaceStore } from '@/lib/state/workspaceStore';
 import { useProjectStore } from '@/lib/state/projectStore';
 import {
   createProject,
-  closeProject,
+  requestCloseProject,
   renameProject,
 } from '@/editor/commands/projectCommands';
 import { cn } from '@/lib/utils/cn';
@@ -20,6 +20,14 @@ export function TabBar() {
   const projects = useProjectStore((s) => s.projects);
   const saveState = useProjectStore((s) => s.saveState);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  /** Warn before closing a tab with unsaved changes (plan §0 polish). */
+  const requestClose = (id: string, name: string) => {
+    void requestCloseProject(id, {
+      title: t('editor:tabs.unsavedTitle'),
+      message: t('editor:tabs.unsavedMessage', { name }),
+    });
+  };
 
   return (
     <div className="flex h-9 items-center gap-1 overflow-x-auto border-b border-[var(--calqo-divider)] px-2 calqo-scroll">
@@ -67,7 +75,7 @@ export function TabBar() {
               aria-label={`${t('actions.delete')} ${project.name}`}
               onClick={(e) => {
                 e.stopPropagation();
-                void closeProject(id);
+                requestClose(id, project.name);
               }}
               className="flex h-4 w-4 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--calqo-hover)]"
             >

@@ -46,6 +46,8 @@ export function ShortcutHelpModal({
           ['⇧⌘G', t('shortcuts.ungroup')],
           ['[ / ]', t('shortcuts.order')],
           ['Delete', t('shortcuts.delete')],
+          ['← ↑ → ↓', t('shortcuts.nudge')],
+          ['⇧ + ←↑→↓', t('shortcuts.nudgeLarge')],
         ],
       },
     ],

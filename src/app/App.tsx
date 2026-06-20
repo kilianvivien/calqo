@@ -8,6 +8,7 @@ import {
   groupSelectedLayers,
   hydrateWorkspace,
   flushPendingSaves,
+  nudgeSelectedLayers,
   pasteLayers,
   redoProject,
   saveProject,
@@ -16,6 +17,10 @@ import {
   undoProject,
   ungroupSelected,
 } from '@/editor/commands/projectCommands';
+
+/** Keyboard nudge increments (artboard px): a fine step and a coarse step. */
+const NUDGE_SMALL = 1;
+const NUDGE_LARGE = 10;
 import { ErrorBoundary } from './ErrorBoundary';
 import { AppShell } from './shell/AppShell';
 
@@ -60,6 +65,21 @@ export function App() {
         if (id) redoProject(id);
       }
       if (typing) return;
+      if (
+        key === 'arrowup' ||
+        key === 'arrowdown' ||
+        key === 'arrowleft' ||
+        key === 'arrowright'
+      ) {
+        e.preventDefault();
+        if (id) {
+          const step = e.shiftKey ? NUDGE_LARGE : NUDGE_SMALL;
+          const dx = key === 'arrowleft' ? -step : key === 'arrowright' ? step : 0;
+          const dy = key === 'arrowup' ? -step : key === 'arrowdown' ? step : 0;
+          nudgeSelectedLayers(id, dx, dy);
+        }
+        return;
+      }
       if ((e.metaKey || e.ctrlKey) && key === 'c') {
         if (id) copySelectedLayers(id);
       }

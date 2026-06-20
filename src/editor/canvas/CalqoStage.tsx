@@ -38,6 +38,7 @@ import { LayerRenderer, type NodeRegistry } from './LayerRenderer';
 import { CanvasContextMenu } from './CanvasContextMenu';
 import { registerStageSampler } from './stageSampler';
 import { useAssetImage } from './useAssetImage';
+import { computeSnap } from './snapping';
 import {
   clampCropView,
   initCropView,
@@ -508,36 +509,20 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const snapNode = (layer: CalqoLayer, node: Konva.Node) => {
     if (!snapEnabled) return;
     const rect = node.getClientRect({ relativeTo: node.getParent() ?? undefined });
-    const candidatesX = [0, artboard.width / 2, artboard.width];
-    const candidatesY = [0, artboard.height / 2, artboard.height];
-    flattenLayers(artboard.layers)
+    const others = flattenLayers(artboard.layers)
       .filter((candidate) => candidate.id !== layer.id && candidate.visible)
-      .forEach((candidate) => {
-        candidatesX.push(candidate.x, candidate.x + candidate.w / 2, candidate.x + candidate.w);
-        candidatesY.push(candidate.y, candidate.y + candidate.h / 2, candidate.y + candidate.h);
-      });
-    const nodeX = [rect.x, rect.x + rect.width / 2, rect.x + rect.width];
-    const nodeY = [rect.y, rect.y + rect.height / 2, rect.y + rect.height];
-    const nextGuides: { axis: 'x' | 'y'; position: number }[] = [];
-    let dx = 0;
-    let dy = 0;
-
-    for (const candidate of candidatesX) {
-      const match = nodeX.find((value) => Math.abs(value - candidate) <= SNAP_DISTANCE);
-      if (match !== undefined) {
-        dx = candidate - match;
-        nextGuides.push({ axis: 'x', position: candidate });
-        break;
-      }
-    }
-    for (const candidate of candidatesY) {
-      const match = nodeY.find((value) => Math.abs(value - candidate) <= SNAP_DISTANCE);
-      if (match !== undefined) {
-        dy = candidate - match;
-        nextGuides.push({ axis: 'y', position: candidate });
-        break;
-      }
-    }
+      .map((candidate) => ({
+        x: candidate.x,
+        y: candidate.y,
+        width: candidate.w,
+        height: candidate.h,
+      }));
+    const { dx, dy, guides: nextGuides } = computeSnap(
+      { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      others,
+      { width: artboard.width, height: artboard.height },
+      SNAP_DISTANCE,
+    );
     if (dx || dy) node.position({ x: node.x() + dx, y: node.y() + dy });
     setGuides(nextGuides);
   };

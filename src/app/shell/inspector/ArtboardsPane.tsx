@@ -14,9 +14,10 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Copy, GripVertical, LayoutGrid, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, Copy, GripVertical, LayoutGrid, Plus, Trash2, X } from 'lucide-react';
 import {
   addArtboard,
+  artboardOverflowLayerIds,
   deleteArtboard,
   duplicateArtboard,
   renameArtboard,
@@ -37,6 +38,8 @@ export function ArtboardsPane() {
   const project = useActiveProject();
   const activeArtboardId = useSelectionStore((s) => s.activeArtboardId);
   const [adding, setAdding] = useState(false);
+  // Set after a duplicate-to-preset; drives the post-resize review banner.
+  const [reviewId, setReviewId] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
@@ -51,6 +54,19 @@ export function ArtboardsPane() {
     const to = artboards.findIndex((ab) => ab.id === over.id);
     if (from >= 0 && to >= 0) reorderArtboard(project.id, from, to);
   };
+
+  const handleDuplicate = (sourceId: string, preset?: ArtboardPresetId) => {
+    const newId = duplicateArtboard(project.id, sourceId, preset);
+    // Only a resize can push layers out of bounds — review those.
+    setReviewId(preset && newId ? newId : null);
+  };
+
+  const reviewArtboard = reviewId
+    ? artboards.find((ab) => ab.id === reviewId) ?? null
+    : null;
+  const reviewOverflow = reviewArtboard
+    ? artboardOverflowLayerIds(reviewArtboard).length
+    : 0;
 
   return (
     <section>
@@ -92,6 +108,30 @@ export function ArtboardsPane() {
         </div>
       )}
 
+      {reviewArtboard && reviewOverflow > 0 && (
+        <div className="mb-2 flex items-start gap-2 rounded-[var(--calqo-radius-sm)] border border-[#E8B339]/40 bg-[#E8B339]/10 px-2.5 py-2">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0 text-[#B7791F]" />
+          <button
+            type="button"
+            className="min-w-0 flex-1 text-left text-[11px] text-[var(--calqo-text-2)]"
+            onClick={() => setActiveArtboard(reviewArtboard.id)}
+          >
+            {t('artboards.resizeReview', {
+              name: reviewArtboard.name,
+              count: reviewOverflow,
+            })}
+          </button>
+          <button
+            type="button"
+            aria-label={t('artboards.dismissReview')}
+            className="shrink-0 text-[var(--calqo-text-3)] hover:text-[var(--calqo-text)]"
+            onClick={() => setReviewId(null)}
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
       <div className="glass-thin rounded-[var(--calqo-radius-sm)] p-1">
         <DndContext
           sensors={sensors}
@@ -109,6 +149,7 @@ export function ArtboardsPane() {
                 artboard={artboard}
                 active={artboard.id === activeArtboardId}
                 canDelete={artboards.length > 1}
+                onDuplicate={handleDuplicate}
               />
             ))}
           </SortableContext>
@@ -123,11 +164,13 @@ function ArtboardRow({
   artboard,
   active,
   canDelete,
+  onDuplicate,
 }: {
   projectId: string;
   artboard: CalqoArtboard;
   active: boolean;
   canDelete: boolean;
+  onDuplicate: (sourceId: string, preset?: ArtboardPresetId) => void;
 }) {
   const { t } = useTranslation('editor');
   const [renaming, setRenaming] = useState(false);
@@ -219,7 +262,7 @@ function ArtboardRow({
             type="button"
             className="mb-1 w-full rounded-[6px] px-2 py-1 text-left text-[11px] text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)]"
             onClick={() => {
-              duplicateArtboard(projectId, artboard.id);
+              onDuplicate(artboard.id);
               setPresetOpen(false);
             }}
           >
@@ -232,7 +275,7 @@ function ArtboardRow({
                 type="button"
                 className="rounded-[6px] px-2 py-1 text-left text-[10.5px] text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)]"
                 onClick={() => {
-                  duplicateArtboard(projectId, artboard.id, preset.id as ArtboardPresetId);
+                  onDuplicate(artboard.id, preset.id as ArtboardPresetId);
                   setPresetOpen(false);
                 }}
               >

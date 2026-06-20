@@ -41,7 +41,9 @@
     "group": "Grouper",
     "ungroup": "Dégrouper",
     "order": "Déplacer dans l'ordre",
-    "delete": "Supprimer la sélection"
+    "delete": "Supprimer la sélection",
+    "nudge": "Décaler de 1 px",
+    "nudgeLarge": "Décaler de 10 px"
   },
   "settings": {
     "open": "Ouvrir les réglages",

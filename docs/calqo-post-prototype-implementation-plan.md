@@ -182,21 +182,28 @@ Test cases:
 
 ## Phase K — Layout Power And Production Polish
 
-> **Status: NOT STARTED.**
+> **Status: COMPLETE.** Align/distribute/stack commands surface as an Arrange
+> grid in the multi-selection inspector and only touch unlocked, visible layers.
+> Smart guides gained an equal-spacing pass alongside the existing center/edge/
+> artboard snapping (extracted to a pure `computeSnap`). Arrow keys nudge 1px,
+> Shift+Arrow 10px. Duplicate-to-preset now shows a dismissible post-resize
+> review banner when layers fall out of bounds. Batch export filenames dedupe on
+> collision, and export readiness adds large-raster and large-batch warnings.
+> SVG/HTML fidelity is documented in `docs/export-fidelity.md`.
 
 Goal: improve the repetitive layout tasks that make social-post production fast.
 
 Deliverables:
 
-- [ ] Add align and distribute commands for selected layers.
-- [ ] Add stronger smart guides for center, edge, spacing, and artboard bounds.
-- [ ] Add keyboard nudging with normal and large increments.
-- [ ] Add spacing tools for equal gaps and quick vertical/horizontal stacks.
-- [ ] Improve duplicate-to-preset with post-resize review warnings.
-- [ ] Improve batch export naming and export readiness warnings.
-- [ ] Document SVG/HTML fidelity limitations for filters, masks, blend modes,
+- [x] Add align and distribute commands for selected layers.
+- [x] Add stronger smart guides for center, edge, spacing, and artboard bounds.
+- [x] Add keyboard nudging with normal and large increments.
+- [x] Add spacing tools for equal gaps and quick vertical/horizontal stacks.
+- [x] Improve duplicate-to-preset with post-resize review warnings.
+- [x] Improve batch export naming and export readiness warnings.
+- [x] Document SVG/HTML fidelity limitations for filters, masks, blend modes,
       and advanced text effects.
-- [ ] Add performance checks for large raster assets, many artboards, and
+- [x] Add performance checks for large raster assets, many artboards, and
       inactive stage mounting.
 
 Acceptance criteria:

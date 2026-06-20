@@ -34,6 +34,10 @@
     "emptyHint": "Créez un nouveau projet pour commencer à concevoir.",
     "createProject": "Créer un projet"
   },
+  "tabs": {
+    "unsavedTitle": "Modifications non enregistrées",
+    "unsavedMessage": "« {{name}} » comporte des modifications non enregistrées. Fermer quand même ?"
+  },
   "newProject": {
     "title": "Choisissez un format",
     "subtitle": "Choisissez une taille de réseau social pour démarrer votre projet."
@@ -168,6 +172,17 @@
     "preset_badge": "Badge",
     "preset_cta": "CTA",
     "sectionLayout": "Disposition",
+    "arrange": "Aligner",
+    "alignLeft": "Aligner à gauche",
+    "alignCenterH": "Centrer horizontalement",
+    "alignRight": "Aligner à droite",
+    "alignTop": "Aligner en haut",
+    "alignMiddle": "Centrer verticalement",
+    "alignBottom": "Aligner en bas",
+    "distributeH": "Répartir horizontalement",
+    "distributeV": "Répartir verticalement",
+    "stackH": "Empiler en ligne",
+    "stackV": "Empiler en colonne",
     "appearance": "Apparence",
     "emptyTitle": "Aucune sélection",
     "emptyHint": "Sélectionnez un calque sur le plan de travail pour le modifier, ou choisissez un outil pour ajouter un élément.",
@@ -212,7 +227,9 @@
     "add": "Ajouter un plan de travail",
     "delete": "Supprimer le plan de travail",
     "duplicateToPreset": "Dupliquer vers un format",
-    "duplicateSameSize": "Dupliquer (même taille)"
+    "duplicateSameSize": "Dupliquer (même taille)",
+    "resizeReview": "{{name}} : {{count}} calque(s) dépassent après redimensionnement. Vérifier.",
+    "dismissReview": "Ignorer"
   },
   "export": {
     "title": "Exporter",
@@ -236,6 +253,8 @@
     "warnings": "Avant d'exporter",
     "warnOverflow": "{{name}} : certains calques dépassent du plan de travail.",
     "warnMissingAsset": "{{name}} : une ressource image est manquante.",
+    "warnLargeAsset": "{{name}} est volumineuse ({{width}}×{{height}} px) et peut ralentir l'édition et l'export.",
+    "warnManyArtboards": "Exporter {{count}} plans de travail à la fois peut prendre du temps.",
     "download": "Exporter",
     "working": "Exportation…",
     "copyImage": "Copier l'image",

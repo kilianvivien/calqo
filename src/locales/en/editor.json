@@ -34,6 +34,10 @@
     "emptyHint": "Create a new project to start designing.",
     "createProject": "Create a project"
   },
+  "tabs": {
+    "unsavedTitle": "Unsaved changes",
+    "unsavedMessage": "“{{name}}” has unsaved changes. Close it anyway?"
+  },
   "newProject": {
     "title": "Choose a format",
     "subtitle": "Pick a social-media size to start your new project."
@@ -168,6 +172,17 @@
     "preset_badge": "Badge",
     "preset_cta": "CTA",
     "sectionLayout": "Layout",
+    "arrange": "Arrange",
+    "alignLeft": "Align left",
+    "alignCenterH": "Align horizontal centers",
+    "alignRight": "Align right",
+    "alignTop": "Align top",
+    "alignMiddle": "Align vertical centers",
+    "alignBottom": "Align bottom",
+    "distributeH": "Distribute horizontally",
+    "distributeV": "Distribute vertically",
+    "stackH": "Stack into a row",
+    "stackV": "Stack into a column",
     "appearance": "Appearance",
     "emptyTitle": "Nothing selected",
     "emptyHint": "Select a layer on the canvas to edit it, or pick a tool to add something new.",
@@ -212,7 +227,9 @@
     "add": "Add artboard",
     "delete": "Delete artboard",
     "duplicateToPreset": "Duplicate to format",
-    "duplicateSameSize": "Duplicate (same size)"
+    "duplicateSameSize": "Duplicate (same size)",
+    "resizeReview": "{{name}}: {{count}} layer(s) fall outside after resize. Review.",
+    "dismissReview": "Dismiss"
   },
   "export": {
     "title": "Export",
@@ -236,6 +253,8 @@
     "warnings": "Before you export",
     "warnOverflow": "{{name}}: some layers fall outside the artboard.",
     "warnMissingAsset": "{{name}}: an image asset is missing.",
+    "warnLargeAsset": "{{name}} is large ({{width}}×{{height}}px) and may slow editing and export.",
+    "warnManyArtboards": "Exporting {{count}} artboards at once may take a while.",
     "download": "Export",
     "working": "Exporting…",
     "copyImage": "Copy image",
