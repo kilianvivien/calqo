@@ -13,10 +13,11 @@ Instagram posts and stories, YouTube thumbnails, LinkedIn banners, event cards,
 announcements, and other static graphics that need to look polished without
 opening a heavyweight design suite.
 
-Think of it as the practical 20% of Canva that small teams, makers, and
+Calqo is built around the practical tools small teams, makers, and
 communications people use every day: text, images, shapes, icons, artboards,
-layers, exports, and templates. Calqo keeps that workflow local-first,
-open-source, and native-feeling, with a macOS-inspired "Liquid Glass" interface.
+layers, exports, and templates. It keeps that workflow local-first,
+open-source, and native-feeling, with a macOS-inspired "Liquid Glass"
+interface.
 
 The two headline AI workflows are different from image generation. Calqo asks an
 LLM to produce the app's own editable project JSON, so a prompt can become a real
@@ -24,15 +25,7 @@ template with selectable layers. It can also keep per-language text variants in 
 project and translate a design in place without rebuilding the layout.
 
 Calqo (from _calque_, the French word for a design "layer") ships as a browser
-React app today, with a Tauri desktop shell planned. It shares its build
-philosophy and design language with the
-[GeoCarto](https://github.com/kilianvivien) project.
-
-See [`docs/PRD-calqo-v0.5.md`](docs/PRD-calqo-v0.5.md) for the product spec and
-[`docs/calqo-browser-prototype-implementation-plan.md`](docs/calqo-browser-prototype-implementation-plan.md)
-plus
-[`docs/calqo-post-prototype-implementation-plan.md`](docs/calqo-post-prototype-implementation-plan.md)
-for the detailed build plans.
+React app today, with a Tauri desktop shell planned.
 
 ## Status
 
@@ -172,8 +165,7 @@ reports unsupported copy operations instead of throwing.
 Calqo targets the macOS "Liquid Glass" material: translucent, layered,
 light-refracting surfaces over a soft wallpaper. A small CSS-variable token
 system (`src/styles/tokens.css`) drives color, blur, radius, and motion across
-light/dark themes, with a reduced-transparency fallback for accessibility. See
-[`docs/GeoCarto-design.md`](docs/GeoCarto-design.md) for the full design system.
+light/dark themes, with a reduced-transparency fallback for accessibility.
 
 ## License
 
