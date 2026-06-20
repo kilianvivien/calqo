@@ -34,6 +34,7 @@
     "marqueeTool": "Marquee select tool",
     "panTool": "Pan tool",
     "textTool": "Text tool",
+    "listTool": "List tool",
     "shapeTools": "Shape tools",
     "imageTool": "Image tool",
     "selectAll": "Select all layers",

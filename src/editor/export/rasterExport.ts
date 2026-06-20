@@ -11,9 +11,11 @@ import { Line } from 'konva/lib/shapes/Line';
 import type { Shape } from 'konva/lib/Shape';
 import { assetStorage } from '@/lib/adapters';
 import { isGroupLayer } from '@/editor/utils/layers';
+import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
 import type {
   CalqoArtboard,
   CalqoLayer,
+  ListLayer,
   ShapeLayer,
 } from '@/lib/schema';
 
@@ -49,6 +51,9 @@ function solidFill(fill: ShapeLayer['fill']): string | undefined {
 function collectAssetIds(layers: CalqoLayer[], into = new Set<string>()): Set<string> {
   for (const layer of layers) {
     if (layer.type === 'image' || layer.type === 'svg') into.add(layer.assetId);
+    if (layer.type === 'list' && layer.marker.kind === 'asset' && layer.marker.assetId) {
+      into.add(layer.marker.assetId);
+    }
     if (isGroupLayer(layer)) collectAssetIds(layer.children, into);
   }
   return into;
@@ -204,7 +209,107 @@ function buildNode(
     return new KonvaImage({ ...base, image });
   }
 
+  if (layer.type === 'list') {
+    return buildListNode(layer, images, locale);
+  }
+
   return null;
+}
+
+/** Build a list layer as a clipped Konva group of marker + row text nodes,
+ * mirroring the on-canvas ListLayerNode. */
+function buildListNode(
+  layer: ListLayer,
+  images: Map<string, HTMLImageElement>,
+  locale: string,
+): Group | null {
+  const style = layer.style;
+  const { rowHeights, markerWidth, rowTextWidth, totalHeight } = listRowLayout(layer, locale);
+  const markerSize = layer.marker.size ?? style.fontSize;
+  const lineHeightPx = style.fontSize * style.lineHeight;
+  const vAlign = style.verticalAlign ?? 'top';
+  let startY = 0;
+  if (vAlign === 'middle') startY = Math.max(0, (layer.h - totalHeight) / 2);
+  else if (vAlign === 'bottom') startY = Math.max(0, layer.h - totalHeight);
+
+  const group = new Group({
+    ...commonAttrs(layer),
+    clipX: 0,
+    clipY: 0,
+    clipWidth: layer.w,
+    clipHeight: layer.h,
+  });
+
+  const markerImage =
+    layer.marker.kind === 'asset' && layer.marker.assetId
+      ? images.get(layer.marker.assetId) ?? null
+      : null;
+
+  let cursorY = startY;
+  layer.items.forEach((row) => {
+    const rowHeight = rowHeights.shift() ?? lineHeightPx;
+    const value = row.text[locale] ?? Object.values(row.text)[0] ?? '';
+    const rowY = cursorY;
+    cursorY += rowHeight;
+
+    if (layer.marker.kind !== 'none') {
+      if (markerImage) {
+        const imgY = rowY + Math.max(0, (lineHeightPx - markerSize) / 2);
+        group.add(
+          new KonvaImage({
+            image: markerImage,
+            x: 0,
+            y: imgY,
+            width: markerSize,
+            height: markerSize,
+          }),
+        );
+      } else if (layer.marker.kind !== 'asset') {
+        group.add(
+          new Text({
+            x: 0,
+            y: rowY,
+            width: markerWidth,
+            height: rowHeight,
+            text: markerGlyph(layer.marker),
+            fontFamily: style.fontFamily,
+            fontSize: markerSize,
+            fontStyle: String(style.fontWeight),
+            fill: layer.marker.color,
+            align: 'left',
+            verticalAlign: 'top',
+            lineHeight: style.lineHeight,
+          }),
+        );
+      }
+    }
+
+    group.add(
+      new Text({
+        x: markerWidth + layer.markerGap,
+        y: rowY,
+        width: rowTextWidth,
+        height: rowHeight,
+        text: value,
+        fontFamily: style.fontFamily,
+        fontSize: style.fontSize,
+        fontStyle: String(style.fontWeight),
+        fill: style.color,
+        align: style.align,
+        verticalAlign: 'top',
+        lineHeight: style.lineHeight,
+        letterSpacing: style.letterSpacing,
+        stroke: style.stroke?.color,
+        strokeWidth: style.stroke?.width ?? 0,
+        shadowColor: style.shadow?.color,
+        shadowBlur: style.shadow?.blur,
+        shadowOffsetX: style.shadow?.offsetX,
+        shadowOffsetY: style.shadow?.offsetY,
+        shadowOpacity: style.shadow?.opacity,
+      }),
+    );
+  });
+  return group;
 }
 
 /** Render an artboard to a raster blob via a detached offscreen Konva stage. */

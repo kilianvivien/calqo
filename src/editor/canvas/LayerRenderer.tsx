@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Arrow, Ellipse, Group, Image, Line, Rect, Text } from 'react-konva';
 import type Konva from 'konva';
 import { Blur } from 'konva/lib/filters/Blur';
-import type { CalqoLayer, ImageLayer } from '@/lib/schema';
+import type { CalqoLayer, ImageLayer, ListLayer } from '@/lib/schema';
+import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
 import { fillProps, strokeProps } from './shapeStyle';
 import { buildImageFilterPipeline, coverCropRect } from './imageFilters';
 import { drawMaskPath } from './maskClip';
@@ -292,6 +293,17 @@ export function LayerRenderer(props: LayerRendererProps) {
     return <SvgLayerNode layer={layer} base={base} />;
   }
 
+  if (layer.type === 'list') {
+    return (
+      <ListLayerNode
+        layer={layer}
+        base={base}
+        activeLocale={activeLocale}
+        onTextEdit={onTextEdit}
+      />
+    );
+  }
+
   return null;
 }
 
@@ -427,4 +439,126 @@ function SvgLayerNode({
   const { image, missing } = useAssetImage(layer.assetId, layer.color);
   if (!image) return <AssetPlaceholder layer={layer} base={base} missing={missing} />;
   return <Image {...base} {...shadowProps(layer)} {...blendProps(layer)} image={image} />;
+}
+
+/** List layer: a clipped group stacking one marker + one wrapped text node per
+ * row. Row heights come from the shared offscreen measurement so on-canvas
+ * layout matches overflow detection. */
+function ListLayerNode({
+  layer,
+  base,
+  activeLocale,
+  onTextEdit,
+}: {
+  layer: ListLayer;
+  base: ReturnType<typeof commonProps>;
+  activeLocale: string;
+  onTextEdit: (layer: CalqoLayer) => void;
+}) {
+  const { rowHeights, totalHeight, markerWidth, rowTextWidth } = useMemo(
+    () => listRowLayout(layer, activeLocale),
+    [layer, activeLocale],
+  );
+
+  // Vertically anchor the stacked rows within the box per the shared style.
+  const vAlign = layer.style.verticalAlign ?? 'top';
+  let startY = 0;
+  if (vAlign === 'middle') startY = Math.max(0, (layer.h - totalHeight) / 2);
+  else if (vAlign === 'bottom') startY = Math.max(0, layer.h - totalHeight);
+
+  const markerSize = layer.marker.size ?? layer.style.fontSize;
+  const markerIsAsset = layer.marker.kind === 'asset';
+  const { image: markerImage, missing: markerMissing } = useAssetImage(
+    markerIsAsset ? (layer.marker.assetId ?? null) : null,
+    markerIsAsset ? layer.marker.color : undefined,
+  );
+
+  let cursorY = startY;
+  return (
+    <Group
+      {...base}
+      {...shadowProps(layer)}
+      {...blendProps(layer)}
+      clipX={0}
+      clipY={0}
+      clipWidth={layer.w}
+      clipHeight={layer.h}
+      onDblClick={() => onTextEdit(layer)}
+      onDblTap={() => onTextEdit(layer)}
+    >
+      {layer.items.map((row, index) => {
+        const rowHeight = rowHeights[index] ?? layer.style.fontSize * layer.style.lineHeight;
+        const value = row.text[activeLocale] ?? Object.values(row.text)[0] ?? '';
+        const rowY = cursorY;
+        cursorY += rowHeight;
+        return (
+          <Group key={row.id}>
+            {layer.marker.kind !== 'none' && (
+              <>
+                {markerIsAsset ? (
+                  markerImage ? (
+                    <Image
+                      image={markerImage}
+                      x={0}
+                      y={rowY + Math.max(0, (layer.style.fontSize * layer.style.lineHeight - markerSize) / 2)}
+                      width={markerSize}
+                      height={markerSize}
+                    />
+                  ) : (
+                    <Rect
+                      x={0}
+                      y={rowY}
+                      width={markerSize}
+                      height={markerSize}
+                      fill={markerMissing ? '#FFECEC' : '#F2F5F9'}
+                      stroke={markerMissing ? '#FF5F57' : '#94A3B8'}
+                      dash={[4, 3]}
+                    />
+                  )
+                ) : (
+                  <Text
+                    x={0}
+                    y={rowY}
+                    width={markerWidth}
+                    height={rowHeight}
+                    text={markerGlyph(layer.marker)}
+                    fontFamily={layer.style.fontFamily}
+                    fontSize={markerSize}
+                    fontStyle={String(layer.style.fontWeight)}
+                    fill={layer.marker.color}
+                    align="left"
+                    verticalAlign="top"
+                    lineHeight={layer.style.lineHeight}
+                    wrap="none"
+                  />
+                )}
+              </>
+            )}
+            <Text
+              x={markerWidth + layer.markerGap}
+              y={rowY}
+              width={rowTextWidth}
+              height={rowHeight}
+              text={value}
+              fontFamily={layer.style.fontFamily}
+              fontSize={layer.style.fontSize}
+              fontStyle={String(layer.style.fontWeight)}
+              fill={layer.style.color}
+              align={layer.style.align}
+              verticalAlign="top"
+              lineHeight={layer.style.lineHeight}
+              letterSpacing={layer.style.letterSpacing}
+              stroke={layer.style.stroke?.color}
+              strokeWidth={layer.style.stroke?.width ?? 0}
+              shadowColor={layer.style.shadow?.color}
+              shadowBlur={layer.style.shadow?.blur}
+              shadowOffsetX={layer.style.shadow?.offsetX}
+              shadowOffsetY={layer.style.shadow?.offsetY}
+              shadowOpacity={layer.style.shadow?.opacity}
+            />
+          </Group>
+        );
+      })}
+    </Group>
+  );
 }

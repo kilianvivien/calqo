@@ -3,7 +3,8 @@
 import { Text } from 'konva/lib/shapes/Text';
 import { assetStorage } from '@/lib/adapters';
 import { isGroupLayer } from '@/editor/utils/layers';
-import type { CalqoArtboard, CalqoLayer, ShapeLayer, TextLayer } from '@/lib/schema';
+import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
+import type { CalqoArtboard, CalqoLayer, ListLayer, ShapeLayer, TextLayer } from '@/lib/schema';
 
 interface TextLine {
   text: string;
@@ -179,7 +180,85 @@ function serializeLayer(
     return `${open}<image href="${dataUrl}" x="0" y="0" width="${layer.w}" height="${layer.h}" preserveAspectRatio="${aspect}" />${close}`;
   }
 
+  if (layer.type === 'list') {
+    return serializeList(layer, assets, locale, warnings, open, close);
+  }
+
   return '';
+}
+
+/** Serialize a list layer as a group of per-row text blocks with markers,
+ * mirroring the on-canvas ListLayerNode layout. */
+function serializeList(
+  layer: ListLayer,
+  assets: Map<string, string>,
+  locale: string,
+  warnings: string[],
+  open: string,
+  close: string,
+): string {
+  const style = layer.style;
+  const { rowHeights, markerWidth, rowTextWidth } = listRowLayout(layer, locale);
+  const markerSize = layer.marker.size ?? style.fontSize;
+  const lineHeightPx = style.fontSize * style.lineHeight;
+  const vAlign = style.verticalAlign ?? 'top';
+  const totalHeight = rowHeights.reduce((sum, h) => sum + h, 0);
+  let startY = 0;
+  if (vAlign === 'middle') startY = Math.max(0, (layer.h - totalHeight) / 2);
+  else if (vAlign === 'bottom') startY = Math.max(0, layer.h - totalHeight);
+
+  const markerAssetUrl =
+    layer.marker.kind === 'asset' && layer.marker.assetId
+      ? assets.get(layer.marker.assetId)
+      : null;
+  if (layer.marker.kind === 'asset' && !markerAssetUrl) {
+    warnings.push(`Missing marker asset for list "${layer.name}".`);
+  }
+
+  let cursorY = startY;
+  const parts: string[] = [];
+  layer.items.forEach((row, index) => {
+    const rowHeight = rowHeights[index] ?? lineHeightPx;
+    const value = row.text[locale] ?? Object.values(row.text)[0] ?? '';
+    const rowY = cursorY;
+    cursorY += rowHeight;
+
+    if (layer.marker.kind !== 'none') {
+      if (markerAssetUrl) {
+        const imgY = rowY + Math.max(0, (lineHeightPx - markerSize) / 2);
+        parts.push(
+          `<image href="${markerAssetUrl}" x="0" y="${round(imgY)}" width="${markerSize}" height="${markerSize}" preserveAspectRatio="xMidYMid meet" />`,
+        );
+      } else if (layer.marker.kind !== 'asset') {
+        parts.push(
+          `<text font-family="${esc(style.fontFamily)}" font-size="${markerSize}" font-weight="${style.fontWeight}" fill="${layer.marker.color}" x="0" y="${round(rowY + lineHeightPx / 2)}" dominant-baseline="central">${esc(markerGlyph(layer.marker))}</text>`,
+        );
+      }
+    }
+
+    const synthetic = { style, w: rowTextWidth, h: rowHeight } as unknown as TextLayer;
+    const { lines } = layoutText(synthetic, value);
+    const tspans = lines
+      .map((line, n) => {
+        const x =
+          style.align === 'right'
+            ? markerWidth + layer.markerGap + (rowTextWidth - line.width)
+            : style.align === 'center'
+              ? markerWidth + layer.markerGap + (rowTextWidth - line.width) / 2
+              : markerWidth + layer.markerGap;
+        const y = rowY + lineHeightPx / 2 + n * lineHeightPx;
+        return `<tspan x="${round(x)}" y="${round(y)}">${esc(line.text)}</tspan>`;
+      })
+      .join('');
+    const stroke = style.stroke
+      ? ` stroke="${style.stroke.color}" stroke-width="${style.stroke.width}"`
+      : '';
+    const letterSpacing = style.letterSpacing ? ` letter-spacing="${style.letterSpacing}"` : '';
+    parts.push(
+      `<text font-family="${esc(style.fontFamily)}" font-size="${style.fontSize}" font-weight="${style.fontWeight}" fill="${style.color}" dominant-baseline="central" text-anchor="start"${letterSpacing}${stroke}>${tspans}</text>`,
+    );
+  });
+  return `${open}${parts.join('')}${close}`;
 }
 
 async function loadAssetDataUrls(artboard: CalqoArtboard): Promise<Map<string, string>> {
@@ -187,6 +266,9 @@ async function loadAssetDataUrls(artboard: CalqoArtboard): Promise<Map<string, s
   const collect = (layers: CalqoLayer[]) => {
     for (const layer of layers) {
       if (layer.type === 'image' || layer.type === 'svg') ids.add(layer.assetId);
+      if (layer.type === 'list' && layer.marker.kind === 'asset' && layer.marker.assetId) {
+        ids.add(layer.marker.assetId);
+      }
       if (isGroupLayer(layer)) collect(layer.children);
     }
   };

@@ -6,9 +6,11 @@ import { assetStorage } from '@/lib/adapters';
 import {
   addImportedAssetLayer,
   addLayerToActiveArtboard,
+  commitListInlineEdit,
   createArrowLayer,
   createCustomPolygonLayer,
   createFreehandLayer,
+  createListLayer,
   createPolygonShapeLayer,
   createShapeLayer,
   createTextLayer,
@@ -21,7 +23,14 @@ import {
   updateLayerInActiveArtboard,
 } from '@/editor/commands/projectCommands';
 import { findLayerInArtboard, flattenLayers, isGroupLayer } from '@/editor/utils/layers';
-import type { CalqoArtboard, CalqoLayer, CalqoProject, TextLayer } from '@/lib/schema';
+import { markerGlyphWidth } from '@/editor/i18n-content/translationPipeline';
+import type {
+  CalqoArtboard,
+  CalqoLayer,
+  CalqoProject,
+  ListLayer,
+  TextLayer,
+} from '@/lib/schema';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
 import { TextEditOverlay } from './TextEditOverlay';
@@ -202,7 +211,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     [artboard, selectedLayerIds],
   );
   const editingLayer = editingTextId
-    ? (findLayerInArtboard(artboard, editingTextId) as TextLayer | null)
+    ? (findLayerInArtboard(artboard, editingTextId) as TextLayer | ListLayer | null)
     : null;
   const lineLikeSelection = useMemo(() => isLineLikeSelection(selectedLayers), [selectedLayers]);
   // Group when ≥2 top-level layers are selected; ungroup when a single group is.
@@ -304,7 +313,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       }
       if (event.key !== 'Enter') return;
       const only = selectedLayers.length === 1 ? selectedLayers[0] : null;
-      if (only?.type === 'text' && !only.locked) {
+      if ((only?.type === 'text' || only?.type === 'list') && !only.locked) {
         event.preventDefault();
         setEditingTextId(only.id);
       }
@@ -469,6 +478,12 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     }
     if (activeTool === 'text') {
       const layer = createTextLayer(project, point.x, point.y);
+      addLayerToActiveArtboard(project.id, layer);
+      setActiveTool('select');
+      return;
+    }
+    if (activeTool === 'list') {
+      const layer = createListLayer(project, point.x, point.y);
       addLayerToActiveArtboard(project.id, layer);
       setActiveTool('select');
       return;
@@ -810,7 +825,10 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
               }}
               onTransformEnd={normalizeNode}
               onTextEdit={(layerToEdit) => {
-                if (layerToEdit.type === 'text' && !layerToEdit.locked) {
+                if (
+                  (layerToEdit.type === 'text' || layerToEdit.type === 'list') &&
+                  !layerToEdit.locked
+                ) {
                   setSelection([layerToEdit.id]);
                   setEditingTextId(layerToEdit.id);
                 }
@@ -1057,14 +1075,42 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       </Stage>
       {editingLayer && (
         <TextEditOverlay
-          layer={editingLayer}
-          locale={project.activeContentLocale}
+          initialValue={
+            editingLayer.type === 'list'
+              ? editingLayer.items
+                  .map(
+                    (row) =>
+                      row.text[project.activeContentLocale] ??
+                      Object.values(row.text)[0] ??
+                      '',
+                  )
+                  .join('\n')
+              : (editingLayer.text[project.activeContentLocale] ??
+                Object.values(editingLayer.text)[0] ??
+                '')
+          }
+          textStyle={editingLayer.style}
+          rotation={editingLayer.rotation}
+          insetLeft={
+            editingLayer.type === 'list'
+              ? markerGlyphWidth(editingLayer) + editingLayer.markerGap
+              : 0
+          }
           node={nodeRefs.current.get(editingLayer.id) ?? null}
           stageScale={zoom}
           onCommit={(value) => {
-            updateLayerInActiveArtboard(project.id, editingLayer.id, {
-              text: { [project.activeContentLocale]: value },
-            });
+            if (editingLayer.type === 'list') {
+              commitListInlineEdit(
+                project.id,
+                editingLayer.id,
+                project.activeContentLocale,
+                value.split('\n'),
+              );
+            } else {
+              updateLayerInActiveArtboard(project.id, editingLayer.id, {
+                text: { [project.activeContentLocale]: value },
+              });
+            }
             setEditingTextId(null);
           }}
           onCancel={() => setEditingTextId(null)}

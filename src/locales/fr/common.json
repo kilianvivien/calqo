@@ -34,6 +34,7 @@
     "marqueeTool": "Outil sélection rectangle",
     "panTool": "Outil main",
     "textTool": "Outil texte",
+    "listTool": "Outil liste",
     "shapeTools": "Outils formes",
     "imageTool": "Outil image",
     "selectAll": "Sélectionner tous les calques",

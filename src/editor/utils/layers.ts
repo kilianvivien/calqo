@@ -6,6 +6,9 @@ import type {
   Fill,
   GroupLayer,
   ImageLayer,
+  ListLayer,
+  ListItem,
+  ListMarker,
   ShapeLayer,
   SvgLayer,
   TextLayer,
@@ -36,6 +39,12 @@ export type LayerPatch = Partial<
   blendMode?: CalqoLayer['blendMode'];
   /** Group-only: bake a Konva transform scale into the group's children. */
   groupScale?: { sx: number; sy: number };
+  /** List-only: replace the full items array. */
+  items?: ListItem[];
+  /** List-only: replace/patch the marker config. */
+  marker?: Partial<ListMarker>;
+  /** List-only: horizontal gap between marker and row text. */
+  markerGap?: number;
 };
 
 export function isGroupLayer(layer: CalqoLayer): layer is GroupLayer {
@@ -160,6 +169,12 @@ export function applyLayerPatch(layer: CalqoLayer, patch: LayerPatch): void {
     if (patch.color === null) delete layer.color;
     else layer.color = patch.color;
   }
+  if (layer.type === 'list') {
+    if (patch.items) layer.items = patch.items;
+    if (patch.marker) layer.marker = { ...layer.marker, ...patch.marker };
+    if (patch.markerGap !== undefined) layer.markerGap = patch.markerGap;
+    if (patch.style) layer.style = { ...layer.style, ...patch.style };
+  }
   if (isGroupLayer(layer) && patch.groupScale) {
     const { sx, sy } = patch.groupScale;
     layer.children.forEach((child) => scaleLayerTree(child, sx, sy));
@@ -179,6 +194,10 @@ export function isSvgLayer(layer: CalqoLayer): layer is SvgLayer {
   return layer.type === 'svg';
 }
 
+export function isListLayer(layer: CalqoLayer): layer is ListLayer {
+  return layer.type === 'list';
+}
+
 /** Deep-clone a layer (and its group children) under freshly minted ids, so a
  * duplicate/paste never aliases the original's identity. */
 export function cloneLayerWithNewIds(layer: CalqoLayer): CalqoLayer {
@@ -186,6 +205,7 @@ export function cloneLayerWithNewIds(layer: CalqoLayer): CalqoLayer {
   const reassign = (target: CalqoLayer) => {
     target.id = createId('layer');
     if (isGroupLayer(target)) target.children.forEach(reassign);
+    if (target.type === 'list') target.items.forEach((item) => (item.id = createId('item')));
   };
   reassign(clone);
   return clone;
@@ -221,6 +241,9 @@ export function scaleLayerTree(layer: CalqoLayer, sx: number, sy: number): void 
   layer.w = Math.max(1, layer.w * sx);
   layer.h = Math.max(1, layer.h * sy);
   if (layer.type === 'text') {
+    layer.style.fontSize = Math.max(1, layer.style.fontSize * Math.sqrt(sx * sy));
+  }
+  if (layer.type === 'list') {
     layer.style.fontSize = Math.max(1, layer.style.fontSize * Math.sqrt(sx * sy));
   }
   if (layer.type === 'shape' && layer.points) {

@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type Konva from 'konva';
-import type { TextLayer } from '@/lib/schema';
+import type { TextStyle } from '@/lib/schema';
 
 interface TextEditOverlayProps {
-  layer: TextLayer;
-  locale: string;
+  initialValue: string;
+  textStyle: TextStyle;
+  rotation: number;
+  /** Inset (stage units) of the editable text column from the left of the
+   * node's box — used by list layers to clear the marker column. */
+  insetLeft?: number;
   node: Konva.Node | null;
   stageScale: number;
   onCommit: (value: string) => void;
@@ -12,44 +16,63 @@ interface TextEditOverlayProps {
 }
 
 export function TextEditOverlay({
-  layer,
-  locale,
+  initialValue,
+  textStyle,
+  rotation,
+  insetLeft = 0,
   node,
   stageScale,
   onCommit,
   onCancel,
 }: TextEditOverlayProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
-  const [value, setValue] = useState(
-    layer.text[locale] ?? Object.values(layer.text)[0] ?? '',
-  );
+  const [value, setValue] = useState(initialValue);
+  const valueRef = useRef(initialValue);
   const [style, setStyle] = useState<React.CSSProperties | null>(null);
+
+  // Keep a ref in sync so onBlur/keydown always commit the latest value even
+  // if a stale render closure is active.
+  const update = (next: string) => {
+    valueRef.current = next;
+    setValue(next);
+  };
 
   useEffect(() => {
     const textNode = node;
     const stage = textNode?.getStage();
     const container = stage?.container();
-    if (!textNode || !container) return;
-    if (!stage) return;
+    if (!textNode || !container || !stage) return;
     const box = textNode.getClientRect({ relativeTo: stage });
     const containerBox = container.getBoundingClientRect();
+    const leftInsetPx = insetLeft * stageScale;
     setStyle({
       position: 'fixed',
-      left: containerBox.left + box.x,
+      left: containerBox.left + box.x + leftInsetPx,
       top: containerBox.top + box.y,
-      width: Math.max(40, box.width),
+      width: Math.max(40, box.width - leftInsetPx),
       minHeight: Math.max(32, box.height),
-      transform: `rotate(${layer.rotation}deg)`,
+      transform: `rotate(${rotation}deg)`,
       transformOrigin: 'top left',
-      fontFamily: layer.style.fontFamily,
-      fontSize: layer.style.fontSize * stageScale,
-      fontWeight: layer.style.fontWeight,
-      lineHeight: layer.style.lineHeight,
-      letterSpacing: layer.style.letterSpacing * stageScale,
-      color: layer.style.color,
-      textAlign: layer.style.align === 'justify' ? 'left' : layer.style.align,
+      fontFamily: textStyle.fontFamily,
+      fontSize: textStyle.fontSize * stageScale,
+      fontWeight: textStyle.fontWeight,
+      lineHeight: textStyle.lineHeight,
+      letterSpacing: textStyle.letterSpacing * stageScale,
+      color: textStyle.color,
+      textAlign: textStyle.align === 'justify' ? 'left' : textStyle.align,
+      overflow: 'hidden',
     });
-  }, [layer, node, stageScale]);
+  }, [node, stageScale, insetLeft, textStyle, rotation]);
+
+  // Auto-grow the textarea so every line is visible while editing. Without this
+  // pressing Enter (which adds a row for lists) scrolls the new line out of view
+  // and the edit feels unreliable.
+  useLayoutEffect(() => {
+    const textarea = ref.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value, style]);
 
   useEffect(() => {
     const textarea = ref.current;
@@ -60,12 +83,14 @@ export function TextEditOverlay({
 
   if (!style) return null;
 
+  const commit = () => onCommit(valueRef.current);
+
   return (
     <textarea
       ref={ref}
       value={value}
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={() => onCommit(value)}
+      onChange={(event) => update(event.target.value)}
+      onBlur={commit}
       onKeyDown={(event) => {
         event.stopPropagation();
         if (event.key === 'Escape') {
@@ -74,7 +99,7 @@ export function TextEditOverlay({
         }
         if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
           event.preventDefault();
-          onCommit(value);
+          commit();
         }
       }}
       className="z-50 resize-none rounded-[var(--calqo-radius-xs)] border border-[var(--calqo-accent)] bg-white/95 p-1 outline-none ring-4 ring-[var(--calqo-accent-ring)]"

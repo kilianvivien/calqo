@@ -1,10 +1,13 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlignCenter,
   AlignJustify,
   AlignLeft,
   AlignRight,
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
   Badge,
   Brush,
   Circle,
@@ -13,15 +16,18 @@ import {
   Hand,
   Image as ImageIcon,
   Layers,
+  List,
   Minus,
   MousePointer2,
   BoxSelect,
   MoveUpRight,
   PenTool,
   Pipette,
+  Plus,
   Shapes,
   Square,
   Star,
+  Trash2,
   Triangle,
   Type,
   type LucideIcon,
@@ -34,6 +40,11 @@ import {
   updateLayerInActiveArtboard,
   editProject,
   replaceLayerAsset,
+  addListItem,
+  removeListItem,
+  reorderListItem,
+  updateListItemTextForLocale,
+  setListMarker,
 } from '@/editor/commands/projectCommands';
 import { findLayerInArtboard } from '@/editor/utils/layers';
 import { GlassSegmentedControl } from '@/components/glass';
@@ -43,9 +54,12 @@ import { useUiStore, type BrushStyle, type EditorTool } from '@/lib/state/uiStor
 import type {
   ArrowStyle,
   CalqoLayer,
+  CalqoAssetRef,
   Fill,
   ImageLayer,
   ImageMask,
+  ListLayer,
+  ListMarker,
   ShadowStyle,
   StrokeStyle,
   TextLayer,
@@ -69,6 +83,7 @@ const LAYER_TYPE_ICON: Record<CalqoLayer['type'], LucideIcon> = {
   shape: Square,
   image: ImageIcon,
   svg: Shapes,
+  list: List,
   group: Folder,
 };
 
@@ -77,6 +92,7 @@ const TOOL_ICON: Record<EditorTool, LucideIcon> = {
   marquee: BoxSelect,
   pan: Hand,
   text: Type,
+  list: List,
   rect: Square,
   ellipse: Circle,
   line: Minus,
@@ -93,6 +109,7 @@ const TOOL_ICON: Record<EditorTool, LucideIcon> = {
 
 const DRAW_TOOLS: EditorTool[] = [
   'text',
+  'list',
   'rect',
   'ellipse',
   'line',
@@ -439,6 +456,7 @@ function layerSubtitle(
     text: 'properties.text',
     image: 'properties.image',
     svg: 'properties.svg',
+    list: 'properties.list',
     group: 'panels.layers',
   };
   return t(typeKey[layer.type]);
@@ -756,6 +774,16 @@ function LayerControls({
         />
       )}
 
+      {layer.type === 'list' && (
+        <ListControls
+          projectId={projectId}
+          layer={layer}
+          locale={locale}
+          locales={locales}
+          update={update}
+        />
+      )}
+
       {layer.type === 'image' && (
         <ImageControls projectId={projectId} layer={layer} update={update} />
       )}
@@ -971,7 +999,7 @@ function EffectsControls({
   const { t } = useTranslation('editor');
   const effects = layer.effects;
   const shadow = effects?.shadow;
-  const showShadow = layer.type !== 'text';
+  const showShadow = layer.type !== 'text' && layer.type !== 'list';
 
   return (
     <Section title={t('properties.effects')}>
@@ -1104,136 +1132,592 @@ function TextControls({
       </Section>
 
       <Section title={t('properties.presets')}>
-        <TextPresetRow
-          onApply={(id) => update({ style: textPresetStyle(id) })}
-        />
+        <TextPresetRow onApply={(id) => update({ style: textPresetStyle(id) })} />
       </Section>
 
-      <Section title={t('properties.typography')}>
-        <SelectField
-          label={t('properties.font')}
-          value={layer.style.fontFamily}
-          options={BUNDLED_FONTS.map((f) => ({ value: f.family, label: f.family }))}
-          onChange={(fontFamily) => update({ style: { fontFamily } })}
-        />
-        <SelectField
-          label={t('properties.weight')}
-          value={String(layer.style.fontWeight)}
-          options={WEIGHT_OPTIONS}
-          onChange={(weight) => update({ style: { fontWeight: Number(weight) } })}
-        />
-        <SliderField
-          label={t('properties.size')}
-          value={layer.style.fontSize}
-          min={8}
-          max={240}
-          onChange={(fontSize) => update({ style: { fontSize } })}
-        />
-        <AlignField
-          value={layer.style.align}
-          onChange={(align) => update({ style: { align } })}
-        />
-        <VerticalAlignField
-          value={layer.style.verticalAlign ?? 'top'}
-          onChange={(verticalAlign) => update({ style: { verticalAlign } })}
-        />
-        <SliderField
-          label={t('properties.lineHeight')}
-          value={layer.style.lineHeight}
-          min={0.8}
-          max={3}
-          step={0.05}
-          onChange={(lineHeight) => update({ style: { lineHeight } })}
-        />
-        <SliderField
-          label={t('properties.letterSpacing')}
-          value={layer.style.letterSpacing}
-          min={-10}
-          max={40}
-          step={0.5}
-          onChange={(letterSpacing) => update({ style: { letterSpacing } })}
-        />
-        <ColorField
-          label={t('properties.color')}
-          value={layer.style.color}
-          onChange={(color) => update({ style: { color } })}
-        />
-      </Section>
+      <TypographyControls
+        style={layer.style}
+        onChange={(style) => update({ style })}
+      />
 
-      <Section title={t('properties.stroke')}>
-        <ColorField
-          label={t('properties.color')}
-          value={layer.style.stroke?.color ?? '#000000'}
-          onChange={(color) =>
-            update({ style: { stroke: { color, width: layer.style.stroke?.width ?? 1 } } })
+      <TextStrokeControls
+        style={layer.style}
+        onChange={(style) => update({ style })}
+      />
+
+      <TextShadowControls
+        shadow={shadow}
+        onChange={(shadow) => update({ style: { shadow } })}
+      />
+    </>
+  );
+}
+
+/** Shared typography section (font / weight / size / align / line-height /
+ * letter-spacing / color) — used by both text and list layers so a list keeps
+ * every text-editing feature. */
+function TypographyControls({
+  style,
+  onChange,
+}: {
+  style: TextLayer['style'];
+  onChange: (style: Partial<TextLayer['style']>) => void;
+}) {
+  const { t } = useTranslation('editor');
+  return (
+    <Section title={t('properties.typography')}>
+      <SelectField
+        label={t('properties.font')}
+        value={style.fontFamily}
+        options={BUNDLED_FONTS.map((f) => ({ value: f.family, label: f.family }))}
+        onChange={(fontFamily) => onChange({ fontFamily })}
+      />
+      <SelectField
+        label={t('properties.weight')}
+        value={String(style.fontWeight)}
+        options={WEIGHT_OPTIONS}
+        onChange={(weight) => onChange({ fontWeight: Number(weight) })}
+      />
+      <SliderField
+        label={t('properties.size')}
+        value={style.fontSize}
+        min={8}
+        max={240}
+        onChange={(fontSize) => onChange({ fontSize })}
+      />
+      <AlignField value={style.align} onChange={(align) => onChange({ align })} />
+      <VerticalAlignField
+        value={style.verticalAlign ?? 'top'}
+        onChange={(verticalAlign) => onChange({ verticalAlign })}
+      />
+      <SliderField
+        label={t('properties.lineHeight')}
+        value={style.lineHeight}
+        min={0.8}
+        max={3}
+        step={0.05}
+        onChange={(lineHeight) => onChange({ lineHeight })}
+      />
+      <SliderField
+        label={t('properties.letterSpacing')}
+        value={style.letterSpacing}
+        min={-10}
+        max={40}
+        step={0.5}
+        onChange={(letterSpacing) => onChange({ letterSpacing })}
+      />
+      <ColorField
+        label={t('properties.color')}
+        value={style.color}
+        onChange={(color) => onChange({ color })}
+      />
+    </Section>
+  );
+}
+
+/** Shared text stroke section — used by text and list layers. */
+function TextStrokeControls({
+  style,
+  onChange,
+}: {
+  style: TextLayer['style'];
+  onChange: (style: Partial<TextLayer['style']>) => void;
+}) {
+  const { t } = useTranslation('editor');
+  return (
+    <Section title={t('properties.stroke')}>
+      <ColorField
+        label={t('properties.color')}
+        value={style.stroke?.color ?? '#000000'}
+        onChange={(color) =>
+          onChange({ stroke: { color, width: style.stroke?.width ?? 1 } })
+        }
+      />
+      <SliderField
+        label={t('properties.strokeWidth')}
+        value={style.stroke?.width ?? 0}
+        min={0}
+        max={20}
+        step={0.5}
+        onChange={(width) =>
+          onChange({
+            stroke:
+              width > 0
+                ? { color: style.stroke?.color ?? '#000000', width }
+                : undefined,
+          })
+        }
+      />
+    </Section>
+  );
+}
+
+/** Shared text shadow section — used by text and list layers. */
+function TextShadowControls({
+  shadow,
+  onChange,
+}: {
+  shadow: ShadowStyle | undefined;
+  onChange: (shadow: ShadowStyle | undefined) => void;
+}) {
+  const { t } = useTranslation('editor');
+  return (
+    <Section title={t('properties.shadow')}>
+      <label className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-[12px] text-[var(--calqo-text-2)]">
+        <input
+          type="checkbox"
+          checked={Boolean(shadow)}
+          onChange={(event) =>
+            onChange(event.target.checked ? DEFAULT_TEXT_SHADOW : undefined)
           }
+          className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
         />
-        <SliderField
-          label={t('properties.strokeWidth')}
-          value={layer.style.stroke?.width ?? 0}
-          min={0}
-          max={20}
-          step={0.5}
-          onChange={(width) =>
-            update({
-              style: {
-                stroke:
-                  width > 0
-                    ? { color: layer.style.stroke?.color ?? '#000000', width }
-                    : undefined,
-              },
-            })
-          }
-        />
-      </Section>
-
-      <Section title={t('properties.shadow')}>
-        <label className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-[12px] text-[var(--calqo-text-2)]">
-          <input
-            type="checkbox"
-            checked={Boolean(shadow)}
-            onChange={(event) =>
-              update({ style: { shadow: event.target.checked ? DEFAULT_TEXT_SHADOW : undefined } })
-            }
-            className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
+        {t('properties.shadowEnable')}
+      </label>
+      {shadow && (
+        <>
+          <ColorField
+            label={t('properties.color')}
+            value={shadow.color}
+            onChange={(color) => onChange({ ...shadow, color })}
           />
-          {t('properties.shadowEnable')}
-        </label>
-        {shadow && (
+          <NumberField
+            label={t('properties.blur')}
+            value={shadow.blur}
+            min={0}
+            onChange={(blur) => onChange({ ...shadow, blur })}
+          />
+          <NumberField
+            label="X"
+            value={shadow.offsetX}
+            onChange={(offsetX) => onChange({ ...shadow, offsetX })}
+          />
+          <NumberField
+            label="Y"
+            value={shadow.offsetY}
+            onChange={(offsetY) => onChange({ ...shadow, offsetY })}
+          />
+          <NumberField
+            label={t('properties.opacity')}
+            value={Math.round((shadow.opacity ?? 1) * 100)}
+            min={0}
+            max={100}
+            onChange={(opacity) => onChange({ ...shadow, opacity: opacity / 100 })}
+          />
+        </>
+      )}
+    </Section>
+  );
+}
+
+const MARKER_KIND_OPTIONS: { value: ListMarker['kind']; labelKey: string }[] = [
+  { value: 'bullet', labelKey: 'list.markerBullet' },
+  { value: 'dash', labelKey: 'list.markerDash' },
+  { value: 'arrow', labelKey: 'list.markerArrow' },
+  { value: 'none', labelKey: 'list.markerNone' },
+  { value: 'character', labelKey: 'list.markerCharacter' },
+  { value: 'asset', labelKey: 'list.markerAsset' },
+];
+
+/** Load an asset blob into an object URL for use as an <img> thumbnail. */
+function useAssetThumbnail(assetId: string | null | undefined): string | null {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    let created: string | null = null;
+    if (!assetId) {
+      setUrl(null);
+      return undefined;
+    }
+    void assetStorage.getAssetBlob(assetId).then((blob) => {
+      if (!alive) return;
+      if (!blob) {
+        setUrl(null);
+        return;
+      }
+      created = URL.createObjectURL(blob);
+      setUrl(created);
+    });
+    return () => {
+      alive = false;
+      if (created) URL.revokeObjectURL(created);
+    };
+  }, [assetId]);
+  return url;
+}
+
+/** Grid of already-imported assets the user can pick as a list marker, plus an
+ * upload button to add a new one inline. */
+function MarkerAssetPicker({
+  projectId,
+  layerId,
+  selectedAssetId,
+  onPick,
+}: {
+  projectId: string;
+  layerId: string;
+  selectedAssetId: string | undefined;
+  onPick: (asset: CalqoAssetRef) => void;
+}) {
+  const { t } = useTranslation('editor');
+  const project = useActiveProject();
+  const setSvgDialog = useUiStore((s) => s.setSvgDialog);
+  const setMarkerPickerLayerId = useUiStore((s) => s.setMarkerPickerLayerId);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const assets = (project?.assets ?? []).filter((a) => a.kind === 'svg').slice().reverse();
+
+  const onUpload = (file: File) => {
+    void measureImage(file).then(async (measured) => {
+      const asset = await assetStorage.saveAsset(projectId, file, {
+        kind: file.type === 'image/svg+xml' ? 'svg' : 'raster',
+        name: file.name,
+        mimeType: file.type,
+        width: measured.width,
+        height: measured.height,
+      });
+      onPick(asset);
+    });
+  };
+
+  const openLibrary = () => {
+    setMarkerPickerLayerId(layerId);
+    setSvgDialog(true);
+  };
+
+  return (
+    <div className="px-2 py-1.5">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) onUpload(file);
+          event.currentTarget.value = '';
+        }}
+      />
+      {assets.length === 0 ? (
+        <p className="px-1 py-2 text-[11.5px] leading-relaxed text-[var(--calqo-text-3)]">
+          {t('list.noAssets')}
+        </p>
+      ) : (
+        <div className="grid max-h-40 grid-cols-5 gap-1.5 overflow-y-auto">
+          {assets.map((asset) => (
+            <AssetThumbButton
+              key={asset.id}
+              asset={asset}
+              selected={asset.id === selectedAssetId}
+              onClick={() => onPick(asset)}
+            />
+          ))}
+        </div>
+      )}
+      <div className="mt-2 flex gap-1.5">
+        <button
+          type="button"
+          onClick={openLibrary}
+          className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-[var(--calqo-radius-sm)] bg-[var(--calqo-accent)] px-3 text-[12px] font-medium text-[var(--calqo-text-on-accent)] transition-opacity hover:opacity-90"
+        >
+          <Shapes size={13} />
+          {t('list.pickAsset')}
+        </button>
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="flex h-8 items-center justify-center gap-1.5 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)]"
+          aria-label={t('properties.replaceAsset')}
+        >
+          <Plus size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AssetThumbButton({
+  asset,
+  selected,
+  onClick,
+}: {
+  asset: CalqoAssetRef;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const url = useAssetThumbnail(asset.id);
+  return (
+    <button
+      type="button"
+      title={asset.name}
+      aria-pressed={selected}
+      onClick={onClick}
+      className={[
+        'grid aspect-square place-items-center overflow-hidden rounded-[var(--calqo-radius-sm)] border bg-[var(--calqo-glass)] transition-colors',
+        selected
+          ? 'border-[var(--calqo-accent)] ring-2 ring-[var(--calqo-accent-ring)]'
+          : 'border-[var(--calqo-divider)] hover:bg-[var(--calqo-hover)]',
+      ].join(' ')}
+    >
+      {url ? (
+        <img src={url} alt={asset.name} className="h-full w-full object-contain p-1" />
+      ) : (
+        <ImageIcon size={14} className="text-[var(--calqo-text-3)]" />
+      )}
+    </button>
+  );
+}
+
+/** A single list row editor: reorder handles, per-locale textareas, delete. */
+function ListItemRow({
+  projectId,
+  layerId,
+  row,
+  index,
+  count,
+  locale,
+  locales,
+  expanded,
+  onToggleExpand,
+}: {
+  projectId: string;
+  layerId: string;
+  row: ListLayer['items'][number];
+  index: number;
+  count: number;
+  locale: string;
+  locales: string[];
+  expanded: boolean;
+  onToggleExpand: () => void;
+}) {
+  const { t } = useTranslation('editor');
+  const otherLocales = locales.filter((l) => l !== locale);
+  return (
+    <div className="rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] p-1.5">
+      <div className="mb-1 flex items-center gap-1">
+        <span className="mono px-1 text-[10px] text-[var(--calqo-text-3)]">{index + 1}</span>
+        <div className="flex flex-1 items-center justify-end gap-0.5">
+          <button
+            type="button"
+            aria-label={t('list.moveUp')}
+            disabled={index === 0}
+            onClick={() => reorderListItem(projectId, layerId, index, index - 1)}
+            className="rounded p-1 text-[var(--calqo-text-3)] transition-colors enabled:hover:bg-[var(--calqo-hover)] enabled:hover:text-[var(--calqo-text)] disabled:opacity-30"
+          >
+            <ArrowUp size={12} />
+          </button>
+          <button
+            type="button"
+            aria-label={t('list.moveDown')}
+            disabled={index === count - 1}
+            onClick={() => reorderListItem(projectId, layerId, index, index + 1)}
+            className="rounded p-1 text-[var(--calqo-text-3)] transition-colors enabled:hover:bg-[var(--calqo-hover)] enabled:hover:text-[var(--calqo-text)] disabled:opacity-30"
+          >
+            <ArrowDown size={12} />
+          </button>
+          <button
+            type="button"
+            aria-label={t('list.deleteRow')}
+            disabled={count <= 1}
+            onClick={() => removeListItem(projectId, layerId, row.id)}
+            className="rounded p-1 text-[var(--calqo-text-3)] transition-colors enabled:hover:bg-[#FF3B30]/15 enabled:hover:text-[#FF3B30] disabled:opacity-30"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      </div>
+      <textarea
+        value={row.text[locale] ?? ''}
+        placeholder={t('content.emptyVariant')}
+        onChange={(event) =>
+          updateListItemTextForLocale(projectId, layerId, row.id, locale, event.target.value)
+        }
+        className="min-h-9 w-full resize-y rounded-[var(--calqo-radius-xs)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 py-1 text-[12px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-1 focus:ring-[var(--calqo-accent-ring)]"
+      />
+      {otherLocales.length > 0 && (
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          className="mt-1 flex items-center gap-1 px-1 text-[10px] text-[var(--calqo-accent)] transition-opacity hover:opacity-80"
+        >
+          {expanded ? t('list.hideLocales') : t('list.showLocales')}
+        </button>
+      )}
+      {expanded &&
+        otherLocales.map((other) => {
+          const value = row.text[other];
+          const missing = value === undefined;
+          return (
+            <div key={other} className="mt-1.5">
+              <div className="mb-0.5 flex items-center gap-1.5">
+                <span className="mono text-[9px] uppercase text-[var(--calqo-text-3)]">
+                  {other}
+                </span>
+                {missing && (
+                  <span className="text-[9px] text-[#B7791F]">{t('content.missingVariant')}</span>
+                )}
+              </div>
+              <textarea
+                value={value ?? ''}
+                placeholder={t('content.emptyVariant')}
+                onChange={(event) =>
+                  updateListItemTextForLocale(
+                    projectId,
+                    layerId,
+                    row.id,
+                    other,
+                    event.target.value,
+                  )
+                }
+                className="min-h-8 w-full resize-y rounded-[var(--calqo-radius-xs)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 py-1 text-[12px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-1 focus:ring-[var(--calqo-accent-ring)]"
+              />
+            </div>
+          );
+        })}
+    </div>
+  );
+}
+
+/** List inspector: rows (add / reorder / per-locale edit), marker config, and
+ * the full shared typography / stroke / shadow controls. */
+function ListControls({
+  projectId,
+  layer,
+  locale,
+  locales,
+  update,
+}: {
+  projectId: string;
+  layer: ListLayer;
+  locale: string;
+  locales: string[];
+  update: (patch: Parameters<typeof updateLayerInActiveArtboard>[2]) => void;
+}) {
+  const { t } = useTranslation('editor');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const marker = layer.marker;
+
+  const toggleExpand = (rowId: string) =>
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) next.delete(rowId);
+      else next.add(rowId);
+      return next;
+    });
+
+  return (
+    <>
+      <Section title={t('list.items')}>
+        <div className="flex flex-col gap-1.5 p-1">
+          {layer.items.map((row, index) => (
+            <ListItemRow
+              key={row.id}
+              projectId={projectId}
+              layerId={layer.id}
+              row={row}
+              index={index}
+              count={layer.items.length}
+              locale={locale}
+              locales={locales}
+              expanded={expandedRows.has(row.id)}
+              onToggleExpand={() => toggleExpand(row.id)}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={() => addListItem(projectId, layer.id)}
+            className="mt-0.5 flex h-8 items-center justify-center gap-1.5 rounded-[var(--calqo-radius-sm)] border border-dashed border-[var(--calqo-divider)] text-[12px] text-[var(--calqo-text-2)] transition-colors hover:border-[var(--calqo-accent)] hover:text-[var(--calqo-accent)]"
+          >
+            <Plus size={13} />
+            {t('list.addItem')}
+          </button>
+          {layer.overflow?.hasOverflow && (
+            <div className="flex items-center gap-1.5 rounded-[var(--calqo-radius-sm)] border border-[#E8B339]/40 bg-[#E8B339]/10 px-2.5 py-1.5 text-[11px] text-[#B7791F]">
+              <AlertTriangle size={12} />
+              {t(`content.overflow.${layer.overflow.suggestedAction}`)}
+            </div>
+          )}
+        </div>
+      </Section>
+
+      <Section title={t('list.marker')}>
+        <SelectField
+          label={t('list.markerKind')}
+          value={marker.kind}
+          options={MARKER_KIND_OPTIONS.map((opt) => ({
+            value: opt.value,
+            label: t(opt.labelKey),
+          }))}
+          onChange={(kind) => update({ marker: { kind: kind as ListMarker['kind'] } })}
+        />
+        {marker.kind === 'character' && (
+          <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1.5 text-[12px]">
+            <span className="text-[var(--calqo-text-3)]">{t('list.character')}</span>
+            <input
+              type="text"
+              value={marker.character ?? ''}
+              maxLength={4}
+              placeholder="✦"
+              onChange={(event) =>
+                update({ marker: { character: event.target.value } })
+              }
+              className="h-8 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 text-[12px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
+            />
+          </div>
+        )}
+        {marker.kind === 'asset' && (
+          <MarkerAssetPicker
+            projectId={projectId}
+            layerId={layer.id}
+            selectedAssetId={marker.assetId}
+            onPick={(asset) =>
+              setListMarker(projectId, layer.id, { assetId: asset.id }, asset)
+            }
+          />
+        )}
+        {marker.kind !== 'none' && (
           <>
             <ColorField
-              label={t('properties.color')}
-              value={shadow.color}
-              onChange={(color) => update({ style: { shadow: { ...shadow, color } } })}
+              label={t('list.markerColor')}
+              value={marker.color}
+              onChange={(color) => update({ marker: { color } })}
             />
-            <NumberField
-              label={t('properties.blur')}
-              value={shadow.blur}
+            <SliderField
+              label={t('list.markerSize')}
+              value={marker.size ?? layer.style.fontSize}
+              min={6}
+              max={120}
+              onChange={(size) => update({ marker: { size } })}
+            />
+            <SliderField
+              label={t('list.markerGap')}
+              value={layer.markerGap}
               min={0}
-              onChange={(blur) => update({ style: { shadow: { ...shadow, blur } } })}
-            />
-            <NumberField
-              label="X"
-              value={shadow.offsetX}
-              onChange={(offsetX) => update({ style: { shadow: { ...shadow, offsetX } } })}
-            />
-            <NumberField
-              label="Y"
-              value={shadow.offsetY}
-              onChange={(offsetY) => update({ style: { shadow: { ...shadow, offsetY } } })}
-            />
-            <NumberField
-              label={t('properties.opacity')}
-              value={Math.round((shadow.opacity ?? 1) * 100)}
-              min={0}
-              max={100}
-              onChange={(opacity) =>
-                update({ style: { shadow: { ...shadow, opacity: opacity / 100 } } })
-              }
+              max={48}
+              step={1}
+              onChange={(markerGap) => update({ markerGap })}
             />
           </>
         )}
       </Section>
+
+      <Section title={t('list.presets')}>
+        <TextPresetRow onApply={(id) => update({ style: textPresetStyle(id) })} />
+      </Section>
+
+      <TypographyControls
+        style={layer.style}
+        onChange={(style) => update({ style })}
+      />
+
+      <TextStrokeControls
+        style={layer.style}
+        onChange={(style) => update({ style })}
+      />
+
+      <TextShadowControls
+        shadow={layer.style.shadow}
+        onChange={(shadow) => update({ style: { shadow } })}
+      />
     </>
   );
 }

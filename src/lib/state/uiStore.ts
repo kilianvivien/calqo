@@ -7,6 +7,7 @@ export type EditorTool =
   | 'marquee'
   | 'pan'
   | 'text'
+  | 'list'
   | 'rect'
   | 'ellipse'
   | 'line'
@@ -105,6 +106,10 @@ interface UiState {
   aiDialog: AiDialog;
   /** Whether the insert-SVG dialog (library / AI / upload) is open. */
   svgDialog: boolean;
+  /** When set, the SVG dialog runs in "marker picker" mode: the chosen SVG is
+   * saved as an asset and set as the marker on this list layer instead of being
+   * inserted as a new canvas layer. Cleared when the dialog closes. */
+  markerPickerLayerId: string | null;
   /** Image layer currently in interactive crop mode, or null. */
   croppingLayerId: string | null;
   setTheme: (theme: ThemeMode) => void;
@@ -119,6 +124,7 @@ interface UiState {
   requestFit: () => void;
   setAiDialog: (dialog: AiDialog) => void;
   setSvgDialog: (open: boolean) => void;
+  setMarkerPickerLayerId: (id: string | null) => void;
   setCroppingLayerId: (id: string | null) => void;
 }
 
@@ -141,6 +147,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   fitRequest: 0,
   aiDialog: 'none',
   svgDialog: false,
+  markerPickerLayerId: null,
   croppingLayerId: null,
   setTheme: (theme) => {
     safeSet(THEME_KEY, theme);
@@ -166,5 +173,6 @@ export const useUiStore = create<UiState>((set, get) => ({
   requestFit: () => set({ fitRequest: get().fitRequest + 1 }),
   setAiDialog: (aiDialog) => set({ aiDialog }),
   setSvgDialog: (svgDialog) => set({ svgDialog }),
+  setMarkerPickerLayerId: (markerPickerLayerId) => set({ markerPickerLayerId }),
   setCroppingLayerId: (croppingLayerId) => set({ croppingLayerId }),
 }));

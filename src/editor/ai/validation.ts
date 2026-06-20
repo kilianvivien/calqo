@@ -213,6 +213,9 @@ export function checkTemplateQuality(
       if (layer.type === 'shape' && layer.fill.type === 'image') {
         issues.push(`${layer.name}: image fills are not allowed in AI output.`);
       }
+      if (layer.type === 'list' && layer.marker.kind === 'asset') {
+        issues.push(`${layer.name}: asset-backed list markers are not allowed in AI output.`);
+      }
       if (x < 0 || y < 0 || x + layer.w > artboard.width || y + layer.h > artboard.height) {
         warnings.push(`${layer.name}: layer falls outside the artboard bounds.`);
       }
@@ -220,6 +223,12 @@ export function checkTemplateQuality(
         const ratio = contrastRatio(layer.style.color, bgColor);
         if (ratio !== null && ratio < 4.5) {
           warnings.push(`${layer.name}: text contrast is low against the artboard background.`);
+        }
+      }
+      if (layer.type === 'list' && bgColor && isHexColor(layer.style.color)) {
+        const ratio = contrastRatio(layer.style.color, bgColor);
+        if (ratio !== null && ratio < 4.5) {
+          warnings.push(`${layer.name}: list text contrast is low against the artboard background.`);
         }
       }
     });

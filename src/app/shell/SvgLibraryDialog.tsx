@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Copy, Sparkles, Upload, X } from 'lucide-react';
 import { GlassButton, GlassIconButton } from '@/components/glass';
 import { assetStorage, clipboard } from '@/lib/adapters';
-import { addImportedAssetLayer } from '@/editor/commands/projectCommands';
+import { addImportedAssetLayer, setListMarker } from '@/editor/commands/projectCommands';
 import { generateSvgMark } from '@/editor/ai/svgService';
 import { getProvider } from '@/editor/ai/providerRegistry';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
@@ -32,7 +32,12 @@ function SvgLibraryDialogInner() {
   const artboard = useActiveArtboard();
   const settings = useAiSettingsStore((s) => s.settings);
   const setSvgDialog = useUiStore((s) => s.setSvgDialog);
-  const close = () => setSvgDialog(false);
+  const markerPickerLayerId = useUiStore((s) => s.markerPickerLayerId);
+  const setMarkerPickerLayerId = useUiStore((s) => s.setMarkerPickerLayerId);
+  const close = () => {
+    setSvgDialog(false);
+    setMarkerPickerLayerId(null);
+  };
 
   const [tab, setTab] = useState<Tab>('library');
   const [search, setSearch] = useState('');
@@ -54,7 +59,7 @@ function SvgLibraryDialogInner() {
   }, []);
 
   const insertSvg = async (svg: string, name: string, color?: string) => {
-    if (!project || !artboard) return;
+    if (!project) return;
     const { width, height } = extractSvgSize(svg);
     const ratio = width / height;
     const w = ratio >= 1 ? 240 : 240 * ratio;
@@ -67,13 +72,22 @@ function SvgLibraryDialogInner() {
       width: Math.round(w),
       height: Math.round(h),
     });
-    addImportedAssetLayer(
-      project.id,
-      asset,
-      (artboard.width - w) / 2,
-      (artboard.height - h) / 2,
-      color,
-    );
+    if (markerPickerLayerId) {
+      setListMarker(
+        project.id,
+        markerPickerLayerId,
+        { kind: 'asset', assetId: asset.id, color: color ?? '#111827' },
+        asset,
+      );
+    } else if (artboard) {
+      addImportedAssetLayer(
+        project.id,
+        asset,
+        (artboard.width - w) / 2,
+        (artboard.height - h) / 2,
+        color,
+      );
+    }
     close();
   };
 
@@ -167,10 +181,12 @@ function SvgLibraryDialogInner() {
               className="flex items-center gap-2 text-[16px] font-semibold text-[var(--calqo-text)]"
             >
               <Sparkles size={17} className="text-[var(--calqo-accent)]" />
-              {t('svgLibrary.title')}
+              {markerPickerLayerId ? t('list.pickAsset') : t('svgLibrary.title')}
             </h2>
             <p className="mt-0.5 text-[12px] text-[var(--calqo-text-3)]">
-              {t('svgLibrary.subtitle')}
+              {markerPickerLayerId
+                ? t('list.markerAsset')
+                : t('svgLibrary.subtitle')}
             </p>
           </div>
           <GlassIconButton label={t('export.close')} onClick={close}>

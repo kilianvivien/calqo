@@ -25,6 +25,7 @@ import {
   GripVertical,
   Image as ImageIcon,
   Layers,
+  List,
   Lock,
   Shapes,
   Square,
@@ -57,6 +58,7 @@ const LAYER_ICON = {
   shape: Square,
   image: ImageIcon,
   svg: Shapes,
+  list: List,
   group: Folder,
 } as const;
 

@@ -21,6 +21,7 @@ const SCHEMA_SUMMARY = `Project JSON shape:
 }
 Layer is one of:
 - text:  { "type":"text", "name":string, "x":num,"y":num,"w":num,"h":num, "rotation":0,"opacity":1,"visible":true,"locked":false, "text": { "<locale>": string }, "style": { "fontFamily":string,"fontSize":num,"fontWeight":400|700,"color":hex,"align":"left|center|right","lineHeight":num,"letterSpacing":0 } }
+- list:  { "type":"list", "name":string, ...box..., "items": [ { "id":string, "text": { "<locale>": string } } ], "marker": { "kind":"bullet|dash|arrow|none|character", "color":hex }, "markerGap":num, "style": { ...same as text.style... } }
 - shape: { "type":"shape","shape":"rect|ellipse|line", ...box..., "fill": {"type":"solid","color":hex}, "stroke"?: {"color":hex,"width":num}, "cornerRadius"?:num }
 All coordinates are logical pixels inside the artboard box.`;
 

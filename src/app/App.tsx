@@ -97,7 +97,8 @@ export function App() {
       if (key === 't') useUiStore.getState().setActiveTool('text');
       if (key === 'r') useUiStore.getState().setActiveTool('rect');
       if (key === 'e') useUiStore.getState().setActiveTool('ellipse');
-      if (key === 'l') useUiStore.getState().setActiveTool('line');
+      if (e.shiftKey && key === 'l') useUiStore.getState().setActiveTool('list');
+      else if (key === 'l') useUiStore.getState().setActiveTool('line');
       if (key === 'i') useUiStore.getState().setActiveTool('image');
       if (key === '?' || (e.shiftKey && key === '/')) {
         e.preventDefault();

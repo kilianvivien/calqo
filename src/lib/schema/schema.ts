@@ -176,6 +176,44 @@ export const svgLayerSchema = z.object({
   color: hexish.optional(),
 });
 
+/** The glyph drawn in front of each list row. `bullet` / `dash` / `arrow` are
+ * built-in; `none` draws nothing; `character` renders any typed glyph (emoji,
+ * checkmark, custom symbol); `asset` references an imported raster/SVG so the
+ * marker can be a real icon from the library. */
+export const listMarkerSchema = z.object({
+  kind: z.enum(['bullet', 'dash', 'arrow', 'none', 'character', 'asset']).default('bullet'),
+  /** Used only when `kind === 'character'` (any single character or short glyph). */
+  character: z.string().optional(),
+  /** Used only when `kind === 'asset'`; must match a `CalqoAssetRef.id`. */
+  assetId: z.string().optional(),
+  /** Marker colour (glyph or asset tint). */
+  color: hexish.default('#111827'),
+  /** Marker size in px; defaults to the row's font size when omitted. */
+  size: z.number().positive().optional(),
+});
+
+/** One row of a list. Carries its own per-locale text and overflow flag so each
+ * row participates in the multilingual + translation pipeline independently. */
+export const listItemSchema = z.object({
+  id: z.string(),
+  text: z.record(localeCodeSchema, z.string()),
+  overflow: textOverflowSchema.optional(),
+});
+
+export const listLayerSchema = z.object({
+  ...baseLayerShape,
+  type: z.literal('list'),
+  items: z.array(listItemSchema).min(1),
+  marker: listMarkerSchema,
+  /** Horizontal gap between the marker and the row text, in px. */
+  markerGap: z.number().default(8),
+  /** Shared typography for all rows (same shape as text-layer style, so presets
+   * and per-locale variants work identically). */
+  style: textStyleSchema,
+  autoFit: z.boolean().optional(),
+  overflow: textOverflowSchema.optional(),
+});
+
 /** Layers form a discriminated union; groups nest recursively. Typed explicitly
  * because z.lazy() erases the inferred type. */
 export interface GroupLayer {
@@ -201,6 +239,7 @@ export type CalqoLayer =
   | z.infer<typeof shapeLayerSchema>
   | z.infer<typeof imageLayerSchema>
   | z.infer<typeof svgLayerSchema>
+  | z.infer<typeof listLayerSchema>
   | GroupLayer;
 
 export const groupLayerSchema: z.ZodType<GroupLayer> = z.lazy(() =>
@@ -220,6 +259,7 @@ export const layerSchema: z.ZodType<CalqoLayer> = z.lazy(() =>
     shapeLayerSchema,
     imageLayerSchema,
     svgLayerSchema,
+    listLayerSchema,
     groupLayerSchema,
   ]),
 ) as unknown as z.ZodType<CalqoLayer>;
@@ -298,6 +338,9 @@ export type ImageLayer = z.infer<typeof imageLayerSchema>;
 export type ImageMask = z.infer<typeof imageMaskSchema>;
 export type ImageFilters = NonNullable<ImageLayer['filters']>;
 export type SvgLayer = z.infer<typeof svgLayerSchema>;
+export type ListLayer = z.infer<typeof listLayerSchema>;
+export type ListItem = z.infer<typeof listItemSchema>;
+export type ListMarker = z.infer<typeof listMarkerSchema>;
 export type BackgroundFill = z.infer<typeof backgroundFillSchema>;
 export type Fill = z.infer<typeof fillSchema>;
 export type StrokeStyle = z.infer<typeof strokeSchema>;

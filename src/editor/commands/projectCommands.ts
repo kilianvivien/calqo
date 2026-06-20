@@ -10,12 +10,18 @@ import {
   type CreateProjectOptions,
   type GlossaryEntry,
   type GroupLayer,
+  type ListLayer,
+  type ListItem,
   type LocaleCode,
   type ShapeLayer,
   type TextLayer,
 } from '@/lib/schema';
 import type { TranslationResult } from '@/editor/ai/AIProvider';
-import { detectTextOverflow } from '@/editor/i18n-content/translationPipeline';
+import {
+  decodeListRowId,
+  detectListOverflow,
+  detectTextOverflow,
+} from '@/editor/i18n-content/translationPipeline';
 import {
   ARTBOARD_PRESETS,
   type ArtboardPresetId,
@@ -295,6 +301,35 @@ export function createTextLayer(
       color: '#111827',
       align: 'left',
       lineHeight: 1.1,
+      letterSpacing: 0,
+    },
+  };
+}
+
+/** Build a new list layer with two starter rows seeded for the active locale. */
+export function createListLayer(
+  project: CalqoProject,
+  x: number,
+  y: number,
+): CalqoLayer {
+  const locale = project.activeContentLocale;
+  const items: ListItem[] = [
+    { id: createId('item'), text: { [locale]: 'Double-click to edit' } },
+    { id: createId('item'), text: { [locale]: '' } },
+  ];
+  return {
+    ...baseLayer('List', x, y, 360, 160),
+    type: 'list',
+    items,
+    marker: { kind: 'bullet', color: '#111827' },
+    markerGap: 8,
+    style: {
+      fontFamily: 'Inter',
+      fontSize: 36,
+      fontWeight: 500,
+      color: '#111827',
+      align: 'left',
+      lineHeight: 1.25,
       letterSpacing: 0,
     },
   };
@@ -1058,6 +1093,9 @@ function scaleLayerAroundOrigin(layer: CalqoLayer, scale: number): CalqoLayer {
     if (target.type === 'text') {
       target.style.fontSize = Math.max(1, target.style.fontSize * scale);
     }
+    if (target.type === 'list') {
+      target.style.fontSize = Math.max(1, target.style.fontSize * scale);
+    }
     if (target.type === 'shape' && target.points) {
       target.points = target.points.map((value) => value * scale);
     }
@@ -1077,6 +1115,20 @@ function forEachTextLayer(
   const visit = (layers: CalqoLayer[]) => {
     for (const layer of layers) {
       if (layer.type === 'text') fn(layer as TextLayer);
+      else if (isGroupLayer(layer)) visit(layer.children);
+    }
+  };
+  project.artboards.forEach((artboard) => visit(artboard.layers as CalqoLayer[]));
+}
+
+/** Walk every list layer in the project (recursing into groups). */
+function forEachListLayer(
+  project: CalqoProject | Draft<CalqoProject>,
+  fn: (layer: ListLayer) => void,
+): void {
+  const visit = (layers: CalqoLayer[]) => {
+    for (const layer of layers) {
+      if (layer.type === 'list') fn(layer as ListLayer);
       else if (isGroupLayer(layer)) visit(layer.children);
     }
   };
@@ -1116,6 +1168,13 @@ export function addContentLocale(
             layer.text[locale] = layer.text[source];
           }
         });
+        forEachListLayer(draft, (layer) => {
+          for (const row of layer.items) {
+            if (row.text[source] !== undefined && row.text[locale] === undefined) {
+              row.text[locale] = row.text[source];
+            }
+          }
+        });
       }
       draft.activeContentLocale = locale;
     },
@@ -1137,6 +1196,11 @@ export function removeContentLocale(
       draft.contentLocales = draft.contentLocales.filter((l) => l !== locale);
       forEachTextLayer(draft, (layer) => {
         delete layer.text[locale];
+      });
+      forEachListLayer(draft, (layer) => {
+        for (const row of layer.items) {
+          delete row.text[locale];
+        }
       });
       if (draft.activeContentLocale === locale) {
         draft.activeContentLocale = draft.contentLocales[0];
@@ -1160,6 +1224,175 @@ export function updateTextForLocale(
         updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
           if (layer.type === 'text') layer.text[locale] = value;
         });
+      });
+    },
+    { undoable: true },
+  );
+}
+
+// --- List layer commands --------------------------------------------------
+
+/** Set a single list row's value for a specific locale (per-row editor). */
+export function updateListItemTextForLocale(
+  projectId: string,
+  layerId: string,
+  rowId: string,
+  locale: LocaleCode,
+  value: string,
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      draft.artboards.forEach((artboard) => {
+        updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
+          if (layer.type !== 'list') return;
+          const row = layer.items.find((r) => r.id === rowId);
+          if (row) row.text[locale] = value;
+        });
+      });
+    },
+    { undoable: true },
+  );
+}
+
+/** Append (or insert) a new empty row to a list. Returns the new row id, or
+ * null if the layer was not found. */
+export function addListItem(
+  projectId: string,
+  layerId: string,
+  atIndex?: number,
+): string | null {
+  const rowId = createId('item');
+  editProject(
+    projectId,
+    (draft) => {
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      if (!artboard) return;
+      updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
+        if (layer.type !== 'list') return;
+        const newRow: ListItem = { id: rowId, text: {} };
+        if (atIndex === undefined || atIndex >= layer.items.length) {
+          layer.items.push(newRow);
+        } else {
+          layer.items.splice(Math.max(0, atIndex), 0, newRow);
+        }
+      });
+    },
+    { undoable: true },
+  );
+  return rowId;
+}
+
+/** Remove a row from a list by id; keeps at least one row. */
+export function removeListItem(
+  projectId: string,
+  layerId: string,
+  rowId: string,
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      if (!artboard) return;
+      updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
+        if (layer.type !== 'list') return;
+        if (layer.items.length <= 1) return;
+        layer.items = layer.items.filter((r) => r.id !== rowId);
+      });
+    },
+    { undoable: true },
+  );
+}
+
+/** Move a list row from one index to another. */
+export function reorderListItem(
+  projectId: string,
+  layerId: string,
+  fromIndex: number,
+  toIndex: number,
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      if (!artboard) return;
+      updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
+        if (layer.type !== 'list') return;
+        layer.items = moveInArray(layer.items, fromIndex, toIndex);
+      });
+    },
+    { undoable: true },
+  );
+}
+
+/** Replace a list layer's marker config. When the marker references an asset,
+ * the asset ref is registered on the project manifest (mirroring
+ * `replaceLayerAsset`). `marker.assetId` may be set to undefined to clear. */
+export function setListMarker(
+  projectId: string,
+  layerId: string,
+  marker: Partial<ListLayer['marker']>,
+  asset?: CalqoAssetRef,
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      if (asset && !draft.assets.some((existing) => existing.id === asset.id)) {
+        draft.assets.push(asset);
+      }
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      if (!artboard) return;
+      updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
+        if (layer.type !== 'list') return;
+        layer.marker = { ...layer.marker, ...marker };
+      });
+    },
+    { undoable: true },
+  );
+}
+
+/** Reconcile a list's rows with the lines typed in the inline editor. Surviving
+ * rows keep their id (and other-locale text); new lines append fresh rows;
+ * trailing rows are dropped. Only the active locale's text is rewritten for
+ * surviving rows. */
+export function commitListInlineEdit(
+  projectId: string,
+  layerId: string,
+  locale: LocaleCode,
+  lines: string[],
+): void {
+  // Strip trailing empty lines so an accidental Enter at the end of the inline
+  // editor doesn't create empty rows. Keep at least one row.
+  const trimmed = lines.length === 0 ? [''] : lines.slice();
+  while (trimmed.length > 1 && trimmed[trimmed.length - 1].trim() === '') {
+    trimmed.pop();
+  }
+  editProject(
+    projectId,
+    (draft) => {
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      if (!artboard) return;
+      updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
+        if (layer.type !== 'list') return;
+        const next: ListItem[] = trimmed.map((line, index) => {
+          const existing = layer.items[index];
+          if (existing) {
+            existing.text[locale] = line;
+            return existing;
+          }
+          return { id: createId('item'), text: { [locale]: line } };
+        });
+        layer.items = next;
       });
     },
     { undoable: true },
@@ -1193,6 +1426,19 @@ export function applyTranslationResult(
       for (const item of result.items) {
         const artboard = draft.artboards.find((ab) => ab.id === item.artboardId);
         if (!artboard) continue;
+        const decoded = decodeListRowId(item.layerId);
+        if (decoded) {
+          updateLayer(artboard.layers as CalqoLayer[], decoded.layerId, (layer) => {
+            if (layer.type !== 'list') return;
+            const row = layer.items.find((r) => r.id === decoded.rowId);
+            if (!row) return;
+            row.text[result.targetLocale] = item.translatedText;
+            const overflow = detectListOverflow(layer, result.targetLocale);
+            if (overflow) layer.overflow = overflow;
+            else delete layer.overflow;
+          });
+          continue;
+        }
         updateLayer(artboard.layers as CalqoLayer[], item.layerId, (layer) => {
           if (layer.type !== 'text') return;
           layer.text[result.targetLocale] = item.translatedText;
@@ -1212,6 +1458,11 @@ export function recomputeOverflow(projectId: string): void {
     const locale = draft.activeContentLocale;
     forEachTextLayer(draft, (layer) => {
       const overflow = detectTextOverflow(layer, locale);
+      if (overflow) layer.overflow = overflow;
+      else delete layer.overflow;
+    });
+    forEachListLayer(draft, (layer) => {
+      const overflow = detectListOverflow(layer, locale);
       if (overflow) layer.overflow = overflow;
       else delete layer.overflow;
     });

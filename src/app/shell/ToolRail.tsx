@@ -5,6 +5,7 @@ import {
   BoxSelect,
   Hand,
   Type,
+  List,
   Square,
   Circle,
   Diamond,
@@ -44,6 +45,7 @@ const TOOLS: ToolDef[] = [
   { id: 'marquee', icon: BoxSelect, group: 'navigation', shortcut: 'M' },
   { id: 'pan', icon: Hand, group: 'navigation', shortcut: 'H' },
   { id: 'text', icon: Type, group: 'drawing', shortcut: 'T' },
+  { id: 'list', icon: List, group: 'drawing', shortcut: 'Shift+L' },
   { id: 'rect', icon: Square, group: 'drawing', shortcut: 'R' },
   { id: 'ellipse', icon: Circle, group: 'drawing', shortcut: 'E' },
   { id: 'line', icon: Minus, group: 'drawing', shortcut: 'L' },
@@ -60,11 +62,13 @@ export function ToolRail() {
   const active = useUiStore((s) => s.activeTool);
   const setActive = useUiStore((s) => s.setActiveTool);
   const setSvgDialog = useUiStore((s) => s.setSvgDialog);
+  const setMarkerPickerLayerId = useUiStore((s) => s.setMarkerPickerLayerId);
 
   // The SVG tool opens the insert dialog (library / AI / upload) rather than
   // arming a canvas placement mode.
   const handleSelect = (tool: EditorTool) => {
     if (tool === 'svg') {
+      setMarkerPickerLayerId(null);
       setSvgDialog(true);
       return;
     }
