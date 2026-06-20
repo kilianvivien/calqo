@@ -1,27 +1,46 @@
-# Calqo
+<p align="center">
+  <img src="public/calqo-icon.png" alt="Calqo app icon" width="128" height="128" />
+</p>
 
-> An open-source, simple, glass-native social visual maker.
+<h1 align="center">Calqo</h1>
 
-Calqo (from _calque_, the French word for a design "layer") is a lightweight,
-local-first design tool for quickly producing static social-media visuals —
-posts, stories, thumbnails, banners. It ships as a web React app today, with a
-Tauri desktop shell planned. It shares its build philosophy and macOS "Liquid
-Glass" design language with the [GeoCarto](https://github.com/kilianvivien) project.
+<p align="center">
+  <strong>An open-source, local-first visual maker for static social posts.</strong>
+</p>
 
-The pitch: _the 20% of Canva people actually use for social posts, done well,
-free, with a native-feeling macOS interface — plus two AI superpowers Canva makes
-awkward: prompt-a-template and one-click multilingual text._
+Calqo is a focused design editor for making social-media visuals quickly:
+Instagram posts and stories, YouTube thumbnails, LinkedIn banners, event cards,
+announcements, and other static graphics that need to look polished without
+opening a heavyweight design suite.
+
+Think of it as the practical 20% of Canva that small teams, makers, and
+communications people use every day: text, images, shapes, icons, artboards,
+layers, exports, and templates. Calqo keeps that workflow local-first,
+open-source, and native-feeling, with a macOS-inspired "Liquid Glass" interface.
+
+The two headline AI workflows are different from image generation. Calqo asks an
+LLM to produce the app's own editable project JSON, so a prompt can become a real
+template with selectable layers. It can also keep per-language text variants in a
+project and translate a design in place without rebuilding the layout.
+
+Calqo (from _calque_, the French word for a design "layer") ships as a browser
+React app today, with a Tauri desktop shell planned. It shares its build
+philosophy and design language with the
+[GeoCarto](https://github.com/kilianvivien) project.
 
 See [`docs/PRD-calqo-v0.5.md`](docs/PRD-calqo-v0.5.md) for the product spec and
 [`docs/calqo-browser-prototype-implementation-plan.md`](docs/calqo-browser-prototype-implementation-plan.md)
-for the detailed build plan.
+plus
+[`docs/calqo-post-prototype-implementation-plan.md`](docs/calqo-post-prototype-implementation-plan.md)
+for the detailed build plans.
 
 ## Status
 
-**Shareable browser prototype complete through post-prototype Phase H.** The app
-is still browser-first, but the core edit/save/export/multilingual/AI flows are
-now implemented behind the adapter boundary with provider-specific Gemini
-support.
+**Browser-first public alpha in progress.** The core editor is implemented and
+usable locally: create projects, edit multi-artboard social visuals, save in the
+browser, export files, translate content, and generate editable AI templates.
+The Tauri desktop shell, secure native key storage, and release packaging are
+still planned work.
 
 - [x] Vite + React + TypeScript project
 - [x] Tailwind v4 + Liquid Glass design tokens & primitives
@@ -35,7 +54,51 @@ support.
 - [x] Layers, artboards, export (Phases C–D)
 - [x] Multilingual content + AI flows (Phase E)
 - [x] Prototype hardening pass (Phase F)
+- [x] Graphics editing expansion: arrows, pen/freehand, pattern fills, SVG library (Phase G)
 - [x] Gemini/GenAI provider reliability pass (Phase H)
+- [x] Image crop/focal point, masks, filters, typography presets, effects (Phase I)
+- [x] Faster inspector controls and multi-selection edits (Phase J)
+- [x] Align/distribute/stack tools, smart guides, export readiness polish (Phase K)
+- [x] GitHub chrome button and version metadata (Phase L implementation)
+- [ ] Public alpha docs, E2E smoke tests, sample project, diagnostics (Phase N)
+
+## What you can make
+
+Calqo is aimed at static social visuals and lightweight campaign assets:
+
+- Square, portrait, story, thumbnail, banner, and custom-size artboards.
+- Announcement cards, event posts, product updates, quote cards, basic ads, and
+  multilingual public-information graphics.
+- One project with several output sizes, for example an Instagram square plus a
+  story version and a LinkedIn variant.
+- Local project files you can export/import as `.calqo` JSON, alongside PNG,
+  JPG, WebP, SVG, and HTML wrapper exports.
+
+It is deliberately not a full publishing suite: no print/CMYK workflow, no
+animation timeline, no realtime multiplayer, and no hosted template marketplace.
+
+## Key features
+
+- **Canvas editor:** text, images, shapes, icons/SVGs, layer ordering,
+  selection, transforms, snapping, nudging, grouping, locking, visibility, and
+  undo/redo.
+- **Multi-artboard projects:** design several social sizes in one project, then
+  duplicate or resize content into another preset.
+- **Local-first storage:** browser projects are persisted with IndexedDB/Dexie,
+  and the `.calqo` format is validated through the shared project schema.
+- **Export workflow:** PNG/JPG/WebP with scale options, SVG with fidelity
+  warnings, simple HTML wrappers, batch export, and clipboard/share paths where
+  the browser supports them.
+- **Multilingual content:** text layers can store variants per content locale,
+  so switching from French to English or Turkish changes the design content, not
+  the app chrome.
+- **Prompt-a-template:** describe a design and get an editable Calqo project
+  instead of a flattened image.
+- **Bring-your-own AI provider:** mock mode works offline; Gemini has a
+  provider-specific GenAI path; OpenAI-compatible, Ollama/local, Mistral,
+  OpenRouter, and custom endpoints are supported through the provider layer.
+- **Liquid Glass UI:** light/dark themes, translucent glass panels, and a
+  reduced-transparency mode for accessibility.
 
 ## Tech stack
 
@@ -43,6 +106,8 @@ React 19 · TypeScript · Vite · Tailwind v4 · Konva / react-konva · Zustand 
 Dexie · Zod · react-i18next · lucide-react.
 
 ## Getting started
+
+Calqo uses `pnpm`.
 
 ```bash
 pnpm install
@@ -57,6 +122,9 @@ Before committing, run `pnpm typecheck` and `pnpm test`.
 
 ## Architecture notes
 
+Calqo is designed so the browser app can grow into a Tauri desktop app without
+rewriting the editor.
+
 App/editor code stays behind adapters in `src/lib/adapters/` for storage,
 assets, files, clipboard, fonts, and app settings. That keeps browser-only
 IndexedDB, Blob, and Clipboard API behavior out of editor components and leaves
@@ -69,8 +137,9 @@ do not overwrite open tabs.
 
 Mutations flow through `src/editor/commands/projectCommands.ts`, which marks
 projects dirty, schedules autosave, and coordinates selection/history cleanup.
-Phase F adds tests around autosave coalescing, close/reload flushing, import id
-collisions, and save-error surfacing.
+The test suite covers autosave coalescing, close/reload flushing, import id
+collisions, save-error surfacing, export behavior, AI validation, and the later
+editing-depth passes.
 
 ## AI providers
 
@@ -92,11 +161,11 @@ reports unsupported copy operations instead of throwing.
 ## Known limitations
 
 - Tauri shell, native menus, keychain, packaging, and macOS vibrancy are deferred.
-- The first prototype focuses on static social visuals, not animation/video.
+- Calqo focuses on static social visuals, not animation/video.
 - SVG export is intentionally limited and warns for unsupported fidelity.
 - Clipboard behavior depends on browser permissions and feature support.
-- Advanced typography, complex vector editing, and phone-first editing remain
-  post-prototype work.
+- Complex vector editing, editable HTML/CSS export, and phone-first editing
+  remain future work.
 
 ## Design language
 
