@@ -166,7 +166,21 @@
     "preset_body": "Body",
     "preset_caption": "Caption",
     "preset_badge": "Badge",
-    "preset_cta": "CTA"
+    "preset_cta": "CTA",
+    "sectionLayout": "Layout",
+    "appearance": "Appearance",
+    "emptyTitle": "Nothing selected",
+    "emptyHint": "Select a layer on the canvas to edit it, or pick a tool to add something new.",
+    "showAll": "Show all",
+    "hideAll": "Hide all",
+    "lockAll": "Lock all",
+    "unlockAll": "Unlock all",
+    "exportWarnings": "Export notes",
+    "warnBlend": "Blend modes may differ in SVG/HTML export.",
+    "warnBlur": "Layer blur may differ in SVG/HTML export.",
+    "warnFilters": "Image filters bake into PNG but may differ in SVG/HTML export.",
+    "warnMask": "Image masks may differ in SVG/HTML export.",
+    "warnTextEffect": "Text stroke and shadow may differ in SVG/HTML export."
   },
   "crop": {
     "hint": "Drag to reposition · scroll to zoom",

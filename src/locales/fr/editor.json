@@ -166,7 +166,21 @@
     "preset_body": "Corps",
     "preset_caption": "Légende",
     "preset_badge": "Badge",
-    "preset_cta": "CTA"
+    "preset_cta": "CTA",
+    "sectionLayout": "Disposition",
+    "appearance": "Apparence",
+    "emptyTitle": "Aucune sélection",
+    "emptyHint": "Sélectionnez un calque sur le plan de travail pour le modifier, ou choisissez un outil pour ajouter un élément.",
+    "showAll": "Tout afficher",
+    "hideAll": "Tout masquer",
+    "lockAll": "Tout verrouiller",
+    "unlockAll": "Tout déverrouiller",
+    "exportWarnings": "Notes d'export",
+    "warnBlend": "Les modes de fusion peuvent différer à l'export SVG/HTML.",
+    "warnBlur": "Le flou du calque peut différer à l'export SVG/HTML.",
+    "warnFilters": "Les filtres d'image sont appliqués au PNG mais peuvent différer à l'export SVG/HTML.",
+    "warnMask": "Les masques d'image peuvent différer à l'export SVG/HTML.",
+    "warnTextEffect": "Le contour et l'ombre du texte peuvent différer à l'export SVG/HTML."
   },
   "crop": {
     "hint": "Glissez pour repositionner · molette pour zoomer",

@@ -12,13 +12,17 @@ import {
   Brush,
   Circle,
   Diamond,
+  Eye,
+  EyeOff,
   Folder,
   Hand,
   Image as ImageIcon,
   Layers,
   List,
+  Lock,
   Minus,
   MousePointer2,
+  Unlock,
   BoxSelect,
   MoveUpRight,
   PenTool,
@@ -38,6 +42,9 @@ import {
   polygonPoints,
   type PolygonPreset,
   updateLayerInActiveArtboard,
+  updateLayersInActiveArtboard,
+  beginHistoryCoalescing,
+  endHistoryCoalescing,
   editProject,
   replaceLayerAsset,
   addListItem,
@@ -259,9 +266,11 @@ function FillField({ fill, onChange }: { fill: Fill; onChange: (fill: Fill) => v
             }
           />
           {fill.type === 'linear' && (
-            <NumberField
+            <SliderField
               label={t('properties.gradientAngle')}
               value={fill.angle ?? 0}
+              min={0}
+              max={360}
               onChange={(angle) => onChange({ ...fill, angle })}
             />
           )}
@@ -281,11 +290,12 @@ function FillField({ fill, onChange }: { fill: Fill; onChange: (fill: Fill) => v
             value={fill.background}
             onChange={(background) => onChange({ ...fill, background })}
           />
-          <NumberField
+          <SliderField
             label={t('properties.patternScale')}
             value={fill.scale}
             min={0.25}
             max={6}
+            step={0.25}
             onChange={(scale) => onChange({ ...fill, scale })}
           />
         </>
@@ -416,15 +426,7 @@ export function PropertiesPane() {
   }
 
   if (selected.length > 1) {
-    return (
-      <div className="flex flex-col gap-4">
-        <IdentityCard
-          icon={Layers}
-          title={t('properties.selection')}
-          subtitle={`${selected.length} ${t('properties.layers').toLowerCase()}`}
-        />
-      </div>
-    );
+    return <MultiControls projectId={project.id} layers={selected} />;
   }
 
   return <ToolDefaults activeTool={activeTool} />;
@@ -499,12 +501,21 @@ function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
 
   if (!DRAW_TOOLS.includes(activeTool)) {
     return (
-      <div className="flex flex-col gap-4">
-        <Section title={t('properties.selection')}>
-          <p className="px-2 py-1.5 text-[12px] text-[var(--calqo-text-3)]">
+      <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+        <span className="flex h-11 w-11 items-center justify-center rounded-[var(--calqo-radius-md)] bg-[var(--calqo-hover)] text-[var(--calqo-text-3)]">
+          <MousePointer2 size={20} />
+        </span>
+        <div className="space-y-1">
+          <p className="text-[13px] font-semibold text-[var(--calqo-text-2)]">
+            {t('properties.emptyTitle')}
+          </p>
+          <p className="text-[12px] leading-relaxed text-[var(--calqo-text-3)]">
+            {t('properties.emptyHint')}
+          </p>
+          <p className="text-[11.5px] leading-relaxed text-[var(--calqo-text-3)]">
             {t('properties.noLayerSelected')}
           </p>
-        </Section>
+        </div>
       </div>
     );
   }
@@ -535,10 +546,12 @@ function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
             value={shapeDefaults.stroke}
             onChange={(stroke) => setShapeDefaults({ stroke })}
           />
-          <NumberField
+          <SliderField
             label={t('properties.strokeWidth')}
             value={shapeDefaults.strokeWidth}
             min={0}
+            max={40}
+            step={0.5}
             onChange={(strokeWidth) => setShapeDefaults({ strokeWidth })}
           />
           <StrokeStyleField
@@ -571,6 +584,139 @@ function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
             min={1}
             max={80}
             onChange={(brushSize) => setShapeDefaults({ brushSize })}
+          />
+        </Section>
+      )}
+    </div>
+  );
+}
+
+/** Multi-selection inspector: bulk edits for properties shared across the
+ * selection. Type-specific controls (fill, typography) only appear when at least
+ * one compatible layer is selected, and only touch those layers (plan Phase J). */
+function MultiControls({
+  projectId,
+  layers,
+}: {
+  projectId: string;
+  layers: CalqoLayer[];
+}) {
+  const { t } = useTranslation('editor');
+  const ids = layers.map((l) => l.id);
+  const shapeLayers = layers.filter((l): l is ShapeLayerT => l.type === 'shape');
+  const textLayers = layers.filter(
+    (l): l is TextLayer | ListLayer => l.type === 'text' || l.type === 'list',
+  );
+  const bulk = (patch: Parameters<typeof updateLayersInActiveArtboard>[2], targets = ids) =>
+    updateLayersInActiveArtboard(projectId, targets, patch);
+
+  const allVisible = layers.every((l) => l.visible);
+  const allLocked = layers.every((l) => l.locked);
+  const first = layers[0];
+  const shapeFirst = shapeLayers[0];
+  const textFirst = textLayers[0];
+  const shapeIds = shapeLayers.map((l) => l.id);
+  const textIds = textLayers.map((l) => l.id);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <IdentityCard
+        icon={Layers}
+        title={t('properties.selection')}
+        subtitle={`${layers.length} ${t('properties.layers').toLowerCase()}`}
+      />
+
+      <Section title={t('properties.sectionLayout')}>
+        <SliderField
+          label={t('properties.opacity')}
+          value={Math.round((first.opacity ?? 1) * 100)}
+          min={0}
+          max={100}
+          onChange={(opacity) => bulk({ opacity: opacity / 100 })}
+        />
+        <div className="flex gap-1.5 px-2 py-1.5">
+          <button
+            type="button"
+            onClick={() => bulk({ visible: !allVisible })}
+            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+          >
+            {allVisible ? <EyeOff size={13} /> : <Eye size={13} />}
+            {allVisible ? t('properties.hideAll') : t('properties.showAll')}
+          </button>
+          <button
+            type="button"
+            onClick={() => bulk({ locked: !allLocked })}
+            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+          >
+            {allLocked ? <Unlock size={13} /> : <Lock size={13} />}
+            {allLocked ? t('properties.unlockAll') : t('properties.lockAll')}
+          </button>
+        </div>
+      </Section>
+
+      {shapeFirst && (
+        <Section title={t('properties.appearance')}>
+          <FillField fill={shapeFirst.fill} onChange={(fill) => bulk({ fill }, shapeIds)} />
+          <ColorField
+            label={t('properties.stroke')}
+            value={shapeFirst.stroke?.color ?? '#007AFF'}
+            onChange={(color) =>
+              bulk(
+                { stroke: { ...shapeFirst.stroke, color, width: shapeFirst.stroke?.width ?? 2 } },
+                shapeIds,
+              )
+            }
+          />
+          <SliderField
+            label={t('properties.strokeWidth')}
+            value={shapeFirst.stroke?.width ?? 0}
+            min={0}
+            max={40}
+            step={0.5}
+            onChange={(width) =>
+              bulk(
+                {
+                  stroke:
+                    width > 0
+                      ? { ...shapeFirst.stroke, color: shapeFirst.stroke?.color ?? '#007AFF', width }
+                      : undefined,
+                },
+                shapeIds,
+              )
+            }
+          />
+        </Section>
+      )}
+
+      {textFirst && (
+        <Section title={t('properties.text')}>
+          <SelectField
+            label={t('properties.font')}
+            value={textFirst.style.fontFamily}
+            options={BUNDLED_FONTS.map((f) => ({ value: f.family, label: f.family }))}
+            onChange={(fontFamily) => bulk({ style: { fontFamily } }, textIds)}
+          />
+          <SelectField
+            label={t('properties.weight')}
+            value={String(textFirst.style.fontWeight)}
+            options={WEIGHT_OPTIONS}
+            onChange={(weight) => bulk({ style: { fontWeight: Number(weight) } }, textIds)}
+          />
+          <SliderField
+            label={t('properties.size')}
+            value={textFirst.style.fontSize}
+            min={8}
+            max={240}
+            onChange={(fontSize) => bulk({ style: { fontSize } }, textIds)}
+          />
+          <AlignField
+            value={textFirst.style.align}
+            onChange={(align) => bulk({ style: { align } }, textIds)}
+          />
+          <ColorField
+            label={t('properties.color')}
+            value={textFirst.style.color}
+            onChange={(color) => bulk({ style: { color } }, textIds)}
           />
         </Section>
       )}
@@ -657,18 +803,20 @@ function LayerControls({
     updateLayerInActiveArtboard(projectId, layer.id, patch);
   return (
     <>
-      <Section title={layer.name}>
+      <Section title={t('properties.sectionLayout')}>
         <Row label={t('properties.type')} value={layer.type} mono />
         <NumberField label="X" value={layer.x} onChange={(x) => update({ x })} />
         <NumberField label="Y" value={layer.y} onChange={(y) => update({ y })} />
         <NumberField label="W" value={layer.w} min={1} onChange={(w) => update({ w })} />
         <NumberField label="H" value={layer.h} min={1} onChange={(h) => update({ h })} />
-        <NumberField
+        <SliderField
           label={t('properties.rotate')}
           value={layer.rotation}
+          min={-180}
+          max={180}
           onChange={(rotation) => update({ rotation })}
         />
-        <NumberField
+        <SliderField
           label={t('properties.opacity')}
           value={Math.round(layer.opacity * 100)}
           min={0}
@@ -678,7 +826,7 @@ function LayerControls({
       </Section>
 
       {layer.type === 'shape' && (
-        <Section title={t('properties.shape')}>
+        <Section title={t('properties.appearance')}>
           {convertibleKind(layer) && (
             <SelectField
               label={t('properties.shape')}
@@ -721,10 +869,12 @@ function LayerControls({
               update({ stroke: { ...layer.stroke, color, width: layer.stroke?.width ?? 2 } })
             }
           />
-          <NumberField
+          <SliderField
             label={t('properties.strokeWidth')}
             value={layer.stroke?.width ?? 0}
             min={0}
+            max={40}
+            step={0.5}
             onChange={(width) =>
               update({
                 stroke:
@@ -754,10 +904,11 @@ function LayerControls({
             />
           )}
           {layer.shape === 'rect' && (
-            <NumberField
+            <SliderField
               label={t('properties.cornerRadius')}
               value={layer.cornerRadius ?? 0}
               min={0}
+              max={Math.max(8, Math.round(Math.min(layer.w, layer.h) / 2))}
               onChange={(cornerRadius) => update({ cornerRadius })}
             />
           )}
@@ -806,7 +957,42 @@ function LayerControls({
       )}
 
       <EffectsControls layer={layer} update={update} />
+
+      <ExportWarnings layer={layer} />
     </>
+  );
+}
+
+/** Known SVG/HTML export-fidelity caveats for the selected layer, surfaced so
+ * the user understands why a PNG may differ from a vector export (plan Phase J;
+ * fuller export-readiness work lands in Phase K). */
+function ExportWarnings({ layer }: { layer: CalqoLayer }) {
+  const { t } = useTranslation('editor');
+  const warnings: string[] = [];
+  if (layer.blendMode && layer.blendMode !== 'normal') warnings.push(t('properties.warnBlend'));
+  if ((layer.effects?.blur ?? 0) > 0) warnings.push(t('properties.warnBlur'));
+  if (layer.type === 'image') {
+    if (layer.mask) warnings.push(t('properties.warnMask'));
+    if (hasActiveFilters(layer.filters)) warnings.push(t('properties.warnFilters'));
+  }
+  if (layer.type === 'text' || layer.type === 'list') {
+    if (layer.style.stroke || layer.style.shadow) warnings.push(t('properties.warnTextEffect'));
+  }
+  if (warnings.length === 0) return null;
+  return (
+    <Section title={t('properties.exportWarnings')}>
+      <ul className="flex flex-col gap-1.5 px-2 py-1.5">
+        {warnings.map((message) => (
+          <li
+            key={message}
+            className="flex items-start gap-1.5 text-[11.5px] leading-relaxed text-[var(--calqo-text-3)]"
+          >
+            <AlertTriangle size={12} className="mt-0.5 shrink-0 text-[#B7791F]" />
+            {message}
+          </li>
+        ))}
+      </ul>
+    </Section>
   );
 }
 
@@ -1281,10 +1467,11 @@ function TextShadowControls({
             value={shadow.color}
             onChange={(color) => onChange({ ...shadow, color })}
           />
-          <NumberField
+          <SliderField
             label={t('properties.blur')}
             value={shadow.blur}
             min={0}
+            max={60}
             onChange={(blur) => onChange({ ...shadow, blur })}
           />
           <NumberField
@@ -1297,7 +1484,7 @@ function TextShadowControls({
             value={shadow.offsetY}
             onChange={(offsetY) => onChange({ ...shadow, offsetY })}
           />
-          <NumberField
+          <SliderField
             label={t('properties.opacity')}
             value={Math.round((shadow.opacity ?? 1) * 100)}
             min={0}
@@ -1850,6 +2037,10 @@ function SliderField({
           min={min}
           max={max}
           step={step}
+          // A drag fires many change events; coalesce them into one undo step.
+          onPointerDown={beginHistoryCoalescing}
+          onPointerUp={endHistoryCoalescing}
+          onBlur={endHistoryCoalescing}
           onChange={(event) => onChange(clamp(Number(event.target.value)))}
           className="h-1.5 min-w-0 flex-1 cursor-pointer accent-[var(--calqo-accent)]"
         />

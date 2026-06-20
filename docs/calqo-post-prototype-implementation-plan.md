@@ -141,24 +141,28 @@ Test cases:
 
 ## Phase J — Sidebar And Inspector Usability
 
-> **Status: NOT STARTED.**
+> **Status: COMPLETE.** Paired slider + number controls now drive the
+> high-frequency values, slider drags coalesce into a single undo step, the
+> inspector is regrouped (Layout / Appearance / Text / Image / Effects / Export
+> notes), the empty state gives clearer guidance, and multi-selection exposes
+> bulk edits that only touch compatible layers.
 
 Goal: make common edits faster and more tactile while preserving exact numeric
 control.
 
 Deliverables:
 
-- [ ] Introduce a reusable paired slider + number field component.
-- [ ] Replace numeric-only fields for high-frequency values:
+- [x] Introduce a reusable paired slider + number field component.
+- [x] Replace numeric-only fields for high-frequency values:
       opacity, rotation, stroke width, corner radius, brush size, blur, shadow
       opacity, font size, line height, letter spacing, pattern scale, and image
       filters.
-- [ ] Keep plain number fields for exact geometry where typing is faster:
+- [x] Keep plain number fields for exact geometry where typing is faster:
       X, Y, W, H.
-- [ ] Regroup inspector sections by intent:
+- [x] Regroup inspector sections by intent:
       Layout, Appearance, Text, Image, Effects, and Export warnings.
-- [ ] Add better empty-state guidance when no layer is selected.
-- [ ] Add multi-selection bulk edits for shared properties:
+- [x] Add better empty-state guidance when no layer is selected.
+- [x] Add multi-selection bulk edits for shared properties:
       opacity, lock, visibility, fill, stroke, font basics, and alignment.
 
 Acceptance criteria:

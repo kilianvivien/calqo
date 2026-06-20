@@ -94,7 +94,27 @@ function getArtboard(
   return project.artboards.find((artboard) => artboard.id === artboardId);
 }
 
+/** While a continuous interaction (e.g. a slider drag) runs, collapse all of its
+ * edits into one undo step: the first snapshot captures the pre-interaction
+ * state and later edits skip the history push (plan Phase J). */
+let historyCoalescing = false;
+let coalesceSnapshotTaken = false;
+
+export function beginHistoryCoalescing(): void {
+  historyCoalescing = true;
+  coalesceSnapshotTaken = false;
+}
+
+export function endHistoryCoalescing(): void {
+  historyCoalescing = false;
+  coalesceSnapshotTaken = false;
+}
+
 function snapshotForHistory(id: string): void {
+  if (historyCoalescing) {
+    if (coalesceSnapshotTaken) return;
+    coalesceSnapshotTaken = true;
+  }
   const project = projectStore.getState().projects[id];
   if (project) historyStore.getState().push(id, project);
 }
@@ -641,6 +661,34 @@ export function updateLayerInActiveArtboard(
       if (!artboard) return;
       updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
         applyLayerPatch(layer, patch);
+      });
+    },
+    options,
+  );
+}
+
+/** Apply one patch to several layers in a single undoable step. Each layer only
+ * takes the fields compatible with its type (applyLayerPatch is type-guarded),
+ * so a mixed selection stays safe — incompatible fields are ignored. Used for
+ * multi-selection bulk edits in the inspector (plan Phase J). */
+export function updateLayersInActiveArtboard(
+  projectId: string,
+  layerIds: string[],
+  patch: LayerPatch,
+  options: EditOptions = { undoable: true },
+): void {
+  if (layerIds.length === 0) return;
+  editProject(
+    projectId,
+    (draft) => {
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      if (!artboard) return;
+      layerIds.forEach((layerId) => {
+        updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
+          applyLayerPatch(layer, patch);
+        });
       });
     },
     options,
