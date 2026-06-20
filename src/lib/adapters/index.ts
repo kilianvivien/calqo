@@ -4,10 +4,16 @@
 import { dexieStorageAdapter } from './storage/dexieStorageAdapter';
 import { dexieAssetStorageAdapter } from './assets/dexieAssetStorageAdapter';
 import { browserFileAdapter } from './file/browserFileAdapter';
+import { tauriFileAdapter } from './file/tauriFileAdapter';
 import { browserClipboardAdapter } from './clipboard/browserClipboardAdapter';
+import { tauriClipboardAdapter } from './clipboard/tauriClipboardAdapter';
 import { browserFontAdapter } from './fonts/browserFontAdapter';
+import { tauriFontAdapter } from './fonts/tauriFontAdapter';
 import { dexieSettingsAdapter } from './settings/dexieSettingsAdapter';
+import { tauriSettingsAdapter } from './settings/tauriSettingsAdapter';
 import { browserDialogAdapter } from './dialog/browserDialogAdapter';
+import { tauriDialogAdapter } from './dialog/tauriDialogAdapter';
+import { isTauri } from '@/lib/platform/runtime';
 
 import type { StorageAdapter } from './storage/StorageAdapter';
 import type { AssetStorageAdapter } from './assets/AssetStorageAdapter';
@@ -19,11 +25,19 @@ import type { DialogAdapter } from './dialog/DialogAdapter';
 
 export const storage: StorageAdapter = dexieStorageAdapter;
 export const assetStorage: AssetStorageAdapter = dexieAssetStorageAdapter;
-export const files: FileImportExportAdapter = browserFileAdapter;
-export const clipboard: ClipboardAdapter = browserClipboardAdapter;
-export const fonts: FontAdapter = browserFontAdapter;
-export const appSettings: SettingsAdapter = dexieSettingsAdapter;
-export const dialog: DialogAdapter = browserDialogAdapter;
+export const files: FileImportExportAdapter = isTauri
+  ? tauriFileAdapter
+  : browserFileAdapter;
+export const clipboard: ClipboardAdapter = isTauri
+  ? tauriClipboardAdapter
+  : browserClipboardAdapter;
+export const fonts: FontAdapter = isTauri ? tauriFontAdapter : browserFontAdapter;
+export const appSettings: SettingsAdapter = isTauri
+  ? tauriSettingsAdapter
+  : dexieSettingsAdapter;
+export const dialog: DialogAdapter = isTauri
+  ? tauriDialogAdapter
+  : browserDialogAdapter;
 
 export type { StorageAdapter, ProjectSummary } from './storage/StorageAdapter';
 export type { AssetStorageAdapter, AssetMeta } from './assets/AssetStorageAdapter';

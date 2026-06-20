@@ -19,6 +19,40 @@
     "rename": "Renommer",
     "close": "Fermer"
   },
+  "menu": {
+    "groups": {
+      "calqo": "Calqo",
+      "file": "Fichier",
+      "edit": "Édition",
+      "insert": "Insertion",
+      "object": "Objet",
+      "view": "Affichage",
+      "ai": "IA",
+      "window": "Fenêtre",
+      "help": "Aide"
+    },
+    "app": {
+      "about": "À propos de Calqo",
+      "quit": "Quitter Calqo"
+    },
+    "file": {
+      "saveAs": "Enregistrer sous…"
+    },
+    "edit": {
+      "copy": "Copier",
+      "paste": "Coller",
+      "selectAll": "Tout sélectionner"
+    },
+    "insert": {
+      "imageFromClipboard": "Image depuis le presse-papiers"
+    },
+    "object": {
+      "forward": "Avancer",
+      "backward": "Reculer",
+      "front": "Mettre au premier plan",
+      "back": "Mettre à l'arrière-plan"
+    }
+  },
   "shortcuts": {
     "open": "Ouvrir les raccourcis clavier",
     "title": "Raccourcis clavier",

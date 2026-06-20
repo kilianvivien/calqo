@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
@@ -21,6 +21,13 @@ type PaneId = 'properties' | 'layers' | 'style' | 'diagnostics';
 export function Inspector() {
   const { t } = useTranslation('editor');
   const [pane, setPane] = useState<PaneId>('properties');
+
+  useEffect(() => {
+    const openDiagnostics = () => setPane('diagnostics');
+    window.addEventListener('calqo:open-diagnostics', openDiagnostics);
+    return () =>
+      window.removeEventListener('calqo:open-diagnostics', openDiagnostics);
+  }, []);
 
   const tabs: { id: PaneId; icon: LucideIcon; label: string }[] = [
     { id: 'properties', icon: SlidersHorizontal, label: t('panels.properties') },

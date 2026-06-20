@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { GlassPanel } from '@/components/glass';
 import { createProject } from '@/editor/commands/projectCommands';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
+import { registerAppCommandHandlers } from '@/app/commands/appCommands';
+import { installNativeMenus, scheduleNativeMenuRefresh } from '@/app/commands/nativeMenu';
 import { AppSettingsModal } from './AppSettingsModal';
 import { ExportDialog } from './ExportDialog';
 import { NewProjectModal } from './NewProjectModal';
@@ -16,11 +18,18 @@ import { Workspace } from './Workspace';
 import { Inspector } from './Inspector';
 import { StatusBar } from './StatusBar';
 import { useWorkspaceStore } from '@/lib/state/workspaceStore';
+import { useProjectStore } from '@/lib/state/projectStore';
+import { useSelectionStore } from '@/lib/state/selectionStore';
+import { useHistoryStore } from '@/lib/state/historyStore';
 
 /** The app window. The tab strip appears only when there are multiple open
  * projects, matching GeoCarto's quieter one-document chrome. */
 export function AppShell() {
   const openTabCount = useWorkspaceStore((s) => s.openTabIds.length);
+  const activeProjectId = useWorkspaceStore((s) => s.activeProjectId);
+  const saveState = useProjectStore((s) => s.saveState);
+  const selection = useSelectionStore((s) => s.selectedLayerIds);
+  const histories = useHistoryStore((s) => s.histories);
   const showTabs = openTabCount > 1;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -31,6 +40,24 @@ export function AppShell() {
   useEffect(() => {
     void loadAiSettings();
   }, [loadAiSettings]);
+
+  useEffect(() => {
+    const unregister = registerAppCommandHandlers({
+      openNewProject: () => setNewProjectOpen(true),
+      openExport: () => setExportOpen(true),
+      openSettings: () => setSettingsOpen(true),
+      openShortcuts: () => setShortcutsOpen(true),
+      openDiagnostics: () =>
+        window.dispatchEvent(new CustomEvent('calqo:open-diagnostics')),
+    });
+    return unregister;
+  }, []);
+
+  useEffect(() => installNativeMenus(), []);
+
+  useEffect(() => {
+    scheduleNativeMenuRefresh();
+  }, [activeProjectId, saveState, selection, histories]);
 
   useEffect(() => {
     const openShortcuts = () => setShortcutsOpen(true);
@@ -49,10 +76,7 @@ export function AppShell() {
             : '44px minmax(0, 1fr) 28px',
         }}
       >
-        <TitleBar
-          onExport={() => setExportOpen(true)}
-          onNewProject={() => setNewProjectOpen(true)}
-        />
+        <TitleBar />
         {showTabs && <TabBar />}
 
         <div className="grid min-h-0 grid-cols-[auto_1fr_auto]">
@@ -86,6 +110,7 @@ export function AppShell() {
         onSelect={(preset) => {
           void createProject({ preset });
           setNewProjectOpen(false);
+          scheduleNativeMenuRefresh();
         }}
       />
     </div>

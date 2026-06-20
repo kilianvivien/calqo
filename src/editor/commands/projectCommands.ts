@@ -31,6 +31,7 @@ import { historyStore } from '@/lib/state/historyStore';
 import { projectStore } from '@/lib/state/projectStore';
 import { selectionStore } from '@/lib/state/selectionStore';
 import { workspaceStore } from '@/lib/state/workspaceStore';
+import { desktopFileStore } from '@/lib/state/desktopFileStore';
 import {
   applyLayerPatch,
   boundingBox,
@@ -148,6 +149,7 @@ export function editProject(
 ): void {
   if (options.undoable) snapshotForHistory(id);
   projectStore.getState().patchProject(id, recipe);
+  desktopFileStore.getState().markUnsaved(id);
   scheduleAutosave(id);
 }
 
@@ -271,6 +273,7 @@ export async function closeProject(id: string): Promise<void> {
   await saveProject(id);
   workspaceStore.getState().closeTab(id);
   projectStore.getState().removeProject(id);
+  desktopFileStore.getState().clearFile(id);
   historyStore.getState().clear(id);
   selectionStore.getState().clearSelection();
 }

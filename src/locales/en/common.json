@@ -19,6 +19,40 @@
     "rename": "Rename",
     "close": "Close"
   },
+  "menu": {
+    "groups": {
+      "calqo": "Calqo",
+      "file": "File",
+      "edit": "Edit",
+      "insert": "Insert",
+      "object": "Object",
+      "view": "View",
+      "ai": "AI",
+      "window": "Window",
+      "help": "Help"
+    },
+    "app": {
+      "about": "About Calqo",
+      "quit": "Quit Calqo"
+    },
+    "file": {
+      "saveAs": "Save As…"
+    },
+    "edit": {
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select All"
+    },
+    "insert": {
+      "imageFromClipboard": "Image from Clipboard"
+    },
+    "object": {
+      "forward": "Bring Forward",
+      "backward": "Send Backward",
+      "front": "Bring to Front",
+      "back": "Send to Back"
+    }
+  },
   "shortcuts": {
     "open": "Open keyboard shortcuts",
     "title": "Keyboard shortcuts",

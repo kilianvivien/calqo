@@ -3,6 +3,7 @@ import type { CalqoFile } from '@/lib/adapters';
 import { safeImportProject, type CalqoProject } from '@/lib/schema';
 import { createId } from '@/lib/utils/ids';
 import { projectStore } from '@/lib/state/projectStore';
+import { desktopFileStore } from '@/lib/state/desktopFileStore';
 import { adoptProject } from '@/editor/commands/projectCommands';
 
 function slug(value: string): string {
@@ -52,22 +53,24 @@ export async function buildCalqoFile(project: CalqoProject): Promise<CalqoFile> 
   };
 }
 
+export async function buildCalqoFileText(project: CalqoProject): Promise<string> {
+  return JSON.stringify(await buildCalqoFile(project), null, 2);
+}
+
 /** Export the active project to a downloaded `.calqo` JSON file. */
 export async function exportProjectFile(projectId: string): Promise<void> {
   const project = projectStore.getState().projects[projectId];
   if (!project) return;
-  const file = await buildCalqoFile(project);
-  const blob = new Blob([JSON.stringify(file, null, 2)], {
+  const blob = new Blob([await buildCalqoFileText(project)], {
     type: 'application/json',
   });
   await files.downloadBlob(blob, `${slug(project.name)}.calqo`);
 }
 
-/** Parse, validate, and adopt a `.calqo` (or bare project) file. Assets are
- * restored to storage and the project is opened under a fresh id so an import
- * never clobbers an open document. */
-export async function importProjectFile(file: File): Promise<string> {
-  const text = await file.text();
+export async function importProjectText(
+  text: string,
+  options: { sourcePath?: string; preserveId?: boolean } = {},
+): Promise<string> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -89,9 +92,9 @@ export async function importProjectFile(file: File): Promise<string> {
   const now = new Date().toISOString();
   const project: CalqoProject = {
     ...result.project,
-    id: createId('proj'),
-    createdAt: now,
-    updatedAt: now,
+    id: options.preserveId ? result.project.id : createId('proj'),
+    createdAt: options.preserveId ? result.project.createdAt : now,
+    updatedAt: options.preserveId ? result.project.updatedAt : now,
   };
 
   // Restore inlined assets (if any) under their original ref ids.
@@ -106,5 +109,58 @@ export async function importProjectFile(file: File): Promise<string> {
     );
   }
 
-  return adoptProject(project);
+  const id = await adoptProject(project);
+  if (options.sourcePath) {
+    desktopFileStore.getState().linkFile(id, options.sourcePath, 'saved');
+  }
+  return id;
+}
+
+/** Parse, validate, and adopt a `.calqo` (or bare project) file. Assets are
+ * restored to storage and the project is opened under a fresh id so an import
+ * never clobbers an open document. */
+export async function importProjectFile(file: File): Promise<string> {
+  return importProjectText(await file.text());
+}
+
+export async function openNativeProjectFile(): Promise<string | null> {
+  const opened = await files.openProjectFileFromDisk?.();
+  if (!opened) return null;
+  const text = files.readTextFileFromDisk
+    ? await files.readTextFileFromDisk(opened.path)
+    : JSON.stringify(opened.project);
+  return importProjectText(text, {
+    sourcePath: opened.path,
+  });
+}
+
+export async function saveNativeProjectFile(
+  projectId: string,
+  mode: 'save' | 'saveAs' = 'save',
+): Promise<string | null> {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return null;
+  const text = await buildCalqoFileText(project);
+  const meta = desktopFileStore.getState().files[projectId];
+  const store = desktopFileStore.getState();
+  try {
+    store.setDiskState(projectId, 'saving');
+    if (mode === 'save' && meta?.path && files.writeTextFileToDisk) {
+      await files.writeTextFileToDisk(meta.path, text);
+      store.linkFile(projectId, meta.path, 'saved');
+      return meta.path;
+    }
+    const path = await files.saveTextFileToDisk?.(text, {
+      defaultPath: `${slug(project.name)}.calqo`,
+      title: 'Save Calqo Project',
+      filters: [{ name: 'Calqo Project', extensions: ['calqo'] }],
+    });
+    if (path) store.linkFile(projectId, path, 'saved');
+    else store.setDiskState(projectId, meta?.path ? meta.diskState : 'unlinked');
+    return path ?? null;
+  } catch (error) {
+    console.error('[Calqo] native project save failed', error);
+    store.setDiskState(projectId, 'error');
+    return null;
+  }
 }

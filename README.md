@@ -25,15 +25,16 @@ template with selectable layers. It can also keep per-language text variants in 
 project and translate a design in place without rebuilding the layout.
 
 Calqo (from _calque_, the French word for a design "layer") ships as a browser
-React app today, with a Tauri desktop shell planned.
+React app and now has a macOS-first Tauri desktop shell.
 
 ## Status
 
-**Browser-first public alpha in progress.** The core editor is implemented and
-usable locally: create projects, edit multi-artboard social visuals, save in the
-browser, export files, translate content, and generate editable AI templates.
-The Tauri desktop shell, secure native key storage, and release packaging are
-still planned work.
+**Browser-first public alpha with native desktop foundation.** The core editor
+is implemented and usable locally: create projects, edit multi-artboard social
+visuals, save in the browser, export files, translate content, and generate
+editable AI templates. The Tauri shell now adds localized native menus, native
+`.calqo` open/save flows, secure desktop AI key storage, native clipboard/image
+drop support, local font discovery, and macOS `.app`/`.dmg` packaging.
 
 - [x] Vite + React + TypeScript project
 - [x] Tailwind v4 + Liquid Glass design tokens & primitives
@@ -54,6 +55,7 @@ still planned work.
 - [x] Align/distribute/stack tools, smart guides, export readiness polish (Phase K)
 - [x] GitHub chrome button and version metadata (Phase L implementation)
 - [x] Public alpha docs, E2E smoke tests, sample project, diagnostics (Phase N)
+- [x] Tauri desktop foundation: native menus, file flows, secure settings, packaging (Phase O)
 
 ## What you can make
 
@@ -110,6 +112,8 @@ pnpm test        # Vitest unit tests
 pnpm e2e         # Playwright public-alpha smoke tests
 pnpm lint        # ESLint
 pnpm build       # type-check and production build
+pnpm tauri:dev   # native desktop shell
+pnpm tauri:build # macOS .app and .dmg artifacts
 ```
 
 Before committing, run `pnpm typecheck` and `pnpm test`.
@@ -120,9 +124,10 @@ Calqo is designed so the browser app can grow into a Tauri desktop app without
 rewriting the editor.
 
 App/editor code stays behind adapters in `src/lib/adapters/` for storage,
-assets, files, clipboard, fonts, and app settings. That keeps browser-only
-IndexedDB, Blob, and Clipboard API behavior out of editor components and leaves
-room for Tauri implementations later.
+assets, files, clipboard, fonts, and app settings. Browser builds use Dexie,
+Blob, and web Clipboard APIs; the Tauri shell swaps in native file dialogs,
+Stronghold-backed secure settings, system clipboard image access, and local font
+enumeration through the same boundary.
 
 Project JSON is the product contract. The Zod schema in `src/lib/schema/`
 validates persisted documents, `.calqo` imports, and AI-generated templates via
@@ -141,8 +146,9 @@ Mock mode is the default and works offline. Gemini uses a provider-specific
 GenAI adapter with structured JSON requests for templates and translations.
 Local Ollama, Mistral, OpenRouter, and custom endpoints continue through the
 OpenAI-compatible adapter. Browser API keys are only persisted after explicit
-opt-in and are stored in IndexedDB for this site; prefer a local endpoint for
-real keys until the Tauri keychain adapter exists.
+opt-in and are stored in IndexedDB for this site; the Tauri app stores provider
+keys separately in Stronghold-backed secure storage and keeps them out of
+exported `.calqo` project files.
 
 ## Browser compatibility
 
@@ -154,7 +160,8 @@ reports unsupported copy operations instead of throwing.
 
 ## Known limitations
 
-- Tauri shell, native menus, keychain, packaging, and macOS vibrancy are deferred.
+- Desktop release signing and notarization are not configured yet; local macOS
+  `.app` and `.dmg` artifacts build with `pnpm tauri:build`.
 - Calqo focuses on static social visuals, not animation/video.
 - SVG export is intentionally limited and warns for unsupported fidelity.
 - Clipboard behavior depends on browser permissions and feature support.

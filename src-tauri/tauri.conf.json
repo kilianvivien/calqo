@@ -1,0 +1,56 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Calqo",
+  "version": "0.1.0",
+  "identifier": "dev.calqo.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "title": "Calqo",
+        "label": "main",
+        "width": 1280,
+        "height": 840,
+        "minWidth": 980,
+        "minHeight": 680,
+        "decorations": true,
+        "transparent": true,
+        "hiddenTitle": true,
+        "titleBarStyle": "Overlay",
+        "dragDropEnabled": true,
+        "backgroundColor": "#00000000",
+        "windowEffects": {
+          "effects": ["hudWindow", "underWindowBackground"],
+          "state": "followsWindowActiveState",
+          "radius": 18
+        }
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "app"],
+    "category": "GraphicsAndDesign",
+    "shortDescription": "A simple, glass-native social visual maker",
+    "longDescription": "Calqo is a local-first maker for static social posts, thumbnails, stories, and banners.",
+    "copyright": "Copyright © 2026 Calqo contributors",
+    "createUpdaterArtifacts": false,
+    "icon": [
+      "../public/calqo-icon.png",
+      "../public/calqo-icon@2x.png"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": null
+    }
+  }
+}

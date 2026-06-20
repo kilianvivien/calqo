@@ -2,21 +2,13 @@ import { useEffect } from 'react';
 import { useUiStore, applyUiAttributes } from '@/lib/state/uiStore';
 import { useWorkspaceStore } from '@/lib/state/workspaceStore';
 import {
-  copySelectedLayers,
-  deleteSelectedLayers,
-  duplicateSelectedLayers,
-  groupSelectedLayers,
   hydrateWorkspace,
   flushPendingSaves,
   nudgeSelectedLayers,
-  pasteLayers,
-  redoProject,
-  saveProject,
-  selectAllLayers,
   shiftSelectionZOrder,
-  undoProject,
-  ungroupSelected,
 } from '@/editor/commands/projectCommands';
+import { invokeAppCommandSync } from './commands/appCommands';
+import { installNativeFileDrops } from './commands/nativeFileDrops';
 
 /** Keyboard nudge increments (artboard px): a fine step and a coarse step. */
 const NUDGE_SMALL = 1;
@@ -33,6 +25,8 @@ export function App() {
   useEffect(() => {
     applyUiAttributes(theme, transparency);
   }, [theme, transparency]);
+
+  useEffect(() => installNativeFileDrops(), []);
 
   // Reopen last session's tabs from IndexedDB, and flush saves before unload.
   useEffect(() => {
@@ -52,17 +46,35 @@ export function App() {
       const key = e.key.toLowerCase();
       const id = useWorkspaceStore.getState().activeProjectId;
 
+      if ((e.metaKey || e.ctrlKey) && key === 'n') {
+        e.preventDefault();
+        invokeAppCommandSync('file.new');
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && key === 'o') {
+        e.preventDefault();
+        invokeAppCommandSync('file.open');
+        return;
+      }
       if ((e.metaKey || e.ctrlKey) && key === 's') {
         e.preventDefault();
-        if (id) void saveProject(id);
+        invokeAppCommandSync(e.shiftKey ? 'file.saveAs' : 'file.save');
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && key === 'e') {
+        e.preventDefault();
+        invokeAppCommandSync(e.shiftKey ? 'file.share' : 'file.export');
+        return;
       }
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && key === 'z') {
         e.preventDefault();
-        if (id) undoProject(id);
+        invokeAppCommandSync('edit.undo');
+        return;
       }
       if (((e.metaKey || e.ctrlKey) && e.shiftKey && key === 'z') || ((e.metaKey || e.ctrlKey) && key === 'y')) {
         e.preventDefault();
-        if (id) redoProject(id);
+        invokeAppCommandSync('edit.redo');
+        return;
       }
       if (typing) return;
       if (
@@ -81,24 +93,21 @@ export function App() {
         return;
       }
       if ((e.metaKey || e.ctrlKey) && key === 'c') {
-        if (id) copySelectedLayers(id);
+        invokeAppCommandSync('edit.copy');
       }
       if ((e.metaKey || e.ctrlKey) && key === 'v') {
         e.preventDefault();
-        if (id) pasteLayers(id);
+        invokeAppCommandSync('edit.paste');
         return;
       }
       if ((e.metaKey || e.ctrlKey) && key === 'a') {
         e.preventDefault();
-        if (id) selectAllLayers(id);
+        invokeAppCommandSync('edit.selectAll');
         return;
       }
       if ((e.metaKey || e.ctrlKey) && key === 'g') {
         e.preventDefault();
-        if (id) {
-          if (e.shiftKey) ungroupSelected(id);
-          else groupSelectedLayers(id);
-        }
+        invokeAppCommandSync(e.shiftKey ? 'object.ungroup' : 'object.group');
         return;
       }
       if (key === '[') {
@@ -122,15 +131,15 @@ export function App() {
       if (key === 'i') useUiStore.getState().setActiveTool('image');
       if (key === '?' || (e.shiftKey && key === '/')) {
         e.preventDefault();
-        window.dispatchEvent(new CustomEvent('calqo:open-shortcuts'));
+        invokeAppCommandSync('window.shortcuts');
       }
       if (key === 'delete' || key === 'backspace') {
         e.preventDefault();
-        if (id) deleteSelectedLayers(id);
+        invokeAppCommandSync('edit.delete');
       }
       if ((e.metaKey || e.ctrlKey) && key === 'd') {
         e.preventDefault();
-        if (id) duplicateSelectedLayers(id);
+        invokeAppCommandSync('edit.duplicate');
       }
     };
     window.addEventListener('keydown', onKeyDown);

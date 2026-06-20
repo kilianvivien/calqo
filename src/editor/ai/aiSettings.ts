@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { appSettings } from '@/lib/adapters';
 
 const SETTINGS_KEY = 'ai.settings';
+const SECRET_KEY_PREFIX = 'secure:ai.apiKey.';
 
 /** Selectable AI providers (plan §14.2). Gemini uses its provider-specific
  * GenAI adapter; the others speak OpenAI-compatible chat completions by varying
@@ -128,10 +129,13 @@ export const DEFAULT_AI_SETTINGS: AiSettings = {
   providers: defaultProviders(),
 };
 
-/** Strip API keys before persisting unless the user opted in — the browser is
- * not a secure keychain (plan §14.4). */
-function toPersisted(settings: AiSettings): AiSettings {
-  if (settings.storeKey) return settings;
+/** Strip API keys from the normal settings payload. Tauri stores them in
+ * Stronghold records; the browser only keeps them when the user opts in. */
+export function toPersistedAiSettings(
+  settings: AiSettings,
+  secureSettings: boolean,
+): AiSettings {
+  if (!secureSettings && settings.storeKey) return settings;
   const providers = Object.fromEntries(
     Object.entries(settings.providers).map(([id, config]) => [id, { ...config, apiKey: '' }]),
   ) as Record<AiProviderId, AiProviderConfig>;
@@ -176,10 +180,42 @@ interface AiSettingsState {
   updateProviderConfig: (id: AiProviderId, patch: Partial<AiProviderConfig>) => void;
 }
 
+// A narrow runtime check avoids importing platform modules into this AI feature.
+function isTauriSettings(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    Boolean((window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__)
+  );
+}
+
+async function loadSecureKeys(settings: AiSettings): Promise<AiSettings> {
+  if (!isTauriSettings()) return settings;
+  const providers = { ...settings.providers };
+  await Promise.all(
+    PROVIDER_LIST.map(async (preset) => {
+      const apiKey = await appSettings.get<string>(`${SECRET_KEY_PREFIX}${preset.id}`);
+      if (apiKey) providers[preset.id] = { ...providers[preset.id], apiKey };
+    }),
+  );
+  return { ...settings, providers, storeKey: true };
+}
+
 function persist(settings: AiSettings): void {
-  void appSettings.set(SETTINGS_KEY, toPersisted(settings)).catch((err) => {
+  const secureSettings = isTauriSettings();
+  void appSettings.set(SETTINGS_KEY, toPersistedAiSettings(settings, secureSettings)).catch((err) => {
     console.error('[Calqo] failed to persist AI settings', err);
   });
+  if (secureSettings) {
+    void Promise.all(
+      PROVIDER_LIST.map((preset) => {
+        const key = `${SECRET_KEY_PREFIX}${preset.id}`;
+        const apiKey = settings.providers[preset.id].apiKey.trim();
+        return apiKey ? appSettings.set(key, apiKey) : appSettings.remove(key);
+      }),
+    ).catch((err) => {
+      console.error('[Calqo] failed to persist secure AI keys', err);
+    });
+  }
 }
 
 export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
@@ -192,7 +228,7 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
       const stored = await appSettings.get<Partial<AiSettings>>(SETTINGS_KEY);
       if (stored) {
         set({
-          settings: normalizeAiSettings(stored),
+          settings: await loadSecureKeys(normalizeAiSettings(stored)),
           loaded: true,
         });
         return;

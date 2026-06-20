@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Copy,
@@ -16,20 +16,15 @@ import {
   Undo2,
 } from 'lucide-react';
 import { GlassButton, GlassIconButton } from '@/components/glass';
+import { invokeAppCommandSync } from '@/app/commands/appCommands';
 import { useHistoryStore } from '@/lib/state/historyStore';
 import { useProjectStore } from '@/lib/state/projectStore';
 import { useUiStore } from '@/lib/state/uiStore';
 import { useWorkspaceStore } from '@/lib/state/workspaceStore';
-import { useActiveArtboard, useActiveProject } from '@/lib/state/selectors';
 import {
-  duplicateProject,
-  redoProject,
   renameProject,
-  undoProject,
 } from '@/editor/commands/projectCommands';
-import { exportProjectFile, importProjectFile } from '@/editor/export/calqoFile';
-import { shareArtboardPng } from '@/editor/export/share';
-import { APP_REPOSITORY_URL } from '@/lib/appInfo';
+import { importProjectFile } from '@/editor/export/calqoFile';
 import {
   ImportRecoveryModal,
   type ImportRecovery,
@@ -37,32 +32,13 @@ import {
 
 /** Top chrome: Tauri-ready drag region with a centered document title and
  * global action cluster. */
-export function TitleBar({
-  onExport,
-  onNewProject,
-}: {
-  onExport: () => void;
-  onNewProject: () => void;
-}) {
+export function TitleBar() {
   const { t } = useTranslation(['common', 'editor']);
   const importInputRef = useRef<HTMLInputElement>(null);
   const [editingName, setEditingName] = useState(false);
   const [importFailure, setImportFailure] = useState<ImportRecovery | null>(null);
-  const project = useActiveProject();
-  const artboard = useActiveArtboard();
 
-  const handleShare = () => {
-    if (!project || !artboard) return;
-    void shareArtboardPng(project, artboard).catch((error) => {
-      console.error('[Calqo] share failed', error);
-    });
-  };
-  const openRepository = () => {
-    window.open(APP_REPOSITORY_URL, '_blank', 'noopener,noreferrer');
-  };
   const theme = useUiStore((s) => s.theme);
-  const toggleTheme = useUiStore((s) => s.toggleTheme);
-  const setAiDialog = useUiStore((s) => s.setAiDialog);
   const activeProjectId = useWorkspaceStore((s) => s.activeProjectId);
   const activeProjectName = useProjectStore((s) =>
     activeProjectId ? s.projects[activeProjectId]?.name : null,
@@ -72,6 +48,12 @@ export function TitleBar({
   );
   const canUndo = (history?.past.length ?? 0) > 0;
   const canRedo = (history?.future.length ?? 0) > 0;
+
+  useEffect(() => {
+    const openImport = () => importInputRef.current?.click();
+    window.addEventListener('calqo:open-import', openImport);
+    return () => window.removeEventListener('calqo:open-import', openImport);
+  }, []);
 
   return (
     <header
@@ -124,7 +106,10 @@ export function TitleBar({
 
       {/* Global actions. */}
       <div className="flex shrink-0 items-center justify-end gap-1">
-        <GlassIconButton label={t('actions.new')} onClick={onNewProject}>
+        <GlassIconButton
+          label={t('actions.new')}
+          onClick={() => invokeAppCommandSync('file.new')}
+        >
           <FilePlus2 size={16} />
         </GlassIconButton>
         <input
@@ -153,14 +138,14 @@ export function TitleBar({
         />
         <GlassIconButton
           label={t('editor:export.import')}
-          onClick={() => importInputRef.current?.click()}
+          onClick={() => invokeAppCommandSync('file.open')}
         >
           <FolderOpen size={16} />
         </GlassIconButton>
         <GlassIconButton
           label={t('editor:title.saveFile')}
           disabled={!activeProjectId}
-          onClick={() => activeProjectId && void exportProjectFile(activeProjectId)}
+          onClick={() => invokeAppCommandSync('file.saveAs')}
         >
           <Save size={16} />
         </GlassIconButton>
@@ -168,35 +153,35 @@ export function TitleBar({
         <GlassIconButton
           label={t('actions.undo')}
           disabled={!activeProjectId || !canUndo}
-          onClick={() => activeProjectId && undoProject(activeProjectId)}
+          onClick={() => invokeAppCommandSync('edit.undo')}
         >
           <Undo2 size={16} />
         </GlassIconButton>
         <GlassIconButton
           label={t('actions.redo')}
           disabled={!activeProjectId || !canRedo}
-          onClick={() => activeProjectId && redoProject(activeProjectId)}
+          onClick={() => invokeAppCommandSync('edit.redo')}
         >
           <Redo2 size={16} />
         </GlassIconButton>
         <GlassIconButton
           label={t('actions.duplicate')}
           disabled={!activeProjectId}
-          onClick={() => activeProjectId && void duplicateProject(activeProjectId)}
+          onClick={() => invokeAppCommandSync('edit.duplicate')}
         >
           <Copy size={16} />
         </GlassIconButton>
         <span className="mx-1 h-5 w-px bg-[var(--calqo-divider)]" />
         <GlassIconButton
           label={t('editor:ai.promptTemplate')}
-          onClick={() => setAiDialog('template')}
+          onClick={() => invokeAppCommandSync('ai.promptTemplate')}
         >
           <Sparkles size={16} />
         </GlassIconButton>
         <GlassIconButton
           label={t('editor:ai.translate')}
           disabled={!activeProjectId}
-          onClick={() => setAiDialog('translate')}
+          onClick={() => invokeAppCommandSync('ai.translate')}
         >
           <Languages size={16} />
         </GlassIconButton>
@@ -204,23 +189,29 @@ export function TitleBar({
         <GlassIconButton
           label={t('editor:title.share')}
           disabled={!activeProjectId}
-          onClick={handleShare}
+          onClick={() => invokeAppCommandSync('file.share')}
         >
           <Share size={16} />
         </GlassIconButton>
-        <GlassIconButton label={t('theme.toggle')} onClick={toggleTheme}>
+        <GlassIconButton
+          label={t('theme.toggle')}
+          onClick={() => invokeAppCommandSync('view.theme')}
+        >
           {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
         </GlassIconButton>
         <GlassButton
           variant="primary"
           className="ml-1"
           disabled={!activeProjectId}
-          onClick={onExport}
+          onClick={() => invokeAppCommandSync('file.export')}
         >
           <Download size={15} />
           {t('actions.export')}
         </GlassButton>
-        <GlassIconButton label={t('editor:title.github')} onClick={openRepository}>
+        <GlassIconButton
+          label={t('editor:title.github')}
+          onClick={() => invokeAppCommandSync('help.github')}
+        >
           <Github size={16} />
         </GlassIconButton>
       </div>

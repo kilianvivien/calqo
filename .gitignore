@@ -6,6 +6,8 @@ node_modules
 # Build output
 dist
 dist-ssr
+src-tauri/target
+src-tauri/gen
 
 # Test / coverage artifacts
 coverage
@@ -28,6 +30,9 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+
+# Native local state
+*.stronghold
 
 # Local Claude Code harness config
 .claude/

@@ -4,4 +4,5 @@ export interface ClipboardAdapter {
   canWriteImages(): boolean;
   writeImage(blob: Blob): Promise<boolean>;
   writeText(text: string): Promise<boolean>;
+  readImage?(): Promise<Blob | null>;
 }

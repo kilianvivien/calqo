@@ -160,46 +160,50 @@ adding larger platform surfaces.
 
 ## Phase O - Native Desktop Foundation
 
-> **Status: NOT STARTED.**
+> **Status: COMPLETE.** Tauri v2 scaffolding, runtime platform selection,
+> native adapters, localized native menus, secure desktop AI key storage,
+> file-backed open/save, native asset/clipboard/font flows, macOS material
+> polish, and macOS `.app`/`.dmg` packaging are implemented.
 
 Goal: introduce the Tauri shell promised by the PRD without contaminating the
 browser-first app with native assumptions.
 
 ### Deliverables
 
-- [ ] Scaffold Tauri v2.
+- [x] Scaffold Tauri v2.
   - Add `src-tauri/`.
   - Add Tauri config, icons, app metadata, and dev/build scripts.
   - Keep the existing Vite browser dev path unchanged.
-- [ ] Add platform selection for adapters.
+- [x] Add platform selection for adapters.
   - Keep browser adapter exports as the default web path.
   - Add a small runtime/platform resolver for Tauri adapter implementations.
   - Do not import Tauri APIs directly from editor components.
-- [ ] Implement native settings/key storage.
+- [x] Implement native settings/key storage.
   - Store AI provider secrets in OS keychain or the closest Tauri-supported
     secure storage path.
   - Keep non-sensitive settings in a normal config file or existing adapter.
   - Add migration/copy guidance for browser-stored keys without silently moving
     secrets.
-- [ ] Implement native file flows.
+- [x] Implement native file flows.
   - Open `.calqo` from disk.
   - Save and Save As `.calqo`.
   - Track file-backed dirty state separately from IndexedDB autosave state.
   - Preserve browser import/export behavior.
-- [ ] Implement native asset and clipboard flows where useful.
+- [x] Implement native asset and clipboard flows where useful.
   - Drag images from Finder into the canvas.
   - Copy PNG to system clipboard from export.
   - Paste images from clipboard into the active artboard.
-- [ ] Implement native font access.
+- [x] Implement native font access.
   - List local fonts through the font adapter.
   - Handle missing fonts gracefully when opening projects on another machine.
   - Keep browser font behavior unchanged.
-- [ ] Add native shell polish.
+- [x] Add native shell polish.
   - macOS vibrancy/material where available.
   - Native window controls and drag region.
-  - Native menu items for new/open/save/export/undo/redo.
+  - Native menu items for the existing key app features across Calqo, File,
+    Edit, Insert, Object, View, AI, Window, and Help, localized in EN/FR.
   - Keyboard shortcuts aligned with the web app.
-- [ ] Add desktop packaging.
+- [x] Add desktop packaging.
   - Build artifacts for macOS first.
   - Document Windows/Linux expectations if not fully supported yet.
   - Keep release signing/notarization as explicit follow-up if credentials are
