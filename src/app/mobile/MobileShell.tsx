@@ -53,16 +53,14 @@ export function MobileShell() {
   const showEditor = mode === 'editor' && project;
 
   return (
-    // Anchor the shell to all four viewport edges. A `position: fixed; inset: 0`
-    // element is sized to the initial containing block — the layout/visual
-    // viewport — which in an iOS standalone PWA is the *full screen* (home
-    // indicator included, since we ship `viewport-fit=cover`). This needs no
-    // `vh`/`dvh`/`visualViewport` arithmetic: top-anchored height units under-
-    // report on iOS standalone and left a dead strip below the toolbar. The
-    // top padding clears the translucent status bar; the toolbar carries its
-    // own `safe-area-inset-bottom` padding so it lands above the home indicator.
+    // Fill the *usable* screen as a normal-flow flex column. Because we drop
+    // `viewport-fit=cover` (see index.html), iOS insets the web view to the safe
+    // area, so `100dvh` is exactly the visible height and the toolbar — the last
+    // child of the editor's flex-1 column — sits at the bottom with no
+    // `position:fixed` and no `env()` math. `min-h-screen` (100vh) is the
+    // Safari-14 fallback ahead of `min-h-[100dvh]` (dvh is Safari 15.4+).
     <div
-      className="fixed inset-0 flex touch-manipulation flex-col gap-2 p-2 pt-[max(env(safe-area-inset-top),8px)]"
+      className="flex min-h-screen min-h-[100dvh] touch-manipulation flex-col gap-2 p-2"
       style={{ background: 'var(--calqo-workspace)' }}
     >
       {showEditor ? (
