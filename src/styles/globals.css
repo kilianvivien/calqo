@@ -39,6 +39,17 @@ body {
   height: var(--app-height, 100dvh);
 }
 
+/* On phones, lock the document to the viewport. Without this, an overscroll
+ * bounce in standalone (PWA) mode drags the fixed shell up and reveals a blank
+ * strip beneath the toolbar. */
+@media (max-width: 640px), (max-height: 480px) {
+  html,
+  body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
 /* Section eyebrows — all-caps tracked labels for panel headers. */
 .eyebrow {
   font-size: 10px;

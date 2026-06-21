@@ -122,5 +122,10 @@
     "auto": "Auto",
     "glass": "Glass",
     "solid": "Solid"
+  },
+  "pwa": {
+    "updateAvailable": "A new version is available.",
+    "reload": "Reload",
+    "dismiss": "Later"
   }
 }
