@@ -60,7 +60,7 @@ export function MobileShell() {
     // `position:fixed` and no `env()` math. `min-h-screen` (100vh) is the
     // Safari-14 fallback ahead of `min-h-[100dvh]` (dvh is Safari 15.4+).
     <div
-      className="flex min-h-screen min-h-[100dvh] touch-manipulation flex-col gap-2 p-2"
+      className="app-shell flex min-h-screen min-h-[100dvh] touch-manipulation flex-col gap-2 p-2"
       style={{ background: 'var(--calqo-workspace)' }}
     >
       {showEditor ? (
