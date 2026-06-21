@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  PROVIDER_LIST,
+  MOBILE_HIDDEN_PROVIDERS,
+  MOBILE_PROVIDER_LIST,
   PROVIDER_PRESETS,
   useAiSettingsStore,
 } from '@/editor/ai/aiSettings';
@@ -51,6 +53,14 @@ export function MobileSettingsSheet({ open, onClose }: MobileSettingsSheetProps)
   const setProvider = useAiSettingsStore((s) => s.setProvider);
   const updateProviderConfig = useAiSettingsStore((s) => s.updateProviderConfig);
 
+  // A phone may inherit a desktop "Local (Ollama)" selection that it can't
+  // reach — fall back to the offline mock provider so AI features still work.
+  useEffect(() => {
+    if (MOBILE_HIDDEN_PROVIDERS.includes(settings.providerId)) {
+      setProvider('mock');
+    }
+  }, [settings.providerId, setProvider]);
+
   const preset = PROVIDER_PRESETS[settings.providerId] ?? PROVIDER_PRESETS.mock;
   const config = settings.providers[preset.id];
 
@@ -73,7 +83,7 @@ export function MobileSettingsSheet({ open, onClose }: MobileSettingsSheetProps)
           }
           className="h-11 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[14px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
         >
-          {PROVIDER_LIST.map((option) => (
+          {MOBILE_PROVIDER_LIST.map((option) => (
             <option key={option.id} value={option.id}>
               {option.label}
             </option>

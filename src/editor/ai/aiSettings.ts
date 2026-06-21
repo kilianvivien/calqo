@@ -94,6 +94,16 @@ export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
 
 export const PROVIDER_LIST: ProviderPreset[] = Object.values(PROVIDER_PRESETS);
 
+/** Providers that don't make sense on a phone. "Local (Ollama)" points at
+ * `localhost`, which is unreachable from a mobile browser, so it's hidden from
+ * the phone settings sheet (a desktop selection falls back to mock there). */
+export const MOBILE_HIDDEN_PROVIDERS: readonly AiProviderId[] = ['local'];
+
+/** Providers offered in the phone settings sheet. */
+export const MOBILE_PROVIDER_LIST: ProviderPreset[] = PROVIDER_LIST.filter(
+  (preset) => !MOBILE_HIDDEN_PROVIDERS.includes(preset.id),
+);
+
 const PREVIOUS_DEFAULT_MODELS: Partial<Record<AiProviderId, string[]>> = {
   gemini: ['gemini-2.0-flash'],
   mistral: ['mistral-small-latest'],

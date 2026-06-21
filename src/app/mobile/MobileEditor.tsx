@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Brush,
   Copy,
+  Crop,
   FileUp,
   Image as ImageIcon,
   Languages,
@@ -43,9 +44,10 @@ import { GlassIconButton } from '@/components/glass';
 import { MobileToolbar, type MobileToolItem } from '@/components/mobile';
 import { MobileTopBar } from './MobileTopBar';
 import { MobileStage } from './MobileStage';
+import { MobileCropOverlay } from './MobileCropOverlay';
 import { TextEditSheet } from './sheets/TextEditSheet';
 import { TranslateSheet } from './sheets/TranslateSheet';
-import { ColorSheet } from './sheets/ColorSheet';
+import { FillSheet } from './sheets/FillSheet';
 import { LayersSheet } from './sheets/LayersSheet';
 import { ArrangeSheet } from './sheets/ArrangeSheet';
 import { ExportSheet } from './sheets/ExportSheet';
@@ -110,6 +112,7 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
 
   const [sheet, setSheet] = useState<Sheet>('none');
   const [brush, setBrush] = useState(false);
+  const [cropLayerId, setCropLayerId] = useState<string | null>(null);
   const replaceTargetRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const insertImageRef = useRef<HTMLInputElement>(null);
@@ -120,6 +123,8 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
     selectedLayerIds.length === 1
       ? findLayerInArtboard(artboard, selectedLayerIds[0])
       : null;
+
+  const cropLayer = cropLayerId ? findLayerInArtboard(artboard, cropLayerId) : null;
 
   const openImagePicker = (layerId: string) => {
     replaceTargetRef.current = layerId;
@@ -228,10 +233,16 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
         ...(selectedLayer.type === 'image'
           ? [
               {
+                id: 'crop',
+                label: t('mobile.toolbar.crop'),
+                icon: Crop,
+                accent: true,
+                onClick: () => setCropLayerId(selectedLayer.id),
+              },
+              {
                 id: 'replace',
                 label: t('mobile.toolbar.replace'),
                 icon: ImageIcon,
-                accent: true,
                 onClick: () => openImagePicker(selectedLayer.id),
               },
             ]
@@ -354,7 +365,7 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
             artboard={artboard}
             brush={brush}
             onEditText={() => setSheet('text')}
-            onReplaceImage={(layer) => openImagePicker(layer.id)}
+            onCropImage={(layer) => setCropLayerId(layer.id)}
           />
           {brush && (
             <div className="absolute inset-x-0 top-2 flex justify-center">
@@ -411,7 +422,7 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
           layer={selectedLayer}
         />
       )}
-      <ColorSheet
+      <FillSheet
         open={sheet === 'color'}
         onClose={() => setSheet('none')}
         project={project}
@@ -458,6 +469,14 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
         project={project}
         artboard={artboard}
       />
+
+      {cropLayer && cropLayer.type === 'image' && (
+        <MobileCropOverlay
+          project={project}
+          layer={cropLayer}
+          onClose={() => setCropLayerId(null)}
+        />
+      )}
     </div>
   );
 }

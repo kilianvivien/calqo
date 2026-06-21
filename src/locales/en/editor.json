@@ -92,6 +92,7 @@
     "fill_linear": "Linear",
     "fill_radial": "Radial",
     "fill_pattern": "Pattern",
+    "fill_image": "Image",
     "pattern": "Pattern",
     "patternDots": "Dots",
     "patternGrid": "Grid",
@@ -497,6 +498,7 @@
     "toolbar": {
       "add": "Add",
       "text": "Text",
+      "crop": "Crop",
       "replace": "Replace",
       "color": "Color",
       "arrange": "Arrange",
@@ -510,6 +512,11 @@
     },
     "add": {
       "title": "Add element"
+    },
+    "crop": {
+      "title": "Crop & reframe",
+      "free": "Free",
+      "reset": "Reset crop"
     },
     "brush": {
       "done": "Done drawing"
@@ -532,7 +539,7 @@
       "subtitle": "Translate the text on this artboard."
     },
     "color": {
-      "title": "Colors",
+      "title": "Fill & color",
       "element": "Element",
       "background": "Background",
       "custom": "Custom"

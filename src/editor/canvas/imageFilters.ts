@@ -3,7 +3,10 @@ import { Brighten } from 'konva/lib/filters/Brighten';
 import { Contrast } from 'konva/lib/filters/Contrast';
 import { HSL } from 'konva/lib/filters/HSL';
 import type { Filter } from 'konva/lib/Node';
+import type Konva from 'konva';
 import type { ImageFilters } from '@/lib/schema';
+
+export type ImageFitMode = 'cover' | 'contain' | 'stretch';
 
 /** Default (neutral) value for each filter channel. Brightness/contrast/
  * saturation are signed offsets around 0; blur is a radius in pixels. */
@@ -90,5 +93,33 @@ export function coverCropRect(
     y: (imageHeight - cropHeight) * fy,
     width: cropWidth,
     height: cropHeight,
+  };
+}
+
+/** Konva Image props that fit a loaded image into a `w`×`h` box (local origin
+ * at 0,0) for a given fit mode. Shared by image layers, image fills, and image
+ * backgrounds so they crop/scale identically. */
+export function fitImageConfig(
+  image: HTMLImageElement,
+  fit: ImageFitMode,
+  w: number,
+  h: number,
+): Konva.ImageConfig {
+  if (fit === 'contain') {
+    const scale = Math.min(w / image.width, h / image.height);
+    const width = image.width * scale;
+    const height = image.height * scale;
+    return { image, x: (w - width) / 2, y: (h - height) / 2, width, height };
+  }
+  if (fit === 'stretch') {
+    return { image, x: 0, y: 0, width: w, height: h };
+  }
+  return {
+    image,
+    x: 0,
+    y: 0,
+    width: w,
+    height: h,
+    crop: coverCropRect(image.width, image.height, w, h),
   };
 }

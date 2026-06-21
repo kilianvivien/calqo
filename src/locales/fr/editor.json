@@ -92,6 +92,7 @@
     "fill_linear": "Linéaire",
     "fill_radial": "Radial",
     "fill_pattern": "Motif",
+    "fill_image": "Image",
     "pattern": "Motif",
     "patternDots": "Points",
     "patternGrid": "Grille",
@@ -497,6 +498,7 @@
     "toolbar": {
       "add": "Ajouter",
       "text": "Texte",
+      "crop": "Recadrer",
       "replace": "Remplacer",
       "color": "Couleur",
       "arrange": "Disposer",
@@ -510,6 +512,11 @@
     },
     "add": {
       "title": "Ajouter un élément"
+    },
+    "crop": {
+      "title": "Recadrer",
+      "free": "Libre",
+      "reset": "Réinitialiser le recadrage"
     },
     "brush": {
       "done": "Terminer le dessin"
@@ -532,7 +539,7 @@
       "subtitle": "Traduire le texte de ce plan de travail."
     },
     "color": {
-      "title": "Couleurs",
+      "title": "Fond et couleur",
       "element": "Élément",
       "background": "Fond",
       "custom": "Personnalisée"

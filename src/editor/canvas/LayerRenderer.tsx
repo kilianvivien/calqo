@@ -5,7 +5,7 @@ import type Konva from 'konva';
 import { Blur } from 'konva/lib/filters/Blur';
 import type { CalqoLayer, ImageLayer, ListLayer } from '@/lib/schema';
 import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
-import { fillProps, strokeProps } from './shapeStyle';
+import { fillProps, imageFillProps, strokeProps } from './shapeStyle';
 import { buildImageFilterPipeline, coverCropRect } from './imageFilters';
 import { drawMaskPath } from './maskClip';
 import { useAssetImage } from './useAssetImage';
@@ -131,6 +131,21 @@ export function LayerRenderer(props: LayerRendererProps) {
 
   useLayerBlur(nodeRefs, layer, activeLocale);
 
+  // Image fills load their asset asynchronously; resolve it here so the hook is
+  // always called in the same order regardless of layer type.
+  const shapeFill = layer.type === 'shape' ? layer.fill : null;
+  const fillImageAssetId = shapeFill?.type === 'image' ? shapeFill.assetId : null;
+  const { image: fillImage } = useAssetImage(fillImageAssetId);
+  const resolveFillProps = (w: number, h: number, centered = false) => {
+    if (!shapeFill) return {};
+    if (shapeFill.type === 'image') {
+      return fillImage
+        ? imageFillProps(fillImage, shapeFill.fit, w, h, centered)
+        : { fill: '#FFFFFF' };
+    }
+    return fillProps(shapeFill, w, h, centered);
+  };
+
   if (!layer.visible) return null;
 
   if (layer.type === 'group') {
@@ -210,7 +225,7 @@ export function LayerRenderer(props: LayerRendererProps) {
           y={layer.y + layer.h / 2}
           radiusX={layer.w / 2}
           radiusY={layer.h / 2}
-          {...fillProps(layer.fill, layer.w, layer.h, true)}
+          {...resolveFillProps(layer.w, layer.h, true)}
           {...stroke}
         />
       );
@@ -259,7 +274,7 @@ export function LayerRenderer(props: LayerRendererProps) {
           {...effects}
           points={layer.points ?? [0, 0, layer.w, layer.h]}
           closed={isPolygon}
-          {...(isPolygon ? fillProps(layer.fill, layer.w, layer.h) : {})}
+          {...(isPolygon ? resolveFillProps(layer.w, layer.h) : {})}
           stroke={lineColor}
           strokeWidth={lineWidth}
           hitStrokeWidth={isPolygon ? undefined : lineHitWidth}
@@ -273,7 +288,7 @@ export function LayerRenderer(props: LayerRendererProps) {
       <Rect
         {...base}
         {...effects}
-        {...fillProps(layer.fill, layer.w, layer.h)}
+        {...resolveFillProps(layer.w, layer.h)}
         {...stroke}
         cornerRadius={layer.cornerRadius ?? 0}
       />
