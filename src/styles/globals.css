@@ -9,6 +9,18 @@ body,
   margin: 0;
 }
 
+/* Paint the root element itself with the app's workspace colour. In a standalone
+ * (PWA) launch on iOS the fixed shell is sized to `visualViewport.height`, which
+ * stops short of the physical screen and leaves the home-indicator safe-area
+ * strip uncovered. The `<body>` background would normally propagate to the canvas
+ * and fill it, but the phone-only `overflow: hidden` below stops WebKit from
+ * doing so — so iOS paints that strip the web view's default white. Giving `html`
+ * its own solid background fills the canvas (and any safe area / overscroll) with
+ * the dark workspace colour, seamless with the shell above it. */
+html {
+  background-color: var(--calqo-workspace);
+}
+
 body {
   background: var(--calqo-wallpaper);
   color: var(--calqo-text);

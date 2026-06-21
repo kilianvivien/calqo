@@ -381,13 +381,7 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
           )}
         </div>
 
-        <div
-          className={
-            landscape
-              ? 'h-full w-[76px] shrink-0 pb-[max(env(safe-area-inset-bottom),4px)]'
-              : 'pb-[max(env(safe-area-inset-bottom),4px)]'
-          }
-        >
+        <div className={landscape ? 'h-full w-[76px] shrink-0' : undefined}>
           <MobileToolbar items={[addItem, ...selectionItems]} vertical={landscape} />
         </div>
       </div>
