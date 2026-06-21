@@ -134,8 +134,8 @@ export function MobileProjectBrowser({ onOpen, onCreate }: MobileProjectBrowserP
       <div className="calqo-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-24 pt-3">
         {empty ? (
           <div className="flex flex-col items-center gap-5 px-4 pt-16 text-center">
-            <div className="grid h-14 w-14 place-items-center rounded-[var(--calqo-radius-lg)] bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]">
-              <Sparkles size={26} />
+            <div className="glass grid h-16 w-16 place-items-center rounded-[var(--calqo-radius-lg)] border border-[var(--calqo-accent-ring)] text-[var(--calqo-accent)] shadow-[0_10px_30px_rgba(0,122,255,0.18),inset_0_1px_0_rgba(255,255,255,0.18)]">
+              <Sparkles size={28} />
             </div>
             <div className="space-y-1">
               <p className="text-[15px] font-semibold text-[var(--calqo-text)]">

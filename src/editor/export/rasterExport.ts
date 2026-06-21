@@ -10,9 +10,12 @@ import { Ellipse } from 'konva/lib/shapes/Ellipse';
 import { Line } from 'konva/lib/shapes/Line';
 import { Arrow } from 'konva/lib/shapes/Arrow';
 import type { Shape } from 'konva/lib/Shape';
+import type { ShapeConfig } from 'konva/lib/Shape';
 import { assetStorage } from '@/lib/adapters';
 import { isGroupLayer } from '@/editor/utils/layers';
 import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
+import { fillProps, imageFillProps } from '@/editor/canvas/shapeStyle';
+import { fitImageConfig } from '@/editor/canvas/imageFilters';
 import type {
   CalqoArtboard,
   CalqoLayer,
@@ -40,12 +43,20 @@ const MIME: Record<RasterFormat, string> = {
   webp: 'image/webp',
 };
 
-function backgroundColor(artboard: CalqoArtboard): string {
-  return artboard.background.type === 'solid' ? artboard.background.color : '#FFFFFF';
-}
-
-function solidFill(fill: ShapeLayer['fill']): string | undefined {
-  return fill.type === 'solid' ? fill.color : '#FFFFFF';
+/** Konva fill config for a shape fill, honouring gradients, patterns, and image
+ * fills (image fills need the asset to have loaded). Mirrors the live renderer. */
+function shapeFillConfig(
+  fill: ShapeLayer['fill'],
+  w: number,
+  h: number,
+  centered: boolean,
+  images: Map<string, HTMLImageElement>,
+): ShapeConfig {
+  if (fill.type === 'image') {
+    const image = images.get(fill.assetId);
+    return image ? imageFillProps(image, fill.fit, w, h, centered) : { fill: '#FFFFFF' };
+  }
+  return fillProps(fill, w, h, centered);
 }
 
 /** Asset ids referenced by image/svg layers anywhere in the tree. */
@@ -66,7 +77,9 @@ interface LoadedImages {
 }
 
 async function loadImages(artboard: CalqoArtboard): Promise<LoadedImages> {
-  const ids = [...collectAssetIds(artboard.layers)];
+  const idSet = collectAssetIds(artboard.layers);
+  if (artboard.background.type === 'image') idSet.add(artboard.background.assetId);
+  const ids = [...idSet];
   const images = new Map<string, HTMLImageElement>();
   const urls: string[] = [];
   await Promise.all(
@@ -152,7 +165,7 @@ function buildNode(
         y: layer.y + layer.h / 2,
         radiusX: layer.w / 2,
         radiusY: layer.h / 2,
-        fill: solidFill(layer.fill),
+        ...shapeFillConfig(layer.fill, layer.w, layer.h, true, images),
         stroke: layer.stroke?.color,
         strokeWidth: layer.stroke?.width ?? 0,
       });
@@ -189,7 +202,7 @@ function buildNode(
         ...base,
         points: layer.points ?? [0, 0, layer.w, layer.h],
         closed: isPolygon,
-        fill: isPolygon ? solidFill(layer.fill) : undefined,
+        ...(isPolygon ? shapeFillConfig(layer.fill, layer.w, layer.h, false, images) : {}),
         stroke: lineColor,
         strokeWidth: lineWidth,
         lineCap: 'round',
@@ -198,7 +211,7 @@ function buildNode(
     }
     return new Rect({
       ...base,
-      fill: solidFill(layer.fill),
+      ...shapeFillConfig(layer.fill, layer.w, layer.h, false, images),
       stroke: layer.stroke?.color,
       strokeWidth: layer.stroke?.width ?? 0,
       cornerRadius: layer.cornerRadius ?? 0,
@@ -208,6 +221,18 @@ function buildNode(
   if (layer.type === 'image' || layer.type === 'svg') {
     const image = images.get(layer.assetId);
     if (!image) return null; // missing asset — skipped (flagged as a warning)
+    if (layer.type === 'image' && layer.crop) {
+      return new KonvaImage({
+        ...base,
+        image,
+        crop: {
+          x: layer.crop.x,
+          y: layer.crop.y,
+          width: layer.crop.w,
+          height: layer.crop.h,
+        },
+      });
+    }
     if (layer.type === 'image' && layer.fit === 'cover') {
       const imageRatio = image.width / image.height;
       const layerRatio = layer.w / layer.h;
@@ -368,15 +393,29 @@ export async function exportArtboardRaster(
   // JPEG cannot be transparent, so it always gets a background fill.
   const paintBackground = !transparent || format === 'jpeg';
   if (paintBackground) {
+    const bg = artboard.background;
+    const bgImage = bg.type === 'image' ? images.get(bg.assetId) : undefined;
     layer.add(
       new Rect({
         x: 0,
         y: 0,
         width: artboard.width,
         height: artboard.height,
-        fill: backgroundColor(artboard),
+        ...(bg.type === 'image'
+          ? { fill: '#FFFFFF' }
+          : fillProps(bg, artboard.width, artboard.height)),
       }),
     );
+    if (bgImage && bg.type === 'image') {
+      const clip = new Group({
+        clipX: 0,
+        clipY: 0,
+        clipWidth: artboard.width,
+        clipHeight: artboard.height,
+      });
+      clip.add(new KonvaImage(fitImageConfig(bgImage, bg.fit, artboard.width, artboard.height)));
+      layer.add(clip);
+    }
   }
 
   // Clip content to the artboard bounds so nothing spills past the frame.

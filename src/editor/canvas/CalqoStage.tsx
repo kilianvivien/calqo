@@ -35,6 +35,7 @@ import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
 import { TextEditOverlay } from './TextEditOverlay';
 import { LayerRenderer, type NodeRegistry } from './LayerRenderer';
+import { ArtboardBackground } from './ArtboardBackground';
 import { CanvasContextMenu } from './CanvasContextMenu';
 import { registerStageSampler } from './stageSampler';
 import { useAssetImage } from './useAssetImage';
@@ -103,10 +104,6 @@ function isLineLikeSelection(layers: CalqoLayer[]): boolean {
   if (layers.length !== 1) return false;
   const only = layers[0];
   return only.type === 'shape' && (only.shape === 'line' || only.shape === 'arrow');
-}
-
-function backgroundColor(artboard: CalqoArtboard): string {
-  return artboard.background.type === 'solid' ? artboard.background.color : '#FFFFFF';
 }
 
 function measureImage(file: File): Promise<{ width?: number; height?: number }> {
@@ -780,18 +777,19 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       >
         <Layer>
           <Rect width={size.width} height={size.height} fill="transparent" listening={false} />
-          <Rect
+          <ArtboardBackground
+            background={artboard.background}
             x={artboardX}
             y={artboardY}
             width={artboard.width * zoom}
             height={artboard.height * zoom}
-            fill={backgroundColor(artboard)}
-            shadowColor="rgba(0,0,0,0.24)"
-            shadowBlur={34}
-            shadowOffsetY={18}
-            stroke="rgba(0,0,0,0.14)"
-            strokeWidth={1}
-            listening={false}
+            frameProps={{
+              shadowColor: 'rgba(0,0,0,0.24)',
+              shadowBlur: 34,
+              shadowOffsetY: 18,
+              stroke: 'rgba(0,0,0,0.14)',
+              strokeWidth: 1,
+            }}
           />
         </Layer>
         <Layer x={artboardX} y={artboardY} scaleX={zoom} scaleY={zoom} clipX={0} clipY={0} clipWidth={artboard.width} clipHeight={artboard.height}>

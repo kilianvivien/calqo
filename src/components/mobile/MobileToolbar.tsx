@@ -30,12 +30,13 @@ export function MobileToolButton({
         'flex flex-col items-center justify-center gap-1',
         fill ? 'min-w-0' : 'min-w-[60px] shrink-0',
         'min-h-[52px] rounded-[var(--calqo-radius-sm)] px-1.5 py-1.5',
-        'text-[10.5px] font-medium transition-colors',
+        'text-[10.5px] font-medium',
+        'transition-[transform,background-color,color] duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-spring)]',
         'disabled:opacity-35',
         item.accent
-          ? 'text-[var(--calqo-accent)]'
-          : 'text-[var(--calqo-text-2)]',
-        'enabled:active:bg-[var(--calqo-hover)]',
+          ? 'bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]'
+          : 'text-[var(--calqo-text-2)] enabled:active:bg-[var(--calqo-hover)]',
+        'enabled:active:scale-95',
       )}
     >
       <span className="grid h-5 w-5 place-items-center">

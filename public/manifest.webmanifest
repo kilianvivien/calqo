@@ -1,0 +1,32 @@
+{
+  "name": "Calqo",
+  "short_name": "Calqo",
+  "description": "An open-source, glass-native social visual maker.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#15161c",
+  "theme_color": "#15161c",
+  "categories": ["graphics", "design", "productivity"],
+  "icons": [
+    {
+      "src": "/calqo-icon.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/calqo-icon@2x.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/calqo-icon@2x.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

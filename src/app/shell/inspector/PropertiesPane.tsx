@@ -58,13 +58,13 @@ import {
   stackSelectedLayers,
   beginHistoryCoalescing,
   endHistoryCoalescing,
-  editProject,
   replaceLayerAsset,
   addListItem,
   removeListItem,
   reorderListItem,
   updateListItemTextForLocale,
   setListMarker,
+  setArtboardBackground,
 } from '@/editor/commands/projectCommands';
 import { findLayerInArtboard } from '@/editor/utils/layers';
 import { GlassSegmentedControl } from '@/components/glass';
@@ -73,6 +73,7 @@ import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore, type BrushStyle, type EditorTool } from '@/lib/state/uiStore';
 import type {
   ArrowStyle,
+  BackgroundFill,
   CalqoLayer,
   CalqoAssetRef,
   Fill,
@@ -84,6 +85,16 @@ import type {
   StrokeStyle,
   TextLayer,
 } from '@/lib/schema';
+import {
+  BACKGROUND_FILL_TYPE_OPTIONS,
+  FILL_TYPE_OPTIONS,
+  PATTERN_OPTIONS,
+  backgroundFillForType,
+  fillForType,
+  type BackgroundFillType,
+  type FillType,
+} from '@/editor/canvas/fillHelpers';
+import { saveImageAsset } from '@/lib/utils/imageAsset';
 import {
   isStageSamplerAvailable,
   sampleColorFromStage,
@@ -204,42 +215,24 @@ function isFilledShape(layer: ShapeLayerT): boolean {
 
 const BRUSH_STYLE_OPTIONS: BrushStyle[] = ['smooth', 'marker', 'highlighter', 'dashed'];
 
-const FILL_TYPE_OPTIONS = ['solid', 'linear', 'radial', 'pattern'] as const;
-type FillType = (typeof FILL_TYPE_OPTIONS)[number];
-
-const PATTERN_OPTIONS: { value: Extract<Fill, { type: 'pattern' }>['pattern']; labelKey: string }[] = [
-  { value: 'dots', labelKey: 'properties.patternDots' },
-  { value: 'grid', labelKey: 'properties.patternGrid' },
-  { value: 'hatch', labelKey: 'properties.patternHatch' },
-  { value: 'cross-hatch', labelKey: 'properties.patternCrossHatch' },
-  { value: 'checker', labelKey: 'properties.patternChecker' },
-];
-
-/** First solid-ish colour of a fill, for seeding type switches. */
-function fillBaseColor(fill: Fill): string {
-  if (fill.type === 'solid') return fill.color;
-  if (fill.type === 'linear' || fill.type === 'radial') return fill.stops[0]?.color ?? '#007AFF';
-  if (fill.type === 'pattern') return fill.color;
-  return '#007AFF';
-}
-
-/** Construct a sensible default fill when switching the fill type. */
-function fillForType(type: FillType, current: Fill): Fill {
-  const base = fillBaseColor(current);
-  if (type === 'solid') return { type: 'solid', color: base };
-  if (type === 'linear') {
-    return { type: 'linear', angle: 90, stops: [{ offset: 0, color: base }, { offset: 1, color: '#FFFFFF' }] };
-  }
-  if (type === 'radial') {
-    return { type: 'radial', stops: [{ offset: 0, color: '#FFFFFF' }, { offset: 1, color: base }] };
-  }
-  return { type: 'pattern', pattern: 'dots', color: base, background: '#FFFFFF', scale: 1, angle: 0 };
-}
-
-/** Full fill editor: type switch plus solid/gradient/pattern sub-controls. */
-function FillField({ fill, onChange }: { fill: Fill; onChange: (fill: Fill) => void }) {
+/** Full fill editor: type switch plus solid/gradient/pattern/image sub-controls.
+ * `projectId` enables the image fill (it needs to persist a picked asset). */
+function FillField({
+  fill,
+  onChange,
+  projectId,
+}: {
+  fill: Fill;
+  onChange: (fill: Fill) => void;
+  projectId?: string;
+}) {
   const { t } = useTranslation('editor');
-  const type: FillType = fill.type === 'image' ? 'solid' : fill.type;
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const type: FillType = fill.type;
+  const options = projectId
+    ? FILL_TYPE_OPTIONS
+    : FILL_TYPE_OPTIONS.filter((value) => value !== 'image');
+  const pickImage = () => imageInputRef.current?.click();
   return (
     <div className="space-y-1">
       <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
@@ -248,13 +241,58 @@ function FillField({ fill, onChange }: { fill: Fill; onChange: (fill: Fill) => v
           ariaLabel={t('properties.fill')}
           className="flex w-full [&>button]:flex-1 [&>button]:px-1"
           value={type}
-          onChange={(next) => onChange(fillForType(next as FillType, fill))}
-          options={FILL_TYPE_OPTIONS.map((value) => ({
+          onChange={(next) => {
+            if (next === 'image') {
+              if (fill.type !== 'image') pickImage();
+              return;
+            }
+            onChange(fillForType(next as FillType, fill));
+          }}
+          options={options.map((value) => ({
             value,
             label: t(`properties.fill_${value}`),
           }))}
         />
       </div>
+      {projectId && (
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.currentTarget.value = '';
+            if (!file) return;
+            void saveImageAsset(projectId, file).then((asset) =>
+              onChange({ type: 'image', assetId: asset.id, fit: 'cover' }),
+            );
+          }}
+        />
+      )}
+      {fill.type === 'image' && (
+        <>
+          <SelectField
+            label={t('properties.fit')}
+            value={fill.fit}
+            options={[
+              { value: 'cover', label: t('properties.cover') },
+              { value: 'contain', label: t('properties.contain') },
+              { value: 'stretch', label: t('properties.stretch') },
+            ]}
+            onChange={(fit) => onChange({ ...fill, fit: fit as typeof fill.fit })}
+          />
+          <div className="px-2 py-1.5">
+            <button
+              type="button"
+              className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12.5px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)]"
+              onClick={pickImage}
+            >
+              {t('properties.replaceAsset')}
+            </button>
+          </div>
+        </>
+      )}
       {fill.type === 'solid' && (
         <ColorField
           label={t('properties.color')}
@@ -311,6 +349,121 @@ function FillField({ fill, onChange }: { fill: Fill; onChange: (fill: Fill) => v
             step={0.25}
             onChange={(scale) => onChange({ ...fill, scale })}
           />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Artboard background editor: solid / gradient / image (no pattern). */
+function BackgroundFillField({
+  background,
+  onChange,
+  projectId,
+}: {
+  background: BackgroundFill;
+  onChange: (fill: BackgroundFill, asset?: CalqoAssetRef) => void;
+  projectId: string;
+}) {
+  const { t } = useTranslation('editor');
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const pickImage = () => imageInputRef.current?.click();
+  return (
+    <div className="space-y-1">
+      <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
+        <span className="text-[var(--calqo-text-3)]">{t('properties.fill')}</span>
+        <GlassSegmentedControl
+          ariaLabel={t('properties.fill')}
+          className="flex w-full [&>button]:flex-1 [&>button]:px-1"
+          value={background.type}
+          onChange={(next) => {
+            if (next === 'image') {
+              if (background.type !== 'image') pickImage();
+              return;
+            }
+            onChange(backgroundFillForType(next as BackgroundFillType, background));
+          }}
+          options={BACKGROUND_FILL_TYPE_OPTIONS.map((value) => ({
+            value,
+            label: t(`properties.fill_${value}`),
+          }))}
+        />
+      </div>
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.currentTarget.value = '';
+          if (!file) return;
+          void saveImageAsset(projectId, file).then((asset) =>
+            onChange({ type: 'image', assetId: asset.id, fit: 'cover' }, asset),
+          );
+        }}
+      />
+      {background.type === 'solid' && (
+        <ColorField
+          label={t('properties.color')}
+          value={background.color}
+          onChange={(color) => onChange({ type: 'solid', color })}
+        />
+      )}
+      {(background.type === 'linear' || background.type === 'radial') && (
+        <>
+          <ColorField
+            label={t('properties.gradientStart')}
+            value={background.stops[0]?.color ?? '#007AFF'}
+            onChange={(color) =>
+              onChange({
+                ...background,
+                stops: [{ offset: 0, color }, background.stops[1] ?? { offset: 1, color: '#FFFFFF' }],
+              })
+            }
+          />
+          <ColorField
+            label={t('properties.gradientEnd')}
+            value={background.stops[1]?.color ?? '#FFFFFF'}
+            onChange={(color) =>
+              onChange({
+                ...background,
+                stops: [background.stops[0] ?? { offset: 0, color: '#007AFF' }, { offset: 1, color }],
+              })
+            }
+          />
+          {background.type === 'linear' && (
+            <SliderField
+              label={t('properties.gradientAngle')}
+              value={background.angle ?? 0}
+              min={0}
+              max={360}
+              onChange={(angle) => onChange({ ...background, angle })}
+            />
+          )}
+        </>
+      )}
+      {background.type === 'image' && (
+        <>
+          <SelectField
+            label={t('properties.fit')}
+            value={background.fit}
+            options={[
+              { value: 'cover', label: t('properties.cover') },
+              { value: 'contain', label: t('properties.contain') },
+              { value: 'stretch', label: t('properties.stretch') },
+            ]}
+            onChange={(fit) => onChange({ ...background, fit: fit as typeof background.fit })}
+          />
+          <div className="px-2 py-1.5">
+            <button
+              type="button"
+              className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12.5px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)]"
+              onClick={pickImage}
+            >
+              {t('properties.replaceAsset')}
+            </button>
+          </div>
         </>
       )}
     </div>
@@ -733,7 +886,11 @@ function MultiControls({
 
       {shapeFirst && (
         <Section title={t('properties.appearance')}>
-          <FillField fill={shapeFirst.fill} onChange={(fill) => bulk({ fill }, shapeIds)} />
+          <FillField
+            fill={shapeFirst.fill}
+            projectId={projectId}
+            onChange={(fill) => bulk({ fill }, shapeIds)}
+          />
           <ColorField
             label={t('properties.stroke')}
             value={shapeFirst.stroke?.color ?? '#007AFF'}
@@ -835,8 +992,6 @@ function ArtboardControls({
   artboard: NonNullable<ReturnType<typeof useActiveArtboard>>;
 }) {
   const { t } = useTranslation('editor');
-  const background =
-    artboard.background.type === 'solid' ? artboard.background.color : '#ffffff';
 
   return (
     <>
@@ -845,18 +1000,11 @@ function ArtboardControls({
         <Row label={t('properties.size')} value={`${artboard.width} x ${artboard.height}`} mono />
       </Section>
       <Section title={t('properties.background')}>
-        <ColorField
-          label={t('properties.color')}
-          value={background}
-          onChange={(color) =>
-            editProject(
-              projectId,
-              (draft) => {
-                const target = draft.artboards.find((candidate) => candidate.id === artboardId);
-                if (target) target.background = { type: 'solid', color };
-              },
-              { undoable: true },
-            )
+        <BackgroundFillField
+          background={artboard.background}
+          projectId={projectId}
+          onChange={(background, asset) =>
+            setArtboardBackground(projectId, artboardId, background, asset)
           }
         />
       </Section>
@@ -937,7 +1085,11 @@ function LayerControls({
             />
           )}
           {isFilledShape(layer) && (
-            <FillField fill={layer.fill} onChange={(fill) => update({ fill })} />
+            <FillField
+              fill={layer.fill}
+              projectId={projectId}
+              onChange={(fill) => update({ fill })}
+            />
           )}
           <ColorField
             label={t('properties.stroke')}

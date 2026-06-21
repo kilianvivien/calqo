@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Layer, Line, Rect, Stage, Transformer } from 'react-konva';
+import { Layer, Line, Stage, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import {
   addLayerToActiveArtboard,
@@ -10,14 +10,15 @@ import type { CalqoArtboard, CalqoLayer, CalqoProject } from '@/lib/schema';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
 import { LayerRenderer, type NodeRegistry } from '@/editor/canvas/LayerRenderer';
+import { ArtboardBackground } from '@/editor/canvas/ArtboardBackground';
 
 interface MobileStageProps {
   project: CalqoProject;
   artboard: CalqoArtboard;
   /** Open the text quick-edit sheet (double-tap on a text/list layer). */
   onEditText: (layer: CalqoLayer) => void;
-  /** Replace the image of an image layer (double-tap on an image). */
-  onReplaceImage: (layer: CalqoLayer) => void;
+  /** Open the crop & reframe editor (double-tap on an image). */
+  onCropImage: (layer: CalqoLayer) => void;
   /** When true, one-finger drags paint a freehand stroke instead of selecting. */
   brush?: boolean;
 }
@@ -42,10 +43,6 @@ const TOUCH_ANCHOR_STROKE = 1.2;
 const TOUCH_ROTATE_OFFSET = 22;
 const MIN_ZOOM_FACTOR = 0.5;
 const MAX_ZOOM_FACTOR = 8;
-
-function backgroundColor(artboard: CalqoArtboard): string {
-  return artboard.background.type === 'solid' ? artboard.background.color : '#FFFFFF';
-}
 
 function touchDistance(a: Touch, b: Touch): number {
   return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
@@ -111,7 +108,7 @@ export function MobileStage({
   project,
   artboard,
   onEditText,
-  onReplaceImage,
+  onCropImage,
   brush = false,
 }: MobileStageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -320,13 +317,10 @@ export function MobileStage({
             clipHeight={artboard.height}
             listening={!pinching && !brush}
           >
-            <Rect
-              x={0}
-              y={0}
+            <ArtboardBackground
+              background={artboard.background}
               width={artboard.width}
               height={artboard.height}
-              fill={backgroundColor(artboard)}
-              listening={false}
             />
             {artboard.layers.map((layer) => (
               <LayerRenderer
@@ -351,7 +345,7 @@ export function MobileStage({
                 onImageCrop={(target) => {
                   if (target.type === 'image' && !target.locked) {
                     selectOne(target.id);
-                    onReplaceImage(target);
+                    onCropImage(target);
                   }
                 }}
               />

@@ -124,8 +124,46 @@ export function fillProps(fill: Fill, w: number, h: number, centered = false): K
     };
   }
 
-  // image fills are not painted on the canvas prototype yet.
+  // Image fills are painted via {@link imageFillProps} once the asset image has
+  // loaded; until then fall back to a flat fill so the shape stays visible.
   return { fill: '#FFFFFF' };
+}
+
+/** Konva pattern props that paint a loaded image as a shape fill, scaled to
+ * cover / contain / stretch the shape's `w`×`h` box. `centered` is true for
+ * centre-origin shapes (e.g. Ellipse) so the image lines up with the box. */
+export function imageFillProps(
+  image: HTMLImageElement,
+  fit: 'cover' | 'contain' | 'stretch',
+  w: number,
+  h: number,
+  centered = false,
+): Konva.ShapeConfig {
+  const iw = image.width || 1;
+  const ih = image.height || 1;
+  let scaleX: number;
+  let scaleY: number;
+  if (fit === 'stretch') {
+    scaleX = w / iw;
+    scaleY = h / ih;
+  } else {
+    const scale = fit === 'contain' ? Math.min(w / iw, h / ih) : Math.max(w / iw, h / ih);
+    scaleX = scale;
+    scaleY = scale;
+  }
+  const drawW = iw * scaleX;
+  const drawH = ih * scaleY;
+  const originX = centered ? -drawW / 2 : (w - drawW) / 2;
+  const originY = centered ? -drawH / 2 : (h - drawH) / 2;
+  return {
+    fillPatternImage: image,
+    fillPatternScaleX: scaleX,
+    fillPatternScaleY: scaleY,
+    fillPatternX: originX,
+    fillPatternY: originY,
+    fillPatternRepeat: 'no-repeat',
+    fillPriority: 'pattern',
+  };
 }
 
 /** Translate a Calqo stroke into Konva props, expanding named dash styles. */

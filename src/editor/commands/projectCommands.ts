@@ -3,6 +3,7 @@ import { dialog, storage } from '@/lib/adapters';
 import {
   createArtboard,
   createDefaultProject,
+  type BackgroundFill,
   type CalqoArtboard,
   type CalqoAssetRef,
   type CalqoLayer,
@@ -1167,11 +1168,25 @@ export function setArtboardBackgroundColor(
   artboardId: string,
   color: string,
 ): void {
+  setArtboardBackground(projectId, artboardId, { type: 'solid', color });
+}
+
+/** Set any background fill (solid, gradient, or image) on an artboard. Image
+ * backgrounds reference an asset that must already exist on the project. */
+export function setArtboardBackground(
+  projectId: string,
+  artboardId: string,
+  background: BackgroundFill,
+  asset?: CalqoAssetRef,
+): void {
   editProject(
     projectId,
     (draft) => {
+      if (asset && !draft.assets.some((existing) => existing.id === asset.id)) {
+        draft.assets.push(asset);
+      }
       const target = draft.artboards.find((candidate) => candidate.id === artboardId);
-      if (target) target.background = { type: 'solid', color };
+      if (target) target.background = background;
     },
     { undoable: true },
   );

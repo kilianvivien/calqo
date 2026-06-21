@@ -61,9 +61,11 @@ export function AddSheet({ open, onClose, onInsert }: AddSheetProps) {
             key={kind}
             type="button"
             onClick={() => onInsert(kind)}
-            className="flex flex-col items-center justify-center gap-2 rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] py-5 text-[var(--calqo-text-2)] transition-colors active:bg-[var(--calqo-hover)]"
+            className="glass-thin flex flex-col items-center justify-center gap-2 rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] py-5 text-[var(--calqo-text-2)] transition-[transform,background-color] duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-spring)] active:scale-[0.97] active:bg-[var(--calqo-hover)]"
           >
-            <Icon size={24} />
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]">
+              <Icon size={20} />
+            </span>
             <span className="text-[12px] font-medium">{t(labelKey)}</span>
           </button>
         ))}
