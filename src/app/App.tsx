@@ -16,6 +16,7 @@ const NUDGE_LARGE = 10;
 import { ErrorBoundary } from './ErrorBoundary';
 import { AppShell } from './shell/AppShell';
 import { MobileShell } from './mobile/MobileShell';
+import { PwaUpdatePrompt } from './PwaUpdatePrompt';
 import { usePhoneLayout } from '@/lib/hooks/useResponsiveMode';
 
 export function App() {
@@ -156,6 +157,7 @@ export function App() {
   return (
     <ErrorBoundary>
       {phone ? <MobileShell /> : <AppShell />}
+      <PwaUpdatePrompt />
     </ErrorBoundary>
   );
 }

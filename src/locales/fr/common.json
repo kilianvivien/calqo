@@ -122,5 +122,10 @@
     "auto": "Auto",
     "glass": "Verre",
     "solid": "Opaque"
+  },
+  "pwa": {
+    "updateAvailable": "Une nouvelle version est disponible.",
+    "reload": "Recharger",
+    "dismiss": "Plus tard"
   }
 }
