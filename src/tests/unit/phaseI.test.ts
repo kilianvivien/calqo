@@ -20,6 +20,8 @@ import {
   clampCropView,
   initCropView,
   minCoverScale,
+  MIN_CROP_FRAME,
+  resizeCropFrame,
   viewToCropRect,
   zoomCropView,
 } from '@/editor/canvas/cropGeometry';
@@ -214,6 +216,35 @@ describe('phase I — crop geometry', () => {
     expect(zoomed.scale).toBeGreaterThan(start.scale);
     const out = zoomCropView(start, frame, 0.01, 800, 600);
     expect(out.scale).toBeCloseTo(minCoverScale(800, 600, frame), 5);
+  });
+
+  describe('resizeCropFrame', () => {
+    const bounds = { x: 0, y: 0, w: 400, h: 400 };
+    const base = { x: 100, y: 100, w: 200, h: 200 };
+
+    it('drags an edge while pinning the opposite side', () => {
+      const east = resizeCropFrame(base, 'e', 50, 0, bounds);
+      expect(east).toEqual({ x: 100, y: 100, w: 250, h: 200 });
+      const west = resizeCropFrame(base, 'w', -30, 0, bounds);
+      expect(west).toEqual({ x: 70, y: 100, w: 230, h: 200 });
+    });
+
+    it('moves two edges for a corner handle', () => {
+      const se = resizeCropFrame(base, 'se', 40, 60, bounds);
+      expect(se).toEqual({ x: 100, y: 100, w: 240, h: 260 });
+    });
+
+    it('never grows beyond the bounds', () => {
+      const out = resizeCropFrame(base, 'e', 9999, 0, bounds);
+      expect(out.x + out.w).toBeLessThanOrEqual(bounds.x + bounds.w);
+    });
+
+    it('never shrinks below the minimum size', () => {
+      const out = resizeCropFrame(base, 'e', -9999, 0, bounds);
+      expect(out.w).toBeCloseTo(MIN_CROP_FRAME, 5);
+      const top = resizeCropFrame(base, 'n', 0, 9999, bounds);
+      expect(top.h).toBeCloseTo(MIN_CROP_FRAME, 5);
+    });
   });
 });
 

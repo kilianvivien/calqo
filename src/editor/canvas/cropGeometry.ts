@@ -27,6 +27,49 @@ export interface CropPixelRect {
 
 export const MAX_CROP_ZOOM = 8;
 
+/** Frame corner/edge handles, named by compass direction. */
+export type CropHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
+
+/** Smallest the interactive crop frame may shrink to (artboard px). */
+export const MIN_CROP_FRAME = 56;
+
+/** Resize a crop frame by dragging one handle by (dx, dy). The opposite
+ * edge(s) stay pinned, the frame never escapes `bounds`, and it never shrinks
+ * below {@link MIN_CROP_FRAME}. Pure so the math is unit-testable. */
+export function resizeCropFrame(
+  frame: CropFrame,
+  handle: CropHandle,
+  dx: number,
+  dy: number,
+  bounds: CropFrame,
+): CropFrame {
+  let { x, y, w, h } = frame;
+  const right = x + w;
+  const bottom = y + h;
+  const boundsRight = bounds.x + bounds.w;
+  const boundsBottom = bounds.y + bounds.h;
+
+  if (handle.includes('w')) {
+    const nx = Math.min(Math.max(bounds.x, x + dx), right - MIN_CROP_FRAME);
+    x = nx;
+    w = right - nx;
+  }
+  if (handle.includes('e')) {
+    const nr = Math.max(Math.min(boundsRight, right + dx), x + MIN_CROP_FRAME);
+    w = nr - x;
+  }
+  if (handle.includes('n')) {
+    const ny = Math.min(Math.max(bounds.y, y + dy), bottom - MIN_CROP_FRAME);
+    y = ny;
+    h = bottom - ny;
+  }
+  if (handle.includes('s')) {
+    const nb = Math.max(Math.min(boundsBottom, bottom + dy), y + MIN_CROP_FRAME);
+    h = nb - y;
+  }
+  return { x, y, w, h };
+}
+
 /** Smallest scale at which the image still fully covers the crop frame. */
 export function minCoverScale(iw: number, ih: number, frame: CropFrame): number {
   return Math.max(frame.w / iw, frame.h / ih);
