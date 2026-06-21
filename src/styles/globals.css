@@ -51,6 +51,18 @@ body {
   }
 }
 
+/* In a browser tab, mobile Safari's floating address/tab bar overlays page
+ * content and isn't reflected in the viewport or `env(safe-area-inset-bottom)`,
+ * so it covers the bottom toolbar and the create button. Pad the shell clear of
+ * it in browser display mode only — an installed PWA has no such bar, so it
+ * keeps its flush `p-2` bottom. Lifts the editor toolbar and (via the flex-1
+ * project list) the absolute "+" button together. */
+@media all and (display-mode: browser) {
+  .app-shell {
+    padding-bottom: max(env(safe-area-inset-bottom), 4rem);
+  }
+}
+
 /* Section eyebrows — all-caps tracked labels for panel headers. */
 .eyebrow {
   font-size: 10px;
