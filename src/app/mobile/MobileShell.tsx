@@ -27,43 +27,6 @@ export function MobileShell() {
     void loadAiSettings();
   }, [loadAiSettings]);
 
-  // Pin the shell to the visible viewport height. In a *browser tab* the URL bar
-  // collapses/expands, so `100dvh` overshoots and `visualViewport.height` is the
-  // accurate measure; we publish it as `--app-height` (consumed by `.app-viewport`)
-  // and keep it fresh across rotation, resize, and the launch settle.
-  //
-  // In a *standalone (PWA) launch* there is no browser chrome, so the CSS `100dvh`
-  // fallback already fills the screen edge-to-edge (we ship `viewport-fit=cover`).
-  // There, iOS's `visualViewport.height` under-reports — it returns the *safe*
-  // viewport, inset from the home indicator — which would anchor the fixed shell
-  // short of the screen and leave the bottom toolbar floating above a dead strip.
-  // So we skip the JS measure in standalone and let `100dvh` drive the height.
-  useEffect(() => {
-    const standalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
-    if (standalone) {
-      document.documentElement.style.removeProperty('--app-height');
-      return;
-    }
-
-    const vv = window.visualViewport;
-    const setHeight = () => {
-      const h = vv?.height ?? window.innerHeight;
-      document.documentElement.style.setProperty('--app-height', `${h}px`);
-    };
-    setHeight();
-    vv?.addEventListener('resize', setHeight);
-    window.addEventListener('resize', setHeight);
-    window.addEventListener('orientationchange', setHeight);
-    return () => {
-      vv?.removeEventListener('resize', setHeight);
-      window.removeEventListener('resize', setHeight);
-      window.removeEventListener('orientationchange', setHeight);
-      document.documentElement.style.removeProperty('--app-height');
-    };
-  }, []);
-
   // Keep zoom confined to the canvas: iOS Safari ignores `user-scalable=no`, so
   // suppress its pinch-gesture events here (the canvas runs its own pinch-zoom
   // via touch events, which these don't block). Only active on the phone shell.
@@ -90,8 +53,16 @@ export function MobileShell() {
   const showEditor = mode === 'editor' && project;
 
   return (
+    // Anchor the shell to all four viewport edges. A `position: fixed; inset: 0`
+    // element is sized to the initial containing block — the layout/visual
+    // viewport — which in an iOS standalone PWA is the *full screen* (home
+    // indicator included, since we ship `viewport-fit=cover`). This needs no
+    // `vh`/`dvh`/`visualViewport` arithmetic: top-anchored height units under-
+    // report on iOS standalone and left a dead strip below the toolbar. The
+    // top padding clears the translucent status bar; the toolbar carries its
+    // own `safe-area-inset-bottom` padding so it lands above the home indicator.
     <div
-      className="app-viewport fixed inset-x-0 top-0 flex touch-manipulation flex-col gap-2 p-2 pt-[max(env(safe-area-inset-top),8px)]"
+      className="fixed inset-0 flex touch-manipulation flex-col gap-2 p-2 pt-[max(env(safe-area-inset-top),8px)]"
       style={{ background: 'var(--calqo-workspace)' }}
     >
       {showEditor ? (

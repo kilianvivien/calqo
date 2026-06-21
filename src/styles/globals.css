@@ -40,17 +40,6 @@ body {
   box-sizing: border-box;
 }
 
-/* Fill the visible viewport on phones / standalone PWAs. `dvh` tracks the dynamic
- * viewport and fills the screen edge-to-edge in a standalone PWA (no browser
- * chrome). In a browser tab the collapsing URL bar makes that overshoot, so
- * `--app-height` (set from `visualViewport` in JS, browser tab only) overrides it
- * when present; `vh` is the legacy fallback. */
-.app-viewport {
-  height: 100vh;
-  height: 100dvh;
-  height: var(--app-height, 100dvh);
-}
-
 /* On phones, lock the document to the viewport. Without this, an overscroll
  * bounce in standalone (PWA) mode drags the fixed shell up and reveals a blank
  * strip beneath the toolbar. */
