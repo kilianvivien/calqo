@@ -57,10 +57,14 @@ export function MobileShell() {
     // `viewport-fit=cover` (see index.html), iOS insets the web view to the safe
     // area, so `100dvh` is exactly the visible height and the toolbar — the last
     // child of the editor's flex-1 column — sits at the bottom with no
-    // `position:fixed` and no `env()` math. `min-h-screen` (100vh) is the
-    // Safari-14 fallback ahead of `min-h-[100dvh]` (dvh is Safari 15.4+).
+    // `position:fixed` and no `env()` math. The height must be *definite* (not
+    // `min-h-*`): the canvas sizes itself from a chain of `flex-1`/`h-full`
+    // descendants, and an `h-full` (height:100%) only resolves against a parent
+    // with a definite height — a bare `min-height` leaves it auto, collapsing
+    // the stage to 0px (blank canvas). `h-screen` (100vh) is the Safari-14
+    // fallback ahead of `h-[100dvh]` (dvh is Safari 15.4+).
     <div
-      className="app-shell flex min-h-screen min-h-[100dvh] touch-manipulation flex-col gap-2 p-2"
+      className="app-shell flex h-screen h-[100dvh] touch-manipulation flex-col gap-2 p-2"
       style={{ background: 'var(--calqo-workspace)' }}
     >
       {showEditor ? (
