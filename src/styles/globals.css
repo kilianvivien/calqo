@@ -9,10 +9,10 @@ body,
   margin: 0;
 }
 
-/* Paint the root element itself with the app's workspace colour. In a standalone
- * (PWA) launch on iOS the fixed shell is sized to `visualViewport.height`, which
- * stops short of the physical screen and leaves the home-indicator safe-area
- * strip uncovered. The `<body>` background would normally propagate to the canvas
+/* Paint the root element itself with the app's workspace colour. On a phone the
+ * fixed shell can stop short of the physical screen (an overscroll bounce, or a
+ * stale viewport measure mid-launch), leaving the home-indicator safe-area strip
+ * uncovered. The `<body>` background would normally propagate to the canvas
  * and fill it, but the phone-only `overflow: hidden` below stops WebKit from
  * doing so — so iOS paints that strip the web view's default white. Giving `html`
  * its own solid background fills the canvas (and any safe area / overscroll) with
@@ -40,11 +40,11 @@ body {
   box-sizing: border-box;
 }
 
-/* Fill the visible viewport on phones / standalone PWAs. iOS reports a too-short
- * layout viewport on a standalone launch, so `position: fixed; inset: 0` (and a
- * plain `100%` height) leave a blank gap below the content. `dvh` tracks the
- * dynamic viewport, and `--app-height` (set from `visualViewport` in JS) is the
- * most reliable measure when it's available; `vh` is the legacy fallback. */
+/* Fill the visible viewport on phones / standalone PWAs. `dvh` tracks the dynamic
+ * viewport and fills the screen edge-to-edge in a standalone PWA (no browser
+ * chrome). In a browser tab the collapsing URL bar makes that overshoot, so
+ * `--app-height` (set from `visualViewport` in JS, browser tab only) overrides it
+ * when present; `vh` is the legacy fallback. */
 .app-viewport {
   height: 100vh;
   height: 100dvh;
