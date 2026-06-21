@@ -74,7 +74,10 @@ export function MobileToolbar({
       className={cn(
         'glass glass-strong',
         'rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)]',
-        'overflow-hidden p-1.5',
+        // The glass extends through the home-indicator safe area, but its bottom
+        // padding keeps the buttons clear of it — so the bar reads as one surface
+        // down to the screen edge without putting tap targets under the indicator.
+        'overflow-hidden px-1.5 pt-1.5 pb-[max(env(safe-area-inset-bottom),6px)]',
         vertical && 'h-full',
       )}
     >
