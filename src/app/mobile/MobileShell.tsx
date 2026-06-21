@@ -27,12 +27,26 @@ export function MobileShell() {
     void loadAiSettings();
   }, [loadAiSettings]);
 
-  // Pin the shell to the *visible* viewport. iOS reports a short layout viewport
-  // on a standalone (PWA) launch, so a `fixed inset-0` / `100%` height would stop
-  // short and leave a blank strip at the bottom. `visualViewport.height` is the
+  // Pin the shell to the visible viewport height. In a *browser tab* the URL bar
+  // collapses/expands, so `100dvh` overshoots and `visualViewport.height` is the
   // accurate measure; we publish it as `--app-height` (consumed by `.app-viewport`)
   // and keep it fresh across rotation, resize, and the launch settle.
+  //
+  // In a *standalone (PWA) launch* there is no browser chrome, so the CSS `100dvh`
+  // fallback already fills the screen edge-to-edge (we ship `viewport-fit=cover`).
+  // There, iOS's `visualViewport.height` under-reports — it returns the *safe*
+  // viewport, inset from the home indicator — which would anchor the fixed shell
+  // short of the screen and leave the bottom toolbar floating above a dead strip.
+  // So we skip the JS measure in standalone and let `100dvh` drive the height.
   useEffect(() => {
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    if (standalone) {
+      document.documentElement.style.removeProperty('--app-height');
+      return;
+    }
+
     const vv = window.visualViewport;
     const setHeight = () => {
       const h = vv?.height ?? window.innerHeight;
