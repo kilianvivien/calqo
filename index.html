@@ -30,6 +30,46 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- TEMP diagnostic: surface boot failures on-device (iOS Safari shows a blank
+         white page on an uncaught module/syntax error with no visible console).
+         If the app mounts normally this never renders. Remove once iOS boot is
+         confirmed healthy. -->
+    <script>
+      (function () {
+        function show(msg) {
+          var el = document.getElementById('boot-error');
+          if (!el) {
+            el = document.createElement('pre');
+            el.id = 'boot-error';
+            el.style.cssText =
+              'position:fixed;inset:0;z-index:99999;margin:0;padding:16px;white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,monospace;background:#15161c;color:#ff7a7a;overflow:auto;';
+            (document.body || document.documentElement).appendChild(el);
+          }
+          el.textContent += msg + '\n\n';
+        }
+        window.addEventListener('error', function (e) {
+          show(
+            'Error: ' +
+              (e.message || (e.error && e.error.message) || e.error || 'unknown') +
+              (e.filename ? '\n@ ' + e.filename + ':' + e.lineno + ':' + e.colno : ''),
+          );
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e.reason;
+          show('Unhandled rejection: ' + ((r && (r.stack || r.message)) || r));
+        });
+        window.addEventListener('load', function () {
+          setTimeout(function () {
+            var root = document.getElementById('root');
+            if (root && root.childElementCount === 0 && !document.getElementById('boot-error')) {
+              show(
+                'App did not mount within 6s and root is empty. No error was caught, so the JS bundle likely failed to load/execute (network, MIME, or a stale service worker).',
+              );
+            }
+          }, 6000);
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
