@@ -28,6 +28,17 @@ body {
   box-sizing: border-box;
 }
 
+/* Fill the visible viewport on phones / standalone PWAs. iOS reports a too-short
+ * layout viewport on a standalone launch, so `position: fixed; inset: 0` (and a
+ * plain `100%` height) leave a blank gap below the content. `dvh` tracks the
+ * dynamic viewport, and `--app-height` (set from `visualViewport` in JS) is the
+ * most reliable measure when it's available; `vh` is the legacy fallback. */
+.app-viewport {
+  height: 100vh;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+}
+
 /* Section eyebrows — all-caps tracked labels for panel headers. */
 .eyebrow {
   font-size: 10px;

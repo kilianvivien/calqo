@@ -27,6 +27,29 @@ export function MobileShell() {
     void loadAiSettings();
   }, [loadAiSettings]);
 
+  // Pin the shell to the *visible* viewport. iOS reports a short layout viewport
+  // on a standalone (PWA) launch, so a `fixed inset-0` / `100%` height would stop
+  // short and leave a blank strip at the bottom. `visualViewport.height` is the
+  // accurate measure; we publish it as `--app-height` (consumed by `.app-viewport`)
+  // and keep it fresh across rotation, resize, and the launch settle.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const setHeight = () => {
+      const h = vv?.height ?? window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', `${h}px`);
+    };
+    setHeight();
+    vv?.addEventListener('resize', setHeight);
+    window.addEventListener('resize', setHeight);
+    window.addEventListener('orientationchange', setHeight);
+    return () => {
+      vv?.removeEventListener('resize', setHeight);
+      window.removeEventListener('resize', setHeight);
+      window.removeEventListener('orientationchange', setHeight);
+      document.documentElement.style.removeProperty('--app-height');
+    };
+  }, []);
+
   // Keep zoom confined to the canvas: iOS Safari ignores `user-scalable=no`, so
   // suppress its pinch-gesture events here (the canvas runs its own pinch-zoom
   // via touch events, which these don't block). Only active on the phone shell.
@@ -54,7 +77,7 @@ export function MobileShell() {
 
   return (
     <div
-      className="fixed inset-0 flex touch-manipulation flex-col gap-2 p-2 pt-[max(env(safe-area-inset-top),8px)]"
+      className="app-viewport fixed inset-x-0 top-0 flex touch-manipulation flex-col gap-2 p-2 pt-[max(env(safe-area-inset-top),8px)]"
       style={{ background: 'var(--calqo-workspace)' }}
     >
       {showEditor ? (
