@@ -17,6 +17,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { AppShell } from './shell/AppShell';
 import { MobileShell } from './mobile/MobileShell';
 import { PwaUpdatePrompt } from './PwaUpdatePrompt';
+import { PwaInstallPrompt } from './PwaInstallPrompt';
 import { usePhoneLayout } from '@/lib/hooks/useResponsiveMode';
 
 export function App() {
@@ -158,6 +159,7 @@ export function App() {
     <ErrorBoundary>
       {phone ? <MobileShell /> : <AppShell />}
       <PwaUpdatePrompt />
+      <PwaInstallPrompt />
     </ErrorBoundary>
   );
 }
