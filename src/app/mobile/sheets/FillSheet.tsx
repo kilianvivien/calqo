@@ -11,6 +11,7 @@ import type {
   CalqoLayer,
   CalqoProject,
   Fill,
+  StrokeStyle,
 } from '@/lib/schema';
 import {
   BACKGROUND_FILL_TYPE_OPTIONS,
@@ -33,7 +34,13 @@ interface FillSheetProps {
   layer: CalqoLayer | null;
 }
 
-/** Shapes take the full fill editor; text/list/svg only recolour a flat colour. */
+/** Any shape layer gets stroke controls; only filled shapes get the fill editor. */
+function isShapeLayer(layer: CalqoLayer | null): layer is Extract<CalqoLayer, { type: 'shape' }> {
+  return layer?.type === 'shape';
+}
+
+/** Shapes with an interior fill take the full fill editor; line/arrow/freehand
+ * are stroke-only and skip it. */
 function isShapeFill(layer: CalqoLayer | null): layer is Extract<CalqoLayer, { type: 'shape' }> {
   return (
     layer?.type === 'shape' &&
@@ -328,6 +335,81 @@ function ShapeFillControls({
   );
 }
 
+/** Stroke editor for any shape. Line/arrow/freehand treat the stroke as their
+ * only colour and weight (the "thickness" of a line); filled shapes treat it as
+ * an optional border that can be removed by sliding the width to 0. */
+function ShapeStrokeControls({
+  projectId,
+  layer,
+  palette,
+}: {
+  projectId: string;
+  layer: Extract<CalqoLayer, { type: 'shape' }>;
+  palette: string[];
+}) {
+  const { t } = useTranslation('editor');
+  const stroke = layer.stroke;
+  const strokeOnly =
+    layer.shape === 'line' || layer.shape === 'arrow' || layer.shape === 'freehand';
+  const update = (patch: Parameters<typeof updateLayerInActiveArtboard>[2]) =>
+    updateLayerInActiveArtboard(projectId, layer.id, patch);
+
+  const setColor = (color: string) =>
+    update({ stroke: { ...stroke, color, width: stroke?.width ?? 2 } });
+
+  const setWidth = (width: number) => {
+    if (strokeOnly) {
+      // A line/freehand stroke is the element itself — never let it vanish.
+      update({
+        stroke: { ...stroke, color: stroke?.color ?? '#007AFF', width: Math.max(1, width) },
+      });
+      return;
+    }
+    update({
+      stroke:
+        width > 0
+          ? { ...stroke, color: stroke?.color ?? '#007AFF', width }
+          : undefined,
+    });
+  };
+
+  const setStyle = (style: NonNullable<StrokeStyle['style']>) =>
+    update({
+      stroke: { ...stroke, color: stroke?.color ?? '#007AFF', width: stroke?.width ?? 2, style },
+    });
+
+  return (
+    <>
+      <ColorRow
+        label={strokeOnly ? t('properties.color') : t('properties.stroke')}
+        value={stroke?.color}
+        palette={palette}
+        onPick={setColor}
+      />
+      <Slider
+        label={t('properties.strokeWidth')}
+        value={stroke?.width ?? 0}
+        min={strokeOnly ? 1 : 0}
+        max={40}
+        step={0.5}
+        onChange={setWidth}
+      />
+      {(stroke?.width ?? 0) > 0 && (
+        <Chips
+          label={t('properties.strokeStyle')}
+          value={stroke?.style ?? 'solid'}
+          options={[
+            { value: 'solid' as const, label: t('properties.styleSolid') },
+            { value: 'dashed' as const, label: t('properties.styleDashed') },
+            { value: 'dotted' as const, label: t('properties.styleDotted') },
+          ]}
+          onChange={setStyle}
+        />
+      )}
+    </>
+  );
+}
+
 /** Background editor (solid / gradient / image). */
 function BackgroundFillControls({
   projectId,
@@ -434,6 +516,7 @@ export function FillSheet({ open, onClose, project, artboard, layer }: FillSheet
   const { t } = useTranslation('editor');
   const shapeImageInput = useRef<HTMLInputElement>(null);
   const bgImageInput = useRef<HTMLInputElement>(null);
+  const shapeLayer = isShapeLayer(layer);
   const shape = isShapeFill(layer);
   const flat = isFlatRecolorable(layer);
 
@@ -466,6 +549,13 @@ export function FillSheet({ open, onClose, project, artboard, layer }: FillSheet
           layer={layer}
           palette={project.palette}
           inputRef={shapeImageInput}
+        />
+      )}
+      {shapeLayer && layer && (
+        <ShapeStrokeControls
+          projectId={project.id}
+          layer={layer}
+          palette={project.palette}
         />
       )}
       {flat && layer && (

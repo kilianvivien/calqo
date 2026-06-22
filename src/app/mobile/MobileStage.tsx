@@ -12,7 +12,7 @@ import { useUiStore } from '@/lib/state/uiStore';
 import { LayerRenderer, type NodeRegistry } from '@/editor/canvas/LayerRenderer';
 import { ArtboardBackground } from '@/editor/canvas/ArtboardBackground';
 import { computeSnap, SNAP_DISTANCE } from '@/editor/canvas/snapping';
-import { flattenLayers } from '@/editor/utils/layers';
+import { findLayerInArtboard, flattenLayers } from '@/editor/utils/layers';
 
 interface MobileStageProps {
   project: CalqoProject;
@@ -319,6 +319,18 @@ export function MobileStage({
   const brushDefaults = useUiStore((s) => s.shapeDefaults);
   const scale = current.scale;
 
+  // Lines/arrows have a near-flat bounding box, so the default transformer
+  // (which rejects boxes under 12px and sits its handles on top of the stroke)
+  // makes them nearly ungrabbable on touch. Pad the box, push the rotate handle
+  // out, and stop rejecting thin boxes — mirrors the desktop stage.
+  const onlySelected =
+    selectedLayerIds.length === 1
+      ? findLayerInArtboard(artboard, selectedLayerIds[0])
+      : null;
+  const lineLike =
+    onlySelected?.type === 'shape' &&
+    (onlySelected.shape === 'line' || onlySelected.shape === 'arrow');
+
   return (
     <div
       ref={containerRef}
@@ -389,8 +401,9 @@ export function MobileStage({
               rotateEnabled
               ignoreStroke
               useSingleNodeRotation
-              rotateAnchorOffset={TOUCH_ROTATE_OFFSET / scale}
-              anchorSize={TOUCH_ANCHOR / scale}
+              padding={lineLike ? 18 / scale : 0}
+              rotateAnchorOffset={(lineLike ? 34 : TOUCH_ROTATE_OFFSET) / scale}
+              anchorSize={(lineLike ? 11 : TOUCH_ANCHOR) / scale}
               anchorCornerRadius={TOUCH_ANCHOR_RADIUS / scale}
               anchorStrokeWidth={TOUCH_ANCHOR_STROKE / scale}
               anchorStroke="#007AFF"
@@ -398,7 +411,9 @@ export function MobileStage({
               borderStroke="#007AFF"
               borderStrokeWidth={1.5 / scale}
               boundBoxFunc={(oldBox, next) =>
-                next.width < 12 || next.height < 12 ? oldBox : next
+                // Lines/arrows are legitimately thin — never reject their box or
+                // both resize and rotate get blocked. Other shapes keep a floor.
+                !lineLike && (next.width < 12 || next.height < 12) ? oldBox : next
               }
             />
             {draft && draft.length >= 2 && (
