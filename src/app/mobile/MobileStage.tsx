@@ -11,6 +11,8 @@ import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
 import { LayerRenderer, type NodeRegistry } from '@/editor/canvas/LayerRenderer';
 import { ArtboardBackground } from '@/editor/canvas/ArtboardBackground';
+import { computeSnap, SNAP_DISTANCE } from '@/editor/canvas/snapping';
+import { flattenLayers } from '@/editor/utils/layers';
 
 interface MobileStageProps {
   project: CalqoProject;
@@ -125,6 +127,9 @@ export function MobileStage({
   const selectedLayerIds = useSelectionStore((s) => s.selectedLayerIds);
   const selectOne = useSelectionStore((s) => s.selectOne);
   const clearSelection = useSelectionStore((s) => s.clearSelection);
+  const snapEnabled = useUiStore((s) => s.snapEnabled);
+  const guides = useUiStore((s) => s.guides);
+  const setGuides = useUiStore((s) => s.setGuides);
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -185,6 +190,8 @@ export function MobileStage({
       // A second finger turns a brush stroke into a pinch — drop the draft.
       drawing.current = false;
       setDraft(null);
+      // Drop any snap guide from a one-finger drag the pinch interrupts.
+      useUiStore.getState().setGuides([]);
       setPinching(true);
       event.preventDefault();
     };
@@ -285,6 +292,30 @@ export function MobileStage({
     }
   };
 
+  // Smart snapping while dragging: snap the moving node to other layers and the
+  // artboard, drawing guide lines — same engine as the desktop stage. Runs in
+  // artboard coordinates (via getClientRect), so the view transform is irrelevant.
+  const snapNode = (layer: CalqoLayer, node: Konva.Node) => {
+    if (!snapEnabled) return;
+    const rect = node.getClientRect({ relativeTo: node.getParent() ?? undefined });
+    const others = flattenLayers(artboard.layers)
+      .filter((candidate) => candidate.id !== layer.id && candidate.visible)
+      .map((candidate) => ({
+        x: candidate.x,
+        y: candidate.y,
+        width: candidate.w,
+        height: candidate.h,
+      }));
+    const { dx, dy, guides: nextGuides } = computeSnap(
+      { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      others,
+      { width: artboard.width, height: artboard.height },
+      SNAP_DISTANCE,
+    );
+    if (dx || dy) node.position({ x: node.x() + dx, y: node.y() + dy });
+    setGuides(nextGuides);
+  };
+
   const brushDefaults = useUiStore((s) => s.shapeDefaults);
   const scale = current.scale;
 
@@ -330,8 +361,11 @@ export function MobileStage({
                 selected={selectedLayerIds.includes(layer.id)}
                 nodeRefs={nodeRefs}
                 onSelect={(target) => selectOne(target.id)}
-                onDragMove={() => {}}
-                onDragEnd={(target, node) => commitNode(project.id, target, node)}
+                onDragMove={snapNode}
+                onDragEnd={(target, node) => {
+                  commitNode(project.id, target, node);
+                  setGuides([]);
+                }}
                 onTransformEnd={(target, node) => commitNode(project.id, target, node)}
                 onTextEdit={(target) => {
                   if (
@@ -378,6 +412,20 @@ export function MobileStage({
                 listening={false}
               />
             )}
+            {guides.map((guide) => (
+              <Line
+                key={`${guide.axis}-${guide.position}`}
+                points={
+                  guide.axis === 'x'
+                    ? [guide.position, 0, guide.position, artboard.height]
+                    : [0, guide.position, artboard.width, guide.position]
+                }
+                stroke="#007AFF"
+                strokeWidth={1 / scale}
+                dash={[8 / scale, 5 / scale]}
+                listening={false}
+              />
+            ))}
           </Layer>
         </Stage>
       )}

@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  AlignCenterHorizontal,
+  AlignCenterVertical,
+  AlignEndHorizontal,
+  AlignEndVertical,
+  AlignStartHorizontal,
+  AlignStartVertical,
   ArrowDown,
   ArrowUp,
   ChevronDown,
@@ -9,10 +15,13 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import {
+  alignSelectionToArtboard,
   nudgeSelectedLayers,
   shiftSelectionZOrder,
 } from '@/editor/commands/projectCommands';
+import type { AlignMode } from '@/editor/utils/arrange';
 import type { CalqoProject } from '@/lib/schema';
+import { useUiStore } from '@/lib/state/uiStore';
 import { BottomSheet } from '@/components/mobile';
 import { cn } from '@/lib/utils/cn';
 
@@ -50,13 +59,26 @@ function PadButton({
   );
 }
 
-/** Fine-position and z-order controls for the current selection: a nudge pad
- * (1px / 10px step) plus bring-forward / send-backward (PRD §5.9 "nudge",
- * "reorder"). Coarse move/resize happen by touch on the canvas itself. */
+/** The align-to-canvas controls, paired with the icon and accessible label. */
+const ALIGN_ACTIONS: { mode: AlignMode; icon: typeof AlignStartVertical; key: string }[] = [
+  { mode: 'left', icon: AlignStartVertical, key: 'alignLeft' },
+  { mode: 'center-h', icon: AlignCenterVertical, key: 'centerH' },
+  { mode: 'right', icon: AlignEndVertical, key: 'alignRight' },
+  { mode: 'top', icon: AlignStartHorizontal, key: 'alignTop' },
+  { mode: 'middle', icon: AlignCenterHorizontal, key: 'centerV' },
+  { mode: 'bottom', icon: AlignEndHorizontal, key: 'alignBottom' },
+];
+
+/** Fine-position and z-order controls for the current selection: a snap toggle,
+ * a nudge pad (1px / 10px step), bring-forward / send-backward, and
+ * align-to-canvas (PRD §5.9 "nudge", "reorder"). Coarse move/resize happen by
+ * touch on the canvas itself. */
 export function ArrangeSheet({ open, onClose, project }: ArrangeSheetProps) {
   const { t } = useTranslation('editor');
   const [coarse, setCoarse] = useState(false);
   const step = coarse ? 10 : 1;
+  const snapEnabled = useUiStore((s) => s.snapEnabled);
+  const setSnapEnabled = useUiStore((s) => s.setSnapEnabled);
 
   return (
     <BottomSheet
@@ -66,6 +88,32 @@ export function ArrangeSheet({ open, onClose, project }: ArrangeSheetProps) {
       bodyClassName="pb-4"
     >
       <div className="flex items-center justify-between py-1">
+        <span className="text-[12px] font-medium text-[var(--calqo-text-2)]">
+          {t('mobile.arrange.snap')}
+        </span>
+        <div className="flex gap-1 rounded-full bg-[var(--calqo-hover)] p-0.5">
+          {[
+            { value: true, label: t('mobile.arrange.on') },
+            { value: false, label: t('mobile.arrange.off') },
+          ].map((option) => (
+            <button
+              key={String(option.value)}
+              type="button"
+              onClick={() => setSnapEnabled(option.value)}
+              className={cn(
+                'rounded-full px-3 py-1 text-[12px] font-medium transition-colors',
+                snapEnabled === option.value
+                  ? 'bg-[var(--calqo-accent)] text-[var(--calqo-text-on-accent)]'
+                  : 'text-[var(--calqo-text-2)]',
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between py-1">
         <span className="text-[12px] font-medium text-[var(--calqo-text-2)]">
           {t('mobile.arrange.step')}
         </span>
@@ -132,6 +180,25 @@ export function ArrangeSheet({ open, onClose, project }: ArrangeSheetProps) {
           <ArrowDown size={16} />
           {t('mobile.arrange.backward')}
         </button>
+      </div>
+
+      <div className="mt-5">
+        <span className="text-[12px] font-medium text-[var(--calqo-text-2)]">
+          {t('mobile.arrange.alignTitle')}
+        </span>
+        <div className="mt-2 grid grid-cols-6 gap-1.5">
+          {ALIGN_ACTIONS.map(({ mode, icon: Icon, key }) => (
+            <button
+              key={mode}
+              type="button"
+              aria-label={t(`mobile.arrange.${key}`)}
+              onClick={() => alignSelectionToArtboard(project.id, mode)}
+              className="grid h-11 place-items-center rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] text-[var(--calqo-text-2)] active:bg-[var(--calqo-hover)]"
+            >
+              <Icon size={18} />
+            </button>
+          ))}
+        </div>
       </div>
     </BottomSheet>
   );

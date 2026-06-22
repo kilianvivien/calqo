@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   alignSelectedLayers,
+  alignSelectionToArtboard,
   distributeSelectedLayers,
   isProjectDirty,
   nudgeSelectedLayers,
@@ -204,6 +205,26 @@ describe('phase K — arrange commands', () => {
     // Locked layer is untouched.
     expect(findLayerInArtboard(current.artboards[0], lockedC.id)?.x).toBe(500);
     expect(historyStore.getState().histories[project.id].past).toHaveLength(1);
+  });
+
+  it('centers a single selected layer on the artboard (mobile align-to-canvas)', () => {
+    vi.useFakeTimers();
+    const project = createDefaultProject(); // 1080×1080 artboard
+    const a = createShapeLayer('rect', 0, 0, 100, 100);
+    commitProject(project, [a]);
+    selectionStore.getState().setSelection([a.id]);
+
+    alignSelectionToArtboard(project.id, 'center-h');
+    alignSelectionToArtboard(project.id, 'middle');
+
+    const current = projectStore.getState().projects[project.id];
+    expect(findLayerInArtboard(current.artboards[0], a.id)?.x).toBe(490); // (1080-100)/2
+    expect(findLayerInArtboard(current.artboards[0], a.id)?.y).toBe(490);
+
+    alignSelectionToArtboard(project.id, 'right');
+    expect(
+      findLayerInArtboard(projectStore.getState().projects[project.id].artboards[0], a.id)?.x,
+    ).toBe(980); // 1080-100
   });
 
   it('distributes only with ≥3 arrangeable layers', () => {

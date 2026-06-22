@@ -135,11 +135,11 @@ A **responsive, touch-first** interface for the web app on phones, scoped to *qu
 - **Switch content locale** and **run instant translation** (the "fix the FR/TR/EN card and post it" flow).
 - **Replace / swap images** (from camera roll or camera).
 - Recolor elements and background; adjust the project palette.
-- **Move / resize / nudge** existing elements with touch-friendly handles (no precision layout tooling required).
+- **Move / resize / nudge** existing elements with touch-friendly handles, including **smart snapping guides** while dragging (snap to other elements' and the artboard's edges/centers, plus equal-spacing) and **align-to-canvas** buttons (center / edge against the artboard) for the selected element.
 - Basic layer actions: show/hide, reorder.
 - **Export & share**: save to camera roll and invoke the native share sheet.
 
-**Explicitly out of scope for the phone interface:** prompt-a-template authoring, multi-element grouping, fine alignment/distribution tools, SVG/HTML export. These remain desktop/tablet features.
+**Explicitly out of scope for the phone interface:** prompt-a-template authoring, multi-element grouping, multi-select and element-to-element alignment/distribution, SVG/HTML export. These remain desktop/tablet features. (Snapping guides and align-to-canvas for a single selection *are* available — see above.)
 
 **Design notes:** collapse the floating glass panels into bottom sheets / a contextual toolbar; honor `prefers-reduced-transparency`; lazily mount only the active artboard's Konva stage to keep memory low on device.
 

@@ -800,6 +800,19 @@ export function alignSelectedLayers(projectId: string, mode: AlignMode): void {
   applyPositionPatches(projectId, alignBoxes(resolved.boxes, mode, reference));
 }
 
+/** Align the selected layer(s) against the artboard rather than their shared
+ * bounding box. Works with a single selection (the mobile "center on canvas"
+ * case) as well as many. */
+export function alignSelectionToArtboard(projectId: string, mode: AlignMode): void {
+  const resolved = selectedArrangeBoxes(projectId);
+  if (!resolved || resolved.boxes.length === 0) return;
+  const project = projectStore.getState().projects[projectId];
+  const artboard = project?.artboards.find((ab) => ab.id === resolved.artboardId);
+  if (!artboard) return;
+  const reference = { x: 0, y: 0, w: artboard.width, h: artboard.height };
+  applyPositionPatches(projectId, alignBoxes(resolved.boxes, mode, reference));
+}
+
 /** Distribute the selected layers with equal gaps along an axis (≥3 layers). */
 export function distributeSelectedLayers(projectId: string, axis: Axis): void {
   const resolved = selectedArrangeBoxes(projectId);

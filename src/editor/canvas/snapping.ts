@@ -1,5 +1,8 @@
 import type { CanvasGuide } from '@/lib/state/uiStore';
 
+/** Snap threshold in artboard pixels, shared by the desktop and mobile stages. */
+export const SNAP_DISTANCE = 6;
+
 export interface SnapRect {
   x: number;
   y: number;

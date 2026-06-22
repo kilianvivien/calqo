@@ -39,7 +39,7 @@ import { ArtboardBackground } from './ArtboardBackground';
 import { CanvasContextMenu } from './CanvasContextMenu';
 import { registerStageSampler } from './stageSampler';
 import { useAssetImage } from './useAssetImage';
-import { computeSnap } from './snapping';
+import { computeSnap, SNAP_DISTANCE } from './snapping';
 import {
   clampCropView,
   initCropView,
@@ -76,7 +76,6 @@ type ContextMenuState = { x: number; y: number };
 
 type ShapeTool = 'rect' | 'ellipse' | 'line' | 'arrow' | PolygonPreset;
 
-const SNAP_DISTANCE = 6;
 const TRANSFORMER_ANCHOR_SIZE = 5;
 const SHAPE_TOOLS = new Set<string>([
   'rect',

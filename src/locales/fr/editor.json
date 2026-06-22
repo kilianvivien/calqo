@@ -581,7 +581,17 @@
       "left": "Décaler à gauche",
       "right": "Décaler à droite",
       "forward": "Avancer",
-      "backward": "Reculer"
+      "backward": "Reculer",
+      "snap": "Aimanter",
+      "on": "Activé",
+      "off": "Désactivé",
+      "alignTitle": "Aligner sur le canevas",
+      "alignLeft": "Aligner à gauche",
+      "centerH": "Centrer horizontalement",
+      "alignRight": "Aligner à droite",
+      "alignTop": "Aligner en haut",
+      "centerV": "Centrer verticalement",
+      "alignBottom": "Aligner en bas"
     },
     "export": {
       "title": "Exporter et partager",
