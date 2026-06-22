@@ -581,7 +581,17 @@
       "left": "Nudge left",
       "right": "Nudge right",
       "forward": "Forward",
-      "backward": "Backward"
+      "backward": "Backward",
+      "snap": "Snap",
+      "on": "On",
+      "off": "Off",
+      "alignTitle": "Align to canvas",
+      "alignLeft": "Align left",
+      "centerH": "Center horizontally",
+      "alignRight": "Align right",
+      "alignTop": "Align top",
+      "centerV": "Center vertically",
+      "alignBottom": "Align bottom"
     },
     "export": {
       "title": "Export & share",
