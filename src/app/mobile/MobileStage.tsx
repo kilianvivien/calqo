@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Layer, Line, Stage, Transformer } from 'react-konva';
+import { useTranslation } from 'react-i18next';
+import { Circle, Layer, Line, Stage, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import {
   addLayerToActiveArtboard,
@@ -12,6 +13,12 @@ import { useUiStore } from '@/lib/state/uiStore';
 import { LayerRenderer, type NodeRegistry } from '@/editor/canvas/LayerRenderer';
 import { ArtboardBackground } from '@/editor/canvas/ArtboardBackground';
 import { computeSnap, SNAP_DISTANCE } from '@/editor/canvas/snapping';
+import {
+  DEFAULT_ARROW_HEAD,
+  lineEndpoints,
+  lineSegmentPatch,
+  type Point,
+} from '@/editor/canvas/lineGeometry';
 import { findLayerInArtboard, flattenLayers } from '@/editor/utils/layers';
 
 interface MobileStageProps {
@@ -45,6 +52,12 @@ const TOUCH_ANCHOR_STROKE = 1.2;
 const TOUCH_ROTATE_OFFSET = 22;
 const MIN_ZOOM_FACTOR = 0.5;
 const MAX_ZOOM_FACTOR = 8;
+/** Finger-sized draggable endpoint handles for line/arrow editing. */
+const ENDPOINT_RADIUS = 13;
+const ENDPOINT_STROKE = 2;
+/** Long-press (ms) on a line/arrow toggles its arrow head; movement cancels. */
+const LONG_PRESS_MS = 480;
+const LONG_PRESS_MOVE_TOLERANCE = 12;
 
 function touchDistance(a: Touch, b: Touch): number {
   return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
@@ -113,6 +126,7 @@ export function MobileStage({
   onCropImage,
   brush = false,
 }: MobileStageProps) {
+  const { t } = useTranslation('editor');
   const containerRef = useRef<HTMLDivElement>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const nodeRefs = useRef<NodeRegistry>(new Map());
@@ -120,9 +134,16 @@ export function MobileStage({
   const [view, setView] = useState<View | null>(null);
   const [pinching, setPinching] = useState(false);
   const [draft, setDraft] = useState<number[] | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const drawing = useRef(false);
   const draftRef = useRef<number[] | null>(null);
   draftRef.current = draft;
+  // Endpoint drag: the fixed end + which handle moves, so we can rebuild the
+  // segment from the live handle position. Long-press: a timer armed on a
+  // line/arrow press that fires only if the finger stays put.
+  const endpointDrag = useRef<{ which: 'a' | 'b'; fixed: Point; layerId: string } | null>(null);
+  const longPress = useRef<{ timer: number; x: number; y: number } | null>(null);
+  const hintTimer = useRef<number | null>(null);
 
   const selectedLayerIds = useSelectionStore((s) => s.selectedLayerIds);
   const selectOne = useSelectionStore((s) => s.selectOne);
@@ -130,6 +151,19 @@ export function MobileStage({
   const snapEnabled = useUiStore((s) => s.snapEnabled);
   const guides = useUiStore((s) => s.guides);
   const setGuides = useUiStore((s) => s.setGuides);
+
+  // A single selected line/arrow swaps its transform box for direct endpoint
+  // handles (drag to rotate + lengthen) — the default transformer is nearly
+  // ungrabbable on a near-flat line.
+  const onlySelected =
+    selectedLayerIds.length === 1
+      ? findLayerInArtboard(artboard, selectedLayerIds[0])
+      : null;
+  const lineLike =
+    onlySelected?.type === 'shape' &&
+    (onlySelected.shape === 'line' || onlySelected.shape === 'arrow')
+      ? onlySelected
+      : null;
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -144,6 +178,11 @@ export function MobileStage({
 
   // Reset to a fresh fit when switching artboards.
   useEffect(() => setView(null), [artboard.id]);
+
+  // Drop a pending hint timer if the editor unmounts mid-flash.
+  useEffect(() => () => {
+    if (hintTimer.current) window.clearTimeout(hintTimer.current);
+  }, []);
 
   const fitScale =
     size.width > 0 && size.height > 0
@@ -187,9 +226,11 @@ export function MobileStage({
       const [a, b] = [event.touches[0], event.touches[1]];
       const c = localCenter(a, b);
       gesture = { dist: touchDistance(a, b), cx: c.x, cy: c.y, view: viewRef.current };
-      // A second finger turns a brush stroke into a pinch — drop the draft.
+      // A second finger turns a brush stroke into a pinch — drop the draft and
+      // any armed long-press.
       drawing.current = false;
       setDraft(null);
+      cancelLongPress();
       // Drop any snap guide from a one-finger drag the pinch interrupts.
       useUiStore.getState().setGuides([]);
       setPinching(true);
@@ -231,16 +272,19 @@ export function MobileStage({
     };
   }, []);
 
-  // Keep the transformer attached to the current selection.
+  // Keep the transformer attached to the current selection — except a lone
+  // line/arrow, which is driven by its own endpoint handles instead.
   useEffect(() => {
     const tr = transformerRef.current;
     if (!tr) return;
-    const nodes = selectedLayerIds
-      .map((id) => nodeRefs.current.get(id))
-      .filter((node): node is Konva.Node => Boolean(node));
+    const nodes = lineLike
+      ? []
+      : selectedLayerIds
+          .map((id) => nodeRefs.current.get(id))
+          .filter((node): node is Konva.Node => Boolean(node));
     tr.nodes(nodes);
     tr.getLayer()?.batchDraw();
-  }, [selectedLayerIds, artboard, current.scale]);
+  }, [selectedLayerIds, artboard, current.scale, lineLike]);
 
   const handleStageTap = (
     event: Konva.KonvaEventObject<MouseEvent | TouchEvent>,
@@ -259,8 +303,73 @@ export function MobileStage({
     return { x: (pos.x - v.x) / v.scale, y: (pos.y - v.y) / v.scale };
   };
 
+  const cancelLongPress = () => {
+    if (longPress.current) {
+      window.clearTimeout(longPress.current.timer);
+      longPress.current = null;
+    }
+  };
+
+  const flashHint = (message: string) => {
+    setHint(message);
+    if (hintTimer.current) window.clearTimeout(hintTimer.current);
+    hintTimer.current = window.setTimeout(() => setHint(null), 1500);
+  };
+
+  // Climb from a hit node to the line/arrow layer id it belongs to (if any).
+  const lineLayerIdFor = (node: Konva.Node | null): string | null => {
+    let cur: Konva.Node | null = node;
+    while (cur) {
+      const id = typeof cur.id === 'function' ? cur.id() : undefined;
+      if (id) {
+        const layer = findLayerInArtboard(artboard, id);
+        if (
+          layer?.type === 'shape' &&
+          (layer.shape === 'line' || layer.shape === 'arrow') &&
+          !layer.locked
+        ) {
+          return id;
+        }
+      }
+      cur = cur.getParent();
+    }
+    return null;
+  };
+
+  // Long-press a line ⇄ arrow to toggle its head, keeping the insert UI lean.
+  const toggleLineArrow = (layerId: string) => {
+    const layer = findLayerInArtboard(artboard, layerId);
+    if (layer?.type !== 'shape') return;
+    selectOne(layerId);
+    if (layer.shape === 'line') {
+      updateLayerInActiveArtboard(project.id, layerId, {
+        shape: 'arrow',
+        arrow: layer.arrow ?? { ...DEFAULT_ARROW_HEAD },
+      });
+      flashHint(t('mobile.line.toArrow'));
+    } else {
+      updateLayerInActiveArtboard(project.id, layerId, { shape: 'line' });
+      flashHint(t('mobile.line.toLine'));
+    }
+    navigator.vibrate?.(15);
+  };
+
+  const maybeArmLongPress = (event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+    const evt = event.evt;
+    if (!('touches' in evt) || evt.touches.length !== 1) return;
+    const layerId = lineLayerIdFor(event.target);
+    if (!layerId) return;
+    const touch = evt.touches[0];
+    const timer = window.setTimeout(() => {
+      longPress.current = null;
+      toggleLineArrow(layerId);
+    }, LONG_PRESS_MS);
+    longPress.current = { timer, x: touch.clientX, y: touch.clientY };
+  };
+
   const onPointerDown = (event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (!brush) {
+      maybeArmLongPress(event);
       handleStageTap(event);
       return;
     }
@@ -274,6 +383,18 @@ export function MobileStage({
   };
 
   const onPointerMove = (event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+    // Any real movement means it's a drag/select, not a long-press hold.
+    const lp = longPress.current;
+    if (lp && 'touches' in event.evt) {
+      const touch = event.evt.touches[0];
+      if (
+        touch &&
+        Math.hypot(touch.clientX - lp.x, touch.clientY - lp.y) >
+          LONG_PRESS_MOVE_TOLERANCE
+      ) {
+        cancelLongPress();
+      }
+    }
     if (!brush || !drawing.current) return;
     const stage = event.target.getStage();
     const p = stage && toArtboard(stage);
@@ -282,6 +403,7 @@ export function MobileStage({
   };
 
   const finishStroke = () => {
+    cancelLongPress();
     if (!drawing.current) return;
     drawing.current = false;
     const points = draftRef.current;
@@ -290,6 +412,45 @@ export function MobileStage({
       const layer = createFreehandLayer(points, useUiStore.getState().shapeDefaults);
       if (layer) addLayerToActiveArtboard(project.id, layer);
     }
+  };
+
+  // Drag a line/arrow endpoint: rebuild the segment live on the Konva node for
+  // smooth feedback, then commit the normalised geometry once on release.
+  const handleEnds = lineLike ? lineEndpoints(lineLike) : null;
+
+  const onEndpointDragStart = (which: 'a' | 'b') => {
+    if (!lineLike || !handleEnds) return;
+    cancelLongPress();
+    endpointDrag.current = {
+      which,
+      fixed: which === 'a' ? handleEnds.b : handleEnds.a,
+      layerId: lineLike.id,
+    };
+  };
+
+  const onEndpointDragMove = (event: Konva.KonvaEventObject<DragEvent>) => {
+    const drag = endpointDrag.current;
+    if (!drag) return;
+    const moved = { x: event.target.x(), y: event.target.y() };
+    const a = drag.which === 'a' ? moved : drag.fixed;
+    const b = drag.which === 'b' ? moved : drag.fixed;
+    const node = nodeRefs.current.get(drag.layerId) as Konva.Line | undefined;
+    if (node) {
+      node.position({ x: a.x, y: a.y });
+      node.rotation(0);
+      node.points([0, 0, b.x - a.x, b.y - a.y]);
+      node.getLayer()?.batchDraw();
+    }
+  };
+
+  const onEndpointDragEnd = (event: Konva.KonvaEventObject<DragEvent>) => {
+    const drag = endpointDrag.current;
+    endpointDrag.current = null;
+    if (!drag) return;
+    const moved = { x: event.target.x(), y: event.target.y() };
+    const a = drag.which === 'a' ? moved : drag.fixed;
+    const b = drag.which === 'b' ? moved : drag.fixed;
+    updateLayerInActiveArtboard(project.id, drag.layerId, lineSegmentPatch(a, b));
   };
 
   // Smart snapping while dragging: snap the moving node to other layers and the
@@ -318,18 +479,6 @@ export function MobileStage({
 
   const brushDefaults = useUiStore((s) => s.shapeDefaults);
   const scale = current.scale;
-
-  // Lines/arrows have a near-flat bounding box, so the default transformer
-  // (which rejects boxes under 12px and sits its handles on top of the stroke)
-  // makes them nearly ungrabbable on touch. Pad the box, push the rotate handle
-  // out, and stop rejecting thin boxes — mirrors the desktop stage.
-  const onlySelected =
-    selectedLayerIds.length === 1
-      ? findLayerInArtboard(artboard, selectedLayerIds[0])
-      : null;
-  const lineLike =
-    onlySelected?.type === 'shape' &&
-    (onlySelected.shape === 'line' || onlySelected.shape === 'arrow');
 
   return (
     <div
@@ -401,9 +550,8 @@ export function MobileStage({
               rotateEnabled
               ignoreStroke
               useSingleNodeRotation
-              padding={lineLike ? 18 / scale : 0}
-              rotateAnchorOffset={(lineLike ? 34 : TOUCH_ROTATE_OFFSET) / scale}
-              anchorSize={(lineLike ? 11 : TOUCH_ANCHOR) / scale}
+              rotateAnchorOffset={TOUCH_ROTATE_OFFSET / scale}
+              anchorSize={TOUCH_ANCHOR / scale}
               anchorCornerRadius={TOUCH_ANCHOR_RADIUS / scale}
               anchorStrokeWidth={TOUCH_ANCHOR_STROKE / scale}
               anchorStroke="#007AFF"
@@ -411,11 +559,31 @@ export function MobileStage({
               borderStroke="#007AFF"
               borderStrokeWidth={1.5 / scale}
               boundBoxFunc={(oldBox, next) =>
-                // Lines/arrows are legitimately thin — never reject their box or
-                // both resize and rotate get blocked. Other shapes keep a floor.
-                !lineLike && (next.width < 12 || next.height < 12) ? oldBox : next
+                next.width < 12 || next.height < 12 ? oldBox : next
               }
             />
+            {/* A lone line/arrow gets two finger-sized endpoint handles instead
+                of a transform box — drag one to rotate and lengthen at once. */}
+            {handleEnds &&
+              (['a', 'b'] as const).map((which) => {
+                const point = handleEnds[which];
+                return (
+                  <Circle
+                    key={which}
+                    x={point.x}
+                    y={point.y}
+                    radius={ENDPOINT_RADIUS / scale}
+                    fill="#FFFFFF"
+                    stroke="#007AFF"
+                    strokeWidth={ENDPOINT_STROKE / scale}
+                    draggable
+                    hitStrokeWidth={ENDPOINT_RADIUS / scale}
+                    onDragStart={() => onEndpointDragStart(which)}
+                    onDragMove={onEndpointDragMove}
+                    onDragEnd={onEndpointDragEnd}
+                  />
+                );
+              })}
             {draft && draft.length >= 2 && (
               <Line
                 points={draft}
@@ -443,6 +611,13 @@ export function MobileStage({
             ))}
           </Layer>
         </Stage>
+      )}
+      {hint && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+          <span className="glass glass-strong rounded-full border border-[var(--calqo-divider)] px-4 py-1.5 text-[12.5px] font-medium text-[var(--calqo-accent)] shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+            {hint}
+          </span>
+        </div>
       )}
     </div>
   );
