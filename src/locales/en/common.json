@@ -126,6 +126,14 @@
   "pwa": {
     "updateAvailable": "A new version is available.",
     "reload": "Reload",
-    "dismiss": "Later"
+    "dismiss": "Later",
+    "install": {
+      "title": "Install Calqo",
+      "body": "Add Calqo to your Home Screen for a faster, full-screen experience.",
+      "iosStep1": "Tap Share",
+      "iosStep2": "Choose Add to Home Screen",
+      "action": "Install",
+      "dismiss": "Not now"
+    }
   }
 }

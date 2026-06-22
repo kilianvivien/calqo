@@ -56,10 +56,12 @@ body {
  * so it covers the bottom toolbar and the create button. Pad the shell clear of
  * it in browser display mode only — an installed PWA has no such bar, so it
  * keeps its flush `p-2` bottom. Lifts the editor toolbar and (via the flex-1
- * project list) the absolute "+" button together. */
+ * project list) the absolute "+" button together. The pad is tuned to clear the
+ * bar's overlap without leaving dead space below the toolbar — the floating bar
+ * only covers ~2.5rem, so a larger reserve just wastes canvas height. */
 @media all and (display-mode: browser) {
   .app-shell {
-    padding-bottom: max(env(safe-area-inset-bottom), 4rem);
+    padding-bottom: max(env(safe-area-inset-bottom), 2.5rem);
   }
 }
 

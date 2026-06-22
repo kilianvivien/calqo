@@ -126,6 +126,14 @@
   "pwa": {
     "updateAvailable": "Une nouvelle version est disponible.",
     "reload": "Recharger",
-    "dismiss": "Plus tard"
+    "dismiss": "Plus tard",
+    "install": {
+      "title": "Installer Calqo",
+      "body": "Ajoutez Calqo à votre écran d’accueil pour une expérience plein écran plus rapide.",
+      "iosStep1": "Touchez Partager",
+      "iosStep2": "Choisissez Sur l’écran d’accueil",
+      "action": "Installer",
+      "dismiss": "Plus tard"
+    }
   }
 }
