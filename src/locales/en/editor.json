@@ -521,6 +521,10 @@
     "brush": {
       "done": "Done drawing"
     },
+    "line": {
+      "toArrow": "Converted to arrow",
+      "toLine": "Converted to line"
+    },
     "text": {
       "title": "Edit text",
       "editingLocale": "Editing {{locale}}",

@@ -521,6 +521,10 @@
     "brush": {
       "done": "Terminer le dessin"
     },
+    "line": {
+      "toArrow": "Converti en flèche",
+      "toLine": "Converti en ligne"
+    },
     "text": {
       "title": "Modifier le texte",
       "editingLocale": "Édition de {{locale}}",
