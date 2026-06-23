@@ -70,7 +70,11 @@ import { findLayerInArtboard } from '@/editor/utils/layers';
 import { GlassSegmentedControl } from '@/components/glass';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
-import { useUiStore, type BrushStyle, type EditorTool } from '@/lib/state/uiStore';
+import {
+  useUiStore,
+  type BrushStyle,
+  type EditorTool,
+} from '@/lib/state/uiStore';
 import type {
   ArrowStyle,
   BackgroundFill,
@@ -188,7 +192,9 @@ const COLOR_SWATCHES = [
 ];
 
 function polygonDisplayName(kind: PolygonPreset): string {
-  return kind === 'badge' ? 'Badge' : kind.charAt(0).toUpperCase() + kind.slice(1);
+  return kind === 'badge'
+    ? 'Badge'
+    : kind.charAt(0).toUpperCase() + kind.slice(1);
 }
 
 type ShapeLayerT = Extract<CalqoLayer, { type: 'shape' }>;
@@ -196,12 +202,21 @@ type ShapeLayerT = Extract<CalqoLayer, { type: 'shape' }>;
 /** The shape-kind shown in the convert dropdown, or null for shapes that should
  * not be reshaped through it (arrows, freehand strokes, custom polygons). */
 function convertibleKind(layer: ShapeLayerT): ShapeKind | null {
-  if (layer.shape === 'rect' || layer.shape === 'ellipse' || layer.shape === 'line') {
+  if (
+    layer.shape === 'rect' ||
+    layer.shape === 'ellipse' ||
+    layer.shape === 'line'
+  ) {
     return layer.shape;
   }
   if (layer.shape === 'polygon') {
     const normalized = layer.name.toLowerCase().split(' ')[0];
-    if (normalized === 'triangle' || normalized === 'diamond' || normalized === 'badge' || normalized === 'star') {
+    if (
+      normalized === 'triangle' ||
+      normalized === 'diamond' ||
+      normalized === 'badge' ||
+      normalized === 'star'
+    ) {
       return normalized;
     }
   }
@@ -210,10 +225,19 @@ function convertibleKind(layer: ShapeLayerT): ShapeKind | null {
 
 /** Shapes that paint an interior fill (everything except open strokes). */
 function isFilledShape(layer: ShapeLayerT): boolean {
-  return layer.shape !== 'line' && layer.shape !== 'arrow' && layer.shape !== 'freehand';
+  return (
+    layer.shape !== 'line' &&
+    layer.shape !== 'arrow' &&
+    layer.shape !== 'freehand'
+  );
 }
 
-const BRUSH_STYLE_OPTIONS: BrushStyle[] = ['smooth', 'marker', 'highlighter', 'dashed'];
+const BRUSH_STYLE_OPTIONS: BrushStyle[] = [
+  'smooth',
+  'marker',
+  'highlighter',
+  'dashed',
+];
 
 /** Full fill editor: type switch plus solid/gradient/pattern/image sub-controls.
  * `projectId` enables the image fill (it needs to persist a picked asset). */
@@ -228,32 +252,31 @@ function FillField({
 }) {
   const { t } = useTranslation('editor');
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [pendingImageImport, setPendingImageImport] = useState(false);
   const type: FillType = fill.type;
+  const selectedType: FillType = pendingImageImport ? 'image' : type;
   const options = projectId
     ? FILL_TYPE_OPTIONS
     : FILL_TYPE_OPTIONS.filter((value) => value !== 'image');
   const pickImage = () => imageInputRef.current?.click();
   return (
     <div className="space-y-1">
-      <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
-        <span className="text-[var(--calqo-text-3)]">{t('properties.fill')}</span>
-        <GlassSegmentedControl
-          ariaLabel={t('properties.fill')}
-          className="flex w-full [&>button]:flex-1 [&>button]:px-1"
-          value={type}
-          onChange={(next) => {
-            if (next === 'image') {
-              if (fill.type !== 'image') pickImage();
-              return;
-            }
-            onChange(fillForType(next as FillType, fill));
-          }}
-          options={options.map((value) => ({
-            value,
-            label: t(`properties.fill_${value}`),
-          }))}
-        />
-      </div>
+      <SelectField
+        label={t('properties.fill')}
+        value={selectedType}
+        options={options.map((value) => ({
+          value,
+          label: t(`properties.fill_${value}`),
+        }))}
+        onChange={(next) => {
+          if (next === 'image') {
+            if (fill.type !== 'image') setPendingImageImport(true);
+            return;
+          }
+          setPendingImageImport(false);
+          onChange(fillForType(next as FillType, fill));
+        }}
+      />
       {projectId && (
         <input
           ref={imageInputRef}
@@ -264,11 +287,24 @@ function FillField({
             const file = event.target.files?.[0];
             event.currentTarget.value = '';
             if (!file) return;
-            void saveImageAsset(projectId, file).then((asset) =>
-              onChange({ type: 'image', assetId: asset.id, fit: 'cover' }),
-            );
+            void saveImageAsset(projectId, file)
+              .then((asset) =>
+                onChange({ type: 'image', assetId: asset.id, fit: 'cover' }),
+              )
+              .finally(() => setPendingImageImport(false));
           }}
         />
+      )}
+      {pendingImageImport && fill.type !== 'image' && (
+        <div className="px-2 py-1.5">
+          <button
+            type="button"
+            className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12.5px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)]"
+            onClick={pickImage}
+          >
+            {t('properties.importImage')}
+          </button>
+        </div>
       )}
       {fill.type === 'image' && (
         <>
@@ -280,7 +316,9 @@ function FillField({
               { value: 'contain', label: t('properties.contain') },
               { value: 'stretch', label: t('properties.stretch') },
             ]}
-            onChange={(fit) => onChange({ ...fill, fit: fit as typeof fill.fit })}
+            onChange={(fit) =>
+              onChange({ ...fill, fit: fit as typeof fill.fit })
+            }
           />
           <div className="px-2 py-1.5">
             <button
@@ -293,49 +331,71 @@ function FillField({
           </div>
         </>
       )}
-      {fill.type === 'solid' && (
+      {!pendingImageImport && fill.type === 'solid' && (
         <ColorField
           label={t('properties.color')}
           value={fill.color}
           onChange={(color) => onChange({ type: 'solid', color })}
         />
       )}
-      {(fill.type === 'linear' || fill.type === 'radial') && (
-        <>
-          <ColorField
-            label={t('properties.gradientStart')}
-            value={fill.stops[0]?.color ?? '#007AFF'}
-            onChange={(color) =>
-              onChange({ ...fill, stops: [{ offset: 0, color }, fill.stops[1] ?? { offset: 1, color: '#FFFFFF' }] })
-            }
-          />
-          <ColorField
-            label={t('properties.gradientEnd')}
-            value={fill.stops[1]?.color ?? '#FFFFFF'}
-            onChange={(color) =>
-              onChange({ ...fill, stops: [fill.stops[0] ?? { offset: 0, color: '#007AFF' }, { offset: 1, color }] })
-            }
-          />
-          {fill.type === 'linear' && (
-            <SliderField
-              label={t('properties.gradientAngle')}
-              value={fill.angle ?? 0}
-              min={0}
-              max={360}
-              onChange={(angle) => onChange({ ...fill, angle })}
+      {!pendingImageImport &&
+        (fill.type === 'linear' || fill.type === 'radial') && (
+          <>
+            <ColorField
+              label={t('properties.gradientStart')}
+              value={fill.stops[0]?.color ?? '#007AFF'}
+              onChange={(color) =>
+                onChange({
+                  ...fill,
+                  stops: [
+                    { offset: 0, color },
+                    fill.stops[1] ?? { offset: 1, color: '#FFFFFF' },
+                  ],
+                })
+              }
             />
-          )}
-        </>
-      )}
-      {fill.type === 'pattern' && (
+            <ColorField
+              label={t('properties.gradientEnd')}
+              value={fill.stops[1]?.color ?? '#FFFFFF'}
+              onChange={(color) =>
+                onChange({
+                  ...fill,
+                  stops: [
+                    fill.stops[0] ?? { offset: 0, color: '#007AFF' },
+                    { offset: 1, color },
+                  ],
+                })
+              }
+            />
+            {fill.type === 'linear' && (
+              <SliderField
+                label={t('properties.gradientAngle')}
+                value={fill.angle ?? 0}
+                min={0}
+                max={360}
+                onChange={(angle) => onChange({ ...fill, angle })}
+              />
+            )}
+          </>
+        )}
+      {!pendingImageImport && fill.type === 'pattern' && (
         <>
           <SelectField
             label={t('properties.pattern')}
             value={fill.pattern}
-            options={PATTERN_OPTIONS.map((option) => ({ value: option.value, label: t(option.labelKey) }))}
-            onChange={(pattern) => onChange({ ...fill, pattern: pattern as typeof fill.pattern })}
+            options={PATTERN_OPTIONS.map((option) => ({
+              value: option.value,
+              label: t(option.labelKey),
+            }))}
+            onChange={(pattern) =>
+              onChange({ ...fill, pattern: pattern as typeof fill.pattern })
+            }
           />
-          <ColorField label={t('properties.color')} value={fill.color} onChange={(color) => onChange({ ...fill, color })} />
+          <ColorField
+            label={t('properties.color')}
+            value={fill.color}
+            onChange={(color) => onChange({ ...fill, color })}
+          />
           <ColorField
             label={t('properties.background')}
             value={fill.background}
@@ -367,28 +427,31 @@ function BackgroundFillField({
 }) {
   const { t } = useTranslation('editor');
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [pendingImageImport, setPendingImageImport] = useState(false);
+  const selectedType: BackgroundFillType = pendingImageImport
+    ? 'image'
+    : background.type;
   const pickImage = () => imageInputRef.current?.click();
   return (
     <div className="space-y-1">
-      <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
-        <span className="text-[var(--calqo-text-3)]">{t('properties.fill')}</span>
-        <GlassSegmentedControl
-          ariaLabel={t('properties.fill')}
-          className="flex w-full [&>button]:flex-1 [&>button]:px-1"
-          value={background.type}
-          onChange={(next) => {
-            if (next === 'image') {
-              if (background.type !== 'image') pickImage();
-              return;
-            }
-            onChange(backgroundFillForType(next as BackgroundFillType, background));
-          }}
-          options={BACKGROUND_FILL_TYPE_OPTIONS.map((value) => ({
-            value,
-            label: t(`properties.fill_${value}`),
-          }))}
-        />
-      </div>
+      <SelectField
+        label={t('properties.fill')}
+        value={selectedType}
+        options={BACKGROUND_FILL_TYPE_OPTIONS.map((value) => ({
+          value,
+          label: t(`properties.fill_${value}`),
+        }))}
+        onChange={(next) => {
+          if (next === 'image') {
+            if (background.type !== 'image') setPendingImageImport(true);
+            return;
+          }
+          setPendingImageImport(false);
+          onChange(
+            backgroundFillForType(next as BackgroundFillType, background),
+          );
+        }}
+      />
       <input
         ref={imageInputRef}
         type="file"
@@ -398,51 +461,74 @@ function BackgroundFillField({
           const file = event.target.files?.[0];
           event.currentTarget.value = '';
           if (!file) return;
-          void saveImageAsset(projectId, file).then((asset) =>
-            onChange({ type: 'image', assetId: asset.id, fit: 'cover' }, asset),
-          );
+          void saveImageAsset(projectId, file)
+            .then((asset) =>
+              onChange(
+                { type: 'image', assetId: asset.id, fit: 'cover' },
+                asset,
+              ),
+            )
+            .finally(() => setPendingImageImport(false));
         }}
       />
-      {background.type === 'solid' && (
+      {pendingImageImport && background.type !== 'image' && (
+        <div className="px-2 py-1.5">
+          <button
+            type="button"
+            className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12.5px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)]"
+            onClick={pickImage}
+          >
+            {t('properties.importImage')}
+          </button>
+        </div>
+      )}
+      {!pendingImageImport && background.type === 'solid' && (
         <ColorField
           label={t('properties.color')}
           value={background.color}
           onChange={(color) => onChange({ type: 'solid', color })}
         />
       )}
-      {(background.type === 'linear' || background.type === 'radial') && (
-        <>
-          <ColorField
-            label={t('properties.gradientStart')}
-            value={background.stops[0]?.color ?? '#007AFF'}
-            onChange={(color) =>
-              onChange({
-                ...background,
-                stops: [{ offset: 0, color }, background.stops[1] ?? { offset: 1, color: '#FFFFFF' }],
-              })
-            }
-          />
-          <ColorField
-            label={t('properties.gradientEnd')}
-            value={background.stops[1]?.color ?? '#FFFFFF'}
-            onChange={(color) =>
-              onChange({
-                ...background,
-                stops: [background.stops[0] ?? { offset: 0, color: '#007AFF' }, { offset: 1, color }],
-              })
-            }
-          />
-          {background.type === 'linear' && (
-            <SliderField
-              label={t('properties.gradientAngle')}
-              value={background.angle ?? 0}
-              min={0}
-              max={360}
-              onChange={(angle) => onChange({ ...background, angle })}
+      {!pendingImageImport &&
+        (background.type === 'linear' || background.type === 'radial') && (
+          <>
+            <ColorField
+              label={t('properties.gradientStart')}
+              value={background.stops[0]?.color ?? '#007AFF'}
+              onChange={(color) =>
+                onChange({
+                  ...background,
+                  stops: [
+                    { offset: 0, color },
+                    background.stops[1] ?? { offset: 1, color: '#FFFFFF' },
+                  ],
+                })
+              }
             />
-          )}
-        </>
-      )}
+            <ColorField
+              label={t('properties.gradientEnd')}
+              value={background.stops[1]?.color ?? '#FFFFFF'}
+              onChange={(color) =>
+                onChange({
+                  ...background,
+                  stops: [
+                    background.stops[0] ?? { offset: 0, color: '#007AFF' },
+                    { offset: 1, color },
+                  ],
+                })
+              }
+            />
+            {background.type === 'linear' && (
+              <SliderField
+                label={t('properties.gradientAngle')}
+                value={background.angle ?? 0}
+                min={0}
+                max={360}
+                onChange={(angle) => onChange({ ...background, angle })}
+              />
+            )}
+          </>
+        )}
       {background.type === 'image' && (
         <>
           <SelectField
@@ -453,7 +539,9 @@ function BackgroundFillField({
               { value: 'contain', label: t('properties.contain') },
               { value: 'stretch', label: t('properties.stretch') },
             ]}
-            onChange={(fit) => onChange({ ...background, fit: fit as typeof background.fit })}
+            onChange={(fit) =>
+              onChange({ ...background, fit: fit as typeof background.fit })
+            }
           />
           <div className="px-2 py-1.5">
             <button
@@ -470,7 +558,10 @@ function BackgroundFillField({
   );
 }
 
-const STROKE_STYLE_OPTIONS: { value: NonNullable<StrokeStyle['style']>; labelKey: string }[] = [
+const STROKE_STYLE_OPTIONS: {
+  value: NonNullable<StrokeStyle['style']>;
+  labelKey: string;
+}[] = [
   { value: 'solid', labelKey: 'properties.styleSolid' },
   { value: 'dashed', labelKey: 'properties.styleDashed' },
   { value: 'dotted', labelKey: 'properties.styleDotted' },
@@ -486,19 +577,29 @@ function StrokeStyleField({
   const { t } = useTranslation('editor');
   return (
     <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
-      <span className="text-[var(--calqo-text-3)]">{t('properties.strokeStyle')}</span>
+      <span className="text-[var(--calqo-text-3)]">
+        {t('properties.strokeStyle')}
+      </span>
       <GlassSegmentedControl
         ariaLabel={t('properties.strokeStyle')}
         className="flex w-full [&>button]:flex-1"
         value={value}
         onChange={(next) => onChange(next as NonNullable<StrokeStyle['style']>)}
-        options={STROKE_STYLE_OPTIONS.map((option) => ({ value: option.value, label: t(option.labelKey) }))}
+        options={STROKE_STYLE_OPTIONS.map((option) => ({
+          value: option.value,
+          label: t(option.labelKey),
+        }))}
       />
     </div>
   );
 }
 
-const DEFAULT_ARROW: ArrowStyle = { start: false, end: true, pointerLength: 16, pointerWidth: 16 };
+const DEFAULT_ARROW: ArrowStyle = {
+  start: false,
+  end: true,
+  pointerLength: 16,
+  pointerWidth: 16,
+};
 
 function ArrowHeadField({
   value,
@@ -511,13 +612,17 @@ function ArrowHeadField({
   const arrow = value ?? DEFAULT_ARROW;
   return (
     <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1.5 text-[12px]">
-      <span className="text-[var(--calqo-text-3)]">{t('properties.arrowHeads')}</span>
+      <span className="text-[var(--calqo-text-3)]">
+        {t('properties.arrowHeads')}
+      </span>
       <div className="flex gap-3">
         <label className="flex cursor-pointer items-center gap-1.5 text-[var(--calqo-text-2)]">
           <input
             type="checkbox"
             checked={arrow.start}
-            onChange={(event) => onChange({ ...arrow, start: event.target.checked })}
+            onChange={(event) =>
+              onChange({ ...arrow, start: event.target.checked })
+            }
             className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
           />
           {t('properties.arrowStart')}
@@ -526,7 +631,9 @@ function ArrowHeadField({
           <input
             type="checkbox"
             checked={arrow.end}
-            onChange={(event) => onChange({ ...arrow, end: event.target.checked })}
+            onChange={(event) =>
+              onChange({ ...arrow, end: event.target.checked })
+            }
             className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
           />
           {t('properties.arrowEnd')}
@@ -536,7 +643,9 @@ function ArrowHeadField({
   );
 }
 
-function measureImage(file: File): Promise<{ width?: number; height?: number }> {
+function measureImage(
+  file: File,
+): Promise<{ width?: number; height?: number }> {
   if (file.type === 'image/svg+xml') return Promise.resolve({});
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
@@ -689,7 +798,8 @@ function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
   const isShapeTool = SHAPE_TOOLS.has(activeTool);
   const isPen = activeTool === 'pen';
   const isBrush = activeTool === 'brush';
-  const hasFill = (isShapeTool && activeTool !== 'line' && activeTool !== 'arrow') || isPen;
+  const hasFill =
+    (isShapeTool && activeTool !== 'line' && activeTool !== 'arrow') || isPen;
 
   return (
     <div className="flex flex-col gap-4">
@@ -769,12 +879,16 @@ function MultiControls({
 }) {
   const { t } = useTranslation('editor');
   const ids = layers.map((l) => l.id);
-  const shapeLayers = layers.filter((l): l is ShapeLayerT => l.type === 'shape');
+  const shapeLayers = layers.filter(
+    (l): l is ShapeLayerT => l.type === 'shape',
+  );
   const textLayers = layers.filter(
     (l): l is TextLayer | ListLayer => l.type === 'text' || l.type === 'list',
   );
-  const bulk = (patch: Parameters<typeof updateLayersInActiveArtboard>[2], targets = ids) =>
-    updateLayersInActiveArtboard(projectId, targets, patch);
+  const bulk = (
+    patch: Parameters<typeof updateLayersInActiveArtboard>[2],
+    targets = ids,
+  ) => updateLayersInActiveArtboard(projectId, targets, patch);
 
   const allVisible = layers.every((l) => l.visible);
   const allLocked = layers.every((l) => l.locked);
@@ -896,7 +1010,13 @@ function MultiControls({
             value={shapeFirst.stroke?.color ?? '#007AFF'}
             onChange={(color) =>
               bulk(
-                { stroke: { ...shapeFirst.stroke, color, width: shapeFirst.stroke?.width ?? 2 } },
+                {
+                  stroke: {
+                    ...shapeFirst.stroke,
+                    color,
+                    width: shapeFirst.stroke?.width ?? 2,
+                  },
+                },
                 shapeIds,
               )
             }
@@ -912,7 +1032,11 @@ function MultiControls({
                 {
                   stroke:
                     width > 0
-                      ? { ...shapeFirst.stroke, color: shapeFirst.stroke?.color ?? '#007AFF', width }
+                      ? {
+                          ...shapeFirst.stroke,
+                          color: shapeFirst.stroke?.color ?? '#007AFF',
+                          width,
+                        }
                       : undefined,
                 },
                 shapeIds,
@@ -927,14 +1051,19 @@ function MultiControls({
           <SelectField
             label={t('properties.font')}
             value={textFirst.style.fontFamily}
-            options={BUNDLED_FONTS.map((f) => ({ value: f.family, label: f.family }))}
+            options={BUNDLED_FONTS.map((f) => ({
+              value: f.family,
+              label: f.family,
+            }))}
             onChange={(fontFamily) => bulk({ style: { fontFamily } }, textIds)}
           />
           <SelectField
             label={t('properties.weight')}
             value={String(textFirst.style.fontWeight)}
             options={WEIGHT_OPTIONS}
-            onChange={(weight) => bulk({ style: { fontWeight: Number(weight) } }, textIds)}
+            onChange={(weight) =>
+              bulk({ style: { fontWeight: Number(weight) } }, textIds)
+            }
           />
           <SliderField
             label={t('properties.size')}
@@ -997,7 +1126,11 @@ function ArtboardControls({
     <>
       <Section title={t('properties.artboard')}>
         <Row label={t('properties.name')} value={artboard.name} />
-        <Row label={t('properties.size')} value={`${artboard.width} x ${artboard.height}`} mono />
+        <Row
+          label={t('properties.size')}
+          value={`${artboard.width} x ${artboard.height}`}
+          mono
+        />
       </Section>
       <Section title={t('properties.background')}>
         <BackgroundFillField
@@ -1030,10 +1163,28 @@ function LayerControls({
     <>
       <Section title={t('properties.sectionLayout')}>
         <Row label={t('properties.type')} value={layer.type} mono />
-        <NumberField label="X" value={layer.x} onChange={(x) => update({ x })} />
-        <NumberField label="Y" value={layer.y} onChange={(y) => update({ y })} />
-        <NumberField label="W" value={layer.w} min={1} onChange={(w) => update({ w })} />
-        <NumberField label="H" value={layer.h} min={1} onChange={(h) => update({ h })} />
+        <NumberField
+          label="X"
+          value={layer.x}
+          onChange={(x) => update({ x })}
+        />
+        <NumberField
+          label="Y"
+          value={layer.y}
+          onChange={(y) => update({ y })}
+        />
+        <NumberField
+          label="W"
+          value={layer.w}
+          min={1}
+          onChange={(w) => update({ w })}
+        />
+        <NumberField
+          label="H"
+          value={layer.h}
+          min={1}
+          onChange={(h) => update({ h })}
+        />
         <SliderField
           label={t('properties.rotate')}
           value={layer.rotation}
@@ -1062,11 +1213,20 @@ function LayerControls({
               }))}
               onChange={(value) => {
                 const kind = value as ShapeKind;
-                if (kind === 'triangle' || kind === 'diamond' || kind === 'badge' || kind === 'star') {
+                if (
+                  kind === 'triangle' ||
+                  kind === 'diamond' ||
+                  kind === 'badge' ||
+                  kind === 'star'
+                ) {
                   update({
                     name: polygonDisplayName(kind),
                     shape: 'polygon',
-                    points: polygonPoints(kind, layer.w, Math.max(1, Math.abs(layer.h))),
+                    points: polygonPoints(
+                      kind,
+                      layer.w,
+                      Math.max(1, Math.abs(layer.h)),
+                    ),
                   });
                   return;
                 }
@@ -1079,7 +1239,8 @@ function LayerControls({
                         : 'Rectangle',
                   shape: kind,
                   points: kind === 'line' ? [0, 0, layer.w, layer.h] : null,
-                  cornerRadius: kind === 'rect' ? (layer.cornerRadius ?? 18) : 0,
+                  cornerRadius:
+                    kind === 'rect' ? (layer.cornerRadius ?? 18) : 0,
                 });
               }}
             />
@@ -1095,7 +1256,13 @@ function LayerControls({
             label={t('properties.stroke')}
             value={layer.stroke?.color ?? '#007AFF'}
             onChange={(color) =>
-              update({ stroke: { ...layer.stroke, color, width: layer.stroke?.width ?? 2 } })
+              update({
+                stroke: {
+                  ...layer.stroke,
+                  color,
+                  width: layer.stroke?.width ?? 2,
+                },
+              })
             }
           />
           <SliderField
@@ -1108,7 +1275,11 @@ function LayerControls({
               update({
                 stroke:
                   width > 0
-                    ? { ...layer.stroke, color: layer.stroke?.color ?? '#007AFF', width }
+                    ? {
+                        ...layer.stroke,
+                        color: layer.stroke?.color ?? '#007AFF',
+                        width,
+                      }
                     : undefined,
               })
             }
@@ -1198,14 +1369,17 @@ function LayerControls({
 function ExportWarnings({ layer }: { layer: CalqoLayer }) {
   const { t } = useTranslation('editor');
   const warnings: string[] = [];
-  if (layer.blendMode && layer.blendMode !== 'normal') warnings.push(t('properties.warnBlend'));
+  if (layer.blendMode && layer.blendMode !== 'normal')
+    warnings.push(t('properties.warnBlend'));
   if ((layer.effects?.blur ?? 0) > 0) warnings.push(t('properties.warnBlur'));
   if (layer.type === 'image') {
     if (layer.mask) warnings.push(t('properties.warnMask'));
-    if (hasActiveFilters(layer.filters)) warnings.push(t('properties.warnFilters'));
+    if (hasActiveFilters(layer.filters))
+      warnings.push(t('properties.warnFilters'));
   }
   if (layer.type === 'text' || layer.type === 'list') {
-    if (layer.style.stroke || layer.style.shadow) warnings.push(t('properties.warnTextEffect'));
+    if (layer.style.stroke || layer.style.shadow)
+      warnings.push(t('properties.warnTextEffect'));
   }
   if (warnings.length === 0) return null;
   return (
@@ -1216,7 +1390,10 @@ function ExportWarnings({ layer }: { layer: CalqoLayer }) {
             key={message}
             className="flex items-start gap-1.5 text-[11.5px] leading-relaxed text-[var(--calqo-text-3)]"
           >
-            <AlertTriangle size={12} className="mt-0.5 shrink-0 text-[#B7791F]" />
+            <AlertTriangle
+              size={12}
+              className="mt-0.5 shrink-0 text-[#B7791F]"
+            />
             {message}
           </li>
         ))}
@@ -1225,7 +1402,9 @@ function ExportWarnings({ layer }: { layer: CalqoLayer }) {
   );
 }
 
-type LayerUpdate = (patch: Parameters<typeof updateLayerInActiveArtboard>[2]) => void;
+type LayerUpdate = (
+  patch: Parameters<typeof updateLayerInActiveArtboard>[2],
+) => void;
 
 const MASK_LABEL_KEY: Record<ImageMask['shape'], string> = {
   rounded: 'properties.maskRounded',
@@ -1258,7 +1437,9 @@ function ImageControls({
     <>
       <Section title={t('properties.image')}>
         <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1.5 text-[12px]">
-          <span className="text-[var(--calqo-text-3)]">{t('properties.fit')}</span>
+          <span className="text-[var(--calqo-text-3)]">
+            {t('properties.fit')}
+          </span>
           <GlassSegmentedControl
             ariaLabel={t('properties.fit')}
             className="flex w-full [&>button]:flex-1"
@@ -1278,14 +1459,18 @@ function ImageControls({
               value={Math.round(focal.x * 100)}
               min={0}
               max={100}
-              onChange={(v) => update({ focalPoint: { x: v / 100, y: focal.y } })}
+              onChange={(v) =>
+                update({ focalPoint: { x: v / 100, y: focal.y } })
+              }
             />
             <SliderField
               label={t('properties.focalY')}
               value={Math.round(focal.y * 100)}
               min={0}
               max={100}
-              onChange={(v) => update({ focalPoint: { x: focal.x, y: v / 100 } })}
+              onChange={(v) =>
+                update({ focalPoint: { x: focal.x, y: v / 100 } })
+              }
             />
           </>
         )}
@@ -1308,7 +1493,10 @@ function ImageControls({
           value={maskShape}
           options={[
             { value: 'none', label: t('properties.maskNone') },
-            ...MASK_SHAPES.map((shape) => ({ value: shape, label: t(MASK_LABEL_KEY[shape]) })),
+            ...MASK_SHAPES.map((shape) => ({
+              value: shape,
+              label: t(MASK_LABEL_KEY[shape]),
+            })),
           ]}
           onChange={(value) => {
             if (value === 'none') {
@@ -1319,7 +1507,10 @@ function ImageControls({
             update({
               mask: {
                 shape,
-                radius: shape === 'rounded' ? (layer.mask?.radius ?? Math.min(layer.w, layer.h) * 0.12) : undefined,
+                radius:
+                  shape === 'rounded'
+                    ? (layer.mask?.radius ?? Math.min(layer.w, layer.h) * 0.12)
+                    : undefined,
               },
             });
           }}
@@ -1330,7 +1521,9 @@ function ImageControls({
             value={Math.round(layer.mask.radius ?? 0)}
             min={0}
             max={Math.round(Math.min(layer.w, layer.h) / 2)}
-            onChange={(radius) => update({ mask: { shape: 'rounded', radius } })}
+            onChange={(radius) =>
+              update({ mask: { shape: 'rounded', radius } })
+            }
           />
         )}
       </Section>
@@ -1432,7 +1625,9 @@ function EffectsControls({
           value: mode,
           label: t(`properties.blend_${mode}`),
         }))}
-        onChange={(mode) => update({ blendMode: mode as CalqoLayer['blendMode'] })}
+        onChange={(mode) =>
+          update({ blendMode: mode as CalqoLayer['blendMode'] })
+        }
       />
       {showShadow && (
         <>
@@ -1443,7 +1638,9 @@ function EffectsControls({
               onChange={(event) =>
                 update({
                   effects: nextEffects(effects, {
-                    shadow: event.target.checked ? DEFAULT_EFFECT_SHADOW : undefined,
+                    shadow: event.target.checked
+                      ? DEFAULT_EFFECT_SHADOW
+                      : undefined,
                   }),
                 })
               }
@@ -1457,7 +1654,11 @@ function EffectsControls({
                 label={t('properties.color')}
                 value={shadow.color}
                 onChange={(color) =>
-                  update({ effects: nextEffects(effects, { shadow: { ...shadow, color } }) })
+                  update({
+                    effects: nextEffects(effects, {
+                      shadow: { ...shadow, color },
+                    }),
+                  })
                 }
               />
               <SliderField
@@ -1466,21 +1667,33 @@ function EffectsControls({
                 min={0}
                 max={60}
                 onChange={(blur) =>
-                  update({ effects: nextEffects(effects, { shadow: { ...shadow, blur } }) })
+                  update({
+                    effects: nextEffects(effects, {
+                      shadow: { ...shadow, blur },
+                    }),
+                  })
                 }
               />
               <NumberField
                 label="X"
                 value={shadow.offsetX}
                 onChange={(offsetX) =>
-                  update({ effects: nextEffects(effects, { shadow: { ...shadow, offsetX } }) })
+                  update({
+                    effects: nextEffects(effects, {
+                      shadow: { ...shadow, offsetX },
+                    }),
+                  })
                 }
               />
               <NumberField
                 label="Y"
                 value={shadow.offsetY}
                 onChange={(offsetY) =>
-                  update({ effects: nextEffects(effects, { shadow: { ...shadow, offsetY } }) })
+                  update({
+                    effects: nextEffects(effects, {
+                      shadow: { ...shadow, offsetY },
+                    }),
+                  })
                 }
               />
               <SliderField
@@ -1490,7 +1703,9 @@ function EffectsControls({
                 max={100}
                 onChange={(opacity) =>
                   update({
-                    effects: nextEffects(effects, { shadow: { ...shadow, opacity: opacity / 100 } }),
+                    effects: nextEffects(effects, {
+                      shadow: { ...shadow, opacity: opacity / 100 },
+                    }),
                   })
                 }
               />
@@ -1547,7 +1762,9 @@ function TextControls({
       </Section>
 
       <Section title={t('properties.presets')}>
-        <TextPresetRow onApply={(id) => update({ style: textPresetStyle(id) })} />
+        <TextPresetRow
+          onApply={(id) => update({ style: textPresetStyle(id) })}
+        />
       </Section>
 
       <TypographyControls
@@ -1584,7 +1801,10 @@ function TypographyControls({
       <SelectField
         label={t('properties.font')}
         value={style.fontFamily}
-        options={BUNDLED_FONTS.map((f) => ({ value: f.family, label: f.family }))}
+        options={BUNDLED_FONTS.map((f) => ({
+          value: f.family,
+          label: f.family,
+        }))}
         onChange={(fontFamily) => onChange({ fontFamily })}
       />
       <SelectField
@@ -1600,7 +1820,10 @@ function TypographyControls({
         max={240}
         onChange={(fontSize) => onChange({ fontSize })}
       />
-      <AlignField value={style.align} onChange={(align) => onChange({ align })} />
+      <AlignField
+        value={style.align}
+        onChange={(align) => onChange({ align })}
+      />
       <VerticalAlignField
         value={style.verticalAlign ?? 'top'}
         onChange={(verticalAlign) => onChange({ verticalAlign })}
@@ -1718,7 +1941,9 @@ function TextShadowControls({
             value={Math.round((shadow.opacity ?? 1) * 100)}
             min={0}
             max={100}
-            onChange={(opacity) => onChange({ ...shadow, opacity: opacity / 100 })}
+            onChange={(opacity) =>
+              onChange({ ...shadow, opacity: opacity / 100 })
+            }
           />
         </>
       )}
@@ -1780,7 +2005,10 @@ function MarkerAssetPicker({
   const setSvgDialog = useUiStore((s) => s.setSvgDialog);
   const setMarkerPickerLayerId = useUiStore((s) => s.setMarkerPickerLayerId);
   const inputRef = useRef<HTMLInputElement>(null);
-  const assets = (project?.assets ?? []).filter((a) => a.kind === 'svg').slice().reverse();
+  const assets = (project?.assets ?? [])
+    .filter((a) => a.kind === 'svg')
+    .slice()
+    .reverse();
 
   const onUpload = (file: File) => {
     void measureImage(file).then(async (measured) => {
@@ -1875,7 +2103,11 @@ function AssetThumbButton({
       ].join(' ')}
     >
       {url ? (
-        <img src={url} alt={asset.name} className="h-full w-full object-contain p-1" />
+        <img
+          src={url}
+          alt={asset.name}
+          className="h-full w-full object-contain p-1"
+        />
       ) : (
         <ImageIcon size={14} className="text-[var(--calqo-text-3)]" />
       )}
@@ -1910,13 +2142,17 @@ function ListItemRow({
   return (
     <div className="rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] p-1.5">
       <div className="mb-1 flex items-center gap-1">
-        <span className="mono px-1 text-[10px] text-[var(--calqo-text-3)]">{index + 1}</span>
+        <span className="mono px-1 text-[10px] text-[var(--calqo-text-3)]">
+          {index + 1}
+        </span>
         <div className="flex flex-1 items-center justify-end gap-0.5">
           <button
             type="button"
             aria-label={t('list.moveUp')}
             disabled={index === 0}
-            onClick={() => reorderListItem(projectId, layerId, index, index - 1)}
+            onClick={() =>
+              reorderListItem(projectId, layerId, index, index - 1)
+            }
             className="rounded p-1 text-[var(--calqo-text-3)] transition-colors enabled:hover:bg-[var(--calqo-hover)] enabled:hover:text-[var(--calqo-text)] disabled:opacity-30"
           >
             <ArrowUp size={12} />
@@ -1925,7 +2161,9 @@ function ListItemRow({
             type="button"
             aria-label={t('list.moveDown')}
             disabled={index === count - 1}
-            onClick={() => reorderListItem(projectId, layerId, index, index + 1)}
+            onClick={() =>
+              reorderListItem(projectId, layerId, index, index + 1)
+            }
             className="rounded p-1 text-[var(--calqo-text-3)] transition-colors enabled:hover:bg-[var(--calqo-hover)] enabled:hover:text-[var(--calqo-text)] disabled:opacity-30"
           >
             <ArrowDown size={12} />
@@ -1945,7 +2183,13 @@ function ListItemRow({
         value={row.text[locale] ?? ''}
         placeholder={t('content.emptyVariant')}
         onChange={(event) =>
-          updateListItemTextForLocale(projectId, layerId, row.id, locale, event.target.value)
+          updateListItemTextForLocale(
+            projectId,
+            layerId,
+            row.id,
+            locale,
+            event.target.value,
+          )
         }
         className="min-h-9 w-full resize-y rounded-[var(--calqo-radius-xs)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 py-1 text-[12px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-1 focus:ring-[var(--calqo-accent-ring)]"
       />
@@ -1969,7 +2213,9 @@ function ListItemRow({
                   {other}
                 </span>
                 {missing && (
-                  <span className="text-[9px] text-[#B7791F]">{t('content.missingVariant')}</span>
+                  <span className="text-[9px] text-[#B7791F]">
+                    {t('content.missingVariant')}
+                  </span>
                 )}
               </div>
               <textarea
@@ -2063,11 +2309,15 @@ function ListControls({
             value: opt.value,
             label: t(opt.labelKey),
           }))}
-          onChange={(kind) => update({ marker: { kind: kind as ListMarker['kind'] } })}
+          onChange={(kind) =>
+            update({ marker: { kind: kind as ListMarker['kind'] } })
+          }
         />
         {marker.kind === 'character' && (
           <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1.5 text-[12px]">
-            <span className="text-[var(--calqo-text-3)]">{t('list.character')}</span>
+            <span className="text-[var(--calqo-text-3)]">
+              {t('list.character')}
+            </span>
             <input
               type="text"
               value={marker.character ?? ''}
@@ -2117,7 +2367,9 @@ function ListControls({
       </Section>
 
       <Section title={t('list.presets')}>
-        <TextPresetRow onApply={(id) => update({ style: textPresetStyle(id) })} />
+        <TextPresetRow
+          onApply={(id) => update({ style: textPresetStyle(id) })}
+        />
       </Section>
 
       <TypographyControls
@@ -2183,22 +2435,40 @@ function ReplaceAssetButton({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <section>
       <div className="mb-2">
         <span className="eyebrow">{title}</span>
       </div>
-      <div className="glass-thin rounded-[var(--calqo-radius-sm)] p-1">{children}</div>
+      <div className="glass-thin rounded-[var(--calqo-radius-sm)] p-1">
+        {children}
+      </div>
     </section>
   );
 }
 
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Row({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
     <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1.5 text-[12px]">
       <span className="text-[var(--calqo-text-3)]">{label}</span>
-      <span className={`truncate text-[var(--calqo-text-2)] ${mono ? 'mono text-[11px]' : ''}`}>
+      <span
+        className={`truncate text-[var(--calqo-text-2)] ${mono ? 'mono text-[11px]' : ''}`}
+      >
         {value}
       </span>
     </div>
@@ -2318,7 +2588,13 @@ function ArrangeButton({
 }
 
 /** A quiet full-width text button used for inline reset actions. */
-function InlineButton({ label, onClick }: { label: string; onClick: () => void }) {
+function InlineButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
   return (
     <div className="px-2 py-1.5">
       <button
@@ -2361,7 +2637,10 @@ function SelectField({
   );
 }
 
-const ALIGN_OPTIONS: { value: TextLayer['style']['align']; icon: LucideIcon }[] = [
+const ALIGN_OPTIONS: {
+  value: TextLayer['style']['align'];
+  icon: LucideIcon;
+}[] = [
   { value: 'left', icon: AlignLeft },
   { value: 'center', icon: AlignCenter },
   { value: 'right', icon: AlignRight },
@@ -2378,7 +2657,9 @@ function AlignField({
   const { t } = useTranslation('editor');
   return (
     <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
-      <span className="text-[var(--calqo-text-3)]">{t('properties.align')}</span>
+      <span className="text-[var(--calqo-text-3)]">
+        {t('properties.align')}
+      </span>
       <div
         role="radiogroup"
         aria-label={t('properties.align')}
@@ -2446,7 +2727,9 @@ function VerticalAlignField({
         { value: 'middle', label: t('properties.valignMiddle') },
         { value: 'bottom', label: t('properties.valignBottom') },
       ]}
-      onChange={(v) => onChange(v as NonNullable<TextLayer['style']['verticalAlign']>)}
+      onChange={(v) =>
+        onChange(v as NonNullable<TextLayer['style']['verticalAlign']>)
+      }
     />
   );
 }
