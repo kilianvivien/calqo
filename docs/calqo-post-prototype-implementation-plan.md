@@ -233,14 +233,14 @@ Deliverables:
 - [x] Add a GitHub repository icon button in the title bar next to the export
       cluster.
 - [x] Point the button to `https://github.com/kilianvivien/calqo`.
-- [x] Add bottom-left version metadata: `Calqo 0.1.0`.
+- [x] Add bottom-left version metadata sourced from package metadata.
 - [x] Source the version from package metadata.
 - [x] Localize labels/tooltips in English and French.
 
 Acceptance criteria:
 
 - The GitHub button opens the public repository in a new tab.
-- The status bar shows `Calqo 0.1.0` at the bottom left.
+- The status bar shows the current package version at the bottom left.
 - The additions follow the existing Liquid Glass toolbar/status styling.
 
 Test cases:

@@ -3,43 +3,64 @@
 **Source PRD:** `PRD-calqo-v0.5.md`  
 **Builds on:** `calqo-browser-prototype-implementation-plan.md` and
 `calqo-post-prototype-implementation-plan.md`  
-**Planning date:** 2026-06-20  
-**Target artifact:** a public-ready, local-first Calqo that can ship as a
-credible browser app first, then as a native-feeling Tauri desktop app, while
-opening the PRD's post-v1 work without destabilizing the editor core.
+**Planning date:** 2026-06-23
+**Target artifact:** a public-alpha, local-first Calqo that continues hardening
+the browser app and first Tauri desktop release while opening the PRD's post-v1
+work without destabilizing the editor core.
 
 ---
 
 ## 0. Current Codebase Snapshot
 
-This plan was written after reading the PRD, the prototype and post-prototype
-plans, and the current repository shape.
+This plan is grounded in the repository state as of 2026-06-23 after checking
+the active plans, README, package metadata, source tree, schema, renderer,
+desktop scaffold, mobile shell, unit tests, and E2E smoke files.
 
 Observed status:
 
 - Browser foundation through the prototype plan is implemented.
-- Post-prototype Phases H, I, J, and K are implemented and have matching unit
-  tests.
+- Post-prototype Phases H, I, J, K, and L are implemented and have matching
+  unit or readiness coverage.
 - Phase L's requested work is implemented in code (`APP_VERSION`, repository
-  URL, GitHub toolbar button, status-bar version, localized labels), and the
-  source plan now marks Phase L complete.
+  URL, GitHub toolbar button, status-bar version, localized labels). Current
+  package metadata reports `0.1.6`, while the README release notes still refer
+  to the first public DMG release `v0.1.0`.
 - Phase M is explicitly skipped/deferred in
   `calqo-post-prototype-implementation-plan.md` because it does not contain
   essential public-alpha features for Calqo at this stage.
-- `pnpm typecheck` passes.
-- `pnpm test` passes: 13 files, 119 tests. The run is noisy because jsdom lacks
-  real canvas and IndexedDB APIs in several tests.
-- The README status is stale: it says the shareable browser prototype is
-  complete through Phase H, while code and tests now cover later phases.
-- There is a Playwright config, but no committed `e2e/` test suite yet.
-- There is no Tauri scaffold yet.
+- Phase N is implemented: README/public-alpha docs, deterministic test shims,
+  the bundled sample project path, diagnostics, import recovery, and
+  `e2e/phase-n-smoke.spec.ts` are present.
+- Phase O is implemented: `src-tauri/`, Tauri scripts, runtime capability
+  detection, native file/settings/dialog/clipboard/font adapters, native menus,
+  macOS packaging metadata, and Phase O unit tests are present.
+- Phase P is still not started. The current HTML export remains the simple
+  raster-in-wrapper/snippet path, with editable HTML/CSS still deferred.
+- Phase Q is implemented for the browser phone surface and has since grown past
+  the original quick-edit list: `src/app/mobile/` now includes project browsing,
+  phone stage, top bar, bottom sheets, mobile SVG insertion, fill controls,
+  layers/arrange/export/import/settings/translate sheets, a crop/reframe
+  overlay, and touch brush/freehand support. It is still hard-gated off in
+  Tauri by `usePhoneLayout`.
+- PWA install/update prompts exist (`PwaInstallPrompt`, `PwaUpdatePrompt`,
+  `vite-plugin-pwa`, manifest assets), but no release phase currently treats
+  PWA readiness as a gate.
 - The project schema is still v1. It already includes project palette,
   glossary, locale-aware text/list content, image crop/focal point/mask/filter
-  state, effects, and asset references.
+  state, layer effects, blend modes, gradient/pattern/image fills, shape/text
+  strokes, arrows, freehand strokes, list markers, and asset references.
 - HTML export is still the PRD's v1 raster-in-wrapper export. Editable HTML/CSS
   remains post-v1.
 - Storage, assets, files, clipboard, fonts, settings, and dialogs already sit
   behind adapters in `src/lib/adapters/`.
+- Existing creative depth already includes image masks (rounded, circle,
+  ellipse, triangle, star, hexagon), focal-point/crop/filter controls,
+  gradient/pattern/image fills for shapes, text/list stroke controls, named
+  solid/dashed/dotted shape strokes, freehand brush styles (smooth, marker,
+  highlighter, dashed), arrows, polygons, and an SVG library. The next creative
+  phase should extend this baseline rather than re-plan it.
+- Recent verification commands were not re-run for this documentation edit; the
+  plan reflects committed source/test presence, not a fresh green test run.
 
 Phase M has been explicitly split/deferred before starting this plan:
 
@@ -47,7 +68,8 @@ Phase M has been explicitly split/deferred before starting this plan:
 - Template gallery has a local, editable representation.
 - Project QA exists as an editor-visible concept.
 - Tauri/native work has an agreed adapter plan.
-- Phone editing remains scoped to quick edits and sharing, as in PRD 5.9.
+- Phone editing remains scoped to quick edits, light creation, and sharing, as
+  in PRD 5.9. Full blank-canvas phone authoring remains out of scope.
 
 ---
 
@@ -82,14 +104,17 @@ Recommended order:
 2. **Phase O - Native Desktop Foundation**
 3. **Phase P - Editable HTML/CSS Export**
 4. **Phase Q - Responsive Phone Quick-Edit Interface**
-5. **Phase R - Brand And Template Production Workflows**
-6. **Phase S - Sharing, Import, And Portability Polish**
-7. **Phase T - v1 Release Packaging And Distribution**
+5. **Phase R - Creative Tooling: Frames, Strokes, And Looks**
+6. **Phase S - Brand And Template Production Workflows**
+7. **Phase T - Sharing, Import, And Portability Polish**
+8. **Phase U - v1 Release Packaging And Distribution**
 
 The order is deliberate. Phase N stabilizes the browser app and testing story.
 Phase O creates secure/native paths for key storage and files. Phase P and Q
-then build post-v1 user-facing capabilities on a healthier base. Phases R-S turn
-the pieces into repeatable workflows. Phase T packages and documents the release.
+then build post-v1 user-facing capabilities on a healthier base. Phase R deepens
+the creative primitives that templates and branded workflows will reuse. Phases
+S-T turn the pieces into repeatable, portable workflows. Phase U packages and
+documents the release.
 
 ---
 
@@ -377,7 +402,111 @@ Out of scope:
 
 ---
 
-## Phase R - Brand And Template Production Workflows
+## Phase R - Creative Tooling: Frames, Strokes, And Looks
+
+> **Status: NOT STARTED.**
+
+Goal: make Calqo's existing creative primitives feel richer and faster for
+social visuals, especially image framing and expressive strokes, while keeping
+all results editable, schema-backed, and export-aware.
+
+### Current Baseline
+
+Already implemented and should be preserved:
+
+- Image layers support fit, focal point, crop, masks, filters, shadow/effects,
+  blend modes, and asset replacement that preserves layer settings.
+- Shape layers support rect, ellipse, line, polygon, arrow, and freehand forms.
+- Shape fills support solid, linear gradient, radial gradient, generated
+  patterns, and image fills.
+- Shape strokes support color, width, solid/dashed/dotted styles, explicit dash
+  arrays, and caps in the schema/renderer.
+- Text and list layers support color, stroke width/color, shadow, typography
+  presets, locale variants, and overflow diagnostics.
+- Mobile already has touch brush/freehand, SVG insertion, fill controls, and
+  crop/reframe UI; desktop has deeper inspector controls.
+
+### Deliverables
+
+- [ ] Add non-destructive image frames.
+  - Store frame style in schema as image-layer decoration or a reusable effect
+    that can migrate cleanly from v1.
+  - Support classic border frames: inset, centered, outside, rounded, circle,
+    double-line, and polaroid/card-like frames.
+  - Support creative frames: torn paper, tape corners, photo booth strips,
+    scalloped edges, postage stamp perforations, soft mat, thick poster border,
+    and shadowed cutout.
+  - Allow frame color, width, radius, padding, shadow, and optional caption
+    strip where relevant.
+  - Preserve image crop/focal point/mask/filter state when applying, removing,
+    or changing a frame.
+- [ ] Add frame presets and quick actions.
+  - Add inspector presets for common social looks.
+  - Add one-click "Frame image" and "Remove frame" actions from desktop and
+    phone surfaces.
+  - Let brand/template workflows later mark a frame as a template slot style.
+  - Keep generated frames editable as normal Calqo layers or schema-backed
+    decorations, not flattened pixels.
+- [ ] Add richer stroke styles for shapes, text, and freehand marks.
+  - Extend beyond current solid/dashed/dotted support with hand-drawn, marker,
+    rough, neon, glow, double, offset, inner, outline, sticker, scribble, and
+    sketch stroke looks.
+  - Add editable dash/gap controls for custom dashed lines.
+  - Add line join, cap, and corner treatment controls where Konva/export paths
+    support them.
+  - Add brush presets for social annotation: highlighter, felt-tip, chalk,
+    crayon, marker underline, and glow pen.
+- [ ] Add sticker/outline treatments.
+  - One-click white sticker outline for images/SVGs/text.
+  - Offset shadow/outline combinations for thumbnail-style text.
+  - Optional duplicate-outline expansion when a renderer cannot express the
+    effect as a single node.
+- [ ] Add creative stroke and frame rendering support.
+  - Live canvas rendering in `LayerRenderer`.
+  - Raster export parity first.
+  - SVG export support where practical, with warnings for raster-only looks.
+  - HTML wrapper keeps the existing raster fidelity path; editable HTML export
+    warnings should mention frame/stroke degradations once Phase P exists.
+- [ ] Add reusable looks.
+  - Save a selected layer's fill/stroke/effects/frame settings as a local look.
+  - Apply looks to compatible layers.
+  - Keep looks local and independent from brand kits until Phase S.
+- [ ] Add AI/template compatibility.
+  - Update prompt-a-template guidance so AI can request supported frame and
+    stroke presets through schema-safe names.
+  - Validate unsupported AI-requested looks into warnings instead of importing
+    arbitrary SVG/CSS.
+- [ ] Add mobile parity for quick creative edits.
+  - Expose frame preset application/removal in the image sheet.
+  - Expose brush/stroke preset selection in the mobile add/draw flow.
+  - Keep advanced numeric tuning on desktop where it would crowd phone UI.
+- [ ] Add docs and limitations.
+  - Update export fidelity docs for frame/stroke behavior.
+  - Add examples to the bundled sample or sample gallery once release samples
+    exist.
+
+### Acceptance Criteria
+
+- A user can add an editable frame around an image, change the image crop, and
+  export a faithful PNG without flattening the project.
+- A user can create visibly distinct stroke looks for lines, shapes, freehand
+  marks, and text without leaving Calqo.
+- Unsupported SVG/HTML export cases surface explicit warnings.
+- Frame/stroke presets survive save, import/export, duplicate-to-preset, and
+  mobile/desktop round-trips.
+
+### Test Cases
+
+- Schema migration/import tests for frame/stroke look additions.
+- Unit tests for frame preset application and removal preserving image settings.
+- Renderer/export tests for frame geometry, stroke presets, and fallback
+  warnings.
+- Mobile quick-edit test for applying a frame preset and brush preset.
+- AI validation test for supported and unsupported frame/stroke preset names.
+
+---
+
+## Phase S - Brand And Template Production Workflows
 
 > **Status: NOT STARTED.**
 
@@ -392,12 +521,15 @@ workflows for real social posts.
   - Seed prompt-a-template with selected brand context.
 - [ ] Add template slots.
   - Mark text/image layers as editable slots.
+  - Allow image slots to specify allowed frame presets and default frame style.
+  - Allow text/shape slots to specify allowed stroke/look presets.
   - Store slot names and recommended content lengths.
   - Validate required slots before export.
 - [ ] Add template variants.
   - Square, portrait, story, thumbnail, and banner variants can live in one
     template family.
-  - Duplicate-to-preset can reuse slot metadata and brand constraints.
+  - Duplicate-to-preset can reuse slot metadata, frame/stroke looks, and brand
+    constraints.
 - [ ] Add "make campaign set" workflow.
   - Start from one prompt/template.
   - Generate multiple artboards/presets.
@@ -407,7 +539,8 @@ workflows for real social posts.
   - Let users send active brand kit, glossary, and template slot constraints to
     prompt-a-template.
   - Validate AI output against slot and brand constraints.
-  - Warn when AI uses colors/fonts outside the selected brand kit.
+  - Warn when AI uses colors/fonts/frame presets/stroke looks outside the
+    selected brand kit or template constraints.
 - [ ] Add template authoring affordances.
   - Save current project/artboard as a template.
   - Choose thumbnail, category, and tags.
@@ -426,13 +559,14 @@ workflows for real social posts.
 
 - Brand kit applied to template project.
 - Slot metadata survives save/import/export.
+- Frame and stroke look metadata survives template save/import/export.
 - Campaign set generates multiple valid artboards.
 - QA flags missing required slots and out-of-brand colors.
 - Prompt-a-template request includes brand context only when requested.
 
 ---
 
-## Phase S - Sharing, Import, And Portability Polish
+## Phase T - Sharing, Import, And Portability Polish
 
 > **Status: NOT STARTED.**
 
@@ -462,6 +596,8 @@ desktop, and future phone surfaces.
   - Remember last export format/scale per project.
   - Offer common social export bundles.
   - Keep transparent PNG easy to find.
+  - Include export warnings for frame/stroke looks that degrade outside raster
+    formats.
 - [ ] Add project cleanup tools.
   - Remove unused assets.
   - Compress oversized raster assets with explicit user consent.
@@ -491,11 +627,11 @@ desktop, and future phone surfaces.
 
 ---
 
-## Phase T - v1 Release Packaging And Distribution
+## Phase U - v1 Release Packaging And Distribution
 
 > **Status: NOT STARTED.**
 
-Goal: turn the product into a releaseable open-source project with repeatable
+Goal: turn the public alpha into a repeatable v1 release process with verified
 builds, documented limitations, and clear distribution paths.
 
 ### Deliverables
@@ -503,6 +639,8 @@ builds, documented limitations, and clear distribution paths.
 - [ ] Define release gates.
   - Browser app build passes.
   - Tauri build passes for supported platforms.
+  - PWA install/update path is either verified or explicitly documented as
+    experimental.
   - Core E2E smoke passes.
   - Import/export compatibility tests pass.
   - Known limitations are current.
@@ -520,16 +658,19 @@ builds, documented limitations, and clear distribution paths.
   - Getting started.
   - Browser vs desktop differences.
   - AI provider setup.
+  - Creative frames, stroke looks, and export fidelity.
   - Brand kits/templates.
   - Translation workflow.
   - Export formats and fidelity.
   - Troubleshooting.
 - [ ] Add sample gallery.
   - Include a small set of local sample `.calqo` files.
-  - Cover social presets, multilingual content, and brand/template examples.
+  - Cover social presets, multilingual content, creative frame/stroke examples,
+    and brand/template examples.
   - Keep samples license-clean.
 - [ ] Add distribution targets.
   - Static web deployment.
+  - PWA manifest/install/update behavior for browser distribution.
   - Desktop build artifacts.
   - GitHub releases.
   - Optional homebrew/cask/app distribution later.
@@ -558,6 +699,10 @@ builds, documented limitations, and clear distribution paths.
 
 Likely schema changes after Phase M:
 
+- Image frame/decorations or reusable visual-effect records.
+- Expanded stroke/look metadata for shapes, text/list layers, and freehand
+  marks.
+- Local reusable looks that can be applied across compatible layers.
 - Brand kit references or embedded brand kit snapshots.
 - Template slot metadata.
 - Template family/variant metadata.
@@ -569,8 +714,8 @@ Rules:
 - Bump `CURRENT_SCHEMA_VERSION` for project document changes.
 - Add migrations in `src/lib/schema/migrations.ts`.
 - Add tests for old v1 documents.
-- Keep local library records, such as reusable brand kits or templates, outside
-  project JSON unless the project needs a snapshot for portability.
+- Keep local library records, such as reusable looks, brand kits, or templates,
+  outside project JSON unless the project needs a snapshot for portability.
 
 ### Adapter Boundary
 
@@ -587,6 +732,8 @@ it is rendering platform-specific copy.
 ### AI And Privacy
 
 - Brand kits, glossaries, and template slots are local data.
+- Reusable creative looks, frame presets, and brand-constrained stroke presets
+  are local data.
 - Include them in AI requests only when the user triggers an AI action.
 - Show which context will be sent before provider calls where practical.
 - Keep raw diagnostics useful but avoid displaying or storing secrets.
@@ -609,6 +756,7 @@ Every new UI surface must cover:
 Watch these risk areas:
 
 - Large raster assets in browser canvas.
+- Decorative image frames and multi-pass creative stroke effects.
 - Many artboards in a campaign set.
 - Mobile memory from Konva stages.
 - HTML preview iframes with large data URLs.
@@ -619,7 +767,7 @@ heavier abstractions.
 
 ---
 
-## 4. Recommended Backlog After Phase T
+## 4. Recommended Backlog After Phase U
 
 These are intentionally outside the post-M release path:
 
