@@ -25,7 +25,8 @@ template with selectable layers. It can also keep per-language text variants in 
 project and translate a design in place without rebuilding the layout.
 
 Calqo (from _calque_, the French word for a design "layer") ships as a browser
-React app and now has a first macOS Tauri desktop release.
+React app with a Tauri macOS desktop build and a responsive phone editing
+surface.
 
 <p align="center">
   <img src="public/screen.png" alt="Calqo app screen shot" width="1392" height="952" />
@@ -33,25 +34,27 @@ React app and now has a first macOS Tauri desktop release.
 
 ## Download
 
-The first public alpha is available as
-[Calqo v0.1.0](https://github.com/kilianvivien/calqo/releases/tag/v0.1.0).
+The current public alpha is
+[Calqo v0.1.7](https://github.com/kilianvivien/calqo/releases/tag/v0.1.7).
 
-- macOS Apple Silicon: `Calqo_0.1.0_aarch64.dmg`
+- macOS Apple Silicon: `Calqo_0.1.7_aarch64.dmg`
 - SHA-256:
-  `13092e817aa2d5c8173d9c9a155da1dc66e5d5992af38d2a5b8e3d39d25b30cf`
+  `7600a4c982023a924abe8a196484402491e608a9ed54ca8aaaf1db60747a7173`
 
 The desktop build is currently unsigned and not notarized. On first launch,
 macOS Gatekeeper may require approving the app manually.
 
 ## Status
 
-**Public alpha with a first macOS desktop release.** The core editor is
-implemented and usable locally: create projects, edit multi-artboard social
-visuals, save in the browser or native desktop shell, export files, translate
-content, and generate editable AI templates. Calqo v0.1.0 adds the first
-published Tauri DMG for Apple Silicon Macs, with localized native menus, native
-`.calqo` open/save flows, secure desktop AI key storage, native clipboard/image
-drop support, local font discovery, and macOS `.app`/`.dmg` packaging.
+**Public alpha, current app version 0.1.7.** The core editor is implemented and
+usable locally: create projects, edit multi-artboard social visuals, save in the
+browser or native desktop shell, export files, translate content, and generate
+editable AI templates. The macOS desktop build includes localized native menus,
+native `.calqo` open/save flows, secure desktop AI key storage, native
+clipboard/image drop support, local font discovery, and Apple Silicon
+`.app`/`.dmg` packaging. The browser app also includes a responsive phone
+quick-edit surface, PWA install/update prompts, and recent modal keyboard
+handling polish.
 
 - [x] Vite + React + TypeScript project
 - [x] Tailwind v4 + Liquid Glass design tokens & primitives
@@ -73,7 +76,10 @@ drop support, local font discovery, and macOS `.app`/`.dmg` packaging.
 - [x] GitHub chrome button and version metadata (Phase L implementation)
 - [x] Public alpha docs, E2E smoke tests, sample project, diagnostics (Phase N)
 - [x] Tauri desktop foundation: native menus, file flows, secure settings, packaging (Phase O)
-- [x] First GitHub release with Apple Silicon macOS DMG (`v0.1.0`)
+- [x] Responsive phone quick-edit interface for browser/mobile use (Phase Q)
+- [x] PWA install/update prompts and manifest assets
+- [x] Modal keyboard shortcut isolation and focus-trap polish (`v0.1.7`)
+- [x] Current GitHub release with Apple Silicon macOS DMG (`v0.1.7`)
 
 ## What you can make
 
@@ -95,6 +101,9 @@ animation timeline, no realtime multiplayer, and no hosted template marketplace.
 - **Canvas editor:** text, images, shapes, icons/SVGs, layer ordering,
   selection, transforms, snapping, nudging, grouping, locking, visibility, and
   undo/redo.
+- **Mobile quick edit:** a responsive phone shell with project browsing,
+  contextual toolbars, bottom sheets, text editing, SVG insertion, fill controls,
+  arrange/layers panels, translation, and mobile export/share paths.
 - **Multi-artboard projects:** design several social sizes in one project, then
   duplicate or resize content into another preset.
 - **Local-first storage:** browser projects are persisted with IndexedDB/Dexie,
@@ -112,6 +121,9 @@ animation timeline, no realtime multiplayer, and no hosted template marketplace.
   OpenRouter, and custom endpoints are supported through the provider layer.
 - **Liquid Glass UI:** light/dark themes, translucent glass panels, and a
   reduced-transparency mode for accessibility.
+- **Desktop shell:** native menus, file open/save, clipboard/image-drop support,
+  local font discovery, secure AI key storage, and packaged Apple Silicon DMGs
+  through Tauri.
 
 ## Tech stack
 
@@ -187,8 +199,8 @@ reports unsupported copy operations instead of throwing.
 - Calqo focuses on static social visuals, not animation/video.
 - SVG export is intentionally limited and warns for unsupported fidelity.
 - Clipboard behavior depends on browser permissions and feature support.
-- Complex vector editing, editable HTML/CSS export, and phone-first editing
-  remain future work.
+- Complex vector editing, editable HTML/CSS export, signing/notarization, and
+  production-grade phone-first editing remain future work.
 
 ## Design language
 
