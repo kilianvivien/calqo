@@ -504,6 +504,10 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
 
   const snapNode = (layer: CalqoLayer, node: Konva.Node) => {
     if (!snapEnabled) return;
+    if (selectedLayerIds.length > 1 && selectedLayerIds.includes(layer.id)) {
+      setGuides([]);
+      return;
+    }
     const rect = node.getClientRect({ relativeTo: node.getParent() ?? undefined });
     const others = flattenLayers(artboard.layers)
       .filter((candidate) => candidate.id !== layer.id && candidate.visible)
