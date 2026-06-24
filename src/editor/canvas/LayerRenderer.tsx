@@ -16,6 +16,7 @@ interface LayerRendererProps {
   layer: CalqoLayer;
   activeLocale: string;
   selected: boolean;
+  interactive?: boolean;
   nodeRefs: React.MutableRefObject<NodeRegistry>;
   onSelect: (layer: CalqoLayer, additive: boolean) => void;
   onDragMove: (layer: CalqoLayer, node: Konva.Node) => void;
@@ -32,7 +33,31 @@ function commonProps(
   onDragMove: (layer: CalqoLayer, node: Konva.Node) => void,
   onDragEnd: (layer: CalqoLayer, node: Konva.Node) => void,
   onTransformEnd: (layer: CalqoLayer, node: Konva.Node) => void,
+  interactive = true,
 ) {
+  const handlers = interactive
+    ? {
+        onClick: (event: Konva.KonvaEventObject<MouseEvent>) => {
+          event.cancelBubble = true;
+          if (event.evt.button !== 0) return;
+          onSelect(layer, event.evt.shiftKey);
+        },
+        onTap: (event: Konva.KonvaEventObject<TouchEvent>) => {
+          event.cancelBubble = true;
+          onSelect(layer, false);
+        },
+        onDragMove: (event: Konva.KonvaEventObject<DragEvent>) => {
+          onDragMove(layer, event.target);
+        },
+        onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => {
+          onDragEnd(layer, event.target);
+        },
+        onTransformEnd: (event: Konva.KonvaEventObject<Event>) => {
+          onTransformEnd(layer, event.target);
+        },
+      }
+    : {};
+
   return {
     ref: (node: Konva.Node | null) => {
       if (node) nodeRefs.current.set(layer.id, node);
@@ -47,25 +72,8 @@ function commonProps(
     rotation: layer.rotation,
     opacity: layer.opacity,
     visible: layer.visible,
-    draggable: !layer.locked,
-    onClick: (event: Konva.KonvaEventObject<MouseEvent>) => {
-      event.cancelBubble = true;
-      if (event.evt.button !== 0) return;
-      onSelect(layer, event.evt.shiftKey);
-    },
-    onTap: (event: Konva.KonvaEventObject<TouchEvent>) => {
-      event.cancelBubble = true;
-      onSelect(layer, false);
-    },
-    onDragMove: (event: Konva.KonvaEventObject<DragEvent>) => {
-      onDragMove(layer, event.target);
-    },
-    onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => {
-      onDragEnd(layer, event.target);
-    },
-    onTransformEnd: (event: Konva.KonvaEventObject<Event>) => {
-      onTransformEnd(layer, event.target);
-    },
+    draggable: interactive && !layer.locked,
+    ...handlers,
   };
 }
 
@@ -120,7 +128,7 @@ export function LayerRenderer(props: LayerRendererProps) {
   const {
     layer,
     activeLocale,
-    selected,
+    interactive = true,
     nodeRefs,
     onSelect,
     onDragMove,
@@ -157,6 +165,7 @@ export function LayerRenderer(props: LayerRendererProps) {
       onDragMove,
       onDragEnd,
       onTransformEnd,
+      interactive,
     );
     return (
       <Group {...groupProps} {...blendProps(layer)}>
@@ -165,7 +174,8 @@ export function LayerRenderer(props: LayerRendererProps) {
             key={child.id}
             {...props}
             layer={child}
-            selected={selected || props.nodeRefs.current.has(child.id)}
+            selected={false}
+            interactive={false}
           />
         ))}
       </Group>
@@ -179,6 +189,7 @@ export function LayerRenderer(props: LayerRendererProps) {
     onDragMove,
     onDragEnd,
     onTransformEnd,
+    interactive,
   );
 
   if (layer.type === 'text') {
@@ -202,8 +213,8 @@ export function LayerRenderer(props: LayerRendererProps) {
         shadowOffsetX={layer.style.shadow?.offsetX}
         shadowOffsetY={layer.style.shadow?.offsetY}
         shadowOpacity={layer.style.shadow?.opacity}
-        onDblClick={() => onTextEdit(layer)}
-        onDblTap={() => onTextEdit(layer)}
+        onDblClick={interactive ? () => onTextEdit(layer) : undefined}
+        onDblTap={interactive ? () => onTextEdit(layer) : undefined}
       />
     );
   }
@@ -299,8 +310,8 @@ export function LayerRenderer(props: LayerRendererProps) {
   if (layer.type === 'image') {
     const imageBase = {
       ...base,
-      onDblClick: () => onImageCrop?.(layer),
-      onDblTap: () => onImageCrop?.(layer),
+      onDblClick: interactive ? () => onImageCrop?.(layer) : undefined,
+      onDblTap: interactive ? () => onImageCrop?.(layer) : undefined,
     };
     return <ImageLayerNode layer={layer} base={imageBase} />;
   }
@@ -316,6 +327,7 @@ export function LayerRenderer(props: LayerRendererProps) {
         base={base}
         activeLocale={activeLocale}
         onTextEdit={onTextEdit}
+        interactive={interactive}
       />
     );
   }
@@ -465,11 +477,13 @@ function ListLayerNode({
   base,
   activeLocale,
   onTextEdit,
+  interactive = true,
 }: {
   layer: ListLayer;
   base: ReturnType<typeof commonProps>;
   activeLocale: string;
   onTextEdit: (layer: CalqoLayer) => void;
+  interactive?: boolean;
 }) {
   const { rowHeights, totalHeight, markerWidth, rowTextWidth } = useMemo(
     () => listRowLayout(layer, activeLocale),
@@ -499,8 +513,8 @@ function ListLayerNode({
       clipY={0}
       clipWidth={layer.w}
       clipHeight={layer.h}
-      onDblClick={() => onTextEdit(layer)}
-      onDblTap={() => onTextEdit(layer)}
+      onDblClick={interactive ? () => onTextEdit(layer) : undefined}
+      onDblTap={interactive ? () => onTextEdit(layer) : undefined}
     >
       {layer.items.map((row, index) => {
         const rowHeight = rowHeights[index] ?? layer.style.fontSize * layer.style.lineHeight;
