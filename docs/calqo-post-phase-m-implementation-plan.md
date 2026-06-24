@@ -23,7 +23,7 @@ Observed status:
   unit or readiness coverage.
 - Phase L's requested work is implemented in code (`APP_VERSION`, repository
   URL, GitHub toolbar button, status-bar version, localized labels). Current
-  package metadata reports `0.1.6`, while the README release notes still refer
+  package metadata reports `0.1.7`, while the README release notes still refer
   to the first public DMG release `v0.1.0`.
 - Phase M is explicitly skipped/deferred in
   `calqo-post-prototype-implementation-plan.md` because it does not contain
