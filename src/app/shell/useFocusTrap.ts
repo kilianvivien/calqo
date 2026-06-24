@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -14,22 +14,38 @@ export function useFocusTrap(
   active: boolean,
   onEscape: () => void,
 ): void {
+  const onEscapeRef = useRef(onEscape);
+
+  useEffect(() => {
+    onEscapeRef.current = onEscape;
+  }, [onEscape]);
+
   useEffect(() => {
     if (!active) return undefined;
     const root = ref.current;
     if (!root) return undefined;
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previous =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
 
     const focusables = () =>
       Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
         (el) => !el.hasAttribute('disabled') && el.tabIndex !== -1,
       );
-    (focusables()[0] ?? root).focus();
+
+    if (!root.contains(document.activeElement)) {
+      (
+        root.querySelector<HTMLElement>('[autofocus]') ??
+        focusables()[0] ??
+        root
+      ).focus();
+    }
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onEscape();
+        onEscapeRef.current();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -55,5 +71,5 @@ export function useFocusTrap(
       document.removeEventListener('keydown', onKeyDown);
       previous?.focus();
     };
-  }, [active, onEscape, ref]);
+  }, [active, ref]);
 }
