@@ -9,6 +9,10 @@ import {
 } from '@/editor/commands/projectCommands';
 import { invokeAppCommandSync } from './commands/appCommands';
 import { installNativeFileDrops } from './commands/nativeFileDrops';
+import {
+  isEditableKeyboardTarget,
+  isKeyboardEventInsideModal,
+} from './keyboardGuards';
 
 /** Keyboard nudge increments (artboard px): a fine step and a coarse step. */
 const NUDGE_SMALL = 1;
@@ -43,13 +47,11 @@ export function App() {
     window.addEventListener('beforeunload', onBeforeUnload);
 
     const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const typing =
-        target?.tagName === 'INPUT' ||
-        target?.tagName === 'TEXTAREA' ||
-        target?.isContentEditable;
+      const typing = isEditableKeyboardTarget(e.target);
       const key = e.key.toLowerCase();
       const id = useWorkspaceStore.getState().activeProjectId;
+
+      if (isKeyboardEventInsideModal(e)) return;
 
       if ((e.metaKey || e.ctrlKey) && key === 'n') {
         e.preventDefault();
@@ -76,7 +78,10 @@ export function App() {
         invokeAppCommandSync('edit.undo');
         return;
       }
-      if (((e.metaKey || e.ctrlKey) && e.shiftKey && key === 'z') || ((e.metaKey || e.ctrlKey) && key === 'y')) {
+      if (
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && key === 'z') ||
+        ((e.metaKey || e.ctrlKey) && key === 'y')
+      ) {
         e.preventDefault();
         invokeAppCommandSync('edit.redo');
         return;
@@ -91,7 +96,8 @@ export function App() {
         e.preventDefault();
         if (id) {
           const step = e.shiftKey ? NUDGE_LARGE : NUDGE_SMALL;
-          const dx = key === 'arrowleft' ? -step : key === 'arrowright' ? step : 0;
+          const dx =
+            key === 'arrowleft' ? -step : key === 'arrowright' ? step : 0;
           const dy = key === 'arrowup' ? -step : key === 'arrowdown' ? step : 0;
           nudgeSelectedLayers(id, dx, dy);
         }
@@ -117,12 +123,20 @@ export function App() {
       }
       if (key === '[') {
         e.preventDefault();
-        if (id) shiftSelectionZOrder(id, e.metaKey || e.ctrlKey ? 'back' : 'backward');
+        if (id)
+          shiftSelectionZOrder(
+            id,
+            e.metaKey || e.ctrlKey ? 'back' : 'backward',
+          );
         return;
       }
       if (key === ']') {
         e.preventDefault();
-        if (id) shiftSelectionZOrder(id, e.metaKey || e.ctrlKey ? 'front' : 'forward');
+        if (id)
+          shiftSelectionZOrder(
+            id,
+            e.metaKey || e.ctrlKey ? 'front' : 'forward',
+          );
         return;
       }
       if (key === 'v') useUiStore.getState().setActiveTool('select');
@@ -131,7 +145,8 @@ export function App() {
       if (key === 't') useUiStore.getState().setActiveTool('text');
       if (key === 'r') useUiStore.getState().setActiveTool('rect');
       if (key === 'e') useUiStore.getState().setActiveTool('ellipse');
-      if (e.shiftKey && key === 'l') useUiStore.getState().setActiveTool('list');
+      if (e.shiftKey && key === 'l')
+        useUiStore.getState().setActiveTool('list');
       else if (key === 'l') useUiStore.getState().setActiveTool('line');
       if (key === 'i') useUiStore.getState().setActiveTool('image');
       if (key === '?' || (e.shiftKey && key === '/')) {
