@@ -50,6 +50,7 @@ function commonProps(
     draggable: !layer.locked,
     onClick: (event: Konva.KonvaEventObject<MouseEvent>) => {
       event.cancelBubble = true;
+      if (event.evt.button !== 0) return;
       onSelect(layer, event.evt.shiftKey);
     },
     onTap: (event: Konva.KonvaEventObject<TouchEvent>) => {
