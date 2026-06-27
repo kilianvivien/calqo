@@ -35,18 +35,18 @@ surface.
 ## Download
 
 The current alpha release is
-[Calqo v0.2.0](https://github.com/kilianvivien/calqo/releases/tag/v0.2.0).
+[Calqo v0.2.2](https://github.com/kilianvivien/calqo/releases/tag/v0.2.2).
 
-- macOS Apple Silicon: `Calqo_0.2.0_aarch64.dmg`
+- macOS Apple Silicon: `Calqo_0.2.2_aarch64.dmg`
 - SHA-256:
-  `67cca8b091f316065eb7504cf1834dfa3fabbd228be17f7d98ee4fb90833010b`
+  `c479ef78e2fc487b6ea3d4442886dca11d71bac7dbe64e848f2c1be582a452b6`
 
 The desktop build is currently unsigned and not notarized. On first launch,
 macOS Gatekeeper may require approving the app manually.
 
 ## Status
 
-**Public alpha, current app version 0.2.0.** The core editor is implemented and
+**Public alpha, current app version 0.2.2.** The core editor is implemented and
 usable locally: create projects, edit multi-artboard social visuals, save in the
 browser or native desktop shell, export files, translate content, and generate
 editable AI templates. The macOS desktop build includes localized native menus,
@@ -80,7 +80,8 @@ handling polish.
 - [x] PWA install/update prompts and manifest assets
 - [x] Modal keyboard shortcut isolation and focus-trap polish (`v0.1.7`)
 - [x] Creative frames, stroke looks, sticker outlines, and mobile styling parity (Phase R)
-- [x] Current GitHub release with Apple Silicon macOS DMG (`v0.2.0`)
+- [x] Font/style controls, system font enumeration, and inspector section polish (`v0.2.2`)
+- [x] Current GitHub release with Apple Silicon macOS DMG (`v0.2.2`)
 
 ## What you can make
 
@@ -121,9 +122,10 @@ animation timeline, no realtime multiplayer, and no hosted template marketplace.
   the app chrome.
 - **Prompt-a-template:** describe a design and get an editable Calqo project
   instead of a flattened image.
-- **Bring-your-own AI provider:** mock mode works offline; Gemini has a
-  provider-specific GenAI path; OpenAI-compatible, Ollama/local, Mistral,
-  OpenRouter, and custom endpoints are supported through the provider layer.
+- **Bring-your-own AI provider:** AI is off until a provider is configured;
+  Gemini has a provider-specific GenAI path, while OpenAI-compatible,
+  Ollama/local, Mistral, OpenRouter, and custom endpoints are supported through
+  the provider layer.
 - **Liquid Glass UI:** light/dark themes, translucent glass panels, and a
   reduced-transparency mode for accessibility.
 - **Desktop shell:** native menus, file open/save, clipboard/image-drop support,
@@ -181,13 +183,13 @@ editing-depth passes.
 
 ## AI providers
 
-Mock mode is the default and works offline. Gemini uses a provider-specific
-GenAI adapter with structured JSON requests for templates and translations.
-Local Ollama, Mistral, OpenRouter, and custom endpoints continue through the
-OpenAI-compatible adapter. Browser API keys are only persisted after explicit
-opt-in and are stored in IndexedDB for this site; the Tauri app stores provider
-keys separately in Stronghold-backed secure storage and keeps them out of
-exported `.calqo` project files.
+AI is off by default until a provider is configured. Gemini uses a
+provider-specific GenAI adapter with structured JSON requests for templates and
+translations. Local Ollama, Mistral, OpenRouter, and custom endpoints continue
+through the OpenAI-compatible adapter. Browser API keys are only persisted after
+explicit opt-in and are stored in IndexedDB for this site; the Tauri app stores
+provider keys separately in Stronghold-backed secure storage and keeps them out
+of exported `.calqo` project files.
 
 ## Browser compatibility
 
