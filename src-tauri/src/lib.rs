@@ -3,11 +3,7 @@
 // up the native macOS menu bar (so it has the standard App/Edit/Window submenus,
 // predefined items, and a native About) and system-font discovery. Menu
 // selections are emitted into the webview so React still owns command behavior.
-use std::{
-    collections::{BTreeSet, HashMap},
-    fs,
-    path::Path,
-};
+use std::collections::HashMap;
 use tauri::{
     menu::{
         AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemKind, PredefinedMenuItem,
@@ -426,60 +422,50 @@ fn set_menu_enabled(app: AppHandle, states: HashMap<String, bool>) -> tauri::Res
 }
 
 #[tauri::command]
-fn list_system_fonts() -> Vec<String> {
-    let mut names = BTreeSet::new();
-    for dir in font_dirs() {
-        collect_font_names(Path::new(dir), &mut names);
-    }
-    names.into_iter().collect()
+fn list_system_fonts() -> Result<Vec<String>, String> {
+    font_kit::source::SystemSource::new()
+        .all_families()
+        .map_err(|err| format!("font enumeration failed: {err}"))
 }
 
-fn font_dirs() -> &'static [&'static str] {
-    #[cfg(target_os = "macos")]
-    {
-        &[
-            "/System/Library/Fonts",
-            "/Library/Fonts",
-            "/System/Library/Fonts/Supplemental",
-        ]
-    }
-    #[cfg(target_os = "windows")]
-    {
-        &["C:\\Windows\\Fonts"]
-    }
-    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
-    {
-        &["/usr/share/fonts", "/usr/local/share/fonts"]
-    }
+/// One installed face for a given family. Weight is the OS-resolved CSS weight
+/// (100…900) and italic is `true` for any slanted face (italic or oblique).
+/// Used by the inspector to show only the weight toggles the current font
+/// actually has installed.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FontVariant {
+    weight: u16,
+    italic: bool,
 }
 
-fn collect_font_names(dir: &Path, names: &mut BTreeSet<String>) {
-    let Ok(entries) = fs::read_dir(dir) else {
-        return;
+/// Enumerate the available faces of an installed font family. The OS reports
+/// each `(weight, italic)` pair exactly once, so the UI can decide which
+/// named-weight toggles to expose. Returns an empty list (not an error) when
+/// the family isn't installed or the platform can't introspect it, so the
+/// caller can fall back to the schema's defaults.
+#[tauri::command]
+fn list_font_variants(family: String) -> Result<Vec<FontVariant>, String> {
+    use std::collections::BTreeSet;
+    let source = font_kit::source::SystemSource::new();
+    let Ok(handle) = source.select_family_by_name(&family) else {
+        return Ok(Vec::new());
     };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            collect_font_names(&path, names);
-            continue;
-        }
-        let Some(ext) = path.extension().and_then(|value| value.to_str()) else {
-            continue;
-        };
-        if !matches!(ext.to_ascii_lowercase().as_str(), "ttf" | "otf" | "ttc") {
-            continue;
-        }
-        if let Some(name) = path.file_stem().and_then(|value| value.to_str()) {
-            let cleaned = name
-                .replace(['-', '_'], " ")
-                .split_whitespace()
-                .collect::<Vec<_>>()
-                .join(" ");
-            if !cleaned.is_empty() {
-                names.insert(cleaned);
-            }
-        }
+    let mut seen: BTreeSet<(u16, bool)> = BTreeSet::new();
+    for font_handle in handle.fonts() {
+        let Ok(font) = font_handle.load() else { continue };
+        let props = font.properties();
+        // CoreText reports weights on a piecewise scale (e.g. Thin ≈ 268,
+        // Light = 300, Regular = 400, …). Snap to the nearest CSS bucket.
+        let weight = (((props.weight.0 + 50.0) / 100.0).floor() * 100.0) as u16;
+        let weight = weight.clamp(100, 900);
+        let italic = !matches!(props.style, font_kit::properties::Style::Normal);
+        seen.insert((weight, italic));
     }
+    Ok(seen
+        .into_iter()
+        .map(|(weight, italic)| FontVariant { weight, italic })
+        .collect())
 }
 
 pub fn run() {
@@ -504,6 +490,7 @@ pub fn run() {
         )
         .invoke_handler(tauri::generate_handler![
             list_system_fonts,
+            list_font_variants,
             set_menu_locale,
             set_menu_enabled
         ])

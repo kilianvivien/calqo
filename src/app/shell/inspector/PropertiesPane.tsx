@@ -117,6 +117,8 @@ import { STROKE_LOOK_IDS, strokeLookStyle, type StrokeLookId } from '@/editor/ca
 import { ColorPickerPopover } from './ColorPickerPopover';
 import { TextVariants } from './ContentControls';
 import { useFontOptions } from '@/lib/hooks/useFontOptions';
+import { useFontVariants } from '@/lib/hooks/useFontVariants';
+import { FontMenuField, TextStyleButtons } from '@/components/inspector';
 
 const LAYER_TYPE_ICON: Record<CalqoLayer['type'], LucideIcon> = {
   text: Type,
@@ -2162,14 +2164,7 @@ function EffectsControls({
   );
 }
 
-const WEIGHT_OPTIONS = [
-  { value: '300', label: '300' },
-  { value: '400', label: '400' },
-  { value: '500', label: '500' },
-  { value: '600', label: '600' },
-  { value: '700', label: '700' },
-  { value: '800', label: '800' },
-];
+const WEIGHT_OPTIONS: { value: string; label: string }[] = [];
 
 const DEFAULT_TEXT_SHADOW: ShadowStyle = {
   color: '#000000',
@@ -2242,22 +2237,19 @@ function TypographyControls({
 }) {
   const { t } = useTranslation('editor');
   const fontOptions = useFontOptions(style.fontFamily);
+  const variants = useFontVariants(style.fontFamily);
   return (
     <Section title={t('properties.typography')}>
-      <SelectField
+      <FontMenuField
         label={t('properties.font')}
         value={style.fontFamily}
-        options={fontOptions.map((f) => ({
-          value: f.family,
-          label: f.family,
-        }))}
+        fonts={fontOptions}
         onChange={(fontFamily) => onChange({ fontFamily })}
       />
-      <SelectField
-        label={t('properties.weight')}
-        value={String(style.fontWeight)}
-        options={WEIGHT_OPTIONS}
-        onChange={(weight) => onChange({ fontWeight: Number(weight) })}
+      <InspectorStyleButtons
+        style={style}
+        variants={variants}
+        onChange={(patch) => onChange(patch)}
       />
       <SliderField
         label={t('properties.size')}
@@ -2296,6 +2288,35 @@ function TypographyControls({
         onChange={(color) => onChange({ color })}
       />
     </Section>
+  );
+}
+
+/** Inspector-row wrapper for the shared style buttons component. */
+function InspectorStyleButtons({
+  style,
+  variants,
+  onChange,
+}: {
+  style: TextLayer['style'];
+  variants: ReturnType<typeof useFontVariants>;
+  onChange: (patch: Partial<TextLayer['style']>) => void;
+}) {
+  const { t } = useTranslation('editor');
+  return (
+    <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
+      <span className="text-[var(--calqo-text-3)]">
+        {t('properties.style')}
+      </span>
+      <TextStyleButtons
+        fontWeight={Number(style.fontWeight) || 400}
+        fontStyle={style.fontStyle}
+        textDecoration={style.textDecoration}
+        color={style.color}
+        hasItalic={variants.hasItalic}
+        availableWeights={variants.weights}
+        onChange={onChange}
+      />
+    </div>
   );
 }
 

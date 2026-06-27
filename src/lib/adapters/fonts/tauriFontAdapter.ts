@@ -1,5 +1,5 @@
 import { browserFontAdapter } from './browserFontAdapter';
-import type { FontAdapter, FontDef } from './FontAdapter';
+import type { FontAdapter, FontDef, FontVariant } from './FontAdapter';
 
 function fontDef(family: string): FontDef {
   return { family, stack: `"${family}", system-ui, sans-serif` };
@@ -20,6 +20,15 @@ export const tauriFontAdapter: FontAdapter = {
     } catch (error) {
       console.error('[Calqo] local font enumeration failed', error);
       return browserFontAdapter.listFonts();
+    }
+  },
+  async getFontVariants(family: string): Promise<FontVariant[]> {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return await invoke<FontVariant[]>('list_font_variants', { family });
+    } catch (error) {
+      console.error('[Calqo] local font variant enumeration failed', error);
+      return browserFontAdapter.getFontVariants(family);
     }
   },
 };

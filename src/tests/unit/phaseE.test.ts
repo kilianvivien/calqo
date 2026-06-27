@@ -57,7 +57,7 @@ describe('phase E — schema + validation helpers', () => {
         artboards: [
           {
             background: { type: 'solid', color: '#000' },
-            layers: [{ type: 'text', name: 'T', x: 0, y: 0, w: 10, h: 10, text: { fr: 'Hi' }, style: { fontFamily: 'Inter', fontSize: 10, fontWeight: 400, color: '#fff', align: 'left', lineHeight: 1, letterSpacing: 0 } }],
+            layers: [{ type: 'text', name: 'T', x: 0, y: 0, w: 10, h: 10, text: { fr: 'Hi' }, style: { fontFamily: 'Inter', fontSize: 10, fontWeight: 400, fontStyle: 'normal', textDecoration: 'none', color: '#fff', align: 'left', lineHeight: 1, letterSpacing: 0 } }],
           },
         ],
       },

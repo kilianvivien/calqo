@@ -43,6 +43,6 @@ export type { StorageAdapter, ProjectSummary } from './storage/StorageAdapter';
 export type { AssetStorageAdapter, AssetMeta } from './assets/AssetStorageAdapter';
 export type { FileImportExportAdapter, CalqoFile } from './file/FileImportExportAdapter';
 export type { ClipboardAdapter } from './clipboard/ClipboardAdapter';
-export type { FontAdapter, FontDef } from './fonts/FontAdapter';
+export type { FontAdapter, FontDef, FontVariant } from './fonts/FontAdapter';
 export type { SettingsAdapter } from './settings/SettingsAdapter';
 export type { DialogAdapter } from './dialog/DialogAdapter';

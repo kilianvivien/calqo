@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Arrow, Circle, Ellipse, Group, Image, Line, Rect, Text } from 'react-konva';
+import { CalqoText } from './CalqoText';
 import type Konva from 'konva';
 import { Blur } from 'konva/lib/filters/Blur';
 import type { ArrowStyle, CalqoLayer, ImageLayer, ListLayer } from '@/lib/schema';
@@ -404,7 +405,8 @@ export function LayerRenderer(props: LayerRendererProps) {
       text: textValue,
       fontFamily: layer.style.fontFamily,
       fontSize: layer.style.fontSize,
-      fontStyle: String(layer.style.fontWeight),
+      fontStyle: layer.style.fontStyle,
+      textDecoration: layer.style.textDecoration,
       align: layer.style.align,
       verticalAlign: layer.style.verticalAlign,
       lineHeight: layer.style.lineHeight,
@@ -428,7 +430,7 @@ export function LayerRenderer(props: LayerRendererProps) {
 
     if (!layer.sticker) {
       return (
-        <Text
+        <CalqoText
           {...base}
           {...blendProps(layer)}
           {...typeProps}
@@ -436,6 +438,7 @@ export function LayerRenderer(props: LayerRendererProps) {
           {...ownStroke}
           {...shadow}
           {...editHandlers}
+          fontWeight={layer.style.fontWeight}
         />
       );
     }
@@ -446,18 +449,20 @@ export function LayerRenderer(props: LayerRendererProps) {
     return (
       <Group {...base} {...blendProps(layer)} {...editHandlers}>
         <LocalHitRect layer={layer} interactive={interactive} onSelect={onSelect} />
-        <Text
+        <CalqoText
           {...localSizeProps(layer)}
           {...typeProps}
           fill={layer.sticker.color}
           {...stickerCfg}
+          fontWeight={layer.style.fontWeight}
         />
-        <Text
+        <CalqoText
           {...localSizeProps(layer)}
           {...typeProps}
           fill={layer.style.color}
           {...ownStroke}
           {...shadow}
+          fontWeight={layer.style.fontWeight}
         />
       </Group>
     );
@@ -974,7 +979,7 @@ function ListLayerNode({
                     />
                   )
                 ) : (
-                  <Text
+                  <CalqoText
                     x={0}
                     y={rowY}
                     width={markerWidth}
@@ -982,7 +987,9 @@ function ListLayerNode({
                     text={markerGlyph(layer.marker)}
                     fontFamily={layer.style.fontFamily}
                     fontSize={markerSize}
-                    fontStyle={String(layer.style.fontWeight)}
+                    fontStyle={layer.style.fontStyle}
+                    textDecoration={layer.style.textDecoration}
+                    fontWeight={layer.style.fontWeight}
                     fill={layer.marker.color}
                     align="left"
                     verticalAlign="top"
@@ -992,7 +999,7 @@ function ListLayerNode({
                 )}
               </>
             )}
-            <Text
+            <CalqoText
               x={markerWidth + layer.markerGap}
               y={rowY}
               width={rowTextWidth}
@@ -1000,7 +1007,9 @@ function ListLayerNode({
               text={value}
               fontFamily={layer.style.fontFamily}
               fontSize={layer.style.fontSize}
-              fontStyle={String(layer.style.fontWeight)}
+              fontStyle={layer.style.fontStyle}
+              textDecoration={layer.style.textDecoration}
+              fontWeight={layer.style.fontWeight}
               fill={layer.style.color}
               align={layer.style.align}
               verticalAlign="top"

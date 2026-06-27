@@ -78,6 +78,8 @@ const baseListLayer = {
     fontFamily: 'Inter',
     fontSize: 36,
     fontWeight: 500,
+    fontStyle: 'normal' as const,
+    textDecoration: 'none' as const,
     color: '#111827',
     align: 'left' as const,
     lineHeight: 1.25,

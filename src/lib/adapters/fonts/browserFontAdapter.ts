@@ -1,4 +1,4 @@
-import type { FontAdapter, FontDef } from './FontAdapter';
+import type { FontAdapter, FontDef, FontVariant } from './FontAdapter';
 
 /** Browser prototype font menu: web-safe stacks plus Google Fonts loaded from
  * index.html. Tauri/local enumeration can replace this list later. */
@@ -34,6 +34,13 @@ const BUNDLED_FONTS: FontDef[] = [
 export const browserFontAdapter: FontAdapter = {
   async listFonts(): Promise<FontDef[]> {
     return BUNDLED_FONTS;
+  },
+  async getFontVariants(): Promise<FontVariant[]> {
+    // The browser prototype can't introspect system fonts, so we don't know
+    // which weights each bundled family actually supports. Returning [] lets
+    // the inspector show all standard weight pills for the bundled families
+    // (we treat any weight the user picks as valid).
+    return [];
   },
 };
 

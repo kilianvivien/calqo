@@ -109,6 +109,8 @@ describe('phase I — typography presets', () => {
         fontFamily: 'Inter',
         fontSize: 20,
         fontWeight: 400,
+        fontStyle: 'normal' as const,
+        textDecoration: 'none' as const,
         color: '#000000',
         align: 'left',
         lineHeight: 1.2,

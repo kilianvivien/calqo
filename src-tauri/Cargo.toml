@@ -1,6 +1,6 @@
 [package]
 name = "calqo"
-version = "0.2.0"
+version = "0.2.1"
 description = "A simple, glass-native social visual maker"
 authors = ["Calqo contributors"]
 edition = "2021"
@@ -21,3 +21,5 @@ tauri-plugin-fs = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-store = "2"
 tauri-plugin-stronghold = "2"
+font-kit = "0.14"
+serde = { version = "1", features = ["derive"] }

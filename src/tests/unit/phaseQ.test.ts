@@ -80,6 +80,8 @@ describe('phase Q — mobile quick-edit', () => {
         fontFamily: 'Inter',
         fontSize: 48,
         fontWeight: 400,
+        fontStyle: 'normal' as const,
+        textDecoration: 'none' as const,
         color: '#000000',
         align: 'left' as const,
         lineHeight: 1.2,

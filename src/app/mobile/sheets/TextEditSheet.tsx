@@ -17,12 +17,13 @@ import {
 } from '@/editor/commands/projectCommands';
 import { localeLabel } from '@/editor/i18n-content/contentLocaleService';
 import { useFontOptions } from '@/lib/hooks/useFontOptions';
+import { useFontVariants } from '@/lib/hooks/useFontVariants';
 import type { CalqoLayer, CalqoProject, LocaleCode, TextStyle } from '@/lib/schema';
 import { BottomSheet } from '@/components/mobile';
 import { GlassButton } from '@/components/glass';
+import { FontMenu, TextStyleButtons } from '@/components/inspector';
 import { cn } from '@/lib/utils/cn';
 
-const WEIGHTS = [400, 500, 600, 700, 800];
 const ALIGNS: { value: TextStyle['align']; icon: typeof AlignLeft }[] = [
   { value: 'left', icon: AlignLeft },
   { value: 'center', icon: AlignCenter },
@@ -82,6 +83,7 @@ export function TextEditSheet({ open, onClose, project, layer }: TextEditSheetPr
   const style =
     layer.type === 'text' || layer.type === 'list' ? layer.style : null;
   const fontOptions = useFontOptions(style?.fontFamily);
+  const fontVariants = useFontVariants(style?.fontFamily);
   const patchStyle = (patch: Partial<TextStyle>) =>
     updateLayerInActiveArtboard(project.id, layer.id, { style: patch });
 
@@ -152,17 +154,11 @@ export function TextEditSheet({ open, onClose, project, layer }: TextEditSheetPr
             <span className="mb-1 block text-[12px] font-medium text-[var(--calqo-text-2)]">
               {t('mobile.text.font')}
             </span>
-            <select
+            <FontMenu
               value={style.fontFamily}
-              onChange={(event) => patchStyle({ fontFamily: event.target.value })}
-              className="h-11 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[14px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
-            >
-              {fontOptions.map((font) => (
-                <option key={font.family} value={font.family}>
-                  {font.family}
-                </option>
-              ))}
-            </select>
+              fonts={fontOptions}
+              onChange={(fontFamily) => patchStyle({ fontFamily })}
+            />
           </label>
 
           <div className="flex items-center justify-between gap-3">
@@ -198,21 +194,17 @@ export function TextEditSheet({ open, onClose, project, layer }: TextEditSheetPr
 
           <div className="flex items-center justify-between gap-3">
             <span className="text-[12px] font-medium text-[var(--calqo-text-2)]">
-              {t('mobile.text.weight')}
+              {t('mobile.text.style')}
             </span>
-            <select
-              value={String(style.fontWeight)}
-              onChange={(event) =>
-                patchStyle({ fontWeight: Number(event.target.value) })
-              }
-              className="h-10 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[13px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
-            >
-              {WEIGHTS.map((weight) => (
-                <option key={weight} value={weight}>
-                  {weight}
-                </option>
-              ))}
-            </select>
+            <TextStyleButtons
+              fontWeight={Number(style.fontWeight) || 400}
+              fontStyle={style.fontStyle}
+              textDecoration={style.textDecoration}
+              color={style.color}
+              hasItalic={fontVariants.hasItalic}
+              availableWeights={fontVariants.weights}
+              onChange={(patch) => patchStyle(patch)}
+            />
           </div>
 
           <div className="flex items-center justify-between gap-3">

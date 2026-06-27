@@ -56,6 +56,8 @@ export function TextEditOverlay({
       fontFamily: textStyle.fontFamily,
       fontSize: textStyle.fontSize * stageScale,
       fontWeight: textStyle.fontWeight,
+      fontStyle: textStyle.fontStyle,
+      textDecoration: textStyle.textDecoration,
       lineHeight: textStyle.lineHeight,
       letterSpacing: textStyle.letterSpacing * stageScale,
       color: textStyle.color,

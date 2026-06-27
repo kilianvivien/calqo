@@ -55,6 +55,8 @@ export const fixtureProject: CalqoProject = {
             fontFamily: 'Inter',
             fontSize: 96,
             fontWeight: 700,
+            fontStyle: 'normal',
+            textDecoration: 'none',
             color: '#FFFFFF',
             align: 'left',
             lineHeight: 1.1,

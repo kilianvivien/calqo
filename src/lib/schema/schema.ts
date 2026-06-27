@@ -131,6 +131,8 @@ export const textStyleSchema = z.object({
   fontFamily: z.string().default('Inter'),
   fontSize: z.number().positive().default(48),
   fontWeight: z.union([z.number(), z.string()]).default(400),
+  fontStyle: z.enum(['normal', 'italic']).default('normal'),
+  textDecoration: z.enum(['none', 'underline']).default('none'),
   color: hexish.default('#000000'),
   align: z.enum(['left', 'center', 'right', 'justify']).default('left'),
   verticalAlign: z.enum(['top', 'middle', 'bottom']).optional(),

@@ -139,6 +139,8 @@ describe('phase H — template repair and quality checks', () => {
         fontFamily: 'Inter',
         fontSize: 32,
         fontWeight: 700,
+        fontStyle: 'normal' as const,
+        textDecoration: 'none' as const,
         color: '#FFFFFF',
         align: 'left',
         lineHeight: 1.1,

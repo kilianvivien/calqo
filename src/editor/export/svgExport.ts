@@ -310,7 +310,11 @@ function serializeLayer(
     const letterSpacing = style.letterSpacing
       ? ` letter-spacing="${style.letterSpacing}"`
       : '';
-    return `${open}<text font-family="${esc(style.fontFamily)}" font-size="${style.fontSize}" font-weight="${style.fontWeight}" fill="${style.color}" dominant-baseline="central" text-anchor="start"${letterSpacing}${stroke}>${tspans}</text>${close}`;
+    const fontStyleAttr =
+      style.fontStyle === 'italic' ? ' font-style="italic"' : '';
+    const decorationAttr =
+      style.textDecoration === 'underline' ? ' text-decoration="underline"' : '';
+    return `${open}<text font-family="${esc(style.fontFamily)}" font-size="${style.fontSize}" font-weight="${style.fontWeight}"${fontStyleAttr}${decorationAttr} fill="${style.color}" dominant-baseline="central" text-anchor="start"${letterSpacing}${stroke}>${tspans}</text>${close}`;
   }
 
   if (layer.type === 'image' || layer.type === 'svg') {
@@ -392,8 +396,12 @@ function serializeList(
           `<image href="${markerAssetUrl}" x="0" y="${round(imgY)}" width="${markerSize}" height="${markerSize}" preserveAspectRatio="xMidYMid meet" />`,
         );
       } else if (layer.marker.kind !== 'asset') {
+        const fontStyleAttr =
+          style.fontStyle === 'italic' ? ' font-style="italic"' : '';
+        const decorationAttr =
+          style.textDecoration === 'underline' ? ' text-decoration="underline"' : '';
         parts.push(
-          `<text font-family="${esc(style.fontFamily)}" font-size="${markerSize}" font-weight="${style.fontWeight}" fill="${layer.marker.color}" x="0" y="${round(rowY + lineHeightPx / 2)}" dominant-baseline="central">${esc(markerGlyph(layer.marker))}</text>`,
+          `<text font-family="${esc(style.fontFamily)}" font-size="${markerSize}" font-weight="${style.fontWeight}"${fontStyleAttr}${decorationAttr} fill="${layer.marker.color}" x="0" y="${round(rowY + lineHeightPx / 2)}" dominant-baseline="central">${esc(markerGlyph(layer.marker))}</text>`,
         );
       }
     }
@@ -416,8 +424,12 @@ function serializeList(
       ? ` stroke="${style.stroke.color}" stroke-width="${style.stroke.width}"`
       : '';
     const letterSpacing = style.letterSpacing ? ` letter-spacing="${style.letterSpacing}"` : '';
+    const fontStyleAttr =
+      style.fontStyle === 'italic' ? ' font-style="italic"' : '';
+    const decorationAttr =
+      style.textDecoration === 'underline' ? ' text-decoration="underline"' : '';
     parts.push(
-      `<text font-family="${esc(style.fontFamily)}" font-size="${style.fontSize}" font-weight="${style.fontWeight}" fill="${style.color}" dominant-baseline="central" text-anchor="start"${letterSpacing}${stroke}>${tspans}</text>`,
+      `<text font-family="${esc(style.fontFamily)}" font-size="${style.fontSize}" font-weight="${style.fontWeight}"${fontStyleAttr}${decorationAttr} fill="${style.color}" dominant-baseline="central" text-anchor="start"${letterSpacing}${stroke}>${tspans}</text>`,
     );
   });
   return `${open}${parts.join('')}${close}`;
