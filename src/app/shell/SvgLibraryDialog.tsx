@@ -278,7 +278,7 @@ function SvgLibraryDialogInner() {
                   />
                   <GlassButton
                     variant="primary"
-                    onClick={() => void insertSvg(aiPreview, aiPrompt.slice(0, 32) || 'AI SVG', aiColor)}
+                    onClick={() => void insertSvg(aiPreview, aiPrompt.slice(0, 32) || 'AI SVG')}
                   >
                     {t('svgLibrary.insert')}
                   </GlassButton>

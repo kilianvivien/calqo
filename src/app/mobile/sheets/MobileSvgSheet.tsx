@@ -276,7 +276,7 @@ export function MobileSvgSheet({
                 variant="primary"
                 className="min-w-0 flex-1"
                 onClick={() =>
-                  void insertSvg(aiPreview, aiPrompt.slice(0, 32) || 'AI SVG', color)
+                  void insertSvg(aiPreview, aiPrompt.slice(0, 32) || 'AI SVG')
                 }
               >
                 {t('svgLibrary.insert')}
