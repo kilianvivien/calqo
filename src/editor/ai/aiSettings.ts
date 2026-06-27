@@ -234,27 +234,36 @@ async function loadSecureKeys(settings: AiSettings): Promise<AiSettings> {
   return { ...settings, providers, storeKey: true };
 }
 
+let persistChain: Promise<void> = Promise.resolve();
+
+async function persistOnce(
+  settings: AiSettings,
+  setFallbackIds?: (ids: AiProviderId[]) => void,
+): Promise<void> {
+  const secureSettings = isTauriSettings();
+  await appSettings.set(SETTINGS_KEY, toPersistedAiSettings(settings, secureSettings));
+  if (!secureSettings) return;
+  await Promise.all(
+    PROVIDER_LIST.map((preset) => {
+      const key = secretKeyForProvider(preset.id);
+      const apiKey = settings.providers[preset.id].apiKey.trim();
+      return apiKey ? appSettings.set(key, apiKey) : appSettings.remove(key);
+    }),
+  );
+  setFallbackIds?.(await loadInsecureFallbackProviderIds());
+}
+
 function persist(
   settings: AiSettings,
   setFallbackIds?: (ids: AiProviderId[]) => void,
 ): void {
-  const secureSettings = isTauriSettings();
-  void appSettings.set(SETTINGS_KEY, toPersistedAiSettings(settings, secureSettings)).catch((err) => {
-    console.error('[Calqo] failed to persist AI settings', err);
-  });
-  if (secureSettings) {
-    void Promise.all(
-      PROVIDER_LIST.map((preset) => {
-        const key = secretKeyForProvider(preset.id);
-        const apiKey = settings.providers[preset.id].apiKey.trim();
-        return apiKey ? appSettings.set(key, apiKey) : appSettings.remove(key);
-      }),
-    )
-      .then(async () => setFallbackIds?.(await loadInsecureFallbackProviderIds()))
-      .catch((err) => {
-        console.error('[Calqo] failed to persist secure AI keys', err);
-      });
-  }
+  const snapshot = structuredClone(settings);
+  persistChain = persistChain
+    .catch(() => undefined)
+    .then(() => persistOnce(snapshot, setFallbackIds))
+    .catch((err) => {
+      console.error('[Calqo] failed to persist AI settings', err);
+    });
 }
 
 export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({

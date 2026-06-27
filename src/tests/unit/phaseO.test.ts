@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import i18n, { SUPPORTED_LANGUAGES } from '@/lib/i18n';
 import { platformRuntime } from '@/lib/platform/runtime';
 import {
@@ -29,6 +29,27 @@ describe('phase O — Tauri foundation contracts', () => {
     expect(platformRuntime.capabilities.nativeMenus).toBe(false);
     expect(platformRuntime.capabilities.secureSettings).toBe(false);
     expect(platformRuntime.capabilities.localFonts).toBe(false);
+  });
+
+  it('detects Tauri v2 through the official global flag', async () => {
+    const previous = (globalThis as typeof globalThis & { isTauri?: boolean }).isTauri;
+    vi.resetModules();
+    try {
+      (globalThis as typeof globalThis & { isTauri?: boolean }).isTauri = true;
+
+      const { detectPlatformRuntime } = await import('@/lib/platform/runtime');
+      const runtime = detectPlatformRuntime();
+
+      expect(runtime.kind).toBe('tauri');
+      expect(runtime.capabilities.secureSettings).toBe(true);
+    } finally {
+      if (previous === undefined) {
+        delete (globalThis as typeof globalThis & { isTauri?: boolean }).isTauri;
+      } else {
+        (globalThis as typeof globalThis & { isTauri?: boolean }).isTauri = previous;
+      }
+      vi.resetModules();
+    }
   });
 
   it('reports command availability from workspace state', () => {
@@ -77,4 +98,3 @@ describe('phase O — Tauri foundation contracts', () => {
     }
   });
 });
-

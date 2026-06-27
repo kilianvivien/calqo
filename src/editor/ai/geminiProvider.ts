@@ -33,6 +33,7 @@ interface GeminiResponse {
 
 const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_TIMEOUT = 45_000;
+const SVG_TIMEOUT = 120_000;
 
 const STRING = { type: 'STRING' };
 const NUMBER = { type: 'NUMBER' };
@@ -122,12 +123,13 @@ export function createGeminiProvider(config: GeminiProviderConfig): AIProvider {
     user: string,
     signal?: AbortSignal,
     responseSchema?: unknown,
+    requestTimeoutMs = timeoutMs,
   ): Promise<string> {
     if (!config.apiKey) {
       throw new Error('Gemini API key is missing.');
     }
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
     if (signal) {
       if (signal.aborted) controller.abort();
       else signal.addEventListener('abort', () => controller.abort(), { once: true });
@@ -164,7 +166,7 @@ export function createGeminiProvider(config: GeminiProviderConfig): AIProvider {
       return extractText(JSON.parse(text) as GeminiResponse);
     } catch (err) {
       if (controller.signal.aborted) {
-        throw new Error(`Gemini timed out after ${timeoutMs}ms.`);
+        throw new Error(`Gemini timed out after ${requestTimeoutMs}ms.`);
       }
       throw err;
     } finally {
@@ -200,8 +202,8 @@ export function createGeminiProvider(config: GeminiProviderConfig): AIProvider {
       signal?: AbortSignal,
     ): Promise<SvgPromptResult> {
       const { system, user } = buildSvgPrompt(input);
-      const raw = await generate(system, user, signal);
-      return { raw, diagnostics: { ...diagnostics, rawOutput: raw } };
+      const raw = await generate(system, user, signal, undefined, SVG_TIMEOUT);
+      return { raw, diagnostics: { ...diagnostics, timeoutMs: SVG_TIMEOUT, rawOutput: raw } };
     },
   };
 }

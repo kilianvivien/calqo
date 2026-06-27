@@ -30,6 +30,7 @@ const templateRequest = {
 
 describe('phase H — Gemini provider', () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -94,6 +95,28 @@ describe('phase H — Gemini provider', () => {
         fonts: ['Inter'],
       }),
     ).rejects.toThrow(/Gemini responded 400/);
+  });
+
+  it('allows longer Gemini timeouts for SVG generation', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      const signal = init?.signal;
+      return new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(new Error('aborted')));
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const provider = createGeminiProvider({
+      apiKey: 'key',
+      model: 'gemini-2.0-flash',
+    });
+    const result = provider.generateSvg?.({ prompt: 'hungry bird' });
+    const assertion = expect(result).rejects.toThrow(/Gemini timed out after 120000ms/);
+
+    await vi.advanceTimersByTimeAsync(120_000);
+
+    await assertion;
   });
 });
 
