@@ -7,6 +7,7 @@ import {
 } from '@/editor/commands/projectCommands';
 import type {
   BackgroundFill,
+  ArrowStyle,
   CalqoArtboard,
   CalqoLayer,
   CalqoProject,
@@ -28,6 +29,42 @@ import { FRAME_PRESET_IDS, framePreset } from '@/editor/images/framePresets';
 import { saveImageAsset } from '@/lib/utils/imageAsset';
 import { BottomSheet } from '@/components/mobile';
 import { cn } from '@/lib/utils/cn';
+
+const DEFAULT_ARROW: ArrowStyle = {
+  start: false,
+  end: true,
+  pointerLength: 16,
+  pointerWidth: 16,
+  headStyle: 'triangle',
+};
+
+const ARROW_HEAD_STYLE_OPTIONS: {
+  value: NonNullable<ArrowStyle['headStyle']>;
+  labelKey: string;
+}[] = [
+  { value: 'triangle', labelKey: 'properties.arrowStyle_triangle' },
+  { value: 'chevron', labelKey: 'properties.arrowStyle_chevron' },
+  { value: 'bar', labelKey: 'properties.arrowStyle_bar' },
+  { value: 'dot', labelKey: 'properties.arrowStyle_dot' },
+];
+
+const STROKE_CAP_OPTIONS: {
+  value: NonNullable<StrokeStyle['cap']>;
+  labelKey: string;
+}[] = [
+  { value: 'butt', labelKey: 'properties.strokeCap_butt' },
+  { value: 'round', labelKey: 'properties.strokeCap_round' },
+  { value: 'square', labelKey: 'properties.strokeCap_square' },
+];
+
+const STROKE_JOIN_OPTIONS: {
+  value: NonNullable<StrokeStyle['join']>;
+  labelKey: string;
+}[] = [
+  { value: 'miter', labelKey: 'properties.strokeJoin_miter' },
+  { value: 'round', labelKey: 'properties.strokeJoin_round' },
+  { value: 'bevel', labelKey: 'properties.strokeJoin_bevel' },
+];
 
 interface FillSheetProps {
   open: boolean;
@@ -381,6 +418,16 @@ function ShapeStrokeControls({
       stroke: { ...stroke, color: stroke?.color ?? '#007AFF', width: stroke?.width ?? 2, style },
     });
 
+  const setStrokePatch = (patch: Partial<StrokeStyle>) =>
+    update({
+      stroke: {
+        ...stroke,
+        color: stroke?.color ?? '#007AFF',
+        width: stroke?.width ?? 2,
+        ...patch,
+      },
+    });
+
   return (
     <>
       <ColorRow
@@ -409,6 +456,54 @@ function ShapeStrokeControls({
           onChange={setStyle}
         />
       )}
+      {(stroke?.width ?? 0) > 0 && (stroke?.style === 'dashed' || stroke?.style === 'dotted') && (
+        <>
+          <Slider
+            label={t('properties.strokeDash')}
+            value={stroke?.dashLen ?? Math.max(1, (stroke?.width ?? 2) * 3)}
+            min={1}
+            max={80}
+            step={1}
+            onChange={(dashLen) => setStrokePatch({ dashLen })}
+          />
+          <Slider
+            label={t('properties.strokeGap')}
+            value={stroke?.gap ?? Math.max(1, (stroke?.width ?? 2) * 2)}
+            min={1}
+            max={80}
+            step={1}
+            onChange={(gap) => setStrokePatch({ gap })}
+          />
+        </>
+      )}
+      {(stroke?.width ?? 0) > 0 && (
+        <Chips<NonNullable<StrokeStyle['cap']>>
+          label={t('properties.strokeCap')}
+          value={stroke?.cap ?? 'round'}
+          options={STROKE_CAP_OPTIONS.map((option) => ({
+            value: option.value,
+            label: t(option.labelKey),
+          }))}
+          onChange={(cap) => setStrokePatch({ cap })}
+        />
+      )}
+      {(stroke?.width ?? 0) > 0 && (
+        <Chips<NonNullable<StrokeStyle['join']>>
+          label={t('properties.strokeJoin')}
+          value={stroke?.join ?? 'round'}
+          options={STROKE_JOIN_OPTIONS.map((option) => ({
+            value: option.value,
+            label: t(option.labelKey),
+          }))}
+          onChange={(join) => setStrokePatch({ join })}
+        />
+      )}
+      {layer.shape === 'arrow' && (
+        <ArrowControls
+          projectId={projectId}
+          layer={layer}
+        />
+      )}
       {(stroke?.width ?? 0) > 0 && (
         <Chips<StrokeLookId>
           label={t('properties.strokeLook')}
@@ -425,28 +520,100 @@ function ShapeStrokeControls({
   );
 }
 
-/** Sticker-outline toggle for any decoratable layer. */
-function StickerToggle({
+function ArrowControls({
   projectId,
   layer,
 }: {
   projectId: string;
+  layer: Extract<CalqoLayer, { type: 'shape' }>;
+}) {
+  const { t } = useTranslation('editor');
+  const arrow = layer.arrow ?? DEFAULT_ARROW;
+  const set = (next: ArrowStyle) =>
+    updateLayerInActiveArtboard(projectId, layer.id, { arrow: next });
+
+  return (
+    <>
+      <Chips<NonNullable<ArrowStyle['headStyle']>>
+        label={t('properties.arrowStyle')}
+        value={arrow.headStyle ?? 'triangle'}
+        options={ARROW_HEAD_STYLE_OPTIONS.map((option) => ({
+          value: option.value,
+          label: t(option.labelKey),
+        }))}
+        onChange={(headStyle) => set({ ...arrow, headStyle })}
+      />
+      <Chips<'start' | 'end' | 'both'>
+        label={t('properties.arrowHeads')}
+        value={arrow.start && arrow.end ? 'both' : arrow.start ? 'start' : 'end'}
+        options={[
+          { value: 'start', label: t('properties.arrowStart') },
+          { value: 'end', label: t('properties.arrowEnd') },
+          { value: 'both', label: `${t('properties.arrowStart')} + ${t('properties.arrowEnd')}` },
+        ]}
+        onChange={(value) =>
+          set({
+            ...arrow,
+            start: value === 'start' || value === 'both',
+            end: value === 'end' || value === 'both',
+          })
+        }
+      />
+    </>
+  );
+}
+
+/** Sticker-outline editor for any decoratable layer. */
+function StickerControls({
+  projectId,
+  layer,
+  palette,
+}: {
+  projectId: string;
   layer: CalqoLayer;
+  palette: string[];
 }) {
   const { t } = useTranslation('editor');
   const sticker = (layer as { sticker?: StickerOutline }).sticker;
   const set = (next: StickerOutline | null) =>
     updateLayerInActiveArtboard(projectId, layer.id, { sticker: next });
   return (
-    <Chips<'on' | 'off'>
-      label={t('properties.sticker')}
-      value={sticker ? 'on' : 'off'}
-      options={[
-        { value: 'off', label: t('properties.maskNone') },
-        { value: 'on', label: t('properties.stickerAdd') },
-      ]}
-      onChange={(v) => set(v === 'on' ? { color: '#FFFFFF', width: 12 } : null)}
-    />
+    <>
+      <Chips<'on' | 'off'>
+        label={t('properties.sticker')}
+        value={sticker ? 'on' : 'off'}
+        options={[
+          { value: 'off', label: t('properties.maskNone') },
+          { value: 'on', label: t('properties.stickerAdd') },
+        ]}
+        onChange={(v) => set(v === 'on' ? { color: '#FFFFFF', width: 12 } : null)}
+      />
+      {sticker && (
+        <>
+          <ColorRow
+            label={t('properties.color')}
+            value={sticker.color}
+            palette={palette}
+            onPick={(color) => set({ ...sticker, color })}
+          />
+          <Slider
+            label={t('properties.strokeWidth')}
+            value={sticker.width}
+            min={1}
+            max={64}
+            step={1}
+            onChange={(width) => set({ ...sticker, width })}
+          />
+          <button
+            type="button"
+            onClick={() => set(null)}
+            className="mt-1 flex h-11 w-full items-center justify-center rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] text-[13px] font-medium text-[var(--calqo-text-2)] transition-colors active:bg-[var(--calqo-hover)]"
+          >
+            {t('properties.stickerRemove')}
+          </button>
+        </>
+      )}
+    </>
   );
 }
 
@@ -646,7 +813,7 @@ export function FillSheet({ open, onClose, project, artboard, layer }: FillSheet
           layer.type === 'shape' ||
           layer.type === 'image' ||
           layer.type === 'svg') && (
-          <StickerToggle projectId={project.id} layer={layer} />
+          <StickerControls projectId={project.id} layer={layer} palette={project.palette} />
         )}
 
       <BackgroundFillControls

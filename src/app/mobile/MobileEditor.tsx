@@ -98,6 +98,7 @@ function isRecolorable(layer: CalqoLayer | null): boolean {
     layer?.type === 'text' ||
     layer?.type === 'list' ||
     layer?.type === 'shape' ||
+    layer?.type === 'image' ||
     layer?.type === 'svg'
   );
 }
