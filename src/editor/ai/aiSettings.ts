@@ -1,10 +1,8 @@
 import { create } from 'zustand';
 import { appSettings } from '@/lib/adapters';
-import { INSECURE_SECRET_FALLBACK_PREFIX } from '@/lib/adapters/settings/SettingsAdapter';
 import { platformRuntime } from '@/lib/platform/runtime';
 
 const SETTINGS_KEY = 'ai.settings';
-const SECRET_KEY_PREFIX = 'secure:ai.apiKey.';
 
 /** Selectable AI providers (plan §14.2). `off` disables AI entirely; Gemini uses
  * its provider-specific GenAI adapter; the others speak OpenAI-compatible chat
@@ -147,13 +145,14 @@ export function isAiEnabled(settings: AiSettings): boolean {
   return settings.providerId !== 'off';
 }
 
-/** Strip API keys from the normal settings payload. Tauri stores them in
- * Stronghold records; the browser only keeps them when the user opts in. */
+/** Strip API keys unless the user/app has explicitly opted into remembering
+ * them. Desktop enables this automatically so provider setup survives restart;
+ * browser keeps the explicit opt-in checkbox. */
 export function toPersistedAiSettings(
   settings: AiSettings,
-  secureSettings: boolean,
+  _secureSettings: boolean,
 ): AiSettings {
-  if (!secureSettings && settings.storeKey) return settings;
+  if (settings.storeKey) return settings;
   const providers = Object.fromEntries(
     Object.entries(settings.providers).map(([id, config]) => [id, { ...config, apiKey: '' }]),
   ) as Record<AiProviderId, AiProviderConfig>;
@@ -191,7 +190,6 @@ export function normalizeAiSettings(stored?: Partial<AiSettings> | null): AiSett
 
 interface AiSettingsState {
   settings: AiSettings;
-  insecureKeyFallbackProviderIds: AiProviderId[];
   loaded: boolean;
   load: () => Promise<void>;
   setProvider: (id: AiProviderId) => void;
@@ -199,68 +197,28 @@ interface AiSettingsState {
   updateProviderConfig: (id: AiProviderId, patch: Partial<AiProviderConfig>) => void;
 }
 
-function isTauriSettings(): boolean {
+function storesKeysByDefault(): boolean {
   return platformRuntime.capabilities.secureSettings;
 }
 
-function secretKeyForProvider(id: AiProviderId): string {
-  return `${SECRET_KEY_PREFIX}${id}`;
-}
-
-function fallbackMarkerForProvider(id: AiProviderId): string {
-  return `${INSECURE_SECRET_FALLBACK_PREFIX}${secretKeyForProvider(id)}`;
-}
-
-async function loadInsecureFallbackProviderIds(): Promise<AiProviderId[]> {
-  if (!isTauriSettings()) return [];
-  const ids = await Promise.all(
-    PROVIDER_LIST.map(async (preset) => {
-      const fallback = await appSettings.get<boolean>(fallbackMarkerForProvider(preset.id));
-      return fallback ? preset.id : null;
-    }),
-  );
-  return ids.filter((id): id is AiProviderId => id !== null);
-}
-
-async function loadSecureKeys(settings: AiSettings): Promise<AiSettings> {
-  if (!isTauriSettings()) return settings;
-  const providers = { ...settings.providers };
-  await Promise.all(
-    PROVIDER_LIST.map(async (preset) => {
-      const apiKey = await appSettings.get<string>(secretKeyForProvider(preset.id));
-      if (apiKey) providers[preset.id] = { ...providers[preset.id], apiKey };
-    }),
-  );
-  return { ...settings, providers, storeKey: true };
+function hasAnyApiKey(settings: AiSettings): boolean {
+  return PROVIDER_LIST.some((preset) => settings.providers[preset.id].apiKey.trim().length > 0);
 }
 
 let persistChain: Promise<void> = Promise.resolve();
 
-async function persistOnce(
-  settings: AiSettings,
-  setFallbackIds?: (ids: AiProviderId[]) => void,
-): Promise<void> {
-  const secureSettings = isTauriSettings();
-  await appSettings.set(SETTINGS_KEY, toPersistedAiSettings(settings, secureSettings));
-  if (!secureSettings) return;
-  await Promise.all(
-    PROVIDER_LIST.map((preset) => {
-      const key = secretKeyForProvider(preset.id);
-      const apiKey = settings.providers[preset.id].apiKey.trim();
-      return apiKey ? appSettings.set(key, apiKey) : appSettings.remove(key);
-    }),
+async function persistOnce(settings: AiSettings): Promise<void> {
+  await appSettings.set(
+    SETTINGS_KEY,
+    toPersistedAiSettings(settings, platformRuntime.capabilities.secureSettings),
   );
-  setFallbackIds?.(await loadInsecureFallbackProviderIds());
 }
 
-function persist(
-  settings: AiSettings,
-  setFallbackIds?: (ids: AiProviderId[]) => void,
-): void {
+function persist(settings: AiSettings): void {
   const snapshot = structuredClone(settings);
   persistChain = persistChain
     .catch(() => undefined)
-    .then(() => persistOnce(snapshot, setFallbackIds))
+    .then(() => persistOnce(snapshot))
     .catch((err) => {
       console.error('[Calqo] failed to persist AI settings', err);
     });
@@ -268,7 +226,6 @@ function persist(
 
 export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
   settings: DEFAULT_AI_SETTINGS,
-  insecureKeyFallbackProviderIds: [],
   loaded: false,
 
   load: async () => {
@@ -276,9 +233,12 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
     try {
       const stored = await appSettings.get<Partial<AiSettings>>(SETTINGS_KEY);
       if (stored) {
+        const settings = normalizeAiSettings(stored);
         set({
-          settings: await loadSecureKeys(normalizeAiSettings(stored)),
-          insecureKeyFallbackProviderIds: await loadInsecureFallbackProviderIds(),
+          settings: {
+            ...settings,
+            storeKey: settings.storeKey || (storesKeysByDefault() && hasAnyApiKey(settings)),
+          },
           loaded: true,
         });
         return;
@@ -293,13 +253,13 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
     if (!isProviderId(providerId)) providerId = 'off';
     const next = { ...get().settings, providerId };
     set({ settings: next });
-    persist(next, (ids) => set({ insecureKeyFallbackProviderIds: ids }));
+    persist(next);
   },
 
   setStoreKey: (storeKey) => {
     const next = { ...get().settings, storeKey };
     set({ settings: next });
-    persist(next, (ids) => set({ insecureKeyFallbackProviderIds: ids }));
+    persist(next);
   },
 
   updateProviderConfig: (id, patch) => {
@@ -307,13 +267,16 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
     const current = get().settings;
     const next: AiSettings = {
       ...current,
+      storeKey:
+        current.storeKey ||
+        (storesKeysByDefault() && patch.apiKey !== undefined && patch.apiKey.trim().length > 0),
       providers: {
         ...current.providers,
         [id]: { ...current.providers[id], ...patch },
       },
     };
     set({ settings: next });
-    persist(next, (ids) => set({ insecureKeyFallbackProviderIds: ids }));
+    persist(next);
   },
 }));
 

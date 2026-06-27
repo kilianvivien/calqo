@@ -69,7 +69,7 @@ describe('phase O — Tauri foundation contracts', () => {
     expect(getAppCommandState('edit.delete').enabled).toBe(true);
   });
 
-  it('strips API keys from secure desktop settings payloads', () => {
+  it('persists remembered API keys and strips unremembered keys', () => {
     const settings = {
       ...DEFAULT_AI_SETTINGS,
       storeKey: true,
@@ -82,12 +82,15 @@ describe('phase O — Tauri foundation contracts', () => {
       },
     };
 
-    expect(JSON.stringify(toPersistedAiSettings(settings, true))).not.toContain(
+    expect(JSON.stringify(toPersistedAiSettings(settings, true))).toContain(
       'secret-key',
     );
     expect(JSON.stringify(toPersistedAiSettings(settings, false))).toContain(
       'secret-key',
     );
+    expect(
+      JSON.stringify(toPersistedAiSettings({ ...settings, storeKey: false }, false)),
+    ).not.toContain('secret-key');
   });
 
   it('has localized labels for every app command in English and French', () => {

@@ -93,9 +93,6 @@ export function AppSettingsModal({
   const transparency = useUiStore((s) => s.transparency);
   const setTransparency = useUiStore((s) => s.setTransparency);
   const aiSettings = useAiSettingsStore((s) => s.settings);
-  const insecureKeyFallbackProviderIds = useAiSettingsStore(
-    (s) => s.insecureKeyFallbackProviderIds,
-  );
   const setProvider = useAiSettingsStore((s) => s.setProvider);
   const setStoreKey = useAiSettingsStore((s) => s.setStoreKey);
   const updateProviderConfig = useAiSettingsStore(
@@ -339,23 +336,21 @@ export function AppSettingsModal({
                           <SettingsNote>
                             {secureSettings ? (
                               <span className="flex items-start gap-2 rounded-[var(--calqo-radius-sm)] bg-[#E8B339]/10 px-3 py-2.5 text-[12px] text-[#B7791F]">
-                                {insecureKeyFallbackProviderIds.includes(providerId) && (
+                                {config.apiKey.trim().length > 0
+                                  ? t('settings.ai.keySavedNote')
+                                  : t('settings.ai.desktopKeyWarning')}
+                              </span>
+                            ) : (
+                              <span className="flex items-start gap-2 rounded-[var(--calqo-radius-sm)] bg-[#E8B339]/10 px-3 py-2.5 text-[12px] text-[#B7791F]">
+                                {(!aiSettings.storeKey || config.apiKey.trim().length === 0) && (
                                   <AlertTriangle
                                     size={15}
                                     className="mt-0.5 shrink-0"
                                   />
                                 )}
-                                {insecureKeyFallbackProviderIds.includes(providerId)
-                                  ? t('settings.ai.keyFallbackWarning')
-                                  : t('settings.ai.secureKeyNote')}
-                              </span>
-                            ) : (
-                              <span className="flex items-start gap-2 rounded-[var(--calqo-radius-sm)] bg-[#E8B339]/10 px-3 py-2.5 text-[12px] text-[#B7791F]">
-                                <AlertTriangle
-                                  size={15}
-                                  className="mt-0.5 shrink-0"
-                                />
-                                {t('settings.ai.keyWarning')}
+                                {aiSettings.storeKey && config.apiKey.trim().length > 0
+                                  ? t('settings.ai.keySavedNote')
+                                  : t('settings.ai.keyWarning')}
                               </span>
                             )}
                           </SettingsNote>
