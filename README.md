@@ -34,12 +34,12 @@ surface.
 
 ## Download
 
-The current public alpha is
-[Calqo v0.1.7](https://github.com/kilianvivien/calqo/releases/tag/v0.1.7).
+The current alpha release is
+[Calqo v0.2.0](https://github.com/kilianvivien/calqo/releases/tag/v0.2.0).
 
-- macOS Apple Silicon: `Calqo_0.1.7_aarch64.dmg`
+- macOS Apple Silicon: `Calqo_0.2.0_aarch64.dmg`
 - SHA-256:
-  `7600a4c982023a924abe8a196484402491e608a9ed54ca8aaaf1db60747a7173`
+  `67cca8b091f316065eb7504cf1834dfa3fabbd228be17f7d98ee4fb90833010b`
 
 The desktop build is currently unsigned and not notarized. On first launch,
 macOS Gatekeeper may require approving the app manually.
@@ -79,7 +79,8 @@ handling polish.
 - [x] Responsive phone quick-edit interface for browser/mobile use (Phase Q)
 - [x] PWA install/update prompts and manifest assets
 - [x] Modal keyboard shortcut isolation and focus-trap polish (`v0.1.7`)
-- [x] Current GitHub release with Apple Silicon macOS DMG (`v0.1.7`)
+- [x] Creative frames, stroke looks, sticker outlines, and mobile styling parity (Phase R)
+- [x] Current GitHub release with Apple Silicon macOS DMG (`v0.2.0`)
 
 ## What you can make
 
@@ -101,9 +102,13 @@ animation timeline, no realtime multiplayer, and no hosted template marketplace.
 - **Canvas editor:** text, images, shapes, icons/SVGs, layer ordering,
   selection, transforms, snapping, nudging, grouping, locking, visibility, and
   undo/redo.
+- **Creative styling:** editable image frames, stroke looks, arrows, freehand
+  marks, sticker outlines, pattern fills, masks, filters, typography presets,
+  and effect-aware export warnings.
 - **Mobile quick edit:** a responsive phone shell with project browsing,
-  contextual toolbars, bottom sheets, text editing, SVG insertion, fill controls,
-  arrange/layers panels, translation, and mobile export/share paths.
+  contextual toolbars, bottom sheets, text editing, SVG insertion, fill and
+  stroke controls, sticker/frame chips, arrange/layers panels, translation, and
+  mobile export/share paths.
 - **Multi-artboard projects:** design several social sizes in one project, then
   duplicate or resize content into another preset.
 - **Local-first storage:** browser projects are persisted with IndexedDB/Dexie,
@@ -198,6 +203,8 @@ reports unsupported copy operations instead of throwing.
   yet, so Gatekeeper may require manual approval on first launch.
 - Calqo focuses on static social visuals, not animation/video.
 - SVG export is intentionally limited and warns for unsupported fidelity.
+- SVG export approximates some creative frame, sticker, glow, double, offset,
+  outline, and marker stroke looks; use PNG for pixel-faithful output.
 - Clipboard behavior depends on browser permissions and feature support.
 - Complex vector editing, editable HTML/CSS export, signing/notarization, and
   production-grade phone-first editing remain future work.
