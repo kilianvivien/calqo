@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Arrow, Circle, Ellipse, Group, Image, Line, Rect, Text } from 'react-konva';
+import { Arrow, Circle, Ellipse, Group, Image, Line, Path, Rect, Text } from 'react-konva';
 import { CalqoText } from './CalqoText';
 import type Konva from 'konva';
 import { Blur } from 'konva/lib/filters/Blur';
@@ -262,6 +262,25 @@ function FrameNodesView({ nodes }: { nodes: FrameNodeSpec[] }) {
               stroke={spec.stroke}
               strokeWidth={spec.strokeWidth}
               cornerRadius={spec.cornerRadius}
+              dash={spec.dash}
+              dashEnabled={spec.dash != null}
+              lineCap={spec.dash ? 'round' : undefined}
+              rotation={spec.rotation}
+              opacity={spec.opacity}
+              listening={false}
+              {...shadow}
+            />
+          );
+        }
+        if (spec.kind === 'path') {
+          return (
+            <Path
+              key={i}
+              data={spec.data}
+              fill={spec.fill}
+              stroke={spec.stroke}
+              strokeWidth={spec.strokeWidth}
+              opacity={spec.opacity}
               listening={false}
               {...shadow}
             />

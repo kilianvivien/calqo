@@ -14,6 +14,11 @@ export const STROKE_LOOK_IDS: StrokeLookId[] = [
   'marker',
   'neon',
   'glow',
+  'hand-drawn',
+  'rough',
+  'scribble',
+  'sketch',
+  'inner',
 ];
 
 /** Seed a stroke with a named look, keeping the caller's colour/width. The
@@ -63,6 +68,26 @@ export function strokeLookStyle(id: StrokeLookId, base: StrokeStyle): StrokeStyl
     case 'glow':
       next.altColor = base.altColor ?? base.color;
       next.intensity = base.intensity ?? 0.6;
+      break;
+    case 'hand-drawn':
+      next.cap = 'round';
+      next.join = 'round';
+      next.altColor = base.altColor ?? base.color;
+      break;
+    case 'rough':
+      next.cap = 'round';
+      next.join = 'round';
+      break;
+    case 'scribble':
+      next.cap = 'round';
+      next.join = 'round';
+      break;
+    case 'sketch':
+      next.cap = 'round';
+      next.altColor = base.altColor ?? base.color;
+      break;
+    case 'inner':
+      next.altColor = base.altColor ?? '#111827';
       break;
   }
   return next;

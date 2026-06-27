@@ -18,9 +18,11 @@ Use this table when an export looks different from the canvas.
 | Drop shadow | Exact | Omitted | Exact |
 | Blend modes (multiply, screen, overlay, …) | Exact | Omitted (normal compositing) | Exact |
 | Text stroke / text shadow | Exact | May differ | Exact |
-| Image frames (inset, centered, outside, rounded, circle, double-line, polaroid) | Exact | Approximated (borders as rects/ellipse; caption/shadow may differ) | Exact |
+| Image frames — classic (inset, centered, outside, rounded, circle, double-line, polaroid) | Exact | Approximated (borders as rects/ellipse; caption/shadow may differ) | Exact |
+| Image frames — creative (soft-mat, thick-poster-border, shadowed-cutout, tape-corners, postage-stamp, scalloped-edges, torn-paper, photo-booth-strip) | Exact | Approximated (paths/dashes export; shadows, rotation, and sprocket/tape detail may differ) | Exact |
 | Stroke looks — dashed / dotted | Exact | Exact (`stroke-dasharray`) | Exact |
 | Stroke looks — neon / glow / double / offset / outline / marker | Exact | Approximated (drawn as a plain stroke) | Exact |
+| Stroke looks — hand-drawn / rough / scribble / sketch / inner | Exact | Approximated (drawn as a plain stroke) | Exact |
 | Sticker outline (white/coloured halo) | Exact | Approximated | Exact |
 | Editable after export | No (flat pixels) | Yes (vector shapes/text) | No (embedded PNG) |
 
@@ -42,9 +44,17 @@ reproduces them exactly. In SVG export:
 - Dashed/dotted strokes export precisely as `stroke-dasharray`.
 - Frame borders export as `<rect>`/`<ellipse>` outlines; polaroid captions and
   frame shadows may differ.
-- Neon, glow, double, offset, outline, and marker looks, and sticker outlines,
-  are approximated (drawn as a plain stroke / flat halo). The editor flags these
-  in the **Export notes** section so the difference is never silent.
+- Neon, glow, double, offset, outline, marker, and the roughened looks
+  (hand-drawn, rough, scribble, sketch, inner), plus sticker outlines, are
+  approximated (drawn as a plain stroke / flat halo). The editor flags these in
+  the **Export notes** section so the difference is never silent.
+- Creative frames built from generated outlines (scalloped, torn-paper) export
+  as `<path>`; tape corners and stamp perforations export as rotated/dashed
+  rects. Their shadows and fine detail may differ from raster.
+
+The **chalk** and **crayon** freehand brushes are likewise single-node
+approximations of textured marks (chalk = soft multiply, crayon = broken
+sketch line); PNG export is the most faithful.
 
 For pixel-faithful frames and stroke looks, prefer PNG export.
 

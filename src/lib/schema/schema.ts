@@ -20,7 +20,10 @@ const shadowSchema = z.object({
 
 /** Named stroke "looks" the renderer expands into one or more passes. `plain` /
  * `dashed` / `dotted` are single-node; `double` / `offset` / `outline` /
- * `marker` add sibling passes; `neon` / `glow` add a coloured shadow. */
+ * `marker` add sibling passes; `neon` / `glow` add a coloured shadow. The
+ * roughened looks (`hand-drawn` / `rough` / `scribble` / `sketch` / `inner`)
+ * are single-node approximations via dash arrays, caps/joins, and an offset
+ * stroke-shadow — raster is faithful, SVG is approximated. */
 export const strokeLookSchema = z.enum([
   'plain',
   'dashed',
@@ -31,6 +34,11 @@ export const strokeLookSchema = z.enum([
   'offset',
   'outline',
   'marker',
+  'hand-drawn',
+  'rough',
+  'scribble',
+  'sketch',
+  'inner',
 ]);
 
 /** Stroke supports either an explicit dash array or a named style (`dashed` /
@@ -200,6 +208,14 @@ export const imageFrameSchema = z.object({
     'circle',
     'double-line',
     'polaroid',
+    'torn-paper',
+    'tape-corners',
+    'photo-booth-strip',
+    'scalloped-edges',
+    'postage-stamp',
+    'soft-mat',
+    'thick-poster-border',
+    'shadowed-cutout',
   ]),
   color: hexish.default('#FFFFFF'),
   width: z.number().nonnegative().default(16),

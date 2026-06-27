@@ -9,7 +9,7 @@ import {
 } from '@/editor/commands/projectCommands';
 import { FRAME_PRESET_IDS, framePreset } from '@/editor/images/framePresets';
 import { STROKE_LOOK_IDS, strokeLookStyle } from '@/editor/canvas/strokePresets';
-import { strokeLookConfig } from '@/editor/canvas/strokeStyle';
+import { strokeLookConfig, strokeLookNeedsRasterWarning } from '@/editor/canvas/strokeStyle';
 import { frameRender } from '@/editor/canvas/frameNodes';
 import { checkTemplateQuality } from '@/editor/ai/validation';
 import { buildTemplateInput } from '@/editor/ai/promptTemplateService';
@@ -76,6 +76,38 @@ describe('phase R — schema round-trip', () => {
     const result = safeImportProject(project);
     expect(result.ok).toBe(true);
   });
+
+  it('imports a document carrying a creative frame and a roughened look', () => {
+    const project = createDefaultProject();
+    const layer: ShapeLayer = {
+      id: 'shape2',
+      name: 'Sketchy',
+      type: 'shape',
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 100,
+      rotation: 0,
+      opacity: 1,
+      visible: true,
+      locked: false,
+      shape: 'rect',
+      fill: { type: 'solid', color: '#ffffff' },
+      stroke: { color: '#000000', width: 4, look: 'sketch' },
+    };
+    const img = imageLayer();
+    img.frame = framePreset('scalloped-edges');
+    project.artboards[0].layers.push(layer, img);
+
+    const result = safeImportProject(project);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const shape = result.project.artboards[0].layers[0] as ShapeLayer;
+      expect(shape.stroke?.look).toBe('sketch');
+      const image = result.project.artboards[0].layers[1] as ImageLayer;
+      expect(image.frame?.kind).toBe('scalloped-edges');
+    }
+  });
 });
 
 describe('phase R — frame presets', () => {
@@ -111,6 +143,25 @@ describe('phase R — frame presets', () => {
     expect(render.inset.bottom).toBeGreaterThan(render.inset.top);
     expect(render.front.some((spec) => spec.kind === 'caption')).toBe(true);
   });
+
+  it('renders creative outline frames as a path with a positive inset', () => {
+    for (const id of ['scalloped-edges', 'torn-paper'] as const) {
+      const render = frameRender(framePreset(id), 400, 300);
+      expect(render.inset.top).toBeGreaterThan(0);
+      expect(render.behind.some((spec) => spec.kind === 'path')).toBe(true);
+    }
+  });
+
+  it('pins tape corners as rotated front rects', () => {
+    const render = frameRender(framePreset('tape-corners'), 400, 300);
+    const tape = render.front.filter((spec) => spec.kind === 'rect' && spec.rotation);
+    expect(tape.length).toBe(4);
+  });
+
+  it('draws a dashed perforation ring for postage-stamp', () => {
+    const render = frameRender(framePreset('postage-stamp'), 400, 300);
+    expect(render.front.some((spec) => spec.kind === 'rect' && spec.dash)).toBe(true);
+  });
 });
 
 describe('phase R — stroke looks', () => {
@@ -134,6 +185,13 @@ describe('phase R — stroke looks', () => {
     expect(Array.isArray(dotted.dash)).toBe(true);
     expect(dotted.lineCap).toBe('round');
   });
+
+  it('renders a roughened look (sketch) distinctly and flags it for raster', () => {
+    const sketch = strokeLookConfig({ color: '#000000', width: 4, look: 'sketch' });
+    expect(Array.isArray(sketch.dash)).toBe(true);
+    expect(sketch.shadowForStrokeEnabled).toBe(true);
+    expect(strokeLookNeedsRasterWarning({ color: '#000000', width: 4, look: 'sketch' })).toBe(true);
+  });
 });
 
 describe('phase R — brush presets', () => {
@@ -145,8 +203,21 @@ describe('phase R — brush presets', () => {
       'highlighter',
       'marker-underline',
       'glow-pen',
+      'chalk',
+      'crayon',
       'dashed',
     ]);
+  });
+
+  it('maps chalk / crayon to expected feel', () => {
+    const chalk = brushStyleLayerPatch('chalk', { color: '#334155', width: 10 });
+    expect(chalk.blendMode).toBe('multiply');
+    expect(chalk.opacity).toBeLessThan(1);
+    expect(chalk.stroke.look).toBeUndefined();
+
+    const crayon = brushStyleLayerPatch('crayon', { color: '#334155', width: 10 });
+    expect(crayon.stroke.look).toBe('sketch');
+    expect(crayon.stroke.cap).toBe('round');
   });
 
   it('creates new freehand strokes with Phase R brush styles', () => {

@@ -128,6 +128,90 @@ Shape layer:
 
 Supported shape values include rect, ellipse, line, polygon, arrow, and freehand. Rectangles and ellipses are safest for generated templates.
 
+### Fills (shapes and artboard backgrounds)
+
+A \`fill\` is an object discriminated by \`type\`. Beyond solid colour:
+
+\`\`\`json
+{ "type": "linear", "angle": 90, "stops": [ { "offset": 0, "color": "#0A2540" }, { "offset": 1, "color": "#14B8A6" } ] }
+{ "type": "radial", "stops": [ { "offset": 0, "color": "#FFFFFF" }, { "offset": 1, "color": "#0A2540" } ] }
+{ "type": "pattern", "pattern": "dots", "color": "#FFFFFF", "background": "#0A2540", "scale": 1, "angle": 0 }
+{ "type": "image", "assetId": "asset_photo", "fit": "cover" }
+\`\`\`
+
+Pattern values: dots, grid, hatch, cross-hatch, checker. Image/pattern fills need a matching asset.
+
+### Stroke and stroke "looks" (shapes, text, freehand)
+
+A \`stroke\` adds an editable outline. Beyond \`color\` and \`width\`:
+
+\`\`\`json
+{
+  "color": "#FFFFFF",
+  "width": 6,
+  "style": "dashed",
+  "cap": "round",
+  "join": "round",
+  "dashLen": 18,
+  "gap": 10,
+  "look": "neon",
+  "altColor": "#00E5FF",
+  "intensity": 0.8
+}
+\`\`\`
+
+\`look\` applies an expressive treatment on top of colour/width. Supported looks:
+plain, dashed, dotted, double, offset, outline, marker, neon, glow, hand-drawn,
+rough, scribble, sketch, inner. \`altColor\` is the accent for double/offset/outline/
+neon/glow/sketch/inner; \`intensity\` (0–1) tunes neon/glow. \`style\` (solid/dashed/
+dotted) and \`dashLen\`/\`gap\` control plain dashing. Raster (PNG) export is the most
+faithful; SVG approximates the expressive looks.
+
+### Sticker outline, blend mode, and effects (any layer)
+
+\`\`\`json
+{
+  "sticker": { "color": "#FFFFFF", "width": 12, "shadow": { "color": "#000000", "blur": 8, "offsetX": 0, "offsetY": 4, "opacity": 0.3 } },
+  "blendMode": "multiply",
+  "effects": { "shadow": { "color": "#000000", "blur": 16, "offsetX": 0, "offsetY": 8, "opacity": 0.25 }, "blur": 0 }
+}
+\`\`\`
+
+\`sticker\` draws a coloured halo behind the layer (thumbnail/sticker look). \`blendMode\`
+is one of normal, multiply, screen, overlay.
+
+## Image Layers
+
+To use a photo, embed it as an asset and reference it from an image layer. Add the
+asset to BOTH \`project.assets\` and the envelope \`assets\` array (with a \`dataUrl\`):
+
+\`\`\`json
+{
+  "id": "layer_photo",
+  "name": "Photo",
+  "type": "image",
+  "x": 0, "y": 0, "w": 1080, "h": 720,
+  "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+  "assetId": "asset_photo",
+  "fit": "cover",
+  "focalPoint": { "x": 0.5, "y": 0.4 },
+  "crop": { "x": 0, "y": 0, "w": 1600, "h": 1067 },
+  "mask": { "shape": "rounded", "radius": 48 },
+  "filters": { "brightness": 0.1, "contrast": 0.05, "saturation": 0, "blur": 0 },
+  "frame": { "kind": "polaroid", "color": "#FFFFFF", "width": 24, "caption": { "en": "Summer 2026" } }
+}
+\`\`\`
+
+- \`fit\`: cover, contain, stretch. \`focalPoint\`: 0–1 anchor for a cover crop.
+- \`mask.shape\`: rounded, circle, ellipse, triangle, star, hexagon (\`radius\` for rounded).
+- \`frame.kind\`: inset, centered, outside, rounded, circle, double-line, polaroid,
+  soft-mat, thick-poster-border, shadowed-cutout, tape-corners, postage-stamp,
+  scalloped-edges, torn-paper, photo-booth-strip. Frame fields: color, width, radius
+  (rounded/scalloped), padding, shadow, and per-locale \`caption\` (polaroid / photo-booth).
+- Frames are non-destructive: crop/focal/mask/filter state is preserved.
+
+If you cannot embed an image, prefer text + shape layers so the file stays editable.
+
 ## Generation Workflow
 
 1. Interpret the user's prompt as a social visual brief: format, audience, message, tone, palette, and locale.
@@ -218,6 +302,23 @@ const project = {
       background: { type: "solid", color: "#0A2540" },
       layers: [
         rectLayer("Gold accent", 88, 130, 180, 16, "#E8B339", 8),
+        {
+          // Decorative outlined badge using an expressive Phase R stroke look.
+          id: id("layer"),
+          name: "Neon ring",
+          type: "shape",
+          shape: "ellipse",
+          x: 760,
+          y: 120,
+          w: 220,
+          h: 220,
+          rotation: 0,
+          opacity: 1,
+          visible: true,
+          locked: false,
+          fill: { type: "solid", color: "transparent" },
+          stroke: { color: "#E8B339", width: 8, look: "neon", altColor: "#E8B339", intensity: 0.8 }
+        },
         textLayer("Headline", "Launch your next idea", 88, 190, 860, 220, {
           fontSize: 92,
           fontWeight: 700

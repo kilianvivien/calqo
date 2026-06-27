@@ -100,7 +100,16 @@ function frameSvg(specs: FrameNodeSpec[]): string {
         const fill = spec.fill ? ` fill="${spec.fill}"` : ' fill="none"';
         const stroke = spec.stroke ? ` stroke="${spec.stroke}" stroke-width="${spec.strokeWidth ?? 1}"` : '';
         const radius = spec.cornerRadius ? ` rx="${spec.cornerRadius}"` : '';
-        return `<rect x="${round(spec.x)}" y="${round(spec.y)}" width="${round(spec.w)}" height="${round(spec.h)}"${radius}${fill}${stroke} />`;
+        const dash = spec.dash ? ` stroke-dasharray="${spec.dash.join(' ')}" stroke-linecap="round"` : '';
+        const opacity = spec.opacity != null ? ` opacity="${spec.opacity}"` : '';
+        const rotate = spec.rotation ? ` transform="rotate(${round(spec.rotation)} ${round(spec.x)} ${round(spec.y)})"` : '';
+        return `<rect x="${round(spec.x)}" y="${round(spec.y)}" width="${round(spec.w)}" height="${round(spec.h)}"${radius}${fill}${stroke}${dash}${opacity}${rotate} />`;
+      }
+      if (spec.kind === 'path') {
+        const fill = spec.fill ? ` fill="${spec.fill}"` : ' fill="none"';
+        const stroke = spec.stroke ? ` stroke="${spec.stroke}" stroke-width="${spec.strokeWidth ?? 1}"` : '';
+        const opacity = spec.opacity != null ? ` opacity="${spec.opacity}"` : '';
+        return `<path d="${spec.data}"${fill}${stroke}${opacity} />`;
       }
       if (spec.kind === 'ellipse') {
         return `<ellipse cx="${round(spec.x + spec.w / 2)}" cy="${round(spec.y + spec.h / 2)}" rx="${round(spec.w / 2)}" ry="${round(spec.h / 2)}" fill="none" stroke="${spec.stroke}" stroke-width="${spec.strokeWidth}" />`;

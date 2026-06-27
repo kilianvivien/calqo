@@ -77,6 +77,51 @@ export function strokeLookConfig(stroke?: StrokeStyle): Konva.ShapeConfig {
       config.shadowOffsetY = 0;
       config.shadowForStrokeEnabled = true;
       break;
+    // Roughened looks — single-node approximations of textured pen/pencil marks.
+    case 'hand-drawn':
+      // Round, organic line doubled by a faint offset shadow (inked twice).
+      config.lineCap = 'round';
+      config.lineJoin = 'round';
+      config.shadowColor = accent;
+      config.shadowBlur = 0;
+      config.shadowOpacity = 0.35;
+      config.shadowOffsetX = Math.max(1, width * 0.35);
+      config.shadowOffsetY = Math.max(1, width * 0.35);
+      config.shadowForStrokeEnabled = true;
+      break;
+    case 'rough':
+      // Irregular broken line reading as a coarse, dragged stroke.
+      if (!config.dash) config.dash = [width * 4, width * 1.1, width * 1.8, width * 0.9];
+      config.lineCap = 'round';
+      config.lineJoin = 'round';
+      break;
+    case 'scribble':
+      // Dense short dashes reading as a scribbled fill line.
+      if (!config.dash) config.dash = [width * 1.2, width * 0.9];
+      config.lineCap = 'round';
+      config.lineJoin = 'round';
+      break;
+    case 'sketch':
+      // Light pencil line with a faint parallel ghost (double-pass feel).
+      if (!config.dash) config.dash = [width * 2.5, width * 1.2];
+      config.lineCap = 'round';
+      config.shadowColor = accent;
+      config.shadowBlur = Math.max(1, width * 0.4);
+      config.shadowOpacity = 0.4;
+      config.shadowOffsetX = Math.max(1, width * 0.5);
+      config.shadowOffsetY = Math.max(1, width * 0.5);
+      config.shadowForStrokeEnabled = true;
+      break;
+    case 'inner':
+      // Tight inset ring: an un-blurred accent shadow hugging the stroke reads
+      // as a second line drawn just inside the first.
+      config.shadowColor = accent;
+      config.shadowBlur = 0;
+      config.shadowOpacity = 1;
+      config.shadowOffsetX = -Math.max(1, width * 0.5);
+      config.shadowOffsetY = -Math.max(1, width * 0.5);
+      config.shadowForStrokeEnabled = true;
+      break;
     default:
       break;
   }
@@ -87,5 +132,18 @@ export function strokeLookConfig(stroke?: StrokeStyle): Konva.ShapeConfig {
  * only approximate — used to surface export-fidelity warnings. */
 export function strokeLookNeedsRasterWarning(stroke?: StrokeStyle): boolean {
   const look = stroke?.look;
-  return look === 'neon' || look === 'glow' || look === 'outline' || look === 'double' || look === 'marker';
+  if (!look) return false;
+  const rasterOnly: StrokeStyle['look'][] = [
+    'neon',
+    'glow',
+    'outline',
+    'double',
+    'marker',
+    'hand-drawn',
+    'rough',
+    'scribble',
+    'sketch',
+    'inner',
+  ];
+  return rasterOnly.includes(look);
 }

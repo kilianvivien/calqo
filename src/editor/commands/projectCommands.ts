@@ -15,6 +15,7 @@ import {
   type ListItem,
   type LocaleCode,
   type ShapeLayer,
+  type StrokeLook,
   type StrokeStyle,
   type TextLayer,
 } from '@/lib/schema';
@@ -434,6 +435,8 @@ export const BRUSH_STYLE_IDS: BrushStyle[] = [
   'highlighter',
   'marker-underline',
   'glow-pen',
+  'chalk',
+  'crayon',
   'dashed',
 ];
 
@@ -545,7 +548,7 @@ export const BRUSH_STYLES: Record<
     opacity: number;
     blendMode?: 'multiply';
     style?: 'dashed';
-    look?: 'glow';
+    look?: StrokeLook;
   }
 > = {
   smooth: { tension: 0.4, cap: 'round', opacity: 1 },
@@ -554,6 +557,10 @@ export const BRUSH_STYLES: Record<
   highlighter: { tension: 0, cap: 'square', opacity: 0.4, blendMode: 'multiply' },
   'marker-underline': { tension: 0, cap: 'square', opacity: 0.85, blendMode: 'multiply' },
   'glow-pen': { tension: 0.4, cap: 'round', opacity: 1, look: 'glow' },
+  // Dusty chalk: soft, semi-opaque, multiplies into the background.
+  chalk: { tension: 0.3, cap: 'round', opacity: 0.55, blendMode: 'multiply' },
+  // Waxy crayon: broken, textured line via the sketch look.
+  crayon: { tension: 0.3, cap: 'round', opacity: 0.85, look: 'sketch' },
   dashed: { tension: 0.4, cap: 'round', opacity: 1, style: 'dashed' },
 };
 

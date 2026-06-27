@@ -404,20 +404,25 @@ Out of scope:
 
 ## Phase R - Creative Tooling: Frames, Strokes, And Looks
 
-> **Status: MVP CORE COMPLETE.** Non-destructive image frames (classic kinds:
-> inset, centered, outside, rounded, circle, double-line, polaroid), expressive
-> single-node stroke looks (plain, dashed, dotted, neon, glow, double, offset,
-> outline, marker), three new brush presets (felt-tip, marker-underline,
-> glow-pen), and a schema-backed sticker outline for text/shape/image/svg are
-> implemented end-to-end: schema (no version bump — additive optional fields),
+> **Status: COMPLETE.** Non-destructive image frames — classic (inset, centered,
+> outside, rounded, circle, double-line, polaroid) **and creative** (soft-mat,
+> thick-poster-border, shadowed-cutout, tape-corners, postage-stamp,
+> scalloped-edges, torn-paper, photo-booth-strip) — expressive single-node stroke
+> looks (plain, dashed, dotted, neon, glow, double, offset, outline, marker, plus
+> the roughened **hand-drawn, rough, scribble, sketch, inner**), five brush
+> presets (felt-tip, marker-underline, glow-pen, **chalk, crayon**), and a
+> schema-backed sticker outline for text/shape/image/svg are implemented
+> end-to-end: schema (no version bump — additive enum widening + optional fields),
 > patch plumbing, live `LayerRenderer`, raster-export parity (which also closed
-> the prior stroke-style and image-mask raster gaps), SVG export with
-> approximation warnings, desktop inspector controls, mobile parity (frame +
-> sticker chips, brush presets in the draw flow), AI prompt guidance + validation
-> warnings, EN/FR strings, export-fidelity docs, and focused unit tests
-> (`src/tests/unit/phaseR.test.ts`). Deferred to a follow-up: the eight creative
-> frames (torn paper, tape, scalloped, …), roughened stroke looks (hand-drawn,
-> rough, scribble, sketch, inner), and the reusable "looks" library.
+> the prior stroke-style and image-mask raster gaps), SVG export (now incl. shared
+> `<path>`/dashed/rotated frame specs) with approximation warnings, desktop
+> inspector controls, mobile parity (frame + sticker chips, brush presets in the
+> draw flow), AI prompt guidance + validation warnings, a refreshed
+> downloadable Claude skill (`calqo-project-maker`) documenting image
+> layers/frames/looks/masks/fills, EN/FR strings, export-fidelity docs, and
+> focused unit tests (`src/tests/unit/phaseR.test.ts`). Deferred to a follow-up:
+> the reusable "looks" library and the release sample-gallery examples (blocked on
+> the Phase U gallery).
 
 Goal: make Calqo's existing creative primitives feel richer and faster for
 social visuals, especially image framing and expressive strokes, while keeping
@@ -441,14 +446,14 @@ Already implemented and should be preserved:
 
 ### Deliverables
 
-- [~] Add non-destructive image frames. **(MVP: classic frames done; creative deferred.)**
+- [x] Add non-destructive image frames.
   - Store frame style in schema as image-layer decoration or a reusable effect
     that can migrate cleanly from v1.
   - [x] Support classic border frames: inset, centered, outside, rounded, circle,
     double-line, and polaroid/card-like frames.
-  - [ ] Support creative frames: torn paper, tape corners, photo booth strips,
+  - [x] Support creative frames: torn paper, tape corners, photo booth strips,
     scalloped edges, postage stamp perforations, soft mat, thick poster border,
-    and shadowed cutout. **(Deferred.)**
+    and shadowed cutout.
   - [x] Allow frame color, width, radius, padding, shadow, and optional caption
     strip where relevant.
   - [x] Preserve image crop/focal point/mask/filter state when applying, removing,
@@ -460,14 +465,16 @@ Already implemented and should be preserved:
   - Let brand/template workflows later mark a frame as a template slot style.
   - Keep generated frames editable as normal Calqo layers or schema-backed
     decorations, not flattened pixels.
-- [~] Add richer stroke styles for shapes, text, and freehand marks. **(MVP: single-node looks done; roughened looks deferred.)**
-  - [x] Single-node looks: marker, neon, glow, double, offset, outline (plus
-    existing solid/dashed/dotted). Roughened looks (hand-drawn, rough, scribble,
-    sketch, inner) deferred.
+- [x] Add richer stroke styles for shapes, text, and freehand marks.
+  - [x] Single-node looks: marker, neon, glow, double, offset, outline, and the
+    roughened hand-drawn, rough, scribble, sketch, inner (plus existing
+    solid/dashed/dotted). Roughened looks are single-node approximations
+    (dash/cap/join/offset-shadow); raster is faithful, SVG approximated.
   - [x] Add editable dash/gap controls (`dashLen`/`gap`) for custom dashed lines.
   - [x] Add line join / cap controls where Konva/export paths support them.
-  - [x] Brush presets: felt-tip, marker-underline, glow pen (plus existing
-    smooth/marker/highlighter/dashed). Chalk/crayon deferred (need raster texture).
+  - [x] Brush presets: felt-tip, marker-underline, glow pen, chalk, crayon (plus
+    existing smooth/marker/highlighter/dashed). Chalk/crayon are single-node
+    approximations (chalk = soft multiply; crayon = broken sketch line).
 - [x] Add sticker/outline treatments.
   - [x] One-click sticker outline for images/SVGs/text/shapes.
   - [x] Offset shadow/outline combinations for thumbnail-style text.
@@ -477,7 +484,7 @@ Already implemented and should be preserved:
   - [x] Raster export parity (also closed the prior stroke-style/mask raster gaps).
   - [x] SVG export with warnings for raster-only looks.
   - [x] HTML wrapper keeps the raster fidelity path.
-- [ ] Add reusable looks. **(Deferred to follow-up.)**
+- [ ] Add reusable looks. **(Deferred to follow-up — local looks library.)**
 - [x] Add AI/template compatibility.
   - [x] Prompt-a-template guidance lists supported stroke-look names.
   - [x] Unsupported-but-valid looks become warnings, not failures.

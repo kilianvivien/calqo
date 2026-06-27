@@ -867,7 +867,7 @@ function FrameControls({
             max={80}
             onChange={(width) => update({ frame: { ...frame, width } })}
           />
-          {frame.kind === 'rounded' && (
+          {(frame.kind === 'rounded' || frame.kind === 'scalloped-edges') && (
             <SliderField
               label={t('properties.cornerRadius')}
               value={Math.round(frame.radius ?? 0)}
@@ -876,7 +876,11 @@ function FrameControls({
               onChange={(radius) => update({ frame: { ...frame, radius } })}
             />
           )}
-          {(frame.kind === 'double-line' || frame.kind === 'polaroid') && (
+          {(frame.kind === 'double-line' ||
+            frame.kind === 'polaroid' ||
+            frame.kind === 'soft-mat' ||
+            frame.kind === 'postage-stamp' ||
+            frame.kind === 'photo-booth-strip') && (
             <SliderField
               label={t('properties.framePadding')}
               value={Math.round(frame.padding ?? 0)}
@@ -885,7 +889,7 @@ function FrameControls({
               onChange={(padding) => update({ frame: { ...frame, padding } })}
             />
           )}
-          {frame.kind === 'polaroid' && (
+          {(frame.kind === 'polaroid' || frame.kind === 'photo-booth-strip') && (
             <TextField
               label={t('properties.frameCaption')}
               value={frame.caption?.[locale] ?? ''}

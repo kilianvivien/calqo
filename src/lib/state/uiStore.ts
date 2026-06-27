@@ -38,7 +38,9 @@ export type BrushStyle =
   | 'dashed'
   | 'felt-tip'
   | 'marker-underline'
-  | 'glow-pen';
+  | 'glow-pen'
+  | 'chalk'
+  | 'crayon';
 
 /** Style applied to the next shape a draw tool places — surfaced as the
  * tool-defaults inspector (GeoCarto's "Réglages {outil}" card). */

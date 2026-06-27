@@ -10,6 +10,7 @@ import { Ellipse } from 'konva/lib/shapes/Ellipse';
 import { Line } from 'konva/lib/shapes/Line';
 import { Arrow } from 'konva/lib/shapes/Arrow';
 import { Circle } from 'konva/lib/shapes/Circle';
+import { Path } from 'konva/lib/shapes/Path';
 import type { Shape } from 'konva/lib/Shape';
 import type { ShapeConfig } from 'konva/lib/Shape';
 import type { Context } from 'konva/lib/Context';
@@ -163,6 +164,21 @@ function buildFrameNode(spec: FrameNodeSpec): Shape {
       stroke: spec.stroke,
       strokeWidth: spec.strokeWidth,
       cornerRadius: spec.cornerRadius,
+      dash: spec.dash,
+      dashEnabled: spec.dash != null,
+      lineCap: spec.dash ? 'round' : undefined,
+      rotation: spec.rotation,
+      opacity: spec.opacity,
+      ...shadow,
+    });
+  }
+  if (spec.kind === 'path') {
+    return new Path({
+      data: spec.data,
+      fill: spec.fill,
+      stroke: spec.stroke,
+      strokeWidth: spec.strokeWidth,
+      opacity: spec.opacity,
       ...shadow,
     });
   }
