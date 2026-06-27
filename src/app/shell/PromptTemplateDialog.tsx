@@ -302,8 +302,13 @@ function PromptTemplateDialogInner() {
 
         <footer className="mt-5 flex items-center justify-end gap-2">
           <GlassButton onClick={close}>{t('export.close')}</GlassButton>
-          <GlassButton variant="primary" onClick={generate} disabled={busy || !prompt.trim()}>
-            <Sparkles size={14} />
+          <GlassButton
+            variant="primary"
+            onClick={generate}
+            disabled={busy || !prompt.trim()}
+            loading={busy}
+          >
+            {!busy && <Sparkles size={14} />}
             {busy ? t('promptTemplate.generating') : t('promptTemplate.generate')}
           </GlassButton>
         </footer>

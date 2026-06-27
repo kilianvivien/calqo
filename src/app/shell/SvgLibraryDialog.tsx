@@ -93,8 +93,12 @@ function SvgLibraryDialogInner() {
         return;
       }
       const result = await generateSvgMark(provider, { prompt: aiPrompt.trim(), color: aiColor });
-      if (result.ok) setAiPreview(result.svg);
-      else setError(result.error);
+      if (result.ok) {
+        setAiPreview(result.svg);
+        if (result.warning) setError(result.warning);
+      } else {
+        setError(result.error);
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -327,8 +331,13 @@ function SvgLibraryDialogInner() {
         <footer className="mt-4 flex items-center justify-end gap-2">
           <GlassButton onClick={close}>{t('export.close')}</GlassButton>
           {tab === 'ai' && (
-            <GlassButton variant="primary" onClick={runAi} disabled={busy || !aiPrompt.trim()}>
-              <Sparkles size={14} />
+            <GlassButton
+              variant="primary"
+              onClick={runAi}
+              disabled={busy || !aiPrompt.trim()}
+              loading={busy}
+            >
+              {!busy && <Sparkles size={14} />}
               {busy ? t('svgLibrary.generating') : t('svgLibrary.generate')}
             </GlassButton>
           )}

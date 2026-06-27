@@ -134,6 +134,7 @@ export function TranslateSheet({ open, onClose, project }: TranslateSheetProps) 
             className="flex-1"
             onClick={run}
             disabled={busy || source === target}
+            loading={busy}
           >
             {busy ? t('translate.running') : t('translate.run')}
           </GlassButton>

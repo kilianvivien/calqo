@@ -229,7 +229,7 @@ function TranslateDialogInner() {
             {status}
           </span>
           <div className="flex items-center gap-2">
-            <GlassButton onClick={runJob} disabled={busy || source === target}>
+            <GlassButton onClick={runJob} disabled={busy || source === target} loading={busy}>
               {busy ? t('translate.running') : t('translate.run')}
             </GlassButton>
             <GlassButton variant="primary" onClick={apply} disabled={!preview || preview.rows.length === 0}>

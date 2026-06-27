@@ -81,6 +81,20 @@ html[data-transparency='solid'] .glass-strong {
     }
   }
 
+  @keyframes calqo-button-sheen {
+    0% {
+      transform: translateX(0) skewX(-12deg);
+      opacity: 0;
+    }
+    18% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(320%) skewX(-12deg);
+      opacity: 0;
+    }
+  }
+
   .window-anim {
     animation: calqo-window-in var(--calqo-t-slow) var(--calqo-ease-out);
   }

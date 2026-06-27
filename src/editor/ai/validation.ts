@@ -54,10 +54,138 @@ function ensureLayerIds(layers: unknown): void {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function stringValue(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim().length > 0) return value;
+  }
+  return undefined;
+}
+
+function numberValue(...values: unknown[]): number | undefined {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+  }
+  return undefined;
+}
+
+function solidFill(value: unknown, fallback = '#FFFFFF'): unknown {
+  if (typeof value === 'string') return { type: 'solid', color: value };
+  if (!isRecord(value)) return { type: 'solid', color: fallback };
+  if (!value.type && typeof value.color === 'string') return { ...value, type: 'solid' };
+  if (value.type === 'color' && typeof value.color === 'string') {
+    return { ...value, type: 'solid' };
+  }
+  return value;
+}
+
+function normalizeTextRecord(value: unknown, locale: string, fallback: string): Record<string, string> {
+  if (typeof value === 'string') return { [locale]: value };
+  if (isRecord(value)) {
+    const entries = Object.entries(value).filter(
+      (entry): entry is [string, string] =>
+        typeof entry[0] === 'string' && typeof entry[1] === 'string',
+    );
+    if (entries.length > 0) return Object.fromEntries(entries);
+  }
+  return { [locale]: fallback };
+}
+
+function normalizeTextStyle(value: unknown, input: TemplatePromptInput): Record<string, unknown> {
+  const style = isRecord(value) ? { ...value } : {};
+  style.fontFamily = stringValue(style.fontFamily) ?? input.fonts[0] ?? 'Inter';
+  style.fontSize = numberValue(style.fontSize, style.size) ?? 48;
+  style.fontWeight = numberValue(style.fontWeight, style.weight) ?? style.fontWeight ?? 700;
+  style.fontStyle = style.fontStyle === 'italic' ? 'italic' : 'normal';
+  style.textDecoration = style.textDecoration === 'underline' ? 'underline' : 'none';
+  style.color = stringValue(style.color, style.fill) ?? '#111827';
+  style.align = ['left', 'center', 'right', 'justify'].includes(String(style.align))
+    ? style.align
+    : 'left';
+  style.lineHeight = numberValue(style.lineHeight) ?? 1.2;
+  style.letterSpacing = numberValue(style.letterSpacing) ?? 0;
+  return style;
+}
+
+function normalizeLayerBox(layer: Record<string, unknown>, artboard: Record<string, unknown>): void {
+  const artboardWidth = numberValue(artboard.width) ?? 1080;
+  const artboardHeight = numberValue(artboard.height) ?? 1080;
+  layer.x = numberValue(layer.x, layer.left) ?? 0;
+  layer.y = numberValue(layer.y, layer.top) ?? 0;
+  layer.w = numberValue(layer.w, layer.width) ?? Math.round(artboardWidth * 0.6);
+  layer.h = numberValue(layer.h, layer.height) ?? Math.round(artboardHeight * 0.12);
+  if (typeof layer.name !== 'string' || layer.name.length === 0) {
+    layer.name = stringValue(layer.label) ?? `${String(layer.type ?? 'Layer')} layer`;
+  }
+}
+
+function inferLayerType(layer: Record<string, unknown>): string | undefined {
+  const type = stringValue(layer.type);
+  if (type) return type;
+  if (typeof layer.text === 'string' || typeof layer.content === 'string') return 'text';
+  if (Array.isArray(layer.items) || Array.isArray(layer.list)) return 'list';
+  if (stringValue(layer.shape) || stringValue(layer.kind)) return 'shape';
+  return undefined;
+}
+
+function normalizeListItems(value: unknown, input: TemplatePromptInput): unknown[] {
+  const items = Array.isArray(value) ? value : [];
+  return items.map((item) => {
+    if (typeof item === 'string') {
+      return { id: createId('item'), text: { [input.locale]: item } };
+    }
+    if (!isRecord(item)) {
+      return { id: createId('item'), text: { [input.locale]: '' } };
+    }
+    const normalized = { ...item };
+    if (typeof normalized.id !== 'string' || normalized.id.length === 0) {
+      normalized.id = createId('item');
+    }
+    normalized.text = normalizeTextRecord(normalized.text, input.locale, '');
+    return normalized;
+  });
+}
+
+function normalizeLayer(layer: unknown, input: TemplatePromptInput, artboard: Record<string, unknown>): unknown {
+  if (!isRecord(layer)) return layer;
+  const normalized = { ...layer };
+  normalized.type = inferLayerType(normalized);
+  normalizeLayerBox(normalized, artboard);
+
+  if (normalized.type === 'text') {
+    normalized.text = normalizeTextRecord(
+      normalized.text ?? normalized.content ?? normalized.label,
+      input.locale,
+      '',
+    );
+    normalized.style = normalizeTextStyle(normalized.style, input);
+  } else if (normalized.type === 'list') {
+    normalized.items = normalizeListItems(normalized.items ?? normalized.list, input);
+    if (!isRecord(normalized.marker)) {
+      normalized.marker = { kind: 'bullet', color: '#111827' };
+    }
+    normalized.style = normalizeTextStyle(normalized.style, input);
+  } else if (normalized.type === 'shape') {
+    const shape = stringValue(normalized.shape, normalized.kind) ?? 'rect';
+    normalized.shape = shape === 'circle' ? 'ellipse' : shape;
+    normalized.fill = solidFill(normalized.fill ?? normalized.color, '#E5E7EB');
+  } else if (normalized.type === 'group') {
+    normalized.children = Array.isArray(normalized.children)
+      ? normalized.children.map((child) => normalizeLayer(child, input, artboard))
+      : [];
+  }
+
+  return normalized;
+}
+
 /** Fill the project/artboard envelope that models routinely omit (ids,
  * timestamps, schema version, locale list) using the request as the source of
  * truth, then validate with the strict importer (plan §3.10, §14.6). This is the
- * "repair-friendly" path: it normalizes shape but never invents layer geometry. */
+ * "repair-friendly" path: it normalizes common model shorthand before the
+ * strict importer enforces the real project contract. */
 export function normalizeTemplateDocument(
   raw: unknown,
   input: TemplatePromptInput,
@@ -93,7 +221,10 @@ export function normalizeTemplateDocument(
         if (typeof ab.width !== 'number') ab.width = input.width;
         if (typeof ab.height !== 'number') ab.height = input.height;
         if (typeof ab.name !== 'string') ab.name = 'Artboard';
-        if (!ab.background) ab.background = { type: 'solid', color: '#FFFFFF' };
+        ab.background = solidFill(ab.background, '#FFFFFF');
+        if (Array.isArray(ab.layers)) {
+          ab.layers = ab.layers.map((layer) => normalizeLayer(layer, input, ab));
+        }
         ensureLayerIds(ab.layers);
       }
     }

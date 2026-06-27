@@ -119,6 +119,71 @@ describe('phase H — template repair and quality checks', () => {
     expect(retryInput.repair?.error).toMatch(/JSON parse failed/);
   });
 
+  it('normalizes common AI shorthand before strict project validation', () => {
+    const validation = validateTemplateResponse(
+      JSON.stringify({
+        name: 'Launch card',
+        artboards: [
+          {
+            name: 'Main',
+            width: 1080,
+            height: 1080,
+            background: '#F7FAFC',
+            layers: [
+              {
+                type: 'text',
+                name: 'Headline',
+                x: 80,
+                y: 96,
+                width: 920,
+                height: 160,
+                text: 'Launch soon',
+                style: { color: '#111827', fontSize: 72 },
+              },
+              {
+                type: 'shape',
+                name: 'Badge',
+                shape: 'circle',
+                x: 80,
+                y: 320,
+                width: 200,
+                height: 200,
+                fill: '#0A2540',
+              },
+            ],
+          },
+        ],
+      }),
+      {
+        prompt: 'launch',
+        preset: 'ig-square',
+        width: 1080,
+        height: 1080,
+        locale: 'en',
+        maxLayers: 20,
+        fonts: ['Inter'],
+      },
+    );
+
+    expect(validation.ok).toBe(true);
+    if (!validation.ok) return;
+    expect(validation.project.artboards[0].background).toEqual({
+      type: 'solid',
+      color: '#F7FAFC',
+    });
+    expect(validation.project.artboards[0].layers[0]).toMatchObject({
+      type: 'text',
+      w: 920,
+      h: 160,
+      text: { en: 'Launch soon' },
+    });
+    expect(validation.project.artboards[0].layers[1]).toMatchObject({
+      type: 'shape',
+      shape: 'ellipse',
+      fill: { type: 'solid', color: '#0A2540' },
+    });
+  });
+
   it('warns for out-of-bounds geometry and low text contrast', () => {
     const project = createDefaultProject();
     project.artboards[0].background = { type: 'solid', color: '#FFFFFF' };
@@ -231,6 +296,28 @@ describe('phase H — translation and SVG hardening', () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.raw).toContain('<script>');
+  });
+
+  it('falls back to a bundled SVG when the provider times out', async () => {
+    const provider: AIProvider = {
+      id: 'svg-timeout',
+      label: 'SVG Timeout',
+      capabilities: { structuredJson: false, translation: false },
+      generateTemplate: vi.fn(),
+      translate: vi.fn(),
+      generateSvg: vi.fn().mockRejectedValue(new Error('Gemini timed out after 45000ms.')),
+    };
+
+    const result = await generateSvgMark(provider, {
+      prompt: 'sale badge',
+      color: '#0A2540',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.fallback).toBe(true);
+    expect(result.warning).toMatch(/timed out/i);
+    expect(result.svg).toContain('#0A2540');
   });
 });
 

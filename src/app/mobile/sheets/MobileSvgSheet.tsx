@@ -110,8 +110,12 @@ export function MobileSvgSheet({
         prompt: aiPrompt.trim(),
         color,
       });
-      if (result.ok) setAiPreview(result.svg);
-      else setError(result.error);
+      if (result.ok) {
+        setAiPreview(result.svg);
+        if (result.warning) setError(result.warning);
+      } else {
+        setError(result.error);
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -185,8 +189,9 @@ export function MobileSvgSheet({
             className="w-full"
             onClick={runAi}
             disabled={busy || !aiPrompt.trim()}
+            loading={busy}
           >
-            <Sparkles size={15} />
+            {!busy && <Sparkles size={15} />}
             {busy ? t('svgLibrary.generating') : t('svgLibrary.generate')}
           </GlassButton>
         ) : undefined
