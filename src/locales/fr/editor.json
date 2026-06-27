@@ -28,7 +28,8 @@
     "pen": "Plume (polygone)",
     "brush": "Pinceau",
     "image": "Image",
-    "svg": "Icône / SVG"
+    "svg": "Icône / SVG",
+    "emoji": "Emoji"
   },
   "workspace": {
     "empty": "Aucun projet ouvert",
@@ -454,6 +455,12 @@
     "tabUpload": "Importer",
     "search": "Rechercher des icônes…",
     "insert": "Insérer",
+    "saveToLibrary": "Enregistrer dans la bibliothèque",
+    "saved": "Enregistré",
+    "removeSaved": "Retirer de la bibliothèque",
+    "removeTitle": "Retirer le SVG",
+    "removeMessage": "Retirer « {{name}} » de vos SVG enregistrés ? Cette action est irréversible.",
+    "generatedName": "SVG généré",
     "generate": "Générer",
     "generating": "Génération…",
     "aiPlaceholder": "ex. Une tasse de café minimaliste avec de la vapeur.",
@@ -462,6 +469,7 @@
     "invalidFile": "Ce fichier ne contenait pas de SVG valide.",
     "noResults": "Aucune icône ne correspond à votre recherche.",
     "categories": {
+      "generated": "Générés",
       "engagement": "Engagement",
       "actions": "Actions",
       "commerce": "Commerce",
@@ -511,6 +519,23 @@
       "hashtag": "Hashtag",
       "quote": "Citation",
       "trophy": "Trophée"
+    }
+  },
+  "emojiPicker": {
+    "title": "Insérer un emoji",
+    "subtitle": "Choisissez un emoji à déposer sur le canevas sous forme de texte modifiable.",
+    "search": "Rechercher un emoji…",
+    "noResults": "Aucun emoji ne correspond à votre recherche.",
+    "categories": {
+      "smileys": "Smileys",
+      "people": "Personnes et gestes",
+      "animals": "Animaux et nature",
+      "food": "Nourriture et boissons",
+      "activities": "Activités",
+      "travel": "Voyages et lieux",
+      "objects": "Objets",
+      "symbols": "Symboles",
+      "flags": "Drapeaux"
     }
   },
   "list": {

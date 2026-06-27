@@ -30,6 +30,7 @@ import {
 import { historyStore } from '@/lib/state/historyStore';
 import { projectStore } from '@/lib/state/projectStore';
 import { selectionStore } from '@/lib/state/selectionStore';
+import { useConfirmStore } from '@/lib/state/confirmStore';
 
 function commitProject(project: CalqoProject, layers: CalqoLayer[]) {
   project.artboards[0].layers.push(...layers);
@@ -288,7 +289,9 @@ describe('phase K — warn before closing an unsaved project', () => {
     const project = createDefaultProject();
     commitProject(project, []);
     expect(isProjectDirty(project.id)).toBe(false);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const confirmSpy = vi
+      .spyOn(useConfirmStore.getState(), 'open')
+      .mockResolvedValue(true);
 
     const closed = await requestCloseProject(project.id, prompt);
 
@@ -302,7 +305,9 @@ describe('phase K — warn before closing an unsaved project', () => {
     commitProject(project, []);
     projectStore.getState().setSaveState(project.id, 'unsaved');
     expect(isProjectDirty(project.id)).toBe(true);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const confirmSpy = vi
+      .spyOn(useConfirmStore.getState(), 'open')
+      .mockResolvedValue(false);
 
     const closed = await requestCloseProject(project.id, prompt);
 
@@ -316,7 +321,9 @@ describe('phase K — warn before closing an unsaved project', () => {
     const project = createDefaultProject();
     commitProject(project, []);
     projectStore.getState().setSaveState(project.id, 'unsaved');
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const confirmSpy = vi
+      .spyOn(useConfirmStore.getState(), 'open')
+      .mockResolvedValue(true);
 
     const closed = await requestCloseProject(project.id, prompt);
 

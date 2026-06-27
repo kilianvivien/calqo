@@ -40,6 +40,7 @@ import {
   Pipette,
   Plus,
   Shapes,
+  Smile,
   Square,
   Star,
   Trash2,
@@ -148,6 +149,7 @@ const TOOL_ICON: Record<EditorTool, LucideIcon> = {
   brush: Brush,
   image: ImageIcon,
   svg: Shapes,
+  emoji: Smile,
 };
 
 const DRAW_TOOLS: EditorTool[] = [

@@ -18,6 +18,7 @@ import {
   Badge,
   Image as ImageIcon,
   Shapes,
+  Smile,
   type LucideIcon,
 } from 'lucide-react';
 import { GlassIconButton } from '@/components/glass';
@@ -54,6 +55,7 @@ const TOOLS: ToolDef[] = [
   { id: 'brush', icon: Brush, group: 'freeform', shortcut: 'B' },
   { id: 'image', icon: ImageIcon, group: 'freeform', shortcut: 'I' },
   { id: 'svg', icon: Shapes, group: 'freeform' },
+  { id: 'emoji', icon: Smile, group: 'freeform' },
 ];
 
 /** Vertical tool rail; tool selection drives the canvas and inspector. */
@@ -62,14 +64,19 @@ export function ToolRail() {
   const active = useUiStore((s) => s.activeTool);
   const setActive = useUiStore((s) => s.setActiveTool);
   const setSvgDialog = useUiStore((s) => s.setSvgDialog);
+  const setEmojiDialog = useUiStore((s) => s.setEmojiDialog);
   const setMarkerPickerLayerId = useUiStore((s) => s.setMarkerPickerLayerId);
 
-  // The SVG tool opens the insert dialog (library / AI / upload) rather than
-  // arming a canvas placement mode.
+  // The SVG and emoji tools open an insert dialog rather than arming a canvas
+  // placement mode.
   const handleSelect = (tool: EditorTool) => {
     if (tool === 'svg') {
       setMarkerPickerLayerId(null);
       setSvgDialog(true);
+      return;
+    }
+    if (tool === 'emoji') {
+      setEmojiDialog(true);
       return;
     }
     setActive(tool);

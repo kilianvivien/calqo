@@ -19,6 +19,7 @@ const NUDGE_SMALL = 1;
 const NUDGE_LARGE = 10;
 import { ErrorBoundary } from './ErrorBoundary';
 import { AppShell } from './shell/AppShell';
+import { ConfirmHost } from './shell/ConfirmHost';
 import { MobileShell } from './mobile/MobileShell';
 import { PwaUpdatePrompt } from './PwaUpdatePrompt';
 import { PwaInstallPrompt } from './PwaInstallPrompt';
@@ -173,6 +174,7 @@ export function App() {
   return (
     <ErrorBoundary>
       {phone ? <MobileShell /> : <AppShell />}
+      <ConfirmHost />
       <PwaUpdatePrompt />
       <PwaInstallPrompt />
     </ErrorBoundary>

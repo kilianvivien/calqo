@@ -28,7 +28,8 @@
     "pen": "Pen (polygon)",
     "brush": "Brush",
     "image": "Image",
-    "svg": "Icon / SVG"
+    "svg": "Icon / SVG",
+    "emoji": "Emoji"
   },
   "workspace": {
     "empty": "No project open",
@@ -454,6 +455,12 @@
     "tabUpload": "Upload",
     "search": "Search icons…",
     "insert": "Insert",
+    "saveToLibrary": "Save to library",
+    "saved": "Saved",
+    "removeSaved": "Remove from library",
+    "removeTitle": "Remove SVG",
+    "removeMessage": "Remove “{{name}}” from your saved SVGs? This cannot be undone.",
+    "generatedName": "Generated SVG",
     "generate": "Generate",
     "generating": "Generating…",
     "aiPlaceholder": "e.g. A minimal coffee cup with steam.",
@@ -462,6 +469,7 @@
     "invalidFile": "That file did not contain valid SVG.",
     "noResults": "No icons match your search.",
     "categories": {
+      "generated": "Generated",
       "engagement": "Engagement",
       "actions": "Actions",
       "commerce": "Commerce",
@@ -511,6 +519,23 @@
       "hashtag": "Hashtag",
       "quote": "Quote",
       "trophy": "Trophy"
+    }
+  },
+  "emojiPicker": {
+    "title": "Insert emoji",
+    "subtitle": "Pick an emoji to drop onto the canvas as editable text.",
+    "search": "Search emoji…",
+    "noResults": "No emoji match your search.",
+    "categories": {
+      "smileys": "Smileys",
+      "people": "People & gestures",
+      "animals": "Animals & nature",
+      "food": "Food & drink",
+      "activities": "Activities",
+      "travel": "Travel & places",
+      "objects": "Objects",
+      "symbols": "Symbols",
+      "flags": "Flags"
     }
   },
   "list": {

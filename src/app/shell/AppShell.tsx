@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { GlassPanel } from '@/components/glass';
 import { createProject } from '@/editor/commands/projectCommands';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
+import { useSavedSvgStore } from '@/editor/assets/savedSvgStore';
 import { registerAppCommandHandlers, invokeAppCommandSync } from '@/app/commands/appCommands';
 import { isTauri } from '@/lib/platform/runtime';
 import { installNativeMenus, scheduleNativeMenuRefresh } from '@/app/commands/nativeMenu';
@@ -11,6 +12,7 @@ import { NewProjectModal } from './NewProjectModal';
 import { ProjectManagerModal } from './ProjectManagerModal';
 import { PromptTemplateDialog } from './PromptTemplateDialog';
 import { SvgLibraryDialog } from './SvgLibraryDialog';
+import { EmojiPickerDialog } from './EmojiPickerDialog';
 import { ShortcutHelpModal } from './ShortcutHelpModal';
 import { TranslateDialog } from './TranslateDialog';
 import { TitleBar } from './TitleBar';
@@ -40,10 +42,12 @@ export function AppShell() {
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
   const loadAiSettings = useAiSettingsStore((s) => s.load);
+  const loadSavedSvgs = useSavedSvgStore((s) => s.load);
 
   useEffect(() => {
     void loadAiSettings();
-  }, [loadAiSettings]);
+    void loadSavedSvgs();
+  }, [loadAiSettings, loadSavedSvgs]);
 
   useEffect(() => {
     const unregister = registerAppCommandHandlers({
@@ -130,6 +134,7 @@ export function AppShell() {
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <PromptTemplateDialog />
       <SvgLibraryDialog />
+      <EmojiPickerDialog />
       <ShortcutHelpModal
         open={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Copy, Search, Sparkles, Upload } from 'lucide-react';
-import { assetStorage, clipboard } from '@/lib/adapters';
+import { BookmarkPlus, Check, Copy, Search, Sparkles, Trash2, Upload } from 'lucide-react';
+import { assetStorage, clipboard, dialog } from '@/lib/adapters';
 import { generateSvgMark } from '@/editor/ai/svgService';
 import { getProvider } from '@/editor/ai/providerRegistry';
 import { isAiEnabled, useAiSettingsStore } from '@/editor/ai/aiSettings';
@@ -11,6 +11,7 @@ import {
   SVG_LIBRARY,
   type SvgLibraryItem,
 } from '@/editor/assets/svgLibrary';
+import { useSavedSvgStore, type SavedSvg } from '@/editor/assets/savedSvgStore';
 import { extractSvgSize, looksLikeSvg, recolorSvg, sanitizeSvg } from '@/lib/utils/svg';
 import type { CalqoArtboard, CalqoProject } from '@/lib/schema';
 import { BottomSheet } from '@/components/mobile';
@@ -69,8 +70,29 @@ export function MobileSvgSheet({
   const [color, setColor] = useState(project.palette[0] ?? '#111827');
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiPreview, setAiPreview] = useState<string | null>(null);
+  const [savedPreview, setSavedPreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const savedSvgs = useSavedSvgStore((s) => s.items);
+  const saveSvg = useSavedSvgStore((s) => s.add);
+  const removeSavedSvg = useSavedSvgStore((s) => s.remove);
+
+  const saveCurrentPreview = () => {
+    if (!aiPreview) return;
+    saveSvg(aiPreview, aiPrompt.trim().slice(0, 40) || t('svgLibrary.generatedName'));
+    setSavedPreview(true);
+  };
+
+  const confirmRemoveSaved = async (item: SavedSvg) => {
+    const confirmed = await dialog.confirm({
+      title: t('svgLibrary.removeTitle'),
+      message: t('svgLibrary.removeMessage', { name: item.name }),
+      confirmLabel: t('svgLibrary.removeSaved'),
+      danger: true,
+    });
+    if (confirmed) removeSavedSvg(item.id);
+  };
 
   const insertSvg = async (svg: string, name: string, tint?: string) => {
     const { width, height } = extractSvgSize(svg);
@@ -100,6 +122,7 @@ export function MobileSvgSheet({
     setBusy(true);
     setError(null);
     setAiPreview(null);
+    setSavedPreview(false);
     try {
       const provider = getProvider(settings);
       if (!provider) {
@@ -146,6 +169,12 @@ export function MobileSvgSheet({
     items: filtered.filter((item) => item.category === category),
   })).filter((section) => section.items.length > 0);
 
+  const filteredSaved = search.trim()
+    ? savedSvgs.filter((item) =>
+        item.name.toLowerCase().includes(search.trim().toLowerCase()),
+      )
+    : savedSvgs;
+
   const renderItem = (item: SvgLibraryItem) => {
     const name = t(`svgLibrary.items.${item.nameKey}`);
     return (
@@ -166,6 +195,33 @@ export function MobileSvgSheet({
       </button>
     );
   };
+
+  const renderSaved = (item: SavedSvg) => (
+    <div key={item.id} className="group relative flex min-w-0 flex-col items-center gap-1.5">
+      <button
+        type="button"
+        title={item.name}
+        onClick={() => void insertSvg(item.svg, item.name)}
+        className="flex w-full flex-col items-center gap-1.5"
+      >
+        <span
+          className="flex aspect-square w-full items-center justify-center rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-white p-3 transition-colors group-active:border-[var(--calqo-accent)]"
+          dangerouslySetInnerHTML={{ __html: item.svg }}
+        />
+        <span className="w-full truncate text-center text-[10.5px] leading-tight text-[var(--calqo-text-3)]">
+          {item.name}
+        </span>
+      </button>
+      <button
+        type="button"
+        aria-label={t('svgLibrary.removeSaved')}
+        onClick={() => void confirmRemoveSaved(item)}
+        className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-[var(--calqo-text-3)] shadow-sm active:text-[#B42318]"
+      >
+        <Trash2 size={12} />
+      </button>
+    </div>
+  );
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'library', label: t('svgLibrary.tabLibrary') },
@@ -237,21 +293,34 @@ export function MobileSvgSheet({
           </div>
           <ColorInput value={color} onChange={setColor} label={t('svgLibrary.color')} />
 
-          {sections.length === 0 ? (
+          {sections.length === 0 && filteredSaved.length === 0 ? (
             <p className="py-8 text-center text-[12.5px] text-[var(--calqo-text-3)]">
               {t('svgLibrary.noResults')}
             </p>
           ) : (
-            sections.map((section) => (
-              <section key={section.category} className="space-y-2">
-                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--calqo-text-3)]">
-                  {t(`svgLibrary.categories.${section.category}`)}
-                </h3>
-                <div className="grid grid-cols-4 gap-2.5">
-                  {section.items.map(renderItem)}
-                </div>
-              </section>
-            ))
+            <>
+              {filteredSaved.length > 0 && (
+                <section className="space-y-2">
+                  <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--calqo-text-3)]">
+                    <Sparkles size={12} className="text-[var(--calqo-accent)]" />
+                    {t('svgLibrary.categories.generated')}
+                  </h3>
+                  <div className="grid grid-cols-4 gap-2.5">
+                    {filteredSaved.map(renderSaved)}
+                  </div>
+                </section>
+              )}
+              {sections.map((section) => (
+                <section key={section.category} className="space-y-2">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--calqo-text-3)]">
+                    {t(`svgLibrary.categories.${section.category}`)}
+                  </h3>
+                  <div className="grid grid-cols-4 gap-2.5">
+                    {section.items.map(renderItem)}
+                  </div>
+                </section>
+              ))}
+            </>
           )}
         </div>
       )}
@@ -272,15 +341,25 @@ export function MobileSvgSheet({
                 className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[var(--calqo-radius-sm)] bg-white p-2"
                 dangerouslySetInnerHTML={{ __html: aiPreview }}
               />
-              <GlassButton
-                variant="primary"
-                className="min-w-0 flex-1"
-                onClick={() =>
-                  void insertSvg(aiPreview, aiPrompt.slice(0, 32) || 'AI SVG')
-                }
-              >
-                {t('svgLibrary.insert')}
-              </GlassButton>
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <GlassButton
+                  variant="primary"
+                  className="w-full"
+                  onClick={() =>
+                    void insertSvg(aiPreview, aiPrompt.slice(0, 32) || 'AI SVG')
+                  }
+                >
+                  {t('svgLibrary.insert')}
+                </GlassButton>
+                <GlassButton
+                  className="w-full"
+                  onClick={saveCurrentPreview}
+                  disabled={savedPreview}
+                >
+                  {savedPreview ? <Check size={14} /> : <BookmarkPlus size={14} />}
+                  {savedPreview ? t('svgLibrary.saved') : t('svgLibrary.saveToLibrary')}
+                </GlassButton>
+              </div>
             </div>
           )}
         </div>

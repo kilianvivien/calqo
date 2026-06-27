@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Copy, Sparkles, Upload, X } from 'lucide-react';
+import { BookmarkPlus, Check, Copy, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import { GlassButton, GlassIconButton, ModalOverlay } from '@/components/glass';
-import { assetStorage, clipboard } from '@/lib/adapters';
+import { assetStorage, clipboard, dialog } from '@/lib/adapters';
 import { addImportedAssetLayer, setListMarker } from '@/editor/commands/projectCommands';
 import { generateSvgMark } from '@/editor/ai/svgService';
 import { getProvider } from '@/editor/ai/providerRegistry';
@@ -12,6 +12,7 @@ import {
   SVG_LIBRARY,
   type SvgLibraryItem,
 } from '@/editor/assets/svgLibrary';
+import { useSavedSvgStore, type SavedSvg } from '@/editor/assets/savedSvgStore';
 import { extractSvgSize, looksLikeSvg, recolorSvg, sanitizeSvg } from '@/lib/utils/svg';
 import { ColorSwatchButton } from './inspector/ColorSwatchButton';
 import { useActiveArtboard, useActiveProject } from '@/lib/state/selectors';
@@ -46,7 +47,28 @@ function SvgLibraryDialogInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiPreview, setAiPreview] = useState<string | null>(null);
+  const [savedPreview, setSavedPreview] = useState(false);
   const uploadRef = useRef<HTMLInputElement>(null);
+
+  const savedSvgs = useSavedSvgStore((s) => s.items);
+  const saveSvg = useSavedSvgStore((s) => s.add);
+  const removeSavedSvg = useSavedSvgStore((s) => s.remove);
+
+  const saveCurrentPreview = () => {
+    if (!aiPreview) return;
+    saveSvg(aiPreview, aiPrompt.trim().slice(0, 40) || t('svgLibrary.generatedName'));
+    setSavedPreview(true);
+  };
+
+  const confirmRemoveSaved = async (item: SavedSvg) => {
+    const confirmed = await dialog.confirm({
+      title: t('svgLibrary.removeTitle'),
+      message: t('svgLibrary.removeMessage', { name: item.name }),
+      confirmLabel: t('svgLibrary.removeSaved'),
+      danger: true,
+    });
+    if (confirmed) removeSavedSvg(item.id);
+  };
 
   const insertSvg = async (svg: string, name: string, color?: string) => {
     if (!project) return;
@@ -86,6 +108,7 @@ function SvgLibraryDialogInner() {
     setBusy(true);
     setError(null);
     setAiPreview(null);
+    setSavedPreview(false);
     try {
       const provider = getProvider(settings);
       if (!provider) {
@@ -130,6 +153,13 @@ function SvgLibraryDialogInner() {
     items: filtered.filter((item) => item.category === category),
   })).filter((section) => section.items.length > 0);
 
+  // User-saved AI marks form their own section above the bundled categories.
+  const filteredSaved = search.trim()
+    ? savedSvgs.filter((item) =>
+        item.name.toLowerCase().includes(search.trim().toLowerCase()),
+      )
+    : savedSvgs;
+
   const renderItem = (item: SvgLibraryItem) => {
     const name = t(`svgLibrary.items.${item.nameKey}`);
     return (
@@ -151,6 +181,34 @@ function SvgLibraryDialogInner() {
       </button>
     );
   };
+
+  const renderSaved = (item: SavedSvg) => (
+    <div key={item.id} className="group relative flex flex-col items-center gap-1.5">
+      <button
+        type="button"
+        title={item.name}
+        onClick={() => void insertSvg(item.svg, item.name)}
+        className="flex w-full flex-col items-center gap-1.5"
+      >
+        <span
+          className="flex aspect-square w-full items-center justify-center rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-white p-3 transition-all group-hover:-translate-y-0.5 group-hover:border-[var(--calqo-accent)] group-hover:shadow-[0_6px_18px_rgba(0,0,0,0.12)]"
+          // Saved AI marks were sanitised by savedSvgStore before persisting.
+          dangerouslySetInnerHTML={{ __html: item.svg }}
+        />
+        <span className="w-full truncate text-center text-[10.5px] leading-tight text-[var(--calqo-text-3)] group-hover:text-[var(--calqo-text-2)]">
+          {item.name}
+        </span>
+      </button>
+      <button
+        type="button"
+        title={t('svgLibrary.removeSaved')}
+        onClick={() => void confirmRemoveSaved(item)}
+        className="absolute right-1 top-1 hidden rounded-full bg-white/90 p-1 text-[var(--calqo-text-3)] shadow-sm hover:text-[#B42318] group-hover:block"
+      >
+        <Trash2 size={12} />
+      </button>
+    </div>
+  );
 
   const TABS: { id: Tab; label: string }[] = [
     { id: 'library', label: t('svgLibrary.tabLibrary') },
@@ -229,21 +287,34 @@ function SvgLibraryDialogInner() {
                   />
                 </span>
               </div>
-              {sections.length === 0 ? (
+              {sections.length === 0 && filteredSaved.length === 0 ? (
                 <p className="py-8 text-center text-[12.5px] text-[var(--calqo-text-3)]">
                   {t('svgLibrary.noResults')}
                 </p>
               ) : (
-                sections.map((section) => (
-                  <section key={section.category} className="space-y-2">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--calqo-text-3)]">
-                      {t(`svgLibrary.categories.${section.category}`)}
-                    </h3>
-                    <div className="grid grid-cols-5 gap-2.5">
-                      {section.items.map(renderItem)}
-                    </div>
-                  </section>
-                ))
+                <>
+                  {filteredSaved.length > 0 && (
+                    <section className="space-y-2">
+                      <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--calqo-text-3)]">
+                        <Sparkles size={12} className="text-[var(--calqo-accent)]" />
+                        {t('svgLibrary.categories.generated')}
+                      </h3>
+                      <div className="grid grid-cols-5 gap-2.5">
+                        {filteredSaved.map(renderSaved)}
+                      </div>
+                    </section>
+                  )}
+                  {sections.map((section) => (
+                    <section key={section.category} className="space-y-2">
+                      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--calqo-text-3)]">
+                        {t(`svgLibrary.categories.${section.category}`)}
+                      </h3>
+                      <div className="grid grid-cols-5 gap-2.5">
+                        {section.items.map(renderItem)}
+                      </div>
+                    </section>
+                  ))}
+                </>
               )}
             </div>
           )}
@@ -281,6 +352,10 @@ function SvgLibraryDialogInner() {
                     onClick={() => void insertSvg(aiPreview, aiPrompt.slice(0, 32) || 'AI SVG')}
                   >
                     {t('svgLibrary.insert')}
+                  </GlassButton>
+                  <GlassButton onClick={saveCurrentPreview} disabled={savedPreview}>
+                    {savedPreview ? <Check size={14} /> : <BookmarkPlus size={14} />}
+                    {savedPreview ? t('svgLibrary.saved') : t('svgLibrary.saveToLibrary')}
                   </GlassButton>
                 </div>
               )}
@@ -328,9 +403,8 @@ function SvgLibraryDialogInner() {
           )}
         </div>
 
-        <footer className="mt-4 flex items-center justify-end gap-2">
-          <GlassButton onClick={close}>{t('export.close')}</GlassButton>
-          {tab === 'ai' && (
+        {tab === 'ai' && (
+          <footer className="mt-4 flex items-center justify-end gap-2">
             <GlassButton
               variant="primary"
               onClick={runAi}
@@ -340,8 +414,8 @@ function SvgLibraryDialogInner() {
               {!busy && <Sparkles size={14} />}
               {busy ? t('svgLibrary.generating') : t('svgLibrary.generate')}
             </GlassButton>
-          )}
-        </footer>
+          </footer>
+        )}
     </ModalOverlay>
   );
 }
