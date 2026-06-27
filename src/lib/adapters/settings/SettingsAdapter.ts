@@ -7,3 +7,7 @@ export interface SettingsAdapter {
   set<T>(key: string, value: T): Promise<void>;
   remove(key: string): Promise<void>;
 }
+
+/** Non-secret marker prefix used when a secure setting had to fall back to a
+ * weaker storage backend. The marker never contains the secret value itself. */
+export const INSECURE_SECRET_FALLBACK_PREFIX = 'insecure-secret-fallback:';

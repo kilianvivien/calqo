@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { appSettings } from '@/lib/adapters';
+import { INSECURE_SECRET_FALLBACK_PREFIX } from '@/lib/adapters/settings/SettingsAdapter';
+import { platformRuntime } from '@/lib/platform/runtime';
 
 const SETTINGS_KEY = 'ai.settings';
 const SECRET_KEY_PREFIX = 'secure:ai.apiKey.';
@@ -189,6 +191,7 @@ export function normalizeAiSettings(stored?: Partial<AiSettings> | null): AiSett
 
 interface AiSettingsState {
   settings: AiSettings;
+  insecureKeyFallbackProviderIds: AiProviderId[];
   loaded: boolean;
   load: () => Promise<void>;
   setProvider: (id: AiProviderId) => void;
@@ -196,12 +199,27 @@ interface AiSettingsState {
   updateProviderConfig: (id: AiProviderId, patch: Partial<AiProviderConfig>) => void;
 }
 
-// A narrow runtime check avoids importing platform modules into this AI feature.
 function isTauriSettings(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    Boolean((window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__)
+  return platformRuntime.capabilities.secureSettings;
+}
+
+function secretKeyForProvider(id: AiProviderId): string {
+  return `${SECRET_KEY_PREFIX}${id}`;
+}
+
+function fallbackMarkerForProvider(id: AiProviderId): string {
+  return `${INSECURE_SECRET_FALLBACK_PREFIX}${secretKeyForProvider(id)}`;
+}
+
+async function loadInsecureFallbackProviderIds(): Promise<AiProviderId[]> {
+  if (!isTauriSettings()) return [];
+  const ids = await Promise.all(
+    PROVIDER_LIST.map(async (preset) => {
+      const fallback = await appSettings.get<boolean>(fallbackMarkerForProvider(preset.id));
+      return fallback ? preset.id : null;
+    }),
   );
+  return ids.filter((id): id is AiProviderId => id !== null);
 }
 
 async function loadSecureKeys(settings: AiSettings): Promise<AiSettings> {
@@ -209,14 +227,17 @@ async function loadSecureKeys(settings: AiSettings): Promise<AiSettings> {
   const providers = { ...settings.providers };
   await Promise.all(
     PROVIDER_LIST.map(async (preset) => {
-      const apiKey = await appSettings.get<string>(`${SECRET_KEY_PREFIX}${preset.id}`);
+      const apiKey = await appSettings.get<string>(secretKeyForProvider(preset.id));
       if (apiKey) providers[preset.id] = { ...providers[preset.id], apiKey };
     }),
   );
   return { ...settings, providers, storeKey: true };
 }
 
-function persist(settings: AiSettings): void {
+function persist(
+  settings: AiSettings,
+  setFallbackIds?: (ids: AiProviderId[]) => void,
+): void {
   const secureSettings = isTauriSettings();
   void appSettings.set(SETTINGS_KEY, toPersistedAiSettings(settings, secureSettings)).catch((err) => {
     console.error('[Calqo] failed to persist AI settings', err);
@@ -224,18 +245,21 @@ function persist(settings: AiSettings): void {
   if (secureSettings) {
     void Promise.all(
       PROVIDER_LIST.map((preset) => {
-        const key = `${SECRET_KEY_PREFIX}${preset.id}`;
+        const key = secretKeyForProvider(preset.id);
         const apiKey = settings.providers[preset.id].apiKey.trim();
         return apiKey ? appSettings.set(key, apiKey) : appSettings.remove(key);
       }),
-    ).catch((err) => {
-      console.error('[Calqo] failed to persist secure AI keys', err);
-    });
+    )
+      .then(async () => setFallbackIds?.(await loadInsecureFallbackProviderIds()))
+      .catch((err) => {
+        console.error('[Calqo] failed to persist secure AI keys', err);
+      });
   }
 }
 
 export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
   settings: DEFAULT_AI_SETTINGS,
+  insecureKeyFallbackProviderIds: [],
   loaded: false,
 
   load: async () => {
@@ -245,6 +269,7 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
       if (stored) {
         set({
           settings: await loadSecureKeys(normalizeAiSettings(stored)),
+          insecureKeyFallbackProviderIds: await loadInsecureFallbackProviderIds(),
           loaded: true,
         });
         return;
@@ -259,13 +284,13 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
     if (!isProviderId(providerId)) providerId = 'off';
     const next = { ...get().settings, providerId };
     set({ settings: next });
-    persist(next);
+    persist(next, (ids) => set({ insecureKeyFallbackProviderIds: ids }));
   },
 
   setStoreKey: (storeKey) => {
     const next = { ...get().settings, storeKey };
     set({ settings: next });
-    persist(next);
+    persist(next, (ids) => set({ insecureKeyFallbackProviderIds: ids }));
   },
 
   updateProviderConfig: (id, patch) => {
@@ -279,7 +304,7 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
       },
     };
     set({ settings: next });
-    persist(next);
+    persist(next, (ids) => set({ insecureKeyFallbackProviderIds: ids }));
   },
 }));
 
