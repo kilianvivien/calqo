@@ -20,6 +20,7 @@ import {
   Columns3,
   Rows3,
   Brush,
+  ChevronRight,
   Circle,
   Diamond,
   Eye,
@@ -1567,7 +1568,11 @@ function LayerControls({
     updateLayerInActiveArtboard(projectId, layer.id, patch);
   return (
     <>
-      <Section title={t('properties.sectionLayout')}>
+      <Section
+        title={t('properties.sectionLayout')}
+        collapsible
+        defaultOpen={false}
+      >
         <Row label={t('properties.type')} value={layer.type} mono />
         <NumberField
           label="X"
@@ -1609,6 +1614,91 @@ function LayerControls({
 
       {layer.type === 'shape' && (
         <Section title={t('properties.appearance')}>
+          {isFilledShape(layer) && (
+            <FillField
+              fill={layer.fill}
+              projectId={projectId}
+              onChange={(fill) => update({ fill })}
+            />
+          )}
+          {layer.shape === 'freehand' && (
+            <BrushPresetField
+              value={brushStyleFromLayer(layer)}
+              onChange={(brushStyle) =>
+                update(brushStyleLayerPatch(brushStyle, layer.stroke))
+              }
+            />
+          )}
+          {layer.shape === 'rect' && (
+            <SliderField
+              label={t('properties.cornerRadius')}
+              value={layer.cornerRadius ?? 0}
+              min={0}
+              max={Math.max(8, Math.round(Math.min(layer.w, layer.h) / 2))}
+              onChange={(cornerRadius) => update({ cornerRadius })}
+            />
+          )}
+          <ColorField
+            label={t('properties.stroke')}
+            value={layer.stroke?.color ?? '#007AFF'}
+            onChange={(color) =>
+              update({
+                stroke: {
+                  ...layer.stroke,
+                  color,
+                  width: layer.stroke?.width ?? 2,
+                },
+              })
+            }
+          />
+          <SliderField
+            label={t('properties.strokeWidth')}
+            value={layer.stroke?.width ?? 0}
+            min={0}
+            max={40}
+            step={0.5}
+            onChange={(width) =>
+              update({
+                stroke:
+                  width > 0
+                    ? {
+                        ...layer.stroke,
+                        color: layer.stroke?.color ?? '#007AFF',
+                        width,
+                      }
+                    : undefined,
+              })
+            }
+          />
+          {layer.shape === 'arrow' && (
+            <ArrowHeadField
+              value={layer.arrow}
+              onChange={(arrow) => update({ arrow })}
+            />
+          )}
+          <StrokeStyleField
+            value={layer.stroke?.style ?? 'solid'}
+            onChange={(style) =>
+              update({
+                stroke: {
+                  ...layer.stroke,
+                  color: layer.stroke?.color ?? '#007AFF',
+                  width: layer.stroke?.width ?? 2,
+                  style,
+                },
+              })
+            }
+          />
+          <StrokeAdvancedControls
+            stroke={layer.stroke}
+            fallbackColor="#007AFF"
+            onChange={(stroke) => update({ stroke })}
+          />
+          <StrokeLookRow
+            stroke={layer.stroke}
+            fallbackColor="#007AFF"
+            onChange={(stroke) => update({ stroke })}
+          />
           {convertibleKind(layer) && (
             <SelectField
               label={t('properties.shape')}
@@ -1649,91 +1739,6 @@ function LayerControls({
                     kind === 'rect' ? (layer.cornerRadius ?? 18) : 0,
                 });
               }}
-            />
-          )}
-          {isFilledShape(layer) && (
-            <FillField
-              fill={layer.fill}
-              projectId={projectId}
-              onChange={(fill) => update({ fill })}
-            />
-          )}
-          {layer.shape === 'freehand' && (
-            <BrushPresetField
-              value={brushStyleFromLayer(layer)}
-              onChange={(brushStyle) =>
-                update(brushStyleLayerPatch(brushStyle, layer.stroke))
-              }
-            />
-          )}
-          <ColorField
-            label={t('properties.stroke')}
-            value={layer.stroke?.color ?? '#007AFF'}
-            onChange={(color) =>
-              update({
-                stroke: {
-                  ...layer.stroke,
-                  color,
-                  width: layer.stroke?.width ?? 2,
-                },
-              })
-            }
-          />
-          <SliderField
-            label={t('properties.strokeWidth')}
-            value={layer.stroke?.width ?? 0}
-            min={0}
-            max={40}
-            step={0.5}
-            onChange={(width) =>
-              update({
-                stroke:
-                  width > 0
-                    ? {
-                        ...layer.stroke,
-                        color: layer.stroke?.color ?? '#007AFF',
-                        width,
-                      }
-                    : undefined,
-              })
-            }
-          />
-          <StrokeStyleField
-            value={layer.stroke?.style ?? 'solid'}
-            onChange={(style) =>
-              update({
-                stroke: {
-                  ...layer.stroke,
-                  color: layer.stroke?.color ?? '#007AFF',
-                  width: layer.stroke?.width ?? 2,
-                  style,
-                },
-              })
-            }
-          />
-          <StrokeAdvancedControls
-            stroke={layer.stroke}
-            fallbackColor="#007AFF"
-            onChange={(stroke) => update({ stroke })}
-          />
-          <StrokeLookRow
-            stroke={layer.stroke}
-            fallbackColor="#007AFF"
-            onChange={(stroke) => update({ stroke })}
-          />
-          {layer.shape === 'arrow' && (
-            <ArrowHeadField
-              value={layer.arrow}
-              onChange={(arrow) => update({ arrow })}
-            />
-          )}
-          {layer.shape === 'rect' && (
-            <SliderField
-              label={t('properties.cornerRadius')}
-              value={layer.cornerRadius ?? 0}
-              min={0}
-              max={Math.max(8, Math.round(Math.min(layer.w, layer.h) / 2))}
-              onChange={(cornerRadius) => update({ cornerRadius })}
             />
           )}
         </Section>
@@ -1785,6 +1790,8 @@ function LayerControls({
         </Section>
       )}
 
+      <EffectsControls layer={layer} update={update} />
+
       {(layer.type === 'text' ||
         layer.type === 'shape' ||
         layer.type === 'image' ||
@@ -1794,8 +1801,6 @@ function LayerControls({
           onChange={(sticker) => update({ sticker })}
         />
       )}
-
-      <EffectsControls layer={layer} update={update} />
 
       <ExportWarnings layer={layer} />
     </>
@@ -2205,16 +2210,16 @@ function TextControls({
         />
       </Section>
 
+      <TypographyControls
+        style={layer.style}
+        onChange={(style) => update({ style })}
+      />
+
       <Section title={t('properties.presets')}>
         <TextPresetRow
           onApply={(id) => update({ style: textPresetStyle(id) })}
         />
       </Section>
-
-      <TypographyControls
-        style={layer.style}
-        onChange={(style) => update({ style })}
-      />
 
       <TextStrokeControls
         style={layer.style}
@@ -2929,18 +2934,52 @@ function ReplaceAssetButton({
 function Section({
   title,
   children,
+  collapsible = true,
+  defaultOpen = true,
 }: {
   title: string;
   children: React.ReactNode;
+  /** When set (default), the section header toggles its body open/closed. */
+  collapsible?: boolean;
+  /** Initial open state for a collapsible section. */
+  defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  if (!collapsible) {
+    return (
+      <section>
+        <div className="mb-2">
+          <span className="eyebrow">{title}</span>
+        </div>
+        <div className="glass-thin rounded-[var(--calqo-radius-sm)] p-1">
+          {children}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section>
-      <div className="mb-2">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="mb-2 flex w-full items-center gap-1 text-left"
+      >
+        <ChevronRight
+          size={12}
+          className={`shrink-0 text-[var(--calqo-text-3)] transition-transform ${
+            open ? 'rotate-90' : ''
+          }`}
+        />
         <span className="eyebrow">{title}</span>
-      </div>
-      <div className="glass-thin rounded-[var(--calqo-radius-sm)] p-1">
-        {children}
-      </div>
+      </button>
+      {open && (
+        <div className="glass-thin rounded-[var(--calqo-radius-sm)] p-1">
+          {children}
+        </div>
+      )}
     </section>
   );
 }

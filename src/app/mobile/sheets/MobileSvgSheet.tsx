@@ -4,7 +4,7 @@ import { Copy, Search, Sparkles, Upload } from 'lucide-react';
 import { assetStorage, clipboard } from '@/lib/adapters';
 import { generateSvgMark } from '@/editor/ai/svgService';
 import { getProvider } from '@/editor/ai/providerRegistry';
-import { useAiSettingsStore } from '@/editor/ai/aiSettings';
+import { isAiEnabled, useAiSettingsStore } from '@/editor/ai/aiSettings';
 import { addImportedAssetLayer } from '@/editor/commands/projectCommands';
 import {
   SVG_CATEGORY_ORDER,
@@ -102,6 +102,10 @@ export function MobileSvgSheet({
     setAiPreview(null);
     try {
       const provider = getProvider(settings);
+      if (!provider) {
+        setBusy(false);
+        return;
+      }
       const result = await generateSvgMark(provider, {
         prompt: aiPrompt.trim(),
         color,
@@ -161,7 +165,9 @@ export function MobileSvgSheet({
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'library', label: t('svgLibrary.tabLibrary') },
-    { id: 'ai', label: t('svgLibrary.tabAi') },
+    ...(isAiEnabled(settings)
+      ? [{ id: 'ai' as const, label: t('svgLibrary.tabAi') }]
+      : []),
     { id: 'upload', label: t('svgLibrary.tabUpload') },
   ];
 

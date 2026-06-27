@@ -20,6 +20,11 @@ interface GlassIconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   shortcut?: string;
   /** Where the tooltip floats relative to the button. */
   tooltipPlacement?: 'bottom' | 'right' | 'top';
+  /** Faded, non-actionable state that still shows its tooltip on hover — unlike
+   * the native `disabled` attribute, which suppresses pointer events (and so the
+   * explanatory tooltip). Use when the reason the action is unavailable is worth
+   * surfacing. */
+  softDisabled?: boolean;
 }
 
 interface TipState {
@@ -37,8 +42,10 @@ export function GlassIconButton({
   showTitle = true,
   shortcut,
   tooltipPlacement = 'bottom',
+  softDisabled = false,
   className,
   children,
+  onClick,
   onPointerEnter,
   onPointerLeave,
   onFocus,
@@ -115,16 +122,27 @@ export function GlassIconButton({
         aria-label={label}
         aria-describedby={tip ? tooltipId : undefined}
         aria-pressed={active}
+        aria-disabled={softDisabled || undefined}
         style={{ width: size, height: size }}
         className={cn(
           'inline-flex items-center justify-center rounded-[var(--calqo-radius-sm)]',
           'transition-[transform,background,color] duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-spring)]',
-          'hover:scale-[1.05] active:scale-[0.94]',
+          softDisabled
+            ? 'cursor-not-allowed opacity-40 text-[var(--calqo-text-2)]'
+            : 'hover:scale-[1.05] active:scale-[0.94]',
           active
             ? 'bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]'
-            : 'text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]',
+            : !softDisabled &&
+                'text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]',
           className,
         )}
+        onClick={(e) => {
+          if (softDisabled) {
+            e.preventDefault();
+            return;
+          }
+          onClick?.(e);
+        }}
         onPointerEnter={(e) => {
           if (showTitle) open();
           onPointerEnter?.(e);

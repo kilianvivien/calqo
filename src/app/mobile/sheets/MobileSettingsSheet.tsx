@@ -54,14 +54,14 @@ export function MobileSettingsSheet({ open, onClose }: MobileSettingsSheetProps)
   const updateProviderConfig = useAiSettingsStore((s) => s.updateProviderConfig);
 
   // A phone may inherit a desktop "Local (Ollama)" selection that it can't
-  // reach — fall back to the offline mock provider so AI features still work.
+  // reach — fall back to turning AI off rather than calling an unreachable host.
   useEffect(() => {
     if (MOBILE_HIDDEN_PROVIDERS.includes(settings.providerId)) {
-      setProvider('mock');
+      setProvider('off');
     }
   }, [settings.providerId, setProvider]);
 
-  const preset = PROVIDER_PRESETS[settings.providerId] ?? PROVIDER_PRESETS.mock;
+  const preset = PROVIDER_PRESETS[settings.providerId] ?? PROVIDER_PRESETS.off;
   const config = settings.providers[preset.id];
 
   return (
@@ -85,7 +85,7 @@ export function MobileSettingsSheet({ open, onClose }: MobileSettingsSheetProps)
         >
           {MOBILE_PROVIDER_LIST.map((option) => (
             <option key={option.id} value={option.id}>
-              {option.label}
+              {option.id === 'off' ? t('settings.ai.off') : option.label}
             </option>
           ))}
         </select>
@@ -93,7 +93,7 @@ export function MobileSettingsSheet({ open, onClose }: MobileSettingsSheetProps)
 
       {!preset.remote ? (
         <p className="mt-1 text-[12px] text-[var(--calqo-text-3)]">
-          {t('settings.ai.mockHint')}
+          {t('settings.ai.offHint')}
         </p>
       ) : (
         <>

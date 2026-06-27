@@ -382,7 +382,8 @@
   },
   "ai": {
     "promptTemplate": "Générer un modèle",
-    "translate": "Traduire"
+    "translate": "Traduire",
+    "disabledHint": "L'IA est désactivée — activez un fournisseur dans Réglages ▸ Fournisseur IA"
   },
   "content": {
     "locales": "Langues de contenu",

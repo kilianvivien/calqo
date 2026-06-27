@@ -23,6 +23,7 @@ import { useHistoryStore } from '@/lib/state/historyStore';
 import { useProjectStore } from '@/lib/state/projectStore';
 import { useUiStore } from '@/lib/state/uiStore';
 import { useWorkspaceStore } from '@/lib/state/workspaceStore';
+import { isAiEnabled, useAiSettingsStore } from '@/editor/ai/aiSettings';
 import {
   renameProject,
 } from '@/editor/commands/projectCommands';
@@ -42,6 +43,7 @@ export function TitleBar() {
 
   const theme = useUiStore((s) => s.theme);
   const activeProjectId = useWorkspaceStore((s) => s.activeProjectId);
+  const aiEnabled = useAiSettingsStore((s) => isAiEnabled(s.settings));
   const activeProjectName = useProjectStore((s) =>
     activeProjectId ? s.projects[activeProjectId]?.name : null,
   );
@@ -187,14 +189,16 @@ export function TitleBar() {
         </GlassIconButton>
         <span className="mx-1 h-5 w-px bg-[var(--calqo-divider)]" />
         <GlassIconButton
-          label={t('editor:ai.promptTemplate')}
+          label={aiEnabled ? t('editor:ai.promptTemplate') : t('editor:ai.disabledHint')}
+          softDisabled={!aiEnabled}
           onClick={() => invokeAppCommandSync('ai.promptTemplate')}
         >
           <Sparkles size={16} />
         </GlassIconButton>
         <GlassIconButton
-          label={t('editor:ai.translate')}
-          disabled={!activeProjectId}
+          label={aiEnabled ? t('editor:ai.translate') : t('editor:ai.disabledHint')}
+          softDisabled={!aiEnabled}
+          disabled={aiEnabled && !activeProjectId}
           onClick={() => invokeAppCommandSync('ai.translate')}
         >
           <Languages size={16} />

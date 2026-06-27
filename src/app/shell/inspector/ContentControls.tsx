@@ -13,6 +13,7 @@ import {
 } from '@/editor/i18n-content/contentLocaleService';
 import { useActiveProject } from '@/lib/state/selectors';
 import { useUiStore } from '@/lib/state/uiStore';
+import { isAiEnabled, useAiSettingsStore } from '@/editor/ai/aiSettings';
 import type { TextLayer } from '@/lib/schema';
 
 /** Project-level content-locale management (plan §13, E1). Lives in the Style
@@ -21,6 +22,7 @@ export function ContentLocalesSection() {
   const { t } = useTranslation('editor');
   const project = useActiveProject();
   const setAiDialog = useUiStore((s) => s.setAiDialog);
+  const aiEnabled = useAiSettingsStore((s) => isAiEnabled(s.settings));
 
   if (!project) return null;
 
@@ -28,14 +30,16 @@ export function ContentLocalesSection() {
     <section>
       <div className="mb-2 flex items-center justify-between">
         <span className="eyebrow">{t('content.locales')}</span>
-        <button
-          type="button"
-          onClick={() => setAiDialog('translate')}
-          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-[var(--calqo-accent)] transition-colors hover:bg-[var(--calqo-accent-soft)]"
-        >
-          <Languages size={12} />
-          {t('content.translate')}
-        </button>
+        {aiEnabled && (
+          <button
+            type="button"
+            onClick={() => setAiDialog('translate')}
+            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-[var(--calqo-accent)] transition-colors hover:bg-[var(--calqo-accent-soft)]"
+          >
+            <Languages size={12} />
+            {t('content.translate')}
+          </button>
+        )}
       </div>
       <div className="flex flex-wrap gap-1.5">
         {project.contentLocales.map((locale) => {

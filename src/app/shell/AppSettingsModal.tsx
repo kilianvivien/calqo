@@ -263,7 +263,9 @@ export function AppSettingsModal({
                   >
                     {PROVIDER_LIST.map((preset) => (
                       <option key={preset.id} value={preset.id}>
-                        {preset.label}
+                        {preset.id === 'off'
+                          ? t('settings.ai.off')
+                          : preset.label}
                       </option>
                     ))}
                   </select>
@@ -272,10 +274,10 @@ export function AppSettingsModal({
                 {(() => {
                   const preset =
                     PROVIDER_PRESETS[aiSettings.providerId] ??
-                    PROVIDER_PRESETS.mock;
+                    PROVIDER_PRESETS.off;
                   if (!preset.remote) {
                     return (
-                      <SettingsNote>{t('settings.ai.mockHint')}</SettingsNote>
+                      <SettingsNote>{t('settings.ai.offHint')}</SettingsNote>
                     );
                   }
                   const providerId = preset.id;

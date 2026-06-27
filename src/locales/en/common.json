@@ -92,6 +92,8 @@
     "ai": {
       "title": "AI provider",
       "provider": "Provider",
+      "off": "Off",
+      "offHint": "AI is turned off. Prompt-a-template, translation, and AI graphics are disabled — pick a provider above to enable them.",
       "mockHint": "Works offline with deterministic output — no setup required.",
       "officialHint": "Official provider adapter with structured-output requests where supported.",
       "compatibleHint": "OpenAI-compatible endpoint. Availability of JSON mode and retries depends on that provider.",

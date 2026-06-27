@@ -28,6 +28,7 @@ import {
   openNativeProjectFile,
   saveNativeProjectFile,
 } from '@/editor/export/calqoFile';
+import { aiSettingsStore, isAiEnabled } from '@/editor/ai/aiSettings';
 import { exportArtboardRaster } from '@/editor/export/rasterExport';
 import { shareArtboardPng } from '@/editor/export/share';
 
@@ -189,6 +190,9 @@ export function getAppCommandState(id: AppCommandId): { enabled: boolean } {
   if (id === 'object.ungroup') return { enabled: selectedCount === 1 };
   if (id === 'edit.delete' || id === 'edit.duplicate' || id === 'edit.copy') {
     return { enabled: selectedCount > 0 };
+  }
+  if (id.startsWith('ai.') && !isAiEnabled(aiSettingsStore.getState().settings)) {
+    return { enabled: false };
   }
   if (id === 'ai.translate') return { enabled: Boolean(project) };
   if (id === 'edit.undo') return { enabled: (history?.past.length ?? 0) > 0 };

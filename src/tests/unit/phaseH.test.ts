@@ -255,7 +255,7 @@ describe('phase H — provider settings', () => {
     expect(PROVIDER_PRESETS.gemini.baseUrl).toBe(
       'https://generativelanguage.googleapis.com/v1beta',
     );
-    expect(getProvider(settings).id).toBe('gemini');
+    expect(getProvider(settings)?.id).toBe('gemini');
   });
 
   it('migrates stale hosted default models without overwriting custom models', () => {

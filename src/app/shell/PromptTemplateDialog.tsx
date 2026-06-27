@@ -71,6 +71,10 @@ function PromptTemplateDialogInner() {
     setFailure(null);
     try {
       const provider = getProvider(settings);
+      if (!provider) {
+        setBusy(false);
+        return;
+      }
       const hasReference = referencePalette.length > 0 || referenceUrl.trim().length > 0;
       const effectivePalette = referencePalette.length
         ? referencePalette

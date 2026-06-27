@@ -90,6 +90,10 @@ export function TranslateSheet({ open, onClose, project }: TranslateSheetProps) 
     setPreview(null);
     try {
       const provider = getProvider(settings);
+      if (!provider) {
+        setBusy(false);
+        return;
+      }
       const { job, result, unchanged, missingLayerIds } = await runTranslation(
         provider,
         project,

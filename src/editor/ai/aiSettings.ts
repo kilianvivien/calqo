@@ -4,11 +4,11 @@ import { appSettings } from '@/lib/adapters';
 const SETTINGS_KEY = 'ai.settings';
 const SECRET_KEY_PREFIX = 'secure:ai.apiKey.';
 
-/** Selectable AI providers (plan §14.2). Gemini uses its provider-specific
- * GenAI adapter; the others speak OpenAI-compatible chat completions by varying
- * base URL / model / key. */
+/** Selectable AI providers (plan §14.2). `off` disables AI entirely; Gemini uses
+ * its provider-specific GenAI adapter; the others speak OpenAI-compatible chat
+ * completions by varying base URL / model / key. */
 export type AiProviderId =
-  | 'mock'
+  | 'off'
   | 'local'
   | 'gemini'
   | 'mistral'
@@ -23,22 +23,22 @@ export interface ProviderPreset {
   defaultModel: string;
   needsKey: boolean;
   editableBaseUrl: boolean;
-  /** Whether the provider makes network calls (mock does not). */
+  /** Whether the provider makes network calls (`off` does not). */
   remote: boolean;
   /** Settings copy can distinguish official adapters from compatible endpoints. */
-  adapterKind: 'mock' | 'official' | 'compatible';
+  adapterKind: 'off' | 'official' | 'compatible';
 }
 
 export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
-  mock: {
-    id: 'mock',
-    label: 'Mock (offline)',
+  off: {
+    id: 'off',
+    label: 'Off',
     baseUrl: '',
     defaultModel: '',
     needsKey: false,
     editableBaseUrl: false,
     remote: false,
-    adapterKind: 'mock',
+    adapterKind: 'off',
   },
   local: {
     id: 'local',
@@ -96,7 +96,7 @@ export const PROVIDER_LIST: ProviderPreset[] = Object.values(PROVIDER_PRESETS);
 
 /** Providers that don't make sense on a phone. "Local (Ollama)" points at
  * `localhost`, which is unreachable from a mobile browser, so it's hidden from
- * the phone settings sheet (a desktop selection falls back to mock there). */
+ * the phone settings sheet (a desktop selection falls back to `off` there). */
 export const MOBILE_HIDDEN_PROVIDERS: readonly AiProviderId[] = ['local'];
 
 /** Providers offered in the phone settings sheet. */
@@ -134,10 +134,16 @@ function defaultProviders(): Record<AiProviderId, AiProviderConfig> {
 }
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
-  providerId: 'mock',
+  providerId: 'off',
   storeKey: false,
   providers: defaultProviders(),
 };
+
+/** Whether AI features should be available. `off` disables every AI flow
+ * (prompt-a-template, translation, generate-SVG) and their entry points. */
+export function isAiEnabled(settings: AiSettings): boolean {
+  return settings.providerId !== 'off';
+}
 
 /** Strip API keys from the normal settings payload. Tauri stores them in
  * Stronghold records; the browser only keeps them when the user opts in. */
@@ -157,7 +163,7 @@ function isProviderId(value: unknown): value is AiProviderId {
 }
 
 export function normalizeAiSettings(stored?: Partial<AiSettings> | null): AiSettings {
-  const providerId = isProviderId(stored?.providerId) ? stored.providerId : 'mock';
+  const providerId = isProviderId(stored?.providerId) ? stored.providerId : 'off';
   const providers = defaultProviders();
   for (const preset of PROVIDER_LIST) {
     const config = stored?.providers?.[preset.id];
@@ -250,7 +256,7 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
   },
 
   setProvider: (providerId) => {
-    if (!isProviderId(providerId)) providerId = 'mock';
+    if (!isProviderId(providerId)) providerId = 'off';
     const next = { ...get().settings, providerId };
     set({ settings: next });
     persist(next);

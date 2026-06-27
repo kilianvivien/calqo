@@ -382,7 +382,8 @@
   },
   "ai": {
     "promptTemplate": "Prompt a template",
-    "translate": "Translate"
+    "translate": "Translate",
+    "disabledHint": "AI is off — turn on a provider in Settings ▸ AI provider"
   },
   "content": {
     "locales": "Content locales",

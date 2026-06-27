@@ -6,7 +6,7 @@ import { assetStorage, clipboard } from '@/lib/adapters';
 import { addImportedAssetLayer, setListMarker } from '@/editor/commands/projectCommands';
 import { generateSvgMark } from '@/editor/ai/svgService';
 import { getProvider } from '@/editor/ai/providerRegistry';
-import { useAiSettingsStore } from '@/editor/ai/aiSettings';
+import { isAiEnabled, useAiSettingsStore } from '@/editor/ai/aiSettings';
 import {
   SVG_CATEGORY_ORDER,
   SVG_LIBRARY,
@@ -88,6 +88,10 @@ function SvgLibraryDialogInner() {
     setAiPreview(null);
     try {
       const provider = getProvider(settings);
+      if (!provider) {
+        setBusy(false);
+        return;
+      }
       const result = await generateSvgMark(provider, { prompt: aiPrompt.trim(), color: aiColor });
       if (result.ok) setAiPreview(result.svg);
       else setError(result.error);
@@ -146,7 +150,9 @@ function SvgLibraryDialogInner() {
 
   const TABS: { id: Tab; label: string }[] = [
     { id: 'library', label: t('svgLibrary.tabLibrary') },
-    { id: 'ai', label: t('svgLibrary.tabAi') },
+    ...(isAiEnabled(settings)
+      ? [{ id: 'ai' as const, label: t('svgLibrary.tabAi') }]
+      : []),
     { id: 'upload', label: t('svgLibrary.tabUpload') },
   ];
 

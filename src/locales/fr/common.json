@@ -92,6 +92,8 @@
     "ai": {
       "title": "Fournisseur IA",
       "provider": "Fournisseur",
+      "off": "Désactivé",
+      "offHint": "L'IA est désactivée. La génération de modèles, la traduction et les visuels IA sont indisponibles — choisissez un fournisseur ci-dessus pour les activer.",
       "mockHint": "Fonctionne hors ligne avec une sortie déterministe — aucune configuration requise.",
       "officialHint": "Adaptateur fournisseur officiel avec requêtes structurées lorsque le modèle les prend en charge.",
       "compatibleHint": "Point de terminaison compatible OpenAI. La disponibilité du mode JSON et des reprises dépend de ce fournisseur.",

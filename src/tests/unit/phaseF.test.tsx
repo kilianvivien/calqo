@@ -185,7 +185,7 @@ describe('phase F — settings hardening', () => {
 
   afterEach(resetState);
 
-  it('normalizes stale provider ids back to mock settings', () => {
+  it('normalizes stale provider ids back to the disabled "off" setting', () => {
     const normalized = normalizeAiSettings({
       providerId: 'openai' as never,
       providers: {
@@ -197,8 +197,8 @@ describe('phase F — settings hardening', () => {
       } as never,
     });
 
-    expect(normalized.providerId).toBe('mock');
-    expect(normalized.providers.mock).toBeDefined();
+    expect(normalized.providerId).toBe('off');
+    expect(normalized.providers.off).toBeDefined();
     expect(normalized.providers.local).toBeDefined();
   });
 
@@ -217,6 +217,6 @@ describe('phase F — settings hardening', () => {
       screen.getByRole('dialog', { name: /settings/i }),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: /ai provider/i }));
-    expect(screen.getByText(/works offline/i)).toBeInTheDocument();
+    expect(screen.getByText(/ai is turned off/i)).toBeInTheDocument();
   });
 });

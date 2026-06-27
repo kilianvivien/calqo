@@ -78,6 +78,10 @@ function TranslateDialogInner() {
     setPreview(null);
     try {
       const provider = getProvider(settings);
+      if (!provider) {
+        setBusy(false);
+        return;
+      }
       const { job, result, unchanged, missingLayerIds } = await runTranslation(
         provider,
         { ...project, glossary },

@@ -8,11 +8,11 @@ import {
   type AiSettings,
 } from './aiSettings';
 
-/** Resolve the active provider from settings. Falls back to the mock provider
- * when a remote provider is selected but not configured, so AI flows always work
- * out of the box (plan §14.3, §E6). */
-export function getProvider(settings: AiSettings): AIProvider {
-  if (settings.providerId === 'mock') return mockProvider;
+/** Resolve the active provider from settings, or `null` when AI is turned off.
+ * A remote provider that is selected but not yet configured falls back to the
+ * offline mock so an in-progress setup still exercises the real flow. */
+export function getProvider(settings: AiSettings): AIProvider | null {
+  if (settings.providerId === 'off') return null;
 
   const preset = PROVIDER_PRESETS[settings.providerId];
   const config = settings.providers[settings.providerId];
@@ -39,6 +39,6 @@ export function getProvider(settings: AiSettings): AIProvider {
 }
 
 /** Convenience accessor for command/service code outside React. */
-export function getActiveProvider(): AIProvider {
+export function getActiveProvider(): AIProvider | null {
   return getProvider(aiSettingsStore.getState().settings);
 }

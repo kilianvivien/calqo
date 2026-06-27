@@ -41,6 +41,7 @@ import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useHistoryStore } from '@/lib/state/historyStore';
 import { useIsLandscape } from '@/lib/hooks/useResponsiveMode';
 import { useUiStore } from '@/lib/state/uiStore';
+import { isAiEnabled, useAiSettingsStore } from '@/editor/ai/aiSettings';
 import type { CalqoLayer, CalqoProject } from '@/lib/schema';
 import { GlassIconButton } from '@/components/glass';
 import { MobileToolbar, type MobileToolItem } from '@/components/mobile';
@@ -121,6 +122,7 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
   const replaceTargetRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const insertImageRef = useRef<HTMLInputElement>(null);
+  const aiEnabled = useAiSettingsStore((s) => isAiEnabled(s.settings));
 
   if (!artboard) return null;
 
@@ -286,12 +288,16 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
           icon: LayersIcon,
           onClick: () => setSheet('layers'),
         },
-        {
-          id: 'translate',
-          label: t('mobile.toolbar.translate'),
-          icon: Languages,
-          onClick: () => setSheet('translate'),
-        },
+        ...(aiEnabled
+          ? [
+              {
+                id: 'translate',
+                label: t('mobile.toolbar.translate'),
+                icon: Languages,
+                onClick: () => setSheet('translate'),
+              },
+            ]
+          : []),
       ]
     : [
         {
@@ -313,12 +319,16 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
           icon: LayersIcon,
           onClick: () => setSheet('layers'),
         },
-        {
-          id: 'translate',
-          label: t('mobile.toolbar.translate'),
-          icon: Languages,
-          onClick: () => setSheet('translate'),
-        },
+        ...(aiEnabled
+          ? [
+              {
+                id: 'translate',
+                label: t('mobile.toolbar.translate'),
+                icon: Languages,
+                onClick: () => setSheet('translate'),
+              },
+            ]
+          : []),
         {
           id: 'export',
           label: t('mobile.toolbar.export'),
