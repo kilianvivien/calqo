@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Arrow, Ellipse, Group, Image, Line, Rect, Text } from 'react-konva';
+import { Arrow, Circle, Ellipse, Group, Image, Line, Rect, Text } from 'react-konva';
 import type Konva from 'konva';
 import { Blur } from 'konva/lib/filters/Blur';
-import type { CalqoLayer, ImageLayer, ListLayer } from '@/lib/schema';
+import type { ArrowStyle, CalqoLayer, ImageLayer, ListLayer } from '@/lib/schema';
 import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
 import { fillProps, imageFillProps } from './shapeStyle';
 import { strokeLookConfig } from './strokeStyle';
@@ -104,6 +104,136 @@ function blendProps(layer: CalqoLayer): Konva.ShapeConfig {
  * origin. */
 function localSizeProps(layer: CalqoLayer): Konva.ShapeConfig {
   return { x: 0, y: 0, width: layer.w, height: layer.h, listening: false };
+}
+
+function LocalHitRect({
+  layer,
+  interactive,
+  onSelect,
+}: {
+  layer: CalqoLayer;
+  interactive: boolean;
+  onSelect: (layer: CalqoLayer, additive: boolean) => void;
+}) {
+  if (!interactive || layer.locked) return null;
+  const outset =
+    layer.type !== 'list' && layer.type !== 'group' && layer.sticker
+      ? layer.sticker.width
+      : 0;
+  return (
+    <Rect
+      x={-outset}
+      y={-outset}
+      width={layer.w + outset * 2}
+      height={layer.h + outset * 2}
+      fill="transparent"
+      onClick={(event) => {
+        event.cancelBubble = true;
+        if (event.evt.button !== 0) return;
+        onSelect(layer, event.evt.shiftKey);
+      }}
+      onTap={(event) => {
+        event.cancelBubble = true;
+        onSelect(layer, false);
+      }}
+    />
+  );
+}
+
+function arrowTip(
+  points: number[],
+  atStart: boolean,
+): { x: number; y: number; radians: number } | null {
+  if (points.length < 4) return null;
+  if (atStart) {
+    return {
+      x: points[0],
+      y: points[1],
+      radians: Math.atan2(points[1] - points[3], points[0] - points[2]),
+    };
+  }
+  const n = points.length;
+  return {
+    x: points[n - 2],
+    y: points[n - 1],
+    radians: Math.atan2(points[n - 1] - points[n - 3], points[n - 2] - points[n - 4]),
+  };
+}
+
+function arrowHeadNodes({
+  points,
+  arrow,
+  color,
+  width,
+  keyPrefix,
+}: {
+  points: number[];
+  arrow: ArrowStyle | undefined;
+  color: string;
+  width: number;
+  keyPrefix: string;
+}) {
+  const style = arrow?.headStyle ?? 'triangle';
+  const length = arrow?.pointerLength ?? 16;
+  const headWidth = arrow?.pointerWidth ?? 16;
+  const heads: ReactNode[] = [];
+  const addHead = (atStart: boolean) => {
+    const tip = arrowTip(points, atStart);
+    if (!tip) return;
+    const cos = Math.cos(tip.radians);
+    const sin = Math.sin(tip.radians);
+    const point = (forward: number, side: number) => ({
+      x: tip.x + forward * cos - side * sin,
+      y: tip.y + forward * sin + side * cos,
+    });
+    const key = `${keyPrefix}-${atStart ? 'start' : 'end'}`;
+    if (style === 'chevron') {
+      const a = point(-length, headWidth / 2);
+      const b = point(-length, -headWidth / 2);
+      heads.push(
+        <Line
+          key={key}
+          points={[a.x, a.y, tip.x, tip.y, b.x, b.y]}
+          stroke={color}
+          strokeWidth={width}
+          lineCap="round"
+          lineJoin="round"
+          listening={false}
+        />,
+      );
+      return;
+    }
+    if (style === 'bar') {
+      const a = point(0, headWidth / 2);
+      const b = point(0, -headWidth / 2);
+      heads.push(
+        <Line
+          key={key}
+          points={[a.x, a.y, b.x, b.y]}
+          stroke={color}
+          strokeWidth={Math.max(width, 2)}
+          lineCap="round"
+          listening={false}
+        />,
+      );
+      return;
+    }
+    if (style === 'dot') {
+      heads.push(
+        <Circle
+          key={key}
+          x={tip.x}
+          y={tip.y}
+          radius={Math.max(headWidth / 2, width)}
+          fill={color}
+          listening={false}
+        />,
+      );
+    }
+  };
+  if (arrow?.start ?? false) addHead(true);
+  if (arrow?.end ?? true) addHead(false);
+  return heads;
 }
 
 /** Render a list of declarative frame node specs (shared shape between the live
@@ -315,6 +445,7 @@ export function LayerRenderer(props: LayerRendererProps) {
     const stickerCfg = stickerStrokeConfig(layer.sticker);
     return (
       <Group {...base} {...blendProps(layer)} {...editHandlers}>
+        <LocalHitRect layer={layer} interactive={interactive} onSelect={onSelect} />
         <Text
           {...localSizeProps(layer)}
           {...typeProps}
@@ -353,6 +484,8 @@ export function LayerRenderer(props: LayerRendererProps) {
       paint: { fill?: Konva.ShapeConfig; stroke: Konva.ShapeConfig; fx: Konva.ShapeConfig },
     ) => {
       const common = { ...nodeProps, ...paint.fx };
+      const cap = (paint.stroke.lineCap as 'butt' | 'round' | 'square' | undefined) ?? layer.stroke?.cap ?? 'round';
+      const join = (paint.stroke.lineJoin as 'miter' | 'round' | 'bevel' | undefined) ?? layer.stroke?.join ?? 'round';
       if (layer.shape === 'ellipse') {
         return (
           <Ellipse
@@ -368,6 +501,35 @@ export function LayerRenderer(props: LayerRendererProps) {
         );
       }
       if (layer.shape === 'arrow') {
+        const arrowStyle = layer.arrow?.headStyle ?? 'triangle';
+        if (arrowStyle !== 'triangle') {
+          return (
+            <Group key={key} {...common}>
+              <Line
+                points={points}
+                stroke={(paint.stroke.stroke as string) ?? lineColor}
+                strokeWidth={(paint.stroke.strokeWidth as number) ?? lineWidth}
+                hitStrokeWidth={lineHitWidth}
+                dash={paint.stroke.dash as number[] | undefined}
+                lineCap={cap}
+                lineJoin={join}
+                shadowColor={paint.stroke.shadowColor as string | undefined}
+                shadowBlur={paint.stroke.shadowBlur as number | undefined}
+                shadowOffsetX={paint.stroke.shadowOffsetX as number | undefined}
+                shadowOffsetY={paint.stroke.shadowOffsetY as number | undefined}
+                shadowOpacity={paint.stroke.shadowOpacity as number | undefined}
+                shadowForStrokeEnabled={paint.stroke.shadowForStrokeEnabled as boolean | undefined}
+              />
+              {arrowHeadNodes({
+                points,
+                arrow: layer.arrow,
+                color: (paint.stroke.stroke as string) ?? lineColor,
+                width: (paint.stroke.strokeWidth as number) ?? lineWidth,
+                keyPrefix: key,
+              })}
+            </Group>
+          );
+        }
         return (
           <Arrow
             key={key}
@@ -382,8 +544,8 @@ export function LayerRenderer(props: LayerRendererProps) {
             strokeWidth={(paint.stroke.strokeWidth as number) ?? lineWidth}
             hitStrokeWidth={lineHitWidth}
             dash={paint.stroke.dash as number[] | undefined}
-            lineCap="round"
-            lineJoin="round"
+            lineCap={cap}
+            lineJoin={join}
             shadowColor={paint.stroke.shadowColor as string | undefined}
             shadowBlur={paint.stroke.shadowBlur as number | undefined}
             shadowOffsetX={paint.stroke.shadowOffsetX as number | undefined}
@@ -404,8 +566,8 @@ export function LayerRenderer(props: LayerRendererProps) {
             strokeWidth={(paint.stroke.strokeWidth as number) ?? lineWidth}
             hitStrokeWidth={lineHitWidth}
             dash={paint.stroke.dash as number[] | undefined}
-            lineCap={(paint.stroke.lineCap as 'round' | 'square' | undefined) ?? layer.stroke?.cap ?? 'round'}
-            lineJoin="round"
+            lineCap={cap}
+            lineJoin={join}
             shadowColor={paint.stroke.shadowColor as string | undefined}
             shadowBlur={paint.stroke.shadowBlur as number | undefined}
             shadowOffsetX={paint.stroke.shadowOffsetX as number | undefined}
@@ -428,8 +590,8 @@ export function LayerRenderer(props: LayerRendererProps) {
             strokeWidth={(paint.stroke.strokeWidth as number) ?? lineWidth}
             hitStrokeWidth={isPolygon ? undefined : lineHitWidth}
             dash={paint.stroke.dash as number[] | undefined}
-            lineCap="round"
-            lineJoin="round"
+            lineCap={cap}
+            lineJoin={join}
             shadowColor={paint.stroke.shadowColor as string | undefined}
             shadowBlur={paint.stroke.shadowBlur as number | undefined}
             shadowOffsetX={paint.stroke.shadowOffsetX as number | undefined}
@@ -465,6 +627,7 @@ export function LayerRenderer(props: LayerRendererProps) {
     const stickerCfg = stickerStrokeConfig(layer.sticker, lineWidth);
     return (
       <Group {...base} {...blendProps(layer)} {...shadowProps(layer)}>
+        <LocalHitRect layer={layer} interactive={interactive} onSelect={onSelect} />
         {shapeBody('s', localSizeProps(layer), 0, 0, {
           fill: { fill: layer.sticker.color },
           stroke: stickerCfg,
@@ -485,11 +648,26 @@ export function LayerRenderer(props: LayerRendererProps) {
       onDblClick: interactive ? () => onImageCrop?.(layer) : undefined,
       onDblTap: interactive ? () => onImageCrop?.(layer) : undefined,
     };
-    return <ImageLayerNode layer={layer} base={imageBase} activeLocale={activeLocale} />;
+    return (
+      <ImageLayerNode
+        layer={layer}
+        base={imageBase}
+        activeLocale={activeLocale}
+        interactive={interactive}
+        onSelect={onSelect}
+      />
+    );
   }
 
   if (layer.type === 'svg') {
-    return <SvgLayerNode layer={layer} base={base} />;
+    return (
+      <SvgLayerNode
+        layer={layer}
+        base={base}
+        interactive={interactive}
+        onSelect={onSelect}
+      />
+    );
   }
 
   if (layer.type === 'list') {
@@ -549,6 +727,8 @@ function ImageLayerNode({
   layer,
   base,
   activeLocale,
+  interactive,
+  onSelect,
 }: {
   layer: ImageLayer;
   base: ReturnType<typeof commonProps> & {
@@ -556,6 +736,8 @@ function ImageLayerNode({
     onDblTap?: () => void;
   };
   activeLocale: string;
+  interactive: boolean;
+  onSelect: (layer: CalqoLayer, additive: boolean) => void;
 }) {
   const { image, missing } = useAssetImage(layer.assetId);
   const imageRef = useRef<Konva.Image>(null);
@@ -665,6 +847,7 @@ function ImageLayerNode({
 
   return (
     <Group {...base} {...shadowProps(layer)} {...blendProps(layer)}>
+      <LocalHitRect layer={layer} interactive={interactive} onSelect={onSelect} />
       {stickerNode}
       {frame ? <FrameNodesView nodes={frame.behind} /> : null}
       <Group
@@ -684,15 +867,20 @@ function ImageLayerNode({
 function SvgLayerNode({
   layer,
   base,
+  interactive,
+  onSelect,
 }: {
   layer: Extract<CalqoLayer, { type: 'svg' }>;
   base: ReturnType<typeof commonProps>;
+  interactive: boolean;
+  onSelect: (layer: CalqoLayer, additive: boolean) => void;
 }) {
   const { image, missing } = useAssetImage(layer.assetId, layer.color);
   if (!image) return <AssetPlaceholder layer={layer} base={base} missing={missing} />;
   if (layer.sticker) {
     return (
       <Group {...base} {...blendProps(layer)}>
+        <LocalHitRect layer={layer} interactive={interactive} onSelect={onSelect} />
         <Rect
           x={-layer.sticker.width}
           y={-layer.sticker.width}

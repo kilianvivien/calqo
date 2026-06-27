@@ -162,6 +162,7 @@ const arrowStyleSchema = z.object({
   end: z.boolean().default(true),
   pointerLength: z.number().positive().default(16),
   pointerWidth: z.number().positive().default(16),
+  headStyle: z.enum(['triangle', 'chevron', 'bar', 'dot']).optional(),
 });
 
 export const shapeLayerSchema = z.object({

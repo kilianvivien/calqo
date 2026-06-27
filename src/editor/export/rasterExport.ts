@@ -9,6 +9,7 @@ import { Image as KonvaImage } from 'konva/lib/shapes/Image';
 import { Ellipse } from 'konva/lib/shapes/Ellipse';
 import { Line } from 'konva/lib/shapes/Line';
 import { Arrow } from 'konva/lib/shapes/Arrow';
+import { Circle } from 'konva/lib/shapes/Circle';
 import type { Shape } from 'konva/lib/Shape';
 import type { ShapeConfig } from 'konva/lib/Shape';
 import type { Context } from 'konva/lib/Context';
@@ -27,6 +28,7 @@ import type {
   ImageLayer,
   ListLayer,
   ShapeLayer,
+  ArrowStyle,
 } from '@/lib/schema';
 
 export type RasterFormat = 'png' | 'jpeg' | 'webp';
@@ -189,6 +191,74 @@ function buildFrameNode(spec: FrameNodeSpec): Shape {
   });
 }
 
+function arrowTip(points: number[], atStart: boolean): { x: number; y: number; radians: number } | null {
+  if (points.length < 4) return null;
+  if (atStart) {
+    return {
+      x: points[0],
+      y: points[1],
+      radians: Math.atan2(points[1] - points[3], points[0] - points[2]),
+    };
+  }
+  const n = points.length;
+  return {
+    x: points[n - 2],
+    y: points[n - 1],
+    radians: Math.atan2(points[n - 1] - points[n - 3], points[n - 2] - points[n - 4]),
+  };
+}
+
+function arrowHeadShapes(points: number[], arrow: ArrowStyle | undefined, color: string, width: number): Shape[] {
+  const style = arrow?.headStyle ?? 'triangle';
+  if (style === 'triangle') return [];
+  const length = arrow?.pointerLength ?? 16;
+  const headWidth = arrow?.pointerWidth ?? 16;
+  const heads: Shape[] = [];
+  const addHead = (atStart: boolean) => {
+    const tip = arrowTip(points, atStart);
+    if (!tip) return;
+    const cos = Math.cos(tip.radians);
+    const sin = Math.sin(tip.radians);
+    const point = (forward: number, side: number) => ({
+      x: tip.x + forward * cos - side * sin,
+      y: tip.y + forward * sin + side * cos,
+    });
+    if (style === 'chevron') {
+      const a = point(-length, headWidth / 2);
+      const b = point(-length, -headWidth / 2);
+      heads.push(
+        new Line({
+          points: [a.x, a.y, tip.x, tip.y, b.x, b.y],
+          stroke: color,
+          strokeWidth: width,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }),
+      );
+      return;
+    }
+    if (style === 'bar') {
+      const a = point(0, headWidth / 2);
+      const b = point(0, -headWidth / 2);
+      heads.push(
+        new Line({
+          points: [a.x, a.y, b.x, b.y],
+          stroke: color,
+          strokeWidth: Math.max(width, 2),
+          lineCap: 'round',
+        }),
+      );
+      return;
+    }
+    if (style === 'dot') {
+      heads.push(new Circle({ x: tip.x, y: tip.y, radius: Math.max(headWidth / 2, width), fill: color }));
+    }
+  };
+  if (arrow?.start ?? false) addHead(true);
+  if (arrow?.end ?? true) addHead(false);
+  return heads;
+}
+
 /** Build the Konva node for a layer, mirroring the on-canvas LayerRenderer. */
 function buildNode(
   layer: CalqoLayer,
@@ -264,9 +334,11 @@ function buildNode(
       fillCfg: ShapeConfig,
       strokeCfg: ShapeConfig,
       nb: ShapeConfig,
-    ): Shape => {
+    ): Group | Shape => {
       const sColor = (strokeCfg.stroke as string) ?? lineColor;
       const sWidth = (strokeCfg.strokeWidth as number) ?? lineWidth;
+      const cap = (strokeCfg.lineCap as 'butt' | 'round' | 'square' | undefined) ?? layer.stroke?.cap ?? 'round';
+      const join = (strokeCfg.lineJoin as 'miter' | 'round' | 'bevel' | undefined) ?? layer.stroke?.join ?? 'round';
       if (layer.shape === 'ellipse') {
         return new Ellipse({
           ...nb,
@@ -279,6 +351,21 @@ function buildNode(
         });
       }
       if (layer.shape === 'arrow') {
+        if ((layer.arrow?.headStyle ?? 'triangle') !== 'triangle') {
+          const group = new Group({ ...nb, x: ox, y: oy });
+          group.add(
+            new Line({
+              ...strokeCfg,
+              points,
+              stroke: sColor,
+              strokeWidth: sWidth,
+              lineCap: cap,
+              lineJoin: join,
+            }),
+          );
+          arrowHeadShapes(points, layer.arrow, sColor, sWidth).forEach((head) => group.add(head));
+          return group;
+        }
         return new Arrow({
           ...nb,
           ...strokeCfg,
@@ -292,8 +379,8 @@ function buildNode(
           fill: sColor,
           stroke: sColor,
           strokeWidth: sWidth,
-          lineCap: 'round',
-          lineJoin: 'round',
+          lineCap: cap,
+          lineJoin: join,
         });
       }
       if (layer.shape === 'freehand') {
@@ -306,8 +393,8 @@ function buildNode(
           tension: layer.tension ?? 0.4,
           stroke: sColor,
           strokeWidth: sWidth,
-          lineCap: (strokeCfg.lineCap as 'round' | 'square') ?? layer.stroke?.cap ?? 'round',
-          lineJoin: 'round',
+          lineCap: cap,
+          lineJoin: join,
         });
       }
       if (layer.shape === 'line' || isPolygon) {
@@ -321,8 +408,8 @@ function buildNode(
           closed: isPolygon,
           stroke: sColor,
           strokeWidth: sWidth,
-          lineCap: 'round',
-          lineJoin: 'round',
+          lineCap: cap,
+          lineJoin: join,
         });
       }
       return new Rect({

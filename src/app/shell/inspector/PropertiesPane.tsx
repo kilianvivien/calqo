@@ -47,8 +47,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { assetStorage } from '@/lib/adapters';
-import { BUNDLED_FONTS } from '@/lib/adapters/fonts/browserFontAdapter';
 import {
+  BRUSH_STYLE_IDS,
+  brushStyleLayerPatch,
   polygonPoints,
   type PolygonPreset,
   updateLayerInActiveArtboard,
@@ -115,6 +116,7 @@ import { FRAME_PRESET_IDS, framePreset } from '@/editor/images/framePresets';
 import { STROKE_LOOK_IDS, strokeLookStyle, type StrokeLookId } from '@/editor/canvas/strokePresets';
 import { ColorPickerPopover } from './ColorPickerPopover';
 import { TextVariants } from './ContentControls';
+import { useFontOptions } from '@/lib/hooks/useFontOptions';
 
 const LAYER_TYPE_ICON: Record<CalqoLayer['type'], LucideIcon> = {
   text: Type,
@@ -235,12 +237,17 @@ function isFilledShape(layer: ShapeLayerT): boolean {
   );
 }
 
-const BRUSH_STYLE_OPTIONS: BrushStyle[] = [
-  'smooth',
-  'marker',
-  'highlighter',
-  'dashed',
-];
+function brushStyleFromLayer(layer: ShapeLayerT): BrushStyle {
+  if (layer.stroke?.look === 'glow') return 'glow-pen';
+  if (layer.stroke?.style === 'dashed') return 'dashed';
+  if (layer.blendMode === 'multiply' && layer.opacity >= 0.75) {
+    return 'marker-underline';
+  }
+  if (layer.blendMode === 'multiply') return 'highlighter';
+  if ((layer.tension ?? 0.4) === 0.25) return 'felt-tip';
+  if ((layer.tension ?? 0.4) === 0.18) return 'marker';
+  return 'smooth';
+}
 
 /** Full fill editor: type switch plus solid/gradient/pattern/image sub-controls.
  * `projectId` enables the image fill (it needs to persist a picked asset). */
@@ -570,6 +577,35 @@ const STROKE_STYLE_OPTIONS: {
   { value: 'dotted', labelKey: 'properties.styleDotted' },
 ];
 
+const STROKE_EFFECT_IDS: StrokeLookId[] = STROKE_LOOK_IDS.filter(
+  (id) => id !== 'dashed' && id !== 'dotted',
+);
+
+const STROKE_CAP_OPTIONS: {
+  value: NonNullable<StrokeStyle['cap']>;
+  labelKey: string;
+}[] = [
+  { value: 'butt', labelKey: 'properties.strokeCap_butt' },
+  { value: 'round', labelKey: 'properties.strokeCap_round' },
+  { value: 'square', labelKey: 'properties.strokeCap_square' },
+];
+
+const STROKE_JOIN_OPTIONS: {
+  value: NonNullable<StrokeStyle['join']>;
+  labelKey: string;
+}[] = [
+  { value: 'miter', labelKey: 'properties.strokeJoin_miter' },
+  { value: 'round', labelKey: 'properties.strokeJoin_round' },
+  { value: 'bevel', labelKey: 'properties.strokeJoin_bevel' },
+];
+
+function withStrokeDefaults(
+  stroke: StrokeStyle | undefined,
+  fallbackColor: string,
+): StrokeStyle {
+  return stroke ?? { color: fallbackColor, width: 4 };
+}
+
 function StrokeStyleField({
   value,
   onChange,
@@ -597,8 +633,8 @@ function StrokeStyleField({
   );
 }
 
-/** A grid of expressive stroke-look presets. Applying one keeps the current
- * colour/width and seeds the look's companion fields via `strokeLookStyle`. */
+/** A grid of expressive stroke-effect presets. Dash styles live in the adjacent
+ * stroke style control so dashed/dotted are not duplicated in the UI. */
 function StrokeLookRow({
   stroke,
   fallbackColor,
@@ -610,12 +646,12 @@ function StrokeLookRow({
 }) {
   const { t } = useTranslation('editor');
   const active = stroke?.look ?? 'plain';
-  const base: StrokeStyle = stroke ?? { color: fallbackColor, width: 4 };
+  const base = withStrokeDefaults(stroke, fallbackColor);
   return (
     <div className="flex flex-col gap-1.5 px-2 py-1.5">
-      <span className="text-[var(--calqo-text-3)] text-[12px]">{t('properties.strokeLook')}</span>
+      <span className="text-[var(--calqo-text-3)] text-[12px]">{t('properties.strokeEffect')}</span>
       <div className="flex flex-wrap gap-1.5">
-        {STROKE_LOOK_IDS.map((id) => {
+        {STROKE_EFFECT_IDS.map((id) => {
           const selected = active === id;
           return (
             <button
@@ -630,6 +666,104 @@ function StrokeLookRow({
               }`}
             >
               {t(`properties.strokeLook_${id}`)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StrokeAdvancedControls({
+  stroke,
+  fallbackColor,
+  onChange,
+}: {
+  stroke: StrokeStyle | undefined;
+  fallbackColor: string;
+  onChange: (stroke: StrokeStyle) => void;
+}) {
+  const { t } = useTranslation('editor');
+  const base = withStrokeDefaults(stroke, fallbackColor);
+  const style = base.style ?? 'solid';
+  const showDashControls = style === 'dashed' || style === 'dotted';
+  return (
+    <>
+      {showDashControls && (
+        <>
+          <SliderField
+            label={t('properties.strokeDash')}
+            value={Math.round(base.dashLen ?? base.width * (style === 'dotted' ? 1 : 3))}
+            min={0}
+            max={80}
+            step={0.5}
+            onChange={(dashLen) => onChange({ ...base, dashLen })}
+          />
+          <SliderField
+            label={t('properties.strokeGap')}
+            value={Math.round(base.gap ?? base.width * 2)}
+            min={0}
+            max={80}
+            step={0.5}
+            onChange={(gap) => onChange({ ...base, gap })}
+          />
+        </>
+      )}
+      <SelectField
+        label={t('properties.strokeCap')}
+        value={base.cap ?? 'round'}
+        options={STROKE_CAP_OPTIONS.map((option) => ({
+          value: option.value,
+          label: t(option.labelKey),
+        }))}
+        onChange={(cap) =>
+          onChange({ ...base, cap: cap as NonNullable<StrokeStyle['cap']> })
+        }
+      />
+      <SelectField
+        label={t('properties.strokeJoin')}
+        value={base.join ?? 'round'}
+        options={STROKE_JOIN_OPTIONS.map((option) => ({
+          value: option.value,
+          label: t(option.labelKey),
+        }))}
+        onChange={(join) =>
+          onChange({ ...base, join: join as NonNullable<StrokeStyle['join']> })
+        }
+      />
+    </>
+  );
+}
+
+function BrushPresetField({
+  value,
+  onChange,
+}: {
+  value: BrushStyle;
+  onChange: (brushStyle: BrushStyle) => void;
+}) {
+  const { t } = useTranslation('editor');
+  return (
+    <div className="flex flex-col gap-1.5 px-2 py-1.5">
+      <span className="text-[var(--calqo-text-3)] text-[12px]">
+        {t('properties.brushStyle')}
+      </span>
+      <div className="flex flex-wrap gap-1.5">
+        {BRUSH_STYLE_IDS.map((id) => {
+          const selected = value === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onChange(id)}
+              className={`rounded-[var(--calqo-radius-sm)] border px-2.5 py-1 text-[11.5px] transition-colors ${
+                selected
+                  ? 'border-[var(--calqo-accent)] bg-[var(--calqo-accent)]/10 text-[var(--calqo-text)]'
+                  : 'border-[var(--calqo-divider)] text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]'
+              }`}
+            >
+              {t(`properties.brushStyle_${id}`)}
             </button>
           );
         })}
@@ -675,12 +809,22 @@ function StickerControls({
   );
 }
 
+const DEFAULT_FRAME_SHADOW: ShadowStyle = {
+  color: '#000000',
+  blur: 18,
+  offsetX: 0,
+  offsetY: 10,
+  opacity: 0.24,
+};
+
 /** Image frame section: one-click presets, a remove chip, and numeric tuning. */
 function FrameControls({
   layer,
+  locale,
   update,
 }: {
   layer: ImageLayer;
+  locale: string;
   update: LayerUpdate;
 }) {
   const { t } = useTranslation('editor');
@@ -739,6 +883,83 @@ function FrameControls({
               onChange={(padding) => update({ frame: { ...frame, padding } })}
             />
           )}
+          {frame.kind === 'polaroid' && (
+            <TextField
+              label={t('properties.frameCaption')}
+              value={frame.caption?.[locale] ?? ''}
+              onChange={(caption) =>
+                update({
+                  frame: {
+                    ...frame,
+                    caption: { ...(frame.caption ?? {}), [locale]: caption },
+                  },
+                })
+              }
+            />
+          )}
+          {!frame.shadow ? (
+            <InlineButton
+              label={t('properties.frameShadowAdd')}
+              onClick={() =>
+                update({ frame: { ...frame, shadow: DEFAULT_FRAME_SHADOW } })
+              }
+            />
+          ) : (
+            <>
+              <ColorField
+                label={t('properties.shadowColor')}
+                value={frame.shadow.color}
+                onChange={(color) =>
+                  update({ frame: { ...frame, shadow: { ...frame.shadow!, color } } })
+                }
+              />
+              <SliderField
+                label={t('properties.blur')}
+                value={Math.round(frame.shadow.blur)}
+                min={0}
+                max={80}
+                onChange={(blur) =>
+                  update({ frame: { ...frame, shadow: { ...frame.shadow!, blur } } })
+                }
+              />
+              <SliderField
+                label={t('properties.shadowX')}
+                value={Math.round(frame.shadow.offsetX)}
+                min={-80}
+                max={80}
+                onChange={(offsetX) =>
+                  update({ frame: { ...frame, shadow: { ...frame.shadow!, offsetX } } })
+                }
+              />
+              <SliderField
+                label={t('properties.shadowY')}
+                value={Math.round(frame.shadow.offsetY)}
+                min={-80}
+                max={80}
+                onChange={(offsetY) =>
+                  update({ frame: { ...frame, shadow: { ...frame.shadow!, offsetY } } })
+                }
+              />
+              <SliderField
+                label={t('properties.opacity')}
+                value={Math.round(frame.shadow.opacity * 100)}
+                min={0}
+                max={100}
+                onChange={(opacity) =>
+                  update({
+                    frame: {
+                      ...frame,
+                      shadow: { ...frame.shadow!, opacity: opacity / 100 },
+                    },
+                  })
+                }
+              />
+              <InlineButton
+                label={t('properties.frameShadowRemove')}
+                onClick={() => update({ frame: { ...frame, shadow: undefined } })}
+              />
+            </>
+          )}
           <InlineButton
             label={t('properties.frameRemove')}
             onClick={() => update({ frame: null })}
@@ -754,7 +975,18 @@ const DEFAULT_ARROW: ArrowStyle = {
   end: true,
   pointerLength: 16,
   pointerWidth: 16,
+  headStyle: 'triangle',
 };
+
+const ARROW_HEAD_STYLE_OPTIONS: {
+  value: NonNullable<ArrowStyle['headStyle']>;
+  labelKey: string;
+}[] = [
+  { value: 'triangle', labelKey: 'properties.arrowStyle_triangle' },
+  { value: 'chevron', labelKey: 'properties.arrowStyle_chevron' },
+  { value: 'bar', labelKey: 'properties.arrowStyle_bar' },
+  { value: 'dot', labelKey: 'properties.arrowStyle_dot' },
+];
 
 function ArrowHeadField({
   value,
@@ -766,35 +998,51 @@ function ArrowHeadField({
   const { t } = useTranslation('editor');
   const arrow = value ?? DEFAULT_ARROW;
   return (
-    <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1.5 text-[12px]">
-      <span className="text-[var(--calqo-text-3)]">
-        {t('properties.arrowHeads')}
-      </span>
-      <div className="flex gap-3">
-        <label className="flex cursor-pointer items-center gap-1.5 text-[var(--calqo-text-2)]">
-          <input
-            type="checkbox"
-            checked={arrow.start}
-            onChange={(event) =>
-              onChange({ ...arrow, start: event.target.checked })
-            }
-            className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
-          />
-          {t('properties.arrowStart')}
-        </label>
-        <label className="flex cursor-pointer items-center gap-1.5 text-[var(--calqo-text-2)]">
-          <input
-            type="checkbox"
-            checked={arrow.end}
-            onChange={(event) =>
-              onChange({ ...arrow, end: event.target.checked })
-            }
-            className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
-          />
-          {t('properties.arrowEnd')}
-        </label>
+    <>
+      <SelectField
+        label={t('properties.arrowStyle')}
+        value={arrow.headStyle ?? 'triangle'}
+        options={ARROW_HEAD_STYLE_OPTIONS.map((option) => ({
+          value: option.value,
+          label: t(option.labelKey),
+        }))}
+        onChange={(headStyle) =>
+          onChange({
+            ...arrow,
+            headStyle: headStyle as NonNullable<ArrowStyle['headStyle']>,
+          })
+        }
+      />
+      <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1.5 text-[12px]">
+        <span className="text-[var(--calqo-text-3)]">
+          {t('properties.arrowHeads')}
+        </span>
+        <div className="flex gap-3">
+          <label className="flex cursor-pointer items-center gap-1.5 text-[var(--calqo-text-2)]">
+            <input
+              type="checkbox"
+              checked={arrow.start}
+              onChange={(event) =>
+                onChange({ ...arrow, start: event.target.checked })
+              }
+              className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
+            />
+            {t('properties.arrowStart')}
+          </label>
+          <label className="flex cursor-pointer items-center gap-1.5 text-[var(--calqo-text-2)]">
+            <input
+              type="checkbox"
+              checked={arrow.end}
+              onChange={(event) =>
+                onChange({ ...arrow, end: event.target.checked })
+              }
+              className="h-3.5 w-3.5 accent-[var(--calqo-accent)]"
+            />
+            {t('properties.arrowEnd')}
+          </label>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -868,6 +1116,7 @@ function layerSubtitle(
   layer: CalqoLayer,
 ): string {
   if (layer.type === 'shape') {
+    if (layer.shape === 'freehand') return t('properties.brush');
     if (layer.shape === 'polygon') {
       const normalized = layer.name.toLowerCase().split(' ')[0];
       if (normalized === 'triangle') return t('tools.triangle');
@@ -993,15 +1242,10 @@ function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
       )}
       {isBrush && (
         <Section title={t('properties.brush')}>
-          <SelectField
-            label={t('properties.brushStyle')}
+          <BrushPresetField
             value={shapeDefaults.brushStyle}
-            options={BRUSH_STYLE_OPTIONS.map((style) => ({
-              value: style,
-              label: t(`properties.brushStyle_${style}`),
-            }))}
             onChange={(brushStyle) =>
-              setShapeDefaults({ brushStyle: brushStyle as BrushStyle })
+              setShapeDefaults({ brushStyle })
             }
           />
           <ColorField
@@ -1055,6 +1299,7 @@ function MultiControls({
   const textFirst = textLayers[0];
   const shapeIds = shapeLayers.map((l) => l.id);
   const textIds = textLayers.map((l) => l.id);
+  const textFonts = useFontOptions(textFirst?.style.fontFamily);
 
   return (
     <div className="flex flex-col gap-4">
@@ -1206,7 +1451,7 @@ function MultiControls({
           <SelectField
             label={t('properties.font')}
             value={textFirst.style.fontFamily}
-            options={BUNDLED_FONTS.map((f) => ({
+            options={textFonts.map((f) => ({
               value: f.family,
               label: f.family,
             }))}
@@ -1407,6 +1652,14 @@ function LayerControls({
               onChange={(fill) => update({ fill })}
             />
           )}
+          {layer.shape === 'freehand' && (
+            <BrushPresetField
+              value={brushStyleFromLayer(layer)}
+              onChange={(brushStyle) =>
+                update(brushStyleLayerPatch(brushStyle, layer.stroke))
+              }
+            />
+          )}
           <ColorField
             label={t('properties.stroke')}
             value={layer.stroke?.color ?? '#007AFF'}
@@ -1452,6 +1705,11 @@ function LayerControls({
               })
             }
           />
+          <StrokeAdvancedControls
+            stroke={layer.stroke}
+            fallbackColor="#007AFF"
+            onChange={(stroke) => update({ stroke })}
+          />
           <StrokeLookRow
             stroke={layer.stroke}
             fallbackColor="#007AFF"
@@ -1496,7 +1754,12 @@ function LayerControls({
       )}
 
       {layer.type === 'image' && (
-        <ImageControls projectId={projectId} layer={layer} update={update} />
+        <ImageControls
+          projectId={projectId}
+          layer={layer}
+          locale={locale}
+          update={update}
+        />
       )}
 
       {layer.type === 'svg' && (
@@ -1597,10 +1860,12 @@ const MASK_LABEL_KEY: Record<ImageMask['shape'], string> = {
 function ImageControls({
   projectId,
   layer,
+  locale,
   update,
 }: {
   projectId: string;
   layer: ImageLayer;
+  locale: string;
   update: LayerUpdate;
 }) {
   const { t } = useTranslation('editor');
@@ -1743,7 +2008,7 @@ function ImageControls({
         )}
       </Section>
 
-      <FrameControls layer={layer} update={update} />
+      <FrameControls layer={layer} locale={locale} update={update} />
     </>
   );
 }
@@ -1976,12 +2241,13 @@ function TypographyControls({
   onChange: (style: Partial<TextLayer['style']>) => void;
 }) {
   const { t } = useTranslation('editor');
+  const fontOptions = useFontOptions(style.fontFamily);
   return (
     <Section title={t('properties.typography')}>
       <SelectField
         label={t('properties.font')}
         value={style.fontFamily}
-        options={BUNDLED_FONTS.map((f) => ({
+        options={fontOptions.map((f) => ({
           value: f.family,
           label: f.family,
         }))}
@@ -2067,11 +2333,24 @@ function TextStrokeControls({
         }
       />
       {style.stroke && style.stroke.width > 0 && (
-        <StrokeLookRow
-          stroke={style.stroke}
-          fallbackColor="#000000"
-          onChange={(stroke) => onChange({ stroke })}
-        />
+        <>
+          <StrokeStyleField
+            value={style.stroke.style ?? 'solid'}
+            onChange={(strokeStyle) =>
+              onChange({ stroke: { ...style.stroke!, style: strokeStyle } })
+            }
+          />
+          <StrokeAdvancedControls
+            stroke={style.stroke}
+            fallbackColor="#000000"
+            onChange={(stroke) => onChange({ stroke })}
+          />
+          <StrokeLookRow
+            stroke={style.stroke}
+            fallbackColor="#000000"
+            onChange={(stroke) => onChange({ stroke })}
+          />
+        </>
       )}
     </Section>
   );
@@ -2687,6 +2966,28 @@ function NumberField({
           const next = Number(event.target.value);
           if (Number.isFinite(next)) onChange(next);
         }}
+        className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[12.5px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-2 focus:ring-[var(--calqo-accent-ring)]"
+      />
+    </label>
+  );
+}
+
+function TextField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="grid grid-cols-[88px_1fr] items-center gap-2 px-2 py-1 text-[12px]">
+      <span className="text-[var(--calqo-text-3)]">{label}</span>
+      <input
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[12.5px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-2 focus:ring-[var(--calqo-accent-ring)]"
       />
     </label>

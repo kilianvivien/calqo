@@ -15,6 +15,7 @@ import {
   type ListItem,
   type LocaleCode,
   type ShapeLayer,
+  type StrokeStyle,
   type TextLayer,
 } from '@/lib/schema';
 import type { TranslationResult } from '@/editor/ai/AIProvider';
@@ -422,6 +423,16 @@ export interface ShapeStyleDefaults {
   brushStyle?: BrushStyle;
 }
 
+export const BRUSH_STYLE_IDS: BrushStyle[] = [
+  'smooth',
+  'marker',
+  'felt-tip',
+  'highlighter',
+  'marker-underline',
+  'glow-pen',
+  'dashed',
+];
+
 export type PolygonPreset = 'triangle' | 'diamond' | 'badge' | 'star';
 
 /** Strokes whose width should default to a thicker, line-like weight. */
@@ -506,28 +517,24 @@ export function createFreehandLayer(
   const relative = absolutePoints.map((value, i) => (i % 2 === 0 ? value - minX : value - minY));
   const layer = createShapeLayer('freehand', minX, minY, Math.max(1, maxX - minX), Math.max(1, maxY - minY), defaults);
   if (layer.type === 'shape') {
-    const brush = BRUSH_STYLES[defaults?.brushStyle ?? 'smooth'];
     layer.points = relative;
-    layer.tension = brush.tension;
-    layer.opacity = brush.opacity;
-    if (brush.blendMode) layer.blendMode = brush.blendMode;
     layer.fill = { type: 'solid', color: 'transparent' };
-    const color = defaults?.stroke ?? '#111827';
-    layer.stroke = {
-      color,
-      width: defaults?.brushSize ?? 6,
-      cap: brush.cap,
-      ...(brush.style ? { style: brush.style } : {}),
-      ...(brush.look ? { look: brush.look, altColor: color, intensity: 0.7 } : {}),
-    };
+    Object.assign(
+      layer,
+      brushStyleLayerPatch(defaults?.brushStyle ?? 'smooth', {
+        color: defaults?.stroke ?? '#111827',
+        width: defaults?.brushSize ?? 6,
+      }),
+    );
+    if (layer.blendMode === 'normal') delete layer.blendMode;
   }
   return layer;
 }
 
 /** Freehand feel per brush style: smoothing, line cap, opacity, blend, dashing,
  * and an optional expressive stroke look (Phase R). */
-const BRUSH_STYLES: Record<
-  NonNullable<ShapeStyleDefaults['brushStyle']>,
+export const BRUSH_STYLES: Record<
+  BrushStyle,
   {
     tension: number;
     cap: 'round' | 'square';
@@ -539,12 +546,35 @@ const BRUSH_STYLES: Record<
 > = {
   smooth: { tension: 0.4, cap: 'round', opacity: 1 },
   marker: { tension: 0.18, cap: 'round', opacity: 1 },
-  highlighter: { tension: 0, cap: 'square', opacity: 0.4, blendMode: 'multiply' },
-  dashed: { tension: 0.4, cap: 'round', opacity: 1, style: 'dashed' },
   'felt-tip': { tension: 0.25, cap: 'round', opacity: 1 },
+  highlighter: { tension: 0, cap: 'square', opacity: 0.4, blendMode: 'multiply' },
   'marker-underline': { tension: 0, cap: 'square', opacity: 0.85, blendMode: 'multiply' },
   'glow-pen': { tension: 0.4, cap: 'round', opacity: 1, look: 'glow' },
+  dashed: { tension: 0.4, cap: 'round', opacity: 1, style: 'dashed' },
 };
+
+export function brushStyleLayerPatch(
+  brushStyle: BrushStyle,
+  base?: StrokeStyle,
+): Pick<ShapeLayer, 'tension' | 'opacity'> & {
+  stroke: StrokeStyle;
+  blendMode: NonNullable<ShapeLayer['blendMode']>;
+} {
+  const brush = BRUSH_STYLES[brushStyle];
+  const color = base?.color ?? '#111827';
+  return {
+    tension: brush.tension,
+    opacity: brush.opacity,
+    blendMode: brush.blendMode ?? 'normal',
+    stroke: {
+      color,
+      width: base?.width ?? 6,
+      cap: brush.cap,
+      ...(brush.style ? { style: brush.style } : {}),
+      ...(brush.look ? { look: brush.look, altColor: color, intensity: 0.7 } : {}),
+    },
+  };
+}
 
 /** Build a closed custom polygon from absolute artboard points (pen tool). */
 export function createCustomPolygonLayer(

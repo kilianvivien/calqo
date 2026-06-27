@@ -72,4 +72,34 @@ describe('phase D — export helpers', () => {
     // Arrow renders a shaft path plus a triangular head polygon.
     expect(svg).toContain('<polygon');
   });
+
+  it('exports alternate arrow head styles to SVG', async () => {
+    const artboard = createArtboard('ig-square');
+    const arrow = createShapeLayer('arrow', 0, 0, 120, 0);
+    if (arrow.type === 'shape') {
+      arrow.points = [0, 0, 120, 0];
+      arrow.arrow = { start: false, end: true, pointerLength: 16, pointerWidth: 16, headStyle: 'dot' };
+    }
+    artboard.layers.push(arrow);
+
+    const { svg } = await exportArtboardSvg(artboard, 'en');
+
+    expect(svg).toContain('<circle');
+    expect(svg).not.toContain('<polygon');
+  });
+
+  it('exports selected line cap and join styles to SVG', async () => {
+    const artboard = createArtboard('ig-square');
+    const line = createShapeLayer('line', 0, 0, 120, 0);
+    if (line.type === 'shape') {
+      line.points = [0, 0, 60, 40, 120, 0];
+      line.stroke = { color: '#111111', width: 8, cap: 'square', join: 'bevel' };
+    }
+    artboard.layers.push(line);
+
+    const { svg } = await exportArtboardSvg(artboard, 'en');
+
+    expect(svg).toContain('stroke-linecap="square"');
+    expect(svg).toContain('stroke-linejoin="bevel"');
+  });
 });

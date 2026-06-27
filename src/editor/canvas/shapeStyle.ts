@@ -176,7 +176,7 @@ export function strokeProps(stroke?: StrokeStyle): Konva.ShapeConfig {
     if (stroke.style === 'dashed') dash = [width * 3, width * 2];
     else if (stroke.style === 'dotted') {
       dash = [0.01, width * 2];
-      lineCap = lineCap ?? 'round';
+      lineCap = 'round';
     }
   }
   return {

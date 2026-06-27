@@ -16,7 +16,7 @@ import {
   updateTextForLocale,
 } from '@/editor/commands/projectCommands';
 import { localeLabel } from '@/editor/i18n-content/contentLocaleService';
-import { BUNDLED_FONTS } from '@/lib/adapters/fonts/browserFontAdapter';
+import { useFontOptions } from '@/lib/hooks/useFontOptions';
 import type { CalqoLayer, CalqoProject, LocaleCode, TextStyle } from '@/lib/schema';
 import { BottomSheet } from '@/components/mobile';
 import { GlassButton } from '@/components/glass';
@@ -81,6 +81,7 @@ export function TextEditSheet({ open, onClose, project, layer }: TextEditSheetPr
 
   const style =
     layer.type === 'text' || layer.type === 'list' ? layer.style : null;
+  const fontOptions = useFontOptions(style?.fontFamily);
   const patchStyle = (patch: Partial<TextStyle>) =>
     updateLayerInActiveArtboard(project.id, layer.id, { style: patch });
 
@@ -156,7 +157,7 @@ export function TextEditSheet({ open, onClose, project, layer }: TextEditSheetPr
               onChange={(event) => patchStyle({ fontFamily: event.target.value })}
               className="h-11 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[14px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
             >
-              {BUNDLED_FONTS.map((font) => (
+              {fontOptions.map((font) => (
                 <option key={font.family} value={font.family}>
                   {font.family}
                 </option>

@@ -71,6 +71,7 @@ describe('phase G — fills & strokes', () => {
         w: 10,
         h: 10,
         fill: { type: 'solid', color: '#000' },
+        arrow: { end: true, headStyle: 'chevron' },
       }),
     ).not.toThrow();
   });
@@ -88,6 +89,7 @@ describe('phase G — fills & strokes', () => {
   it('expands named stroke styles into dash arrays', () => {
     expect(strokeProps({ color: '#000', width: 2, style: 'dashed' }).dash).toEqual([6, 4]);
     expect(strokeProps({ color: '#000', width: 2, style: 'dotted' }).lineCap).toBe('round');
+    expect(strokeProps({ color: '#000', width: 2, style: 'dotted', cap: 'butt' }).lineCap).toBe('round');
     expect(strokeProps({ color: '#000', width: 0 }).strokeWidth).toBe(0);
   });
 });

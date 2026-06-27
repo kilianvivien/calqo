@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultProject, safeImportProject } from '@/lib/schema';
 import type { CalqoProject, ImageLayer, ShapeLayer, StrokeLook } from '@/lib/schema';
 import { applyLayerPatch } from '@/editor/utils/layers';
+import {
+  BRUSH_STYLE_IDS,
+  brushStyleLayerPatch,
+  createFreehandLayer,
+} from '@/editor/commands/projectCommands';
 import { FRAME_PRESET_IDS, framePreset } from '@/editor/images/framePresets';
 import { STROKE_LOOK_IDS, strokeLookStyle } from '@/editor/canvas/strokePresets';
 import { strokeLookConfig } from '@/editor/canvas/strokeStyle';
@@ -128,6 +133,51 @@ describe('phase R — stroke looks', () => {
     const dotted = strokeLookConfig({ color: '#000000', width: 4, style: 'dotted' });
     expect(Array.isArray(dotted.dash)).toBe(true);
     expect(dotted.lineCap).toBe('round');
+  });
+});
+
+describe('phase R — brush presets', () => {
+  it('exposes the full desktop/mobile brush preset set', () => {
+    expect(BRUSH_STYLE_IDS).toEqual([
+      'smooth',
+      'marker',
+      'felt-tip',
+      'highlighter',
+      'marker-underline',
+      'glow-pen',
+      'dashed',
+    ]);
+  });
+
+  it('creates new freehand strokes with Phase R brush styles', () => {
+    const glow = createFreehandLayer([0, 0, 40, 20], {
+      fill: '#ffffff',
+      stroke: '#007aff',
+      strokeWidth: 2,
+      brushSize: 12,
+      brushStyle: 'glow-pen',
+    });
+    expect(glow?.type).toBe('shape');
+    if (glow?.type === 'shape') {
+      expect(glow.shape).toBe('freehand');
+      expect(glow.stroke?.look).toBe('glow');
+      expect(glow.stroke?.width).toBe(12);
+    }
+  });
+
+  it('restyles existing freehand strokes and clears blend mode when needed', () => {
+    const underline = brushStyleLayerPatch('marker-underline', {
+      color: '#111111',
+      width: 9,
+    });
+    expect(underline.blendMode).toBe('multiply');
+    expect(underline.stroke.cap).toBe('square');
+
+    const smooth = brushStyleLayerPatch('smooth', underline.stroke);
+    expect(smooth.blendMode).toBe('normal');
+    expect(smooth.stroke.color).toBe('#111111');
+    expect(smooth.stroke.width).toBe(9);
+    expect(smooth.stroke.look).toBeUndefined();
   });
 });
 

@@ -8,7 +8,7 @@ import { strokeProps } from '@/editor/canvas/shapeStyle';
 import { strokeLookNeedsRasterWarning } from '@/editor/canvas/strokeStyle';
 import { frameRender, type FrameNodeSpec } from '@/editor/canvas/frameNodes';
 import { EXPORT_WARNINGS } from './exportWarnings';
-import type { CalqoArtboard, CalqoLayer, ListLayer, ShapeLayer, StrokeStyle, TextLayer } from '@/lib/schema';
+import type { ArrowStyle, CalqoArtboard, CalqoLayer, ListLayer, ShapeLayer, StrokeStyle, TextLayer } from '@/lib/schema';
 
 interface TextLine {
   text: string;
@@ -180,6 +180,32 @@ function arrowHeadPoints(
   return `${corner(0, 0)} ${corner(-length, width / 2)} ${corner(-length, -width / 2)}`;
 }
 
+function arrowHeadSvg(
+  tipX: number,
+  tipY: number,
+  radians: number,
+  length: number,
+  width: number,
+  lineColor: string,
+  lineWidth: number,
+  style: NonNullable<ArrowStyle['headStyle']>,
+): string {
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const point = (forward: number, side: number): string =>
+    `${round(tipX + forward * cos - side * sin)},${round(tipY + forward * sin + side * cos)}`;
+  if (style === 'chevron') {
+    return `<polyline points="${point(-length, width / 2)} ${point(0, 0)} ${point(-length, -width / 2)}" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" />`;
+  }
+  if (style === 'bar') {
+    return `<line x1="${round(tipX + (width / 2) * -sin)}" y1="${round(tipY + (width / 2) * cos)}" x2="${round(tipX - (width / 2) * -sin)}" y2="${round(tipY - (width / 2) * cos)}" stroke="${lineColor}" stroke-width="${Math.max(lineWidth, 2)}" stroke-linecap="round" />`;
+  }
+  if (style === 'dot') {
+    return `<circle cx="${round(tipX)}" cy="${round(tipY)}" r="${round(Math.max(width / 2, lineWidth))}" fill="${lineColor}" />`;
+  }
+  return `<polygon points="${arrowHeadPoints(tipX, tipY, radians, length, width)}" fill="${lineColor}" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linejoin="round" />`;
+}
+
 function serializeLayer(
   layer: CalqoLayer,
   assets: Map<string, string>,
@@ -215,28 +241,30 @@ function serializeLayer(
     // Line-like shapes share the canvas renderer's defaults.
     const lineColor = layer.stroke?.color ?? '#111827';
     const lineWidth = layer.stroke?.width ?? 4;
+    const lineStroke = strokeProps(layer.stroke);
+    const cap = (lineStroke.lineCap as 'butt' | 'round' | 'square' | undefined) ?? layer.stroke?.cap ?? 'round';
+    const join = layer.stroke?.join ?? 'round';
     if (layer.shape === 'freehand') {
       const pts = layer.points ?? [0, 0, layer.w, layer.h];
       const d = strokePathData(pts, layer.tension ?? 0.4);
-      const cap = layer.stroke?.cap ?? 'round';
-      return `${open}<path d="${d}" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="${cap}" stroke-linejoin="round"${dashAttr(layer.stroke)} />${close}`;
+      return `${open}<path d="${d}" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="${cap}" stroke-linejoin="${join}"${dashAttr(layer.stroke)} />${close}`;
     }
     if (layer.shape === 'arrow') {
       const pts = layer.points ?? [0, 0, layer.w, layer.h];
       const n = pts.length;
       const headLength = layer.arrow?.pointerLength ?? 16;
       const headWidth = layer.arrow?.pointerWidth ?? 16;
-      const head = `fill="${lineColor}" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linejoin="round"`;
+      const headStyle = layer.arrow?.headStyle ?? 'triangle';
       const parts = [
-        `<path d="${strokePathData(pts, layer.tension ?? 0)}" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" />`,
+        `<path d="${strokePathData(pts, layer.tension ?? 0)}" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="${cap}" stroke-linejoin="${join}"${dashAttr(layer.stroke)} />`,
       ];
       if ((layer.arrow?.end ?? true) && n >= 4) {
         const radians = Math.atan2(pts[n - 1] - pts[n - 3], pts[n - 2] - pts[n - 4]);
-        parts.push(`<polygon points="${arrowHeadPoints(pts[n - 2], pts[n - 1], radians, headLength, headWidth)}" ${head} />`);
+        parts.push(arrowHeadSvg(pts[n - 2], pts[n - 1], radians, headLength, headWidth, lineColor, lineWidth, headStyle));
       }
       if ((layer.arrow?.start ?? false) && n >= 4) {
         const radians = Math.atan2(pts[1] - pts[3], pts[0] - pts[2]);
-        parts.push(`<polygon points="${arrowHeadPoints(pts[0], pts[1], radians, headLength, headWidth)}" ${head} />`);
+        parts.push(arrowHeadSvg(pts[0], pts[1], radians, headLength, headWidth, lineColor, lineWidth, headStyle));
       }
       return `${open}${parts.join('')}${close}`;
     }
@@ -246,7 +274,7 @@ function serializeLayer(
       for (let i = 0; i < pts.length; i += 2) pairs.push(`${pts[i]},${pts[i + 1]}`);
       const tag = layer.shape === 'polygon' ? 'polygon' : 'polyline';
       const fill = layer.shape === 'polygon' ? solidFill(layer.fill, warnings) : 'none';
-      return `${open}<${tag} points="${pairs.join(' ')}" fill="${fill}" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round"${dashAttr(layer.stroke)} />${close}`;
+      return `${open}<${tag} points="${pairs.join(' ')}" fill="${fill}" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="${cap}" stroke-linejoin="${join}"${dashAttr(layer.stroke)} />${close}`;
     }
     const radius = layer.cornerRadius ? ` rx="${layer.cornerRadius}"` : '';
     return `${open}<rect width="${layer.w}" height="${layer.h}"${radius} fill="${solidFill(layer.fill, warnings)}"${stroke} />${close}`;

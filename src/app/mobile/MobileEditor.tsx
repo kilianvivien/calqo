@@ -22,6 +22,7 @@ import { assetStorage } from '@/lib/adapters';
 import {
   addImportedAssetLayer,
   addLayerToActiveArtboard,
+  BRUSH_STYLE_IDS,
   canRedoProject,
   canUndoProject,
   createListLayer,
@@ -39,7 +40,7 @@ import { useActiveArtboard } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useHistoryStore } from '@/lib/state/historyStore';
 import { useIsLandscape } from '@/lib/hooks/useResponsiveMode';
-import { useUiStore, type BrushStyle } from '@/lib/state/uiStore';
+import { useUiStore } from '@/lib/state/uiStore';
 import type { CalqoLayer, CalqoProject } from '@/lib/schema';
 import { GlassIconButton } from '@/components/glass';
 import { MobileToolbar, type MobileToolItem } from '@/components/mobile';
@@ -69,17 +70,6 @@ type Sheet =
   | 'files'
   | 'svg'
   | 'export';
-
-/** Brush presets offered in the phone draw flow (Phase R). */
-const BRUSH_STYLE_IDS: BrushStyle[] = [
-  'smooth',
-  'marker',
-  'felt-tip',
-  'highlighter',
-  'marker-underline',
-  'glow-pen',
-  'dashed',
-];
 
 interface MobileEditorProps {
   project: CalqoProject;
