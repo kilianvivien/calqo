@@ -545,7 +545,10 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       });
       return;
     }
-    if (layer.type === 'shape' && layer.shape === 'ellipse') {
+    // A plain ellipse node is centre-anchored; a sticker-decorated ellipse is
+    // wrapped in a top-left-anchored Group, so it falls through to the generic
+    // resize below (which rebuilds the decoration at the new size).
+    if (layer.type === 'shape' && layer.shape === 'ellipse' && !layer.sticker) {
       updateLayerInActiveArtboard(project.id, layer.id, {
         x: node.x() - width / 2,
         y: node.y() - height / 2,

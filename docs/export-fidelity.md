@@ -18,6 +18,10 @@ Use this table when an export looks different from the canvas.
 | Drop shadow | Exact | Omitted | Exact |
 | Blend modes (multiply, screen, overlay, …) | Exact | Omitted (normal compositing) | Exact |
 | Text stroke / text shadow | Exact | May differ | Exact |
+| Image frames (inset, centered, outside, rounded, circle, double-line, polaroid) | Exact | Approximated (borders as rects/ellipse; caption/shadow may differ) | Exact |
+| Stroke looks — dashed / dotted | Exact | Exact (`stroke-dasharray`) | Exact |
+| Stroke looks — neon / glow / double / offset / outline / marker | Exact | Approximated (drawn as a plain stroke) | Exact |
+| Sticker outline (white/coloured halo) | Exact | Approximated | Exact |
 | Editable after export | No (flat pixels) | Yes (vector shapes/text) | No (embedded PNG) |
 
 ## Why SVG drops some effects
@@ -27,6 +31,22 @@ clip paths, and blend modes are deliberately omitted so the file stays small and
 portable across tools that only support a conservative SVG subset. When these
 features matter for the final asset, export PNG (or the HTML wrapper, which
 embeds a PNG) instead.
+
+## Creative frames and stroke looks (Phase R)
+
+Decorative image **frames**, expressive **stroke looks**, and **sticker
+outlines** are non-destructive, schema-backed, and fully editable — they survive
+save, `.calqo` import/export, and the desktop ↔ phone round-trip. Raster export
+reproduces them exactly. In SVG export:
+
+- Dashed/dotted strokes export precisely as `stroke-dasharray`.
+- Frame borders export as `<rect>`/`<ellipse>` outlines; polaroid captions and
+  frame shadows may differ.
+- Neon, glow, double, offset, outline, and marker looks, and sticker outlines,
+  are approximated (drawn as a plain stroke / flat halo). The editor flags these
+  in the **Export notes** section so the difference is never silent.
+
+For pixel-faithful frames and stroke looks, prefer PNG export.
 
 The editor surfaces the relevant subset of these warnings in two places:
 

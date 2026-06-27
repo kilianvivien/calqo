@@ -86,6 +86,7 @@ import type {
   ListLayer,
   ListMarker,
   ShadowStyle,
+  StickerOutline,
   StrokeStyle,
   TextLayer,
 } from '@/lib/schema';
@@ -110,6 +111,8 @@ import {
   textPresetStyle,
   type TextPresetId,
 } from '@/editor/typography/textPresets';
+import { FRAME_PRESET_IDS, framePreset } from '@/editor/images/framePresets';
+import { STROKE_LOOK_IDS, strokeLookStyle, type StrokeLookId } from '@/editor/canvas/strokePresets';
 import { ColorPickerPopover } from './ColorPickerPopover';
 import { TextVariants } from './ContentControls';
 
@@ -591,6 +594,158 @@ function StrokeStyleField({
         }))}
       />
     </div>
+  );
+}
+
+/** A grid of expressive stroke-look presets. Applying one keeps the current
+ * colour/width and seeds the look's companion fields via `strokeLookStyle`. */
+function StrokeLookRow({
+  stroke,
+  fallbackColor,
+  onChange,
+}: {
+  stroke: StrokeStyle | undefined;
+  fallbackColor: string;
+  onChange: (stroke: StrokeStyle) => void;
+}) {
+  const { t } = useTranslation('editor');
+  const active = stroke?.look ?? 'plain';
+  const base: StrokeStyle = stroke ?? { color: fallbackColor, width: 4 };
+  return (
+    <div className="flex flex-col gap-1.5 px-2 py-1.5">
+      <span className="text-[var(--calqo-text-3)] text-[12px]">{t('properties.strokeLook')}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {STROKE_LOOK_IDS.map((id) => {
+          const selected = active === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onChange(strokeLookStyle(id as StrokeLookId, base))}
+              className={`rounded-[var(--calqo-radius-sm)] border px-2.5 py-1 text-[11.5px] transition-colors ${
+                selected
+                  ? 'border-[var(--calqo-accent)] bg-[var(--calqo-accent)]/10 text-[var(--calqo-text)]'
+                  : 'border-[var(--calqo-divider)] text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]'
+              }`}
+            >
+              {t(`properties.strokeLook_${id}`)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Shared sticker-outline section for image / svg / text / shape layers. */
+function StickerControls({
+  sticker,
+  onChange,
+}: {
+  sticker: StickerOutline | undefined;
+  onChange: (sticker: StickerOutline | null) => void;
+}) {
+  const { t } = useTranslation('editor');
+  return (
+    <Section title={t('properties.sticker')}>
+      {!sticker ? (
+        <InlineButton
+          label={t('properties.stickerAdd')}
+          onClick={() => onChange({ color: '#FFFFFF', width: 12 })}
+        />
+      ) : (
+        <>
+          <ColorField
+            label={t('properties.color')}
+            value={sticker.color}
+            onChange={(color) => onChange({ ...sticker, color })}
+          />
+          <SliderField
+            label={t('properties.strokeWidth')}
+            value={Math.round(sticker.width)}
+            min={1}
+            max={60}
+            onChange={(width) => onChange({ ...sticker, width })}
+          />
+          <InlineButton label={t('properties.stickerRemove')} onClick={() => onChange(null)} />
+        </>
+      )}
+    </Section>
+  );
+}
+
+/** Image frame section: one-click presets, a remove chip, and numeric tuning. */
+function FrameControls({
+  layer,
+  update,
+}: {
+  layer: ImageLayer;
+  update: LayerUpdate;
+}) {
+  const { t } = useTranslation('editor');
+  const frame = layer.frame;
+  return (
+    <Section title={t('properties.frame')}>
+      <div className="flex flex-wrap gap-1.5 px-2 py-1.5">
+        {FRAME_PRESET_IDS.map((id) => {
+          const selected = frame?.kind === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => update({ frame: framePreset(id) })}
+              className={`rounded-[var(--calqo-radius-sm)] border px-2.5 py-1 text-[11.5px] transition-colors ${
+                selected
+                  ? 'border-[var(--calqo-accent)] bg-[var(--calqo-accent)]/10 text-[var(--calqo-text)]'
+                  : 'border-[var(--calqo-divider)] text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]'
+              }`}
+            >
+              {t(`properties.framePreset_${id}`)}
+            </button>
+          );
+        })}
+      </div>
+      {frame && (
+        <>
+          <ColorField
+            label={t('properties.color')}
+            value={frame.color}
+            onChange={(color) => update({ frame: { ...frame, color } })}
+          />
+          <SliderField
+            label={t('properties.strokeWidth')}
+            value={Math.round(frame.width)}
+            min={1}
+            max={80}
+            onChange={(width) => update({ frame: { ...frame, width } })}
+          />
+          {frame.kind === 'rounded' && (
+            <SliderField
+              label={t('properties.cornerRadius')}
+              value={Math.round(frame.radius ?? 0)}
+              min={0}
+              max={Math.round(Math.min(layer.w, layer.h) / 2)}
+              onChange={(radius) => update({ frame: { ...frame, radius } })}
+            />
+          )}
+          {(frame.kind === 'double-line' || frame.kind === 'polaroid') && (
+            <SliderField
+              label={t('properties.framePadding')}
+              value={Math.round(frame.padding ?? 0)}
+              min={0}
+              max={60}
+              onChange={(padding) => update({ frame: { ...frame, padding } })}
+            />
+          )}
+          <InlineButton
+            label={t('properties.frameRemove')}
+            onClick={() => update({ frame: null })}
+          />
+        </>
+      )}
+    </Section>
   );
 }
 
@@ -1297,6 +1452,11 @@ function LayerControls({
               })
             }
           />
+          <StrokeLookRow
+            stroke={layer.stroke}
+            fallbackColor="#007AFF"
+            onChange={(stroke) => update({ stroke })}
+          />
           {layer.shape === 'arrow' && (
             <ArrowHeadField
               value={layer.arrow}
@@ -1356,6 +1516,16 @@ function LayerControls({
         </Section>
       )}
 
+      {(layer.type === 'text' ||
+        layer.type === 'shape' ||
+        layer.type === 'image' ||
+        layer.type === 'svg') && (
+        <StickerControls
+          sticker={layer.sticker}
+          onChange={(sticker) => update({ sticker })}
+        />
+      )}
+
       <EffectsControls layer={layer} update={update} />
 
       <ExportWarnings layer={layer} />
@@ -1376,10 +1546,18 @@ function ExportWarnings({ layer }: { layer: CalqoLayer }) {
     if (layer.mask) warnings.push(t('properties.warnMask'));
     if (hasActiveFilters(layer.filters))
       warnings.push(t('properties.warnFilters'));
+    if (layer.frame) warnings.push(t('properties.warnFrame'));
   }
   if (layer.type === 'text' || layer.type === 'list') {
     if (layer.style.stroke || layer.style.shadow)
       warnings.push(t('properties.warnTextEffect'));
+  }
+  if (layer.type === 'shape' && layer.stroke?.look &&
+    ['neon', 'glow', 'double', 'outline', 'marker'].includes(layer.stroke.look)) {
+    warnings.push(t('properties.warnStrokeLook'));
+  }
+  if (layer.type !== 'group' && layer.type !== 'list' && layer.sticker) {
+    warnings.push(t('properties.warnSticker'));
   }
   if (warnings.length === 0) return null;
   return (
@@ -1564,6 +1742,8 @@ function ImageControls({
           />
         )}
       </Section>
+
+      <FrameControls layer={layer} update={update} />
     </>
   );
 }
@@ -1886,6 +2066,13 @@ function TextStrokeControls({
           })
         }
       />
+      {style.stroke && style.stroke.width > 0 && (
+        <StrokeLookRow
+          stroke={style.stroke}
+          fallbackColor="#000000"
+          onChange={(stroke) => onChange({ stroke })}
+        />
+      )}
     </Section>
   );
 }

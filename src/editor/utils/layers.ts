@@ -10,12 +10,13 @@ import type {
   ListItem,
   ListMarker,
   ShapeLayer,
+  StickerOutline,
   SvgLayer,
   TextLayer,
 } from '@/lib/schema';
 
 export type LayerPatch = Partial<
-  Omit<CalqoLayer, 'id' | 'type' | 'children' | 'effects'>
+  Omit<CalqoLayer, 'id' | 'type' | 'children' | 'effects' | 'sticker'>
 > & {
   text?: TextLayer['text'];
   style?: Partial<TextLayer['style']>;
@@ -37,6 +38,10 @@ export type LayerPatch = Partial<
   /** Shared layer effects / blend mode. `null` clears effects. */
   effects?: CalqoLayer['effects'] | null;
   blendMode?: CalqoLayer['blendMode'];
+  /** Shared sticker outline. `null` clears it. */
+  sticker?: StickerOutline | null;
+  /** Image-only decorative frame. `null` clears it. */
+  frame?: ImageLayer['frame'] | null;
   /** Group-only: bake a Konva transform scale into the group's children. */
   groupScale?: { sx: number; sy: number };
   /** List-only: replace the full items array. */
@@ -146,6 +151,10 @@ export function applyLayerPatch(layer: CalqoLayer, patch: LayerPatch): void {
     if (patch.effects === null) delete layer.effects;
     else layer.effects = patch.effects;
   }
+  if (patch.sticker !== undefined) {
+    if (patch.sticker === null) delete layer.sticker;
+    else layer.sticker = patch.sticker;
+  }
   if (layer.type === 'image') {
     if (patch.fit) layer.fit = patch.fit;
     if (patch.focalPoint !== undefined) {
@@ -163,6 +172,10 @@ export function applyLayerPatch(layer: CalqoLayer, patch: LayerPatch): void {
     if (patch.crop !== undefined) {
       if (patch.crop === null) delete layer.crop;
       else layer.crop = patch.crop;
+    }
+    if (patch.frame !== undefined) {
+      if (patch.frame === null) delete layer.frame;
+      else layer.frame = patch.frame;
     }
   }
   if (layer.type === 'svg' && patch.color !== undefined) {

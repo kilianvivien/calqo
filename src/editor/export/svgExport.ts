@@ -4,7 +4,11 @@ import { Text } from 'konva/lib/shapes/Text';
 import { assetStorage } from '@/lib/adapters';
 import { isGroupLayer } from '@/editor/utils/layers';
 import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
-import type { CalqoArtboard, CalqoLayer, ListLayer, ShapeLayer, TextLayer } from '@/lib/schema';
+import { strokeProps } from '@/editor/canvas/shapeStyle';
+import { strokeLookNeedsRasterWarning } from '@/editor/canvas/strokeStyle';
+import { frameRender, type FrameNodeSpec } from '@/editor/canvas/frameNodes';
+import { EXPORT_WARNINGS } from './exportWarnings';
+import type { CalqoArtboard, CalqoLayer, ListLayer, ShapeLayer, StrokeStyle, TextLayer } from '@/lib/schema';
 
 interface TextLine {
   text: string;
@@ -65,8 +69,45 @@ function esc(value: string): string {
 
 function solidFill(fill: ShapeLayer['fill'], warnings: string[]): string {
   if (fill.type === 'solid') return fill.color;
-  warnings.push('Gradient and image fills are exported as a flat colour.');
+  warnings.push(EXPORT_WARNINGS.gradientFill);
   return '#CCCCCC';
+}
+
+/** SVG stroke attributes for a Calqo stroke, expanding named dash styles / look
+ * dash arrays and the line join. Raster-only looks are flagged separately. */
+function strokeAttrs(stroke: StrokeStyle | undefined): string {
+  if (!stroke || stroke.width <= 0) return '';
+  const cfg = strokeProps(stroke);
+  let out = ` stroke="${stroke.color}" stroke-width="${stroke.width}"`;
+  if (Array.isArray(cfg.dash) && cfg.dash.length > 0) out += ` stroke-dasharray="${cfg.dash.join(' ')}"`;
+  if (stroke.join) out += ` stroke-linejoin="${stroke.join}"`;
+  if (stroke.cap) out += ` stroke-linecap="${stroke.cap}"`;
+  return out;
+}
+
+/** `stroke-dasharray` attribute for a stroke's named/custom dash, or ''. */
+function dashAttr(stroke: StrokeStyle | undefined): string {
+  if (!stroke) return '';
+  const cfg = strokeProps(stroke);
+  return Array.isArray(cfg.dash) && cfg.dash.length > 0 ? ` stroke-dasharray="${cfg.dash.join(' ')}"` : '';
+}
+
+/** Render frame node specs as SVG elements (image frames). */
+function frameSvg(specs: FrameNodeSpec[]): string {
+  return specs
+    .map((spec) => {
+      if (spec.kind === 'rect') {
+        const fill = spec.fill ? ` fill="${spec.fill}"` : ' fill="none"';
+        const stroke = spec.stroke ? ` stroke="${spec.stroke}" stroke-width="${spec.strokeWidth ?? 1}"` : '';
+        const radius = spec.cornerRadius ? ` rx="${spec.cornerRadius}"` : '';
+        return `<rect x="${round(spec.x)}" y="${round(spec.y)}" width="${round(spec.w)}" height="${round(spec.h)}"${radius}${fill}${stroke} />`;
+      }
+      if (spec.kind === 'ellipse') {
+        return `<ellipse cx="${round(spec.x + spec.w / 2)}" cy="${round(spec.y + spec.h / 2)}" rx="${round(spec.w / 2)}" ry="${round(spec.h / 2)}" fill="none" stroke="${spec.stroke}" stroke-width="${spec.strokeWidth}" />`;
+      }
+      return `<text x="${round(spec.x + spec.w / 2)}" y="${round(spec.y + spec.h / 2)}" font-family="Inter" font-size="${spec.fontSize}" fill="${spec.color}" text-anchor="middle" dominant-baseline="central">${esc(spec.text)}</text>`;
+    })
+    .join('');
 }
 
 function blobToDataUrl(blob: Blob): Promise<string> {
@@ -148,7 +189,10 @@ function serializeLayer(
   if (!layer.visible) return '';
   const opacity = layer.opacity !== 1 ? ` opacity="${layer.opacity}"` : '';
   if (layer.effects?.shadow || layer.effects?.blur) {
-    warnings.push('Shadows and blur are not included in SVG export.');
+    warnings.push(EXPORT_WARNINGS.shadowBlur);
+  }
+  if (layer.sticker) {
+    warnings.push(EXPORT_WARNINGS.stickerOutline);
   }
   const open = `<g transform="${transform(layer)}"${opacity}>`;
   const close = '</g>';
@@ -161,9 +205,10 @@ function serializeLayer(
   }
 
   if (layer.type === 'shape') {
-    const stroke = layer.stroke
-      ? ` stroke="${layer.stroke.color}" stroke-width="${layer.stroke.width}"`
-      : '';
+    const stroke = strokeAttrs(layer.stroke);
+    if (strokeLookNeedsRasterWarning(layer.stroke)) {
+      warnings.push(EXPORT_WARNINGS.strokeLook);
+    }
     if (layer.shape === 'ellipse') {
       return `${open}<ellipse cx="${layer.w / 2}" cy="${layer.h / 2}" rx="${layer.w / 2}" ry="${layer.h / 2}" fill="${solidFill(layer.fill, warnings)}"${stroke} />${close}`;
     }
@@ -174,7 +219,7 @@ function serializeLayer(
       const pts = layer.points ?? [0, 0, layer.w, layer.h];
       const d = strokePathData(pts, layer.tension ?? 0.4);
       const cap = layer.stroke?.cap ?? 'round';
-      return `${open}<path d="${d}" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="${cap}" stroke-linejoin="round" />${close}`;
+      return `${open}<path d="${d}" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="${cap}" stroke-linejoin="round"${dashAttr(layer.stroke)} />${close}`;
     }
     if (layer.shape === 'arrow') {
       const pts = layer.points ?? [0, 0, layer.w, layer.h];
@@ -201,7 +246,7 @@ function serializeLayer(
       for (let i = 0; i < pts.length; i += 2) pairs.push(`${pts[i]},${pts[i + 1]}`);
       const tag = layer.shape === 'polygon' ? 'polygon' : 'polyline';
       const fill = layer.shape === 'polygon' ? solidFill(layer.fill, warnings) : 'none';
-      return `${open}<${tag} points="${pairs.join(' ')}" fill="${fill}" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" />${close}`;
+      return `${open}<${tag} points="${pairs.join(' ')}" fill="${fill}" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round"${dashAttr(layer.stroke)} />${close}`;
     }
     const radius = layer.cornerRadius ? ` rx="${layer.cornerRadius}"` : '';
     return `${open}<rect width="${layer.w}" height="${layer.h}"${radius} fill="${solidFill(layer.fill, warnings)}"${stroke} />${close}`;
@@ -247,18 +292,26 @@ function serializeLayer(
       return '';
     }
     if (layer.type === 'image' && layer.mask) {
-      warnings.push('Image masks are not applied in SVG export.');
+      warnings.push(EXPORT_WARNINGS.imageMask);
     }
     if (layer.type === 'image' && layer.filters) {
-      warnings.push('Image filters (brightness, contrast, saturation, blur) are not applied in SVG export.');
+      warnings.push(EXPORT_WARNINGS.imageFilters);
     }
+    const frame = layer.type === 'image' && layer.frame ? frameRender(layer.frame, layer.w, layer.h, layer.frame.caption?.[locale] ?? Object.values(layer.frame.caption ?? {})[0] ?? '') : null;
+    if (frame) warnings.push(EXPORT_WARNINGS.imageFrame);
+    const inset = frame?.inset ?? { top: 0, right: 0, bottom: 0, left: 0 };
+    const cw = Math.max(1, layer.w - inset.left - inset.right);
+    const ch = Math.max(1, layer.h - inset.top - inset.bottom);
     const aspect =
       layer.type === 'image' && layer.fit === 'contain'
         ? 'xMidYMid meet'
         : layer.type === 'image' && layer.fit === 'stretch'
           ? 'none'
           : 'xMidYMid slice';
-    return `${open}<image href="${dataUrl}" x="0" y="0" width="${layer.w}" height="${layer.h}" preserveAspectRatio="${aspect}" />${close}`;
+    const behind = frame ? frameSvg(frame.behind) : '';
+    const front = frame ? frameSvg(frame.front) : '';
+    const img = `<image href="${dataUrl}" x="${round(inset.left)}" y="${round(inset.top)}" width="${round(cw)}" height="${round(ch)}" preserveAspectRatio="${aspect}" />`;
+    return `${open}${behind}${img}${front}${close}`;
   }
 
   if (layer.type === 'list') {

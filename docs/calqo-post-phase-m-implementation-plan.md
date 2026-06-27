@@ -404,7 +404,20 @@ Out of scope:
 
 ## Phase R - Creative Tooling: Frames, Strokes, And Looks
 
-> **Status: NOT STARTED.**
+> **Status: MVP CORE COMPLETE.** Non-destructive image frames (classic kinds:
+> inset, centered, outside, rounded, circle, double-line, polaroid), expressive
+> single-node stroke looks (plain, dashed, dotted, neon, glow, double, offset,
+> outline, marker), three new brush presets (felt-tip, marker-underline,
+> glow-pen), and a schema-backed sticker outline for text/shape/image/svg are
+> implemented end-to-end: schema (no version bump — additive optional fields),
+> patch plumbing, live `LayerRenderer`, raster-export parity (which also closed
+> the prior stroke-style and image-mask raster gaps), SVG export with
+> approximation warnings, desktop inspector controls, mobile parity (frame +
+> sticker chips, brush presets in the draw flow), AI prompt guidance + validation
+> warnings, EN/FR strings, export-fidelity docs, and focused unit tests
+> (`src/tests/unit/phaseR.test.ts`). Deferred to a follow-up: the eight creative
+> frames (torn paper, tape, scalloped, …), roughened stroke looks (hand-drawn,
+> rough, scribble, sketch, inner), and the reusable "looks" library.
 
 Goal: make Calqo's existing creative primitives feel richer and faster for
 social visuals, especially image framing and expressive strokes, while keeping
@@ -428,62 +441,53 @@ Already implemented and should be preserved:
 
 ### Deliverables
 
-- [ ] Add non-destructive image frames.
+- [~] Add non-destructive image frames. **(MVP: classic frames done; creative deferred.)**
   - Store frame style in schema as image-layer decoration or a reusable effect
     that can migrate cleanly from v1.
-  - Support classic border frames: inset, centered, outside, rounded, circle,
+  - [x] Support classic border frames: inset, centered, outside, rounded, circle,
     double-line, and polaroid/card-like frames.
-  - Support creative frames: torn paper, tape corners, photo booth strips,
+  - [ ] Support creative frames: torn paper, tape corners, photo booth strips,
     scalloped edges, postage stamp perforations, soft mat, thick poster border,
-    and shadowed cutout.
-  - Allow frame color, width, radius, padding, shadow, and optional caption
+    and shadowed cutout. **(Deferred.)**
+  - [x] Allow frame color, width, radius, padding, shadow, and optional caption
     strip where relevant.
-  - Preserve image crop/focal point/mask/filter state when applying, removing,
+  - [x] Preserve image crop/focal point/mask/filter state when applying, removing,
     or changing a frame.
-- [ ] Add frame presets and quick actions.
+- [x] Add frame presets and quick actions.
   - Add inspector presets for common social looks.
   - Add one-click "Frame image" and "Remove frame" actions from desktop and
     phone surfaces.
   - Let brand/template workflows later mark a frame as a template slot style.
   - Keep generated frames editable as normal Calqo layers or schema-backed
     decorations, not flattened pixels.
-- [ ] Add richer stroke styles for shapes, text, and freehand marks.
-  - Extend beyond current solid/dashed/dotted support with hand-drawn, marker,
-    rough, neon, glow, double, offset, inner, outline, sticker, scribble, and
-    sketch stroke looks.
-  - Add editable dash/gap controls for custom dashed lines.
-  - Add line join, cap, and corner treatment controls where Konva/export paths
-    support them.
-  - Add brush presets for social annotation: highlighter, felt-tip, chalk,
-    crayon, marker underline, and glow pen.
-- [ ] Add sticker/outline treatments.
-  - One-click white sticker outline for images/SVGs/text.
-  - Offset shadow/outline combinations for thumbnail-style text.
-  - Optional duplicate-outline expansion when a renderer cannot express the
-    effect as a single node.
-- [ ] Add creative stroke and frame rendering support.
-  - Live canvas rendering in `LayerRenderer`.
-  - Raster export parity first.
-  - SVG export support where practical, with warnings for raster-only looks.
-  - HTML wrapper keeps the existing raster fidelity path; editable HTML export
-    warnings should mention frame/stroke degradations once Phase P exists.
-- [ ] Add reusable looks.
-  - Save a selected layer's fill/stroke/effects/frame settings as a local look.
-  - Apply looks to compatible layers.
-  - Keep looks local and independent from brand kits until Phase S.
-- [ ] Add AI/template compatibility.
-  - Update prompt-a-template guidance so AI can request supported frame and
-    stroke presets through schema-safe names.
-  - Validate unsupported AI-requested looks into warnings instead of importing
-    arbitrary SVG/CSS.
-- [ ] Add mobile parity for quick creative edits.
-  - Expose frame preset application/removal in the image sheet.
-  - Expose brush/stroke preset selection in the mobile add/draw flow.
-  - Keep advanced numeric tuning on desktop where it would crowd phone UI.
-- [ ] Add docs and limitations.
-  - Update export fidelity docs for frame/stroke behavior.
-  - Add examples to the bundled sample or sample gallery once release samples
-    exist.
+- [~] Add richer stroke styles for shapes, text, and freehand marks. **(MVP: single-node looks done; roughened looks deferred.)**
+  - [x] Single-node looks: marker, neon, glow, double, offset, outline (plus
+    existing solid/dashed/dotted). Roughened looks (hand-drawn, rough, scribble,
+    sketch, inner) deferred.
+  - [x] Add editable dash/gap controls (`dashLen`/`gap`) for custom dashed lines.
+  - [x] Add line join / cap controls where Konva/export paths support them.
+  - [x] Brush presets: felt-tip, marker-underline, glow pen (plus existing
+    smooth/marker/highlighter/dashed). Chalk/crayon deferred (need raster texture).
+- [x] Add sticker/outline treatments.
+  - [x] One-click sticker outline for images/SVGs/text/shapes.
+  - [x] Offset shadow/outline combinations for thumbnail-style text.
+  - [x] Duplicate-node expansion when the effect can't be a single node.
+- [x] Add creative stroke and frame rendering support.
+  - [x] Live canvas rendering in `LayerRenderer` (via shared builder helpers).
+  - [x] Raster export parity (also closed the prior stroke-style/mask raster gaps).
+  - [x] SVG export with warnings for raster-only looks.
+  - [x] HTML wrapper keeps the raster fidelity path.
+- [ ] Add reusable looks. **(Deferred to follow-up.)**
+- [x] Add AI/template compatibility.
+  - [x] Prompt-a-template guidance lists supported stroke-look names.
+  - [x] Unsupported-but-valid looks become warnings, not failures.
+- [x] Add mobile parity for quick creative edits.
+  - [x] Frame preset application/removal in the fill sheet (image layers).
+  - [x] Brush/stroke-look preset selection in the draw/fill flow.
+  - [x] Advanced numeric tuning kept on desktop.
+- [x] Add docs and limitations.
+  - [x] Updated export-fidelity docs for frame/stroke behavior.
+  - [ ] Add examples to a release sample gallery once it exists.
 
 ### Acceptance Criteria
 

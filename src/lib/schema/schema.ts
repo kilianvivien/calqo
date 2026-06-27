@@ -18,14 +18,41 @@ const shadowSchema = z.object({
   opacity: z.number().min(0).max(1).default(1),
 });
 
+/** Named stroke "looks" the renderer expands into one or more passes. `plain` /
+ * `dashed` / `dotted` are single-node; `double` / `offset` / `outline` /
+ * `marker` add sibling passes; `neon` / `glow` add a coloured shadow. */
+export const strokeLookSchema = z.enum([
+  'plain',
+  'dashed',
+  'dotted',
+  'neon',
+  'glow',
+  'double',
+  'offset',
+  'outline',
+  'marker',
+]);
+
 /** Stroke supports either an explicit dash array or a named style (`dashed` /
- * `dotted`) the renderer expands from the width, plus an optional line cap. */
-const strokeSchema = z.object({
+ * `dotted`) the renderer expands from the width, plus an optional line cap, a
+ * line join, custom dash/gap lengths, and an expressive `look` (Phase R). */
+export const strokeSchema = z.object({
   color: hexish,
   width: z.number().nonnegative(),
   dash: z.array(z.number()).optional(),
   style: z.enum(['solid', 'dashed', 'dotted']).optional(),
   cap: z.enum(['butt', 'round', 'square']).optional(),
+  /** Corner treatment where the renderer/export supports it. */
+  join: z.enum(['miter', 'round', 'bevel']).optional(),
+  /** Custom dashed-line tuning: explicit dash length and gap, in px. */
+  dashLen: z.number().nonnegative().optional(),
+  gap: z.number().nonnegative().optional(),
+  /** Expressive stroke look applied on top of colour/width. */
+  look: strokeLookSchema.optional(),
+  /** Accent colour for `double` / `offset` / `outline` / glow looks. */
+  altColor: hexish.optional(),
+  /** Strength 0–1 for `neon` / `glow` looks. */
+  intensity: z.number().min(0).max(1).optional(),
 });
 
 const gradientStopSchema = z.object({
@@ -70,9 +97,17 @@ export const backgroundFillSchema = z.union([
   z.object({ type: z.literal('image'), assetId: z.string(), fit: z.enum(['cover', 'contain', 'stretch']).default('cover') }),
 ]);
 
-const layerEffectsSchema = z.object({
+export const layerEffectsSchema = z.object({
   shadow: shadowSchema.optional(),
   blur: z.number().nonnegative().optional(),
+});
+
+/** Non-destructive "sticker" outline: a coloured halo drawn behind the layer
+ * (white-sticker / thumbnail-text treatment). Works on any layer type. */
+export const stickerOutlineSchema = z.object({
+  color: hexish.default('#FFFFFF'),
+  width: z.number().nonnegative().default(12),
+  shadow: shadowSchema.optional(),
 });
 
 const baseLayerShape = {
@@ -88,9 +123,11 @@ const baseLayerShape = {
   locked: z.boolean().default(false),
   blendMode: z.enum(['normal', 'multiply', 'screen', 'overlay']).optional(),
   effects: layerEffectsSchema.optional(),
+  /** Optional sticker outline halo (Phase R). */
+  sticker: stickerOutlineSchema.optional(),
 };
 
-const textStyleSchema = z.object({
+export const textStyleSchema = z.object({
   fontFamily: z.string().default('Inter'),
   fontSize: z.number().positive().default(48),
   fontWeight: z.union([z.number(), z.string()]).default(400),
@@ -148,6 +185,30 @@ export const imageMaskSchema = z.object({
   radius: z.number().nonnegative().optional(),
 });
 
+/** Non-destructive decorative frame drawn around an image. The image content is
+ * inset so the frame sits around the photo, not over it. Crop/focal/mask/filter
+ * state is preserved when a frame is applied, changed, or removed (Phase R). */
+export const imageFrameSchema = z.object({
+  kind: z.enum([
+    'inset',
+    'centered',
+    'outside',
+    'rounded',
+    'circle',
+    'double-line',
+    'polaroid',
+  ]),
+  color: hexish.default('#FFFFFF'),
+  width: z.number().nonnegative().default(16),
+  /** Corner radius for `rounded` frames. */
+  radius: z.number().nonnegative().optional(),
+  /** Inner gap between frame and photo (mat / polaroid). */
+  padding: z.number().nonnegative().optional(),
+  shadow: shadowSchema.optional(),
+  /** Polaroid caption strip text, per content locale. */
+  caption: z.record(localeCodeSchema, z.string()).optional(),
+});
+
 export const imageLayerSchema = z.object({
   ...baseLayerShape,
   type: z.literal('image'),
@@ -165,6 +226,8 @@ export const imageLayerSchema = z.object({
       saturation: z.number().optional(),
     })
     .optional(),
+  /** Non-destructive decorative frame (Phase R). */
+  frame: imageFrameSchema.optional(),
 });
 
 export const svgLayerSchema = z.object({
@@ -230,6 +293,7 @@ export interface GroupLayer {
   locked: boolean;
   blendMode?: 'normal' | 'multiply' | 'screen' | 'overlay';
   effects?: z.infer<typeof layerEffectsSchema>;
+  sticker?: z.infer<typeof stickerOutlineSchema>;
   expanded?: boolean;
   children: CalqoLayer[];
 }
@@ -336,6 +400,7 @@ export type TextLayer = z.infer<typeof textLayerSchema>;
 export type ShapeLayer = z.infer<typeof shapeLayerSchema>;
 export type ImageLayer = z.infer<typeof imageLayerSchema>;
 export type ImageMask = z.infer<typeof imageMaskSchema>;
+export type ImageFrame = z.infer<typeof imageFrameSchema>;
 export type ImageFilters = NonNullable<ImageLayer['filters']>;
 export type SvgLayer = z.infer<typeof svgLayerSchema>;
 export type ListLayer = z.infer<typeof listLayerSchema>;
@@ -344,6 +409,9 @@ export type ListMarker = z.infer<typeof listMarkerSchema>;
 export type BackgroundFill = z.infer<typeof backgroundFillSchema>;
 export type Fill = z.infer<typeof fillSchema>;
 export type StrokeStyle = z.infer<typeof strokeSchema>;
+export type StrokeLook = z.infer<typeof strokeLookSchema>;
+export type StickerOutline = z.infer<typeof stickerOutlineSchema>;
+export type LayerEffects = z.infer<typeof layerEffectsSchema>;
 export type ArrowStyle = z.infer<typeof arrowStyleSchema>;
 export type LocaleCode = z.infer<typeof localeCodeSchema>;
 export type GlossaryEntry = z.infer<typeof glossaryEntrySchema>;

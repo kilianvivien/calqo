@@ -11,6 +11,7 @@ import type {
   CalqoLayer,
   CalqoProject,
   Fill,
+  StickerOutline,
   StrokeStyle,
 } from '@/lib/schema';
 import {
@@ -22,6 +23,8 @@ import {
   type BackgroundFillType,
   type FillType,
 } from '@/editor/canvas/fillHelpers';
+import { STROKE_LOOK_IDS, strokeLookStyle, type StrokeLookId } from '@/editor/canvas/strokePresets';
+import { FRAME_PRESET_IDS, framePreset } from '@/editor/images/framePresets';
 import { saveImageAsset } from '@/lib/utils/imageAsset';
 import { BottomSheet } from '@/components/mobile';
 import { cn } from '@/lib/utils/cn';
@@ -406,7 +409,70 @@ function ShapeStrokeControls({
           onChange={setStyle}
         />
       )}
+      {(stroke?.width ?? 0) > 0 && (
+        <Chips<StrokeLookId>
+          label={t('properties.strokeLook')}
+          value={(stroke?.look ?? 'plain') as StrokeLookId}
+          options={STROKE_LOOK_IDS.map((id) => ({ value: id, label: t(`properties.strokeLook_${id}`) }))}
+          onChange={(id) =>
+            update({
+              stroke: strokeLookStyle(id, stroke ?? { color: '#007AFF', width: 4 }),
+            })
+          }
+        />
+      )}
     </>
+  );
+}
+
+/** Sticker-outline toggle for any decoratable layer. */
+function StickerToggle({
+  projectId,
+  layer,
+}: {
+  projectId: string;
+  layer: CalqoLayer;
+}) {
+  const { t } = useTranslation('editor');
+  const sticker = (layer as { sticker?: StickerOutline }).sticker;
+  const set = (next: StickerOutline | null) =>
+    updateLayerInActiveArtboard(projectId, layer.id, { sticker: next });
+  return (
+    <Chips<'on' | 'off'>
+      label={t('properties.sticker')}
+      value={sticker ? 'on' : 'off'}
+      options={[
+        { value: 'off', label: t('properties.maskNone') },
+        { value: 'on', label: t('properties.stickerAdd') },
+      ]}
+      onChange={(v) => set(v === 'on' ? { color: '#FFFFFF', width: 12 } : null)}
+    />
+  );
+}
+
+/** Frame preset picker for image layers. */
+function FrameChips({
+  projectId,
+  layer,
+}: {
+  projectId: string;
+  layer: Extract<CalqoLayer, { type: 'image' }>;
+}) {
+  const { t } = useTranslation('editor');
+  return (
+    <Chips<string>
+      label={t('properties.frame')}
+      value={layer.frame?.kind ?? 'none'}
+      options={[
+        { value: 'none', label: t('properties.maskNone') },
+        ...FRAME_PRESET_IDS.map((id) => ({ value: id, label: t(`properties.framePreset_${id}`) })),
+      ]}
+      onChange={(value) =>
+        updateLayerInActiveArtboard(projectId, layer.id, {
+          frame: value === 'none' ? null : framePreset(value as (typeof FRAME_PRESET_IDS)[number]),
+        })
+      }
+    />
   );
 }
 
@@ -572,6 +638,16 @@ export function FillSheet({ open, onClose, project, artboard, layer }: FillSheet
           }}
         />
       )}
+
+      {layer?.type === 'image' && <FrameChips projectId={project.id} layer={layer} />}
+
+      {layer &&
+        (layer.type === 'text' ||
+          layer.type === 'shape' ||
+          layer.type === 'image' ||
+          layer.type === 'svg') && (
+          <StickerToggle projectId={project.id} layer={layer} />
+        )}
 
       <BackgroundFillControls
         projectId={project.id}

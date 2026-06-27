@@ -39,6 +39,7 @@ import { useActiveArtboard } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useHistoryStore } from '@/lib/state/historyStore';
 import { useIsLandscape } from '@/lib/hooks/useResponsiveMode';
+import { useUiStore, type BrushStyle } from '@/lib/state/uiStore';
 import type { CalqoLayer, CalqoProject } from '@/lib/schema';
 import { GlassIconButton } from '@/components/glass';
 import { MobileToolbar, type MobileToolItem } from '@/components/mobile';
@@ -68,6 +69,17 @@ type Sheet =
   | 'files'
   | 'svg'
   | 'export';
+
+/** Brush presets offered in the phone draw flow (Phase R). */
+const BRUSH_STYLE_IDS: BrushStyle[] = [
+  'smooth',
+  'marker',
+  'felt-tip',
+  'highlighter',
+  'marker-underline',
+  'glow-pen',
+  'dashed',
+];
 
 interface MobileEditorProps {
   project: CalqoProject;
@@ -112,6 +124,8 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
 
   const [sheet, setSheet] = useState<Sheet>('none');
   const [brush, setBrush] = useState(false);
+  const brushStyle = useUiStore((s) => s.shapeDefaults.brushStyle);
+  const setShapeDefaults = useUiStore((s) => s.setShapeDefaults);
   const [cropLayerId, setCropLayerId] = useState<string | null>(null);
   const replaceTargetRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -368,7 +382,7 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
             onCropImage={(layer) => setCropLayerId(layer.id)}
           />
           {brush && (
-            <div className="absolute inset-x-0 top-2 flex justify-center">
+            <div className="absolute inset-x-0 top-2 flex flex-col items-center gap-2 px-2">
               <button
                 type="button"
                 onClick={() => setBrush(false)}
@@ -377,6 +391,23 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
                 <Brush size={14} />
                 {t('mobile.brush.done')}
               </button>
+              <div className="calqo-scroll glass glass-strong flex max-w-full items-center gap-1.5 overflow-x-auto rounded-full border border-[var(--calqo-divider)] px-2 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+                {BRUSH_STYLE_IDS.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setShapeDefaults({ brushStyle: id })}
+                    className={
+                      'h-8 shrink-0 rounded-full border px-3 text-[12px] font-medium transition-colors ' +
+                      (brushStyle === id
+                        ? 'border-[var(--calqo-accent)] bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]'
+                        : 'border-[var(--calqo-divider)] text-[var(--calqo-text-2)]')
+                    }
+                  >
+                    {t(`properties.brushStyle_${id}`)}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

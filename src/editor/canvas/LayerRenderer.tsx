@@ -5,7 +5,10 @@ import type Konva from 'konva';
 import { Blur } from 'konva/lib/filters/Blur';
 import type { CalqoLayer, ImageLayer, ListLayer } from '@/lib/schema';
 import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
-import { fillProps, imageFillProps, strokeProps } from './shapeStyle';
+import { fillProps, imageFillProps } from './shapeStyle';
+import { strokeLookConfig } from './strokeStyle';
+import { stickerStrokeConfig } from './stickerOutline';
+import { frameRender, type FrameNodeSpec } from './frameNodes';
 import { buildImageFilterPipeline, coverCropRect } from './imageFilters';
 import { drawMaskPath } from './maskClip';
 import { useAssetImage } from './useAssetImage';
@@ -94,6 +97,79 @@ function shadowProps(layer: CalqoLayer): Konva.ShapeConfig {
 function blendProps(layer: CalqoLayer): Konva.ShapeConfig {
   if (!layer.blendMode || layer.blendMode === 'normal') return {};
   return { globalCompositeOperation: layer.blendMode };
+}
+
+/** Size-only props for a node placed inside its own transform group (decorated
+ * layers): the group carries x/y/rotation/opacity, the child sits at the local
+ * origin. */
+function localSizeProps(layer: CalqoLayer): Konva.ShapeConfig {
+  return { x: 0, y: 0, width: layer.w, height: layer.h, listening: false };
+}
+
+/** Render a list of declarative frame node specs (shared shape between the live
+ * renderer and the raster export). */
+function FrameNodesView({ nodes }: { nodes: FrameNodeSpec[] }) {
+  return (
+    <>
+      {nodes.map((spec, i) => {
+        const shadow = 'shadow' in spec && spec.shadow ? {
+          shadowColor: spec.shadow.color,
+          shadowBlur: spec.shadow.blur,
+          shadowOffsetX: spec.shadow.offsetX,
+          shadowOffsetY: spec.shadow.offsetY,
+          shadowOpacity: spec.shadow.opacity ?? 1,
+        } : {};
+        if (spec.kind === 'rect') {
+          return (
+            <Rect
+              key={i}
+              x={spec.x}
+              y={spec.y}
+              width={spec.w}
+              height={spec.h}
+              fill={spec.fill}
+              stroke={spec.stroke}
+              strokeWidth={spec.strokeWidth}
+              cornerRadius={spec.cornerRadius}
+              listening={false}
+              {...shadow}
+            />
+          );
+        }
+        if (spec.kind === 'ellipse') {
+          return (
+            <Ellipse
+              key={i}
+              x={spec.x + spec.w / 2}
+              y={spec.y + spec.h / 2}
+              radiusX={spec.w / 2}
+              radiusY={spec.h / 2}
+              stroke={spec.stroke}
+              strokeWidth={spec.strokeWidth}
+              listening={false}
+              {...shadow}
+            />
+          );
+        }
+        return (
+          <Text
+            key={i}
+            x={spec.x}
+            y={spec.y}
+            width={spec.w}
+            height={spec.h}
+            text={spec.text}
+            fill={spec.color}
+            fontSize={spec.fontSize}
+            fontFamily="Inter"
+            align="center"
+            verticalAlign="middle"
+            listening={false}
+          />
+        );
+      })}
+    </>
+  );
 }
 
 /** Apply / clear a cached Blur filter on a node so schema-backed `effects.blur`
@@ -193,117 +269,213 @@ export function LayerRenderer(props: LayerRendererProps) {
   );
 
   if (layer.type === 'text') {
+    const textValue = layer.text[activeLocale] ?? Object.values(layer.text)[0] ?? '';
+    const typeProps = {
+      text: textValue,
+      fontFamily: layer.style.fontFamily,
+      fontSize: layer.style.fontSize,
+      fontStyle: String(layer.style.fontWeight),
+      align: layer.style.align,
+      verticalAlign: layer.style.verticalAlign,
+      lineHeight: layer.style.lineHeight,
+      letterSpacing: layer.style.letterSpacing,
+    };
+    const ownStroke = {
+      stroke: layer.style.stroke?.color,
+      strokeWidth: layer.style.stroke?.width ?? 0,
+    };
+    const shadow = {
+      shadowColor: layer.style.shadow?.color,
+      shadowBlur: layer.style.shadow?.blur,
+      shadowOffsetX: layer.style.shadow?.offsetX,
+      shadowOffsetY: layer.style.shadow?.offsetY,
+      shadowOpacity: layer.style.shadow?.opacity,
+    };
+    const editHandlers = {
+      onDblClick: interactive ? () => onTextEdit(layer) : undefined,
+      onDblTap: interactive ? () => onTextEdit(layer) : undefined,
+    };
+
+    if (!layer.sticker) {
+      return (
+        <Text
+          {...base}
+          {...blendProps(layer)}
+          {...typeProps}
+          fill={layer.style.color}
+          {...ownStroke}
+          {...shadow}
+          {...editHandlers}
+        />
+      );
+    }
+
+    // Sticker outline: a fat-stroked duplicate behind the glyphs, then the
+    // primary text on top, both inside the layer's transform group.
+    const stickerCfg = stickerStrokeConfig(layer.sticker);
     return (
-      <Text
-        {...base}
-        {...blendProps(layer)}
-        text={layer.text[activeLocale] ?? Object.values(layer.text)[0] ?? ''}
-        fontFamily={layer.style.fontFamily}
-        fontSize={layer.style.fontSize}
-        fontStyle={String(layer.style.fontWeight)}
-        fill={layer.style.color}
-        align={layer.style.align}
-        verticalAlign={layer.style.verticalAlign}
-        lineHeight={layer.style.lineHeight}
-        letterSpacing={layer.style.letterSpacing}
-        stroke={layer.style.stroke?.color}
-        strokeWidth={layer.style.stroke?.width ?? 0}
-        shadowColor={layer.style.shadow?.color}
-        shadowBlur={layer.style.shadow?.blur}
-        shadowOffsetX={layer.style.shadow?.offsetX}
-        shadowOffsetY={layer.style.shadow?.offsetY}
-        shadowOpacity={layer.style.shadow?.opacity}
-        onDblClick={interactive ? () => onTextEdit(layer) : undefined}
-        onDblTap={interactive ? () => onTextEdit(layer) : undefined}
-      />
+      <Group {...base} {...blendProps(layer)} {...editHandlers}>
+        <Text
+          {...localSizeProps(layer)}
+          {...typeProps}
+          fill={layer.sticker.color}
+          {...stickerCfg}
+        />
+        <Text
+          {...localSizeProps(layer)}
+          {...typeProps}
+          fill={layer.style.color}
+          {...ownStroke}
+          {...shadow}
+        />
+      </Group>
     );
   }
 
   if (layer.type === 'shape') {
-    const stroke = strokeProps(layer.stroke);
+    const strokeCfg = strokeLookConfig(layer.stroke);
     const effects = { ...shadowProps(layer), ...blendProps(layer) };
     const lineColor = layer.stroke?.color ?? '#111827';
     const lineWidth = layer.stroke?.width ?? 4;
     // Line-like shapes hit only along their thin stroke by default, which makes
     // them frustrating to grab and drag. Widen the invisible hit area.
     const lineHitWidth = Math.max(lineWidth, 18);
+    const points = layer.points ?? [0, 0, layer.w, layer.h];
 
-    if (layer.shape === 'ellipse') {
+    /** Render the shape body. `geom` positions it (top-left = layer.x/y for the
+     * standalone node, or 0/0 when nested in a decoration group). `paint` is the
+     * normal fill+stroke or the sticker halo pass. */
+    const shapeBody = (
+      key: string,
+      nodeProps: ReturnType<typeof commonProps> | Konva.ShapeConfig,
+      tlx: number,
+      tly: number,
+      paint: { fill?: Konva.ShapeConfig; stroke: Konva.ShapeConfig; fx: Konva.ShapeConfig },
+    ) => {
+      const common = { ...nodeProps, ...paint.fx };
+      if (layer.shape === 'ellipse') {
+        return (
+          <Ellipse
+            key={key}
+            {...common}
+            x={tlx + layer.w / 2}
+            y={tly + layer.h / 2}
+            radiusX={layer.w / 2}
+            radiusY={layer.h / 2}
+            {...(paint.fill ?? {})}
+            {...paint.stroke}
+          />
+        );
+      }
+      if (layer.shape === 'arrow') {
+        return (
+          <Arrow
+            key={key}
+            {...common}
+            points={points}
+            pointerAtBeginning={layer.arrow?.start ?? false}
+            pointerAtEnding={layer.arrow?.end ?? true}
+            pointerLength={layer.arrow?.pointerLength ?? 16}
+            pointerWidth={layer.arrow?.pointerWidth ?? 16}
+            fill={(paint.stroke.stroke as string) ?? lineColor}
+            stroke={(paint.stroke.stroke as string) ?? lineColor}
+            strokeWidth={(paint.stroke.strokeWidth as number) ?? lineWidth}
+            hitStrokeWidth={lineHitWidth}
+            dash={paint.stroke.dash as number[] | undefined}
+            lineCap="round"
+            lineJoin="round"
+            shadowColor={paint.stroke.shadowColor as string | undefined}
+            shadowBlur={paint.stroke.shadowBlur as number | undefined}
+            shadowOffsetX={paint.stroke.shadowOffsetX as number | undefined}
+            shadowOffsetY={paint.stroke.shadowOffsetY as number | undefined}
+            shadowOpacity={paint.stroke.shadowOpacity as number | undefined}
+            shadowForStrokeEnabled={paint.stroke.shadowForStrokeEnabled as boolean | undefined}
+          />
+        );
+      }
+      if (layer.shape === 'freehand') {
+        return (
+          <Line
+            key={key}
+            {...common}
+            points={points}
+            tension={layer.tension ?? 0.4}
+            stroke={(paint.stroke.stroke as string) ?? lineColor}
+            strokeWidth={(paint.stroke.strokeWidth as number) ?? lineWidth}
+            hitStrokeWidth={lineHitWidth}
+            dash={paint.stroke.dash as number[] | undefined}
+            lineCap={(paint.stroke.lineCap as 'round' | 'square' | undefined) ?? layer.stroke?.cap ?? 'round'}
+            lineJoin="round"
+            shadowColor={paint.stroke.shadowColor as string | undefined}
+            shadowBlur={paint.stroke.shadowBlur as number | undefined}
+            shadowOffsetX={paint.stroke.shadowOffsetX as number | undefined}
+            shadowOffsetY={paint.stroke.shadowOffsetY as number | undefined}
+            shadowOpacity={paint.stroke.shadowOpacity as number | undefined}
+            shadowForStrokeEnabled={paint.stroke.shadowForStrokeEnabled as boolean | undefined}
+          />
+        );
+      }
+      if (layer.shape === 'line' || layer.shape === 'polygon') {
+        const isPolygon = layer.shape === 'polygon';
+        return (
+          <Line
+            key={key}
+            {...common}
+            points={points}
+            closed={isPolygon}
+            {...(isPolygon ? (paint.fill ?? {}) : {})}
+            stroke={(paint.stroke.stroke as string) ?? lineColor}
+            strokeWidth={(paint.stroke.strokeWidth as number) ?? lineWidth}
+            hitStrokeWidth={isPolygon ? undefined : lineHitWidth}
+            dash={paint.stroke.dash as number[] | undefined}
+            lineCap="round"
+            lineJoin="round"
+            shadowColor={paint.stroke.shadowColor as string | undefined}
+            shadowBlur={paint.stroke.shadowBlur as number | undefined}
+            shadowOffsetX={paint.stroke.shadowOffsetX as number | undefined}
+            shadowOffsetY={paint.stroke.shadowOffsetY as number | undefined}
+            shadowOpacity={paint.stroke.shadowOpacity as number | undefined}
+            shadowForStrokeEnabled={paint.stroke.shadowForStrokeEnabled as boolean | undefined}
+          />
+        );
+      }
       return (
-        <Ellipse
-          {...base}
-          {...effects}
-          x={layer.x + layer.w / 2}
-          y={layer.y + layer.h / 2}
-          radiusX={layer.w / 2}
-          radiusY={layer.h / 2}
-          {...resolveFillProps(layer.w, layer.h, true)}
-          {...stroke}
+        <Rect
+          key={key}
+          {...common}
+          {...(paint.fill ?? {})}
+          {...paint.stroke}
+          cornerRadius={layer.cornerRadius ?? 0}
         />
       );
+    };
+
+    const primaryPaint = {
+      fill: resolveFillProps(layer.w, layer.h, layer.shape === 'ellipse'),
+      stroke: strokeCfg,
+      fx: effects,
+    };
+
+    if (!layer.sticker) {
+      return shapeBody('p', base, layer.x, layer.y, primaryPaint);
     }
-    if (layer.shape === 'arrow') {
-      return (
-        <Arrow
-          {...base}
-          {...effects}
-          points={layer.points ?? [0, 0, layer.w, layer.h]}
-          pointerAtBeginning={layer.arrow?.start ?? false}
-          pointerAtEnding={layer.arrow?.end ?? true}
-          pointerLength={layer.arrow?.pointerLength ?? 16}
-          pointerWidth={layer.arrow?.pointerWidth ?? 16}
-          fill={lineColor}
-          stroke={lineColor}
-          strokeWidth={lineWidth}
-          hitStrokeWidth={lineHitWidth}
-          dash={stroke.dash as number[] | undefined}
-          lineCap="round"
-          lineJoin="round"
-        />
-      );
-    }
-    if (layer.shape === 'freehand') {
-      return (
-        <Line
-          {...base}
-          {...effects}
-          points={layer.points ?? [0, 0, layer.w, layer.h]}
-          tension={layer.tension ?? 0.4}
-          stroke={lineColor}
-          strokeWidth={lineWidth}
-          hitStrokeWidth={lineHitWidth}
-          dash={stroke.dash as number[] | undefined}
-          lineCap={layer.stroke?.cap ?? 'round'}
-          lineJoin="round"
-        />
-      );
-    }
-    if (layer.shape === 'line' || layer.shape === 'polygon') {
-      const isPolygon = layer.shape === 'polygon';
-      return (
-        <Line
-          {...base}
-          {...effects}
-          points={layer.points ?? [0, 0, layer.w, layer.h]}
-          closed={isPolygon}
-          {...(isPolygon ? resolveFillProps(layer.w, layer.h) : {})}
-          stroke={lineColor}
-          strokeWidth={lineWidth}
-          hitStrokeWidth={isPolygon ? undefined : lineHitWidth}
-          dash={stroke.dash as number[] | undefined}
-          lineCap="round"
-          lineJoin="round"
-        />
-      );
-    }
+
+    // Sticker outline: a fat-stroked silhouette behind the shape, then the
+    // shape on top — both nested in the layer's transform group.
+    const stickerCfg = stickerStrokeConfig(layer.sticker, lineWidth);
     return (
-      <Rect
-        {...base}
-        {...effects}
-        {...resolveFillProps(layer.w, layer.h)}
-        {...stroke}
-        cornerRadius={layer.cornerRadius ?? 0}
-      />
+      <Group {...base} {...blendProps(layer)} {...shadowProps(layer)}>
+        {shapeBody('s', localSizeProps(layer), 0, 0, {
+          fill: { fill: layer.sticker.color },
+          stroke: stickerCfg,
+          fx: {},
+        })}
+        {shapeBody('p', localSizeProps(layer), 0, 0, {
+          fill: primaryPaint.fill,
+          stroke: strokeCfg,
+          fx: {},
+        })}
+      </Group>
     );
   }
 
@@ -313,7 +485,7 @@ export function LayerRenderer(props: LayerRendererProps) {
       onDblClick: interactive ? () => onImageCrop?.(layer) : undefined,
       onDblTap: interactive ? () => onImageCrop?.(layer) : undefined,
     };
-    return <ImageLayerNode layer={layer} base={imageBase} />;
+    return <ImageLayerNode layer={layer} base={imageBase} activeLocale={activeLocale} />;
   }
 
   if (layer.type === 'svg') {
@@ -370,16 +542,20 @@ function AssetPlaceholder({
 }
 
 /** Image layer: a clip group (for masks) wrapping a single Image that carries
- * the cover/contain/stretch crop, focal point, and a cached filter pipeline. */
+ * the cover/contain/stretch crop, focal point, and a cached filter pipeline.
+ * An optional decorative frame insets the image content and draws around it; an
+ * optional sticker halo sits behind the whole layer. */
 function ImageLayerNode({
   layer,
   base,
+  activeLocale,
 }: {
   layer: ImageLayer;
   base: ReturnType<typeof commonProps> & {
     onDblClick?: () => void;
     onDblTap?: () => void;
   };
+  activeLocale: string;
 }) {
   const { image, missing } = useAssetImage(layer.assetId);
   const imageRef = useRef<Konva.Image>(null);
@@ -409,15 +585,22 @@ function ImageLayerNode({
 
   if (!image) return <AssetPlaceholder layer={layer} base={base} missing={missing} />;
 
-  // Crop geometry inside the local box (the clip group is positioned at x/y).
+  // A frame insets the image content; without one the content fills the box.
+  const caption = layer.frame?.caption?.[activeLocale] ?? Object.values(layer.frame?.caption ?? {})[0] ?? '';
+  const frame = layer.frame ? frameRender(layer.frame, layer.w, layer.h, caption) : null;
+  const inset = frame?.inset ?? { top: 0, right: 0, bottom: 0, left: 0 };
+  const cw = Math.max(1, layer.w - inset.left - inset.right);
+  const ch = Math.max(1, layer.h - inset.top - inset.bottom);
+
+  // Crop geometry inside the (possibly inset) content box.
   let imageProps: Konva.ImageConfig;
   if (layer.crop) {
     imageProps = {
       image,
       x: 0,
       y: 0,
-      width: layer.w,
-      height: layer.h,
+      width: cw,
+      height: ch,
       crop: { x: layer.crop.x, y: layer.crop.y, width: layer.crop.w, height: layer.crop.h },
     };
   } else if (layer.fit === 'cover') {
@@ -425,33 +608,74 @@ function ImageLayerNode({
       image,
       x: 0,
       y: 0,
-      width: layer.w,
-      height: layer.h,
-      crop: coverCropRect(image.width, image.height, layer.w, layer.h, layer.focalPoint),
+      width: cw,
+      height: ch,
+      crop: coverCropRect(image.width, image.height, cw, ch, layer.focalPoint),
     };
   } else if (layer.fit === 'contain') {
-    const scale = Math.min(layer.w / image.width, layer.h / image.height);
+    const scale = Math.min(cw / image.width, ch / image.height);
     const width = image.width * scale;
     const height = image.height * scale;
     imageProps = {
       image,
-      x: (layer.w - width) / 2,
-      y: (layer.h - height) / 2,
+      x: (cw - width) / 2,
+      y: (ch - height) / 2,
       width,
       height,
     };
   } else {
-    imageProps = { image, x: 0, y: 0, width: layer.w, height: layer.h };
+    imageProps = { image, x: 0, y: 0, width: cw, height: ch };
   }
 
   const clipFunc = layer.mask
     ? (ctx: Konva.Context) =>
-        drawMaskPath(ctx as unknown as CanvasRenderingContext2D, layer.mask!, layer.w, layer.h)
+        drawMaskPath(ctx as unknown as CanvasRenderingContext2D, layer.mask!, cw, ch)
     : undefined;
 
+  // Sticker halo behind the whole layer (approximated as a rounded silhouette).
+  const stickerNode = layer.sticker ? (
+    <Rect
+      x={-layer.sticker.width}
+      y={-layer.sticker.width}
+      width={layer.w + layer.sticker.width * 2}
+      height={layer.h + layer.sticker.width * 2}
+      fill={layer.sticker.color}
+      cornerRadius={layer.sticker.width}
+      listening={false}
+      {...(layer.sticker.shadow
+        ? {
+            shadowColor: layer.sticker.shadow.color,
+            shadowBlur: layer.sticker.shadow.blur,
+            shadowOffsetX: layer.sticker.shadow.offsetX,
+            shadowOffsetY: layer.sticker.shadow.offsetY,
+            shadowOpacity: layer.sticker.shadow.opacity ?? 1,
+          }
+        : {})}
+    />
+  ) : null;
+
+  // No frame and no sticker: keep the original single-clip-group fast path.
+  if (!frame && !stickerNode) {
+    return (
+      <Group {...base} {...shadowProps(layer)} {...blendProps(layer)} clipFunc={clipFunc}>
+        <Image ref={imageRef} {...imageProps} />
+      </Group>
+    );
+  }
+
   return (
-    <Group {...base} {...shadowProps(layer)} {...blendProps(layer)} clipFunc={clipFunc}>
-      <Image ref={imageRef} {...imageProps} />
+    <Group {...base} {...shadowProps(layer)} {...blendProps(layer)}>
+      {stickerNode}
+      {frame ? <FrameNodesView nodes={frame.behind} /> : null}
+      <Group
+        x={inset.left}
+        y={inset.top}
+        clipFunc={clipFunc}
+        listening={false}
+      >
+        <Image ref={imageRef} {...imageProps} />
+      </Group>
+      {frame ? <FrameNodesView nodes={frame.front} /> : null}
     </Group>
   );
 }
@@ -466,6 +690,22 @@ function SvgLayerNode({
 }) {
   const { image, missing } = useAssetImage(layer.assetId, layer.color);
   if (!image) return <AssetPlaceholder layer={layer} base={base} missing={missing} />;
+  if (layer.sticker) {
+    return (
+      <Group {...base} {...blendProps(layer)}>
+        <Rect
+          x={-layer.sticker.width}
+          y={-layer.sticker.width}
+          width={layer.w + layer.sticker.width * 2}
+          height={layer.h + layer.sticker.width * 2}
+          fill={layer.sticker.color}
+          cornerRadius={layer.sticker.width}
+          listening={false}
+        />
+        <Image {...localSizeProps(layer)} {...shadowProps(layer)} image={image} />
+      </Group>
+    );
+  }
   return <Image {...base} {...shadowProps(layer)} {...blendProps(layer)} image={image} />;
 }
 

@@ -55,6 +55,7 @@ import {
   type Axis,
   type Box,
 } from '@/editor/utils/arrange';
+import type { BrushStyle } from '@/lib/state/uiStore';
 
 const AUTOSAVE_DELAY = 700;
 const pendingSaves = new Map<string, ReturnType<typeof setTimeout>>();
@@ -418,7 +419,7 @@ export interface ShapeStyleDefaults {
   strokeWidth: number;
   strokeStyle?: 'solid' | 'dashed' | 'dotted';
   brushSize?: number;
-  brushStyle?: 'smooth' | 'marker' | 'highlighter' | 'dashed';
+  brushStyle?: BrushStyle;
 }
 
 export type PolygonPreset = 'triangle' | 'diamond' | 'badge' | 'star';
@@ -511,17 +512,20 @@ export function createFreehandLayer(
     layer.opacity = brush.opacity;
     if (brush.blendMode) layer.blendMode = brush.blendMode;
     layer.fill = { type: 'solid', color: 'transparent' };
+    const color = defaults?.stroke ?? '#111827';
     layer.stroke = {
-      color: defaults?.stroke ?? '#111827',
+      color,
       width: defaults?.brushSize ?? 6,
       cap: brush.cap,
       ...(brush.style ? { style: brush.style } : {}),
+      ...(brush.look ? { look: brush.look, altColor: color, intensity: 0.7 } : {}),
     };
   }
   return layer;
 }
 
-/** Freehand feel per brush style: smoothing, line cap, opacity, blend, dashing. */
+/** Freehand feel per brush style: smoothing, line cap, opacity, blend, dashing,
+ * and an optional expressive stroke look (Phase R). */
 const BRUSH_STYLES: Record<
   NonNullable<ShapeStyleDefaults['brushStyle']>,
   {
@@ -530,12 +534,16 @@ const BRUSH_STYLES: Record<
     opacity: number;
     blendMode?: 'multiply';
     style?: 'dashed';
+    look?: 'glow';
   }
 > = {
   smooth: { tension: 0.4, cap: 'round', opacity: 1 },
   marker: { tension: 0.18, cap: 'round', opacity: 1 },
   highlighter: { tension: 0, cap: 'square', opacity: 0.4, blendMode: 'multiply' },
   dashed: { tension: 0.4, cap: 'round', opacity: 1, style: 'dashed' },
+  'felt-tip': { tension: 0.25, cap: 'round', opacity: 1 },
+  'marker-underline': { tension: 0, cap: 'square', opacity: 0.85, blendMode: 'multiply' },
+  'glow-pen': { tension: 0.4, cap: 'round', opacity: 1, look: 'glow' },
 };
 
 /** Build a closed custom polygon from absolute artboard points (pen tool). */

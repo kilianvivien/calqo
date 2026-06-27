@@ -31,7 +31,14 @@ export interface CanvasGuide {
 export type AiDialog = 'none' | 'template' | 'translate';
 
 /** Brush feel for the freehand tool. */
-export type BrushStyle = 'smooth' | 'marker' | 'highlighter' | 'dashed';
+export type BrushStyle =
+  | 'smooth'
+  | 'marker'
+  | 'highlighter'
+  | 'dashed'
+  | 'felt-tip'
+  | 'marker-underline'
+  | 'glow-pen';
 
 /** Style applied to the next shape a draw tool places — surfaced as the
  * tool-defaults inspector (GeoCarto's "Réglages {outil}" card). */

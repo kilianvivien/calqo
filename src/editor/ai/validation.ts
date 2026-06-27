@@ -216,6 +216,25 @@ export function checkTemplateQuality(
       if (layer.type === 'list' && layer.marker.kind === 'asset') {
         issues.push(`${layer.name}: asset-backed list markers are not allowed in AI output.`);
       }
+      // Phase R: a stroke look / image frame the model requested that is valid
+      // schema but outside the supported preset set degrades to a warning rather
+      // than a hard failure.
+      if (
+        layer.type === 'shape' &&
+        layer.stroke?.look &&
+        input.strokeLooks &&
+        !input.strokeLooks.includes(layer.stroke.look)
+      ) {
+        warnings.push(`${layer.name}: stroke look "${layer.stroke.look}" is not a supported preset.`);
+      }
+      if (
+        layer.type === 'image' &&
+        layer.frame &&
+        input.frameKinds &&
+        !input.frameKinds.includes(layer.frame.kind)
+      ) {
+        warnings.push(`${layer.name}: frame "${layer.frame.kind}" is not a supported preset.`);
+      }
       if (x < 0 || y < 0 || x + layer.w > artboard.width || y + layer.h > artboard.height) {
         warnings.push(`${layer.name}: layer falls outside the artboard bounds.`);
       }

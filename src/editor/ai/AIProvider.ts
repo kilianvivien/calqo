@@ -29,6 +29,10 @@ export interface TemplatePromptInput {
   maxLayers: number;
   /** Allowed font families the model may use. */
   fonts: string[];
+  /** Supported expressive stroke-look names the model may request (Phase R). */
+  strokeLooks?: string[];
+  /** Supported image frame-kind names the model may request (Phase R). */
+  frameKinds?: string[];
   /** Optional second-pass repair context after parse/schema/quality failure. */
   repair?: {
     error: string;

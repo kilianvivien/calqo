@@ -22,7 +22,8 @@ const SCHEMA_SUMMARY = `Project JSON shape:
 Layer is one of:
 - text:  { "type":"text", "name":string, "x":num,"y":num,"w":num,"h":num, "rotation":0,"opacity":1,"visible":true,"locked":false, "text": { "<locale>": string }, "style": { "fontFamily":string,"fontSize":num,"fontWeight":400|700,"color":hex,"align":"left|center|right","lineHeight":num,"letterSpacing":0 } }
 - list:  { "type":"list", "name":string, ...box..., "items": [ { "id":string, "text": { "<locale>": string } } ], "marker": { "kind":"bullet|dash|arrow|none|character", "color":hex }, "markerGap":num, "style": { ...same as text.style... } }
-- shape: { "type":"shape","shape":"rect|ellipse|line", ...box..., "fill": {"type":"solid","color":hex}, "stroke"?: {"color":hex,"width":num}, "cornerRadius"?:num }
+- shape: { "type":"shape","shape":"rect|ellipse|line", ...box..., "fill": {"type":"solid","color":hex}, "stroke"?: {"color":hex,"width":num,"look"?:strokeLook}, "cornerRadius"?:num }
+Any layer may add "sticker": {"color":hex,"width":num} for a contrasting outline halo.
 All coordinates are logical pixels inside the artboard box.`;
 
 /** Build the system+user messages for prompt-a-template (plan §14.5–14.7). */
@@ -39,6 +40,12 @@ export function buildTemplatePrompt(input: TemplatePromptInput): {
     `- Write all text in locale "${input.locale}" keyed under that locale.`,
     `- Use at most ${input.maxLayers} layers.`,
     `- Only use these fonts: ${input.fonts.join(', ')}.`,
+    input.strokeLooks?.length
+      ? `- For expressive strokes, only use stroke "look" values: ${input.strokeLooks.join(', ')}.`
+      : '',
+    input.frameKinds?.length
+      ? `- Image layers are not allowed, but supported frame kinds (for reference) are: ${input.frameKinds.join(', ')}.`
+      : '',
     input.palette?.length
       ? `- Prefer this palette: ${input.palette.join(', ')}.`
       : '- Choose a tasteful, high-contrast palette.',

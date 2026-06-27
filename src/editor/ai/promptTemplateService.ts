@@ -1,6 +1,8 @@
 import { BUNDLED_FONTS } from '@/lib/adapters/fonts/browserFontAdapter';
 import { ARTBOARD_PRESETS, type ArtboardPresetId } from '@/lib/schema/presets';
 import type { LocaleCode } from '@/lib/schema';
+import { STROKE_LOOK_IDS } from '@/editor/canvas/strokePresets';
+import { FRAME_PRESET_IDS } from '@/editor/images/framePresets';
 import type { AIProvider, StyleReference, TemplatePromptInput } from './AIProvider';
 import { validateTemplateResponse, type TemplateValidation } from './validation';
 
@@ -29,6 +31,8 @@ export function buildTemplateInput(request: TemplateRequest): TemplatePromptInpu
     styleReference: request.styleReference,
     maxLayers: MAX_TEMPLATE_LAYERS,
     fonts: BUNDLED_FONTS.map((f) => f.family),
+    strokeLooks: [...STROKE_LOOK_IDS],
+    frameKinds: [...FRAME_PRESET_IDS],
   };
 }
 
