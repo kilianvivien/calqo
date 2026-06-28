@@ -35,14 +35,14 @@ surface.
 ## Download
 
 The current alpha release is
-[Calqo v0.2.4](https://github.com/kilianvivien/calqo/releases/tag/v0.2.4).
+[Calqo v0.2.5](https://github.com/kilianvivien/calqo/releases/tag/v0.2.5).
 
 The desktop build is currently unsigned and not notarized. On first launch,
 macOS Gatekeeper may require approving the app manually.
 
 ## Status
 
-**Public alpha, current app version 0.2.4.** The core editor is implemented and
+**Public alpha, current app version 0.2.5.** The core editor is implemented and
 usable locally: create projects, edit multi-artboard social visuals, save in the
 browser or native desktop shell, export files, translate content, and generate
 editable AI templates. The macOS desktop build includes localized native menus,
@@ -79,7 +79,7 @@ library, emoji insertion, app backup/restore, and multi-locale ZIP exports.
 - [x] Font/style controls, system font enumeration, and inspector section polish (`v0.2.2`)
 - [x] Saved AI SVG library, emoji tool, and in-app glass confirmations (`v0.2.3`)
 - [x] Workspace overview, ZIP export, backup/restore, and project duplicate/export (`v0.2.4`)
-- [x] Current GitHub release notes for `v0.2.4`; Apple Silicon DMG asset pending upload
+- [x] Current GitHub release notes for `v0.2.5`; Apple Silicon DMG asset pending upload
 
 ## What you can make
 

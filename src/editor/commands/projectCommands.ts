@@ -12,6 +12,7 @@ import {
   type CreateProjectOptions,
   type GlossaryEntry,
   type GroupLayer,
+  type ImageBackgroundRemovalPass,
   type ListLayer,
   type ListItem,
   type LocaleCode,
@@ -59,6 +60,7 @@ import {
   type Axis,
   type Box,
 } from '@/editor/utils/arrange';
+import { removeBackgroundFromBlob } from '@/editor/images/backgroundRemoval';
 import type { BrushStyle } from '@/lib/state/uiStore';
 
 const AUTOSAVE_DELAY = 700;
@@ -772,10 +774,80 @@ export function replaceLayerAsset(
           // swap is non-destructive. The pixel-space crop is image-specific, so
           // drop it — the fit/focal cover crop recomputes for the new image.
           delete layer.crop;
+          delete layer.backgroundRemoval;
         }
         if (layer.type === 'svg' && asset.kind === 'svg') {
           layer.assetId = asset.id;
         }
+      });
+    },
+    { undoable: true },
+  );
+}
+
+export async function applyImageBackgroundRemovalPasses(
+  projectId: string,
+  layerId: string,
+  passes: ImageBackgroundRemovalPass[],
+): Promise<void> {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return;
+  const artboardId = activeArtboardId(project);
+  const artboard = project.artboards.find((candidate) => candidate.id === artboardId);
+  const layer = findLayer(artboard?.layers ?? [], layerId);
+  if (!layer || layer.type !== 'image') return;
+
+  const sourceAssetId = layer.backgroundRemoval?.source.assetId ?? layer.assetId;
+  const sourceBlob = await assetStorage.getAssetBlob(sourceAssetId);
+  if (!sourceBlob) throw new Error('Original image asset is missing.');
+  const processed = await removeBackgroundFromBlob(sourceBlob, passes);
+  const result = await assetStorage.saveAsset(projectId, processed.blob, {
+    name: `${layer.name} transparent.png`,
+    mimeType: 'image/png',
+    kind: 'raster',
+    width: processed.width,
+    height: processed.height,
+  });
+
+  editProject(
+    projectId,
+    (draft) => {
+      if (!draft.assets.some((existing) => existing.id === result.id)) {
+        draft.assets.push(result);
+      }
+      const targetArtboardId = activeArtboardId(draft as CalqoProject);
+      if (!targetArtboardId) return;
+      const target = getArtboard(draft, targetArtboardId);
+      if (!target) return;
+      updateLayer(target.layers as CalqoLayer[], layerId, (candidate) => {
+        if (candidate.type !== 'image') return;
+        candidate.assetId = result.id;
+        candidate.backgroundRemoval = {
+          source: { assetId: sourceAssetId },
+          result: { assetId: result.id },
+          passes: structuredClone(passes),
+        };
+      });
+    },
+    { undoable: true },
+  );
+}
+
+export function resetImageBackgroundRemoval(
+  projectId: string,
+  layerId: string,
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      if (!artboard) return;
+      updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
+        if (layer.type !== 'image' || !layer.backgroundRemoval) return;
+        layer.assetId = layer.backgroundRemoval.source.assetId;
+        delete layer.backgroundRemoval;
       });
     },
     { undoable: true },

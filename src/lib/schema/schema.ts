@@ -228,6 +228,22 @@ export const imageFrameSchema = z.object({
   caption: z.record(localeCodeSchema, z.string()).optional(),
 });
 
+export const imageBackgroundRemovalPassSchema = z.object({
+  id: z.string(),
+  color: hexish,
+  tolerance: z.number().min(0).max(100),
+  softness: z.number().min(0).max(100),
+  mode: z.enum(['connected', 'global']),
+});
+
+export const imageBackgroundRemovalSchema = z.object({
+  /** Original raster asset. Nested `assetId` keeps asset remapping generic. */
+  source: z.object({ assetId: z.string() }),
+  /** Latest generated transparent PNG derivative. */
+  result: z.object({ assetId: z.string() }).optional(),
+  passes: z.array(imageBackgroundRemovalPassSchema).default([]),
+});
+
 export const imageLayerSchema = z.object({
   ...baseLayerShape,
   type: z.literal('image'),
@@ -243,10 +259,12 @@ export const imageLayerSchema = z.object({
       brightness: z.number().optional(),
       contrast: z.number().optional(),
       saturation: z.number().optional(),
-    })
+  })
     .optional(),
   /** Non-destructive decorative frame (Phase R). */
   frame: imageFrameSchema.optional(),
+  /** Non-destructive raster background removal via additive colour passes. */
+  backgroundRemoval: imageBackgroundRemovalSchema.optional(),
 });
 
 export const svgLayerSchema = z.object({
@@ -420,6 +438,10 @@ export type ShapeLayer = z.infer<typeof shapeLayerSchema>;
 export type ImageLayer = z.infer<typeof imageLayerSchema>;
 export type ImageMask = z.infer<typeof imageMaskSchema>;
 export type ImageFrame = z.infer<typeof imageFrameSchema>;
+export type ImageBackgroundRemoval = z.infer<typeof imageBackgroundRemovalSchema>;
+export type ImageBackgroundRemovalPass = z.infer<
+  typeof imageBackgroundRemovalPassSchema
+>;
 export type ImageFilters = NonNullable<ImageLayer['filters']>;
 export type SvgLayer = z.infer<typeof svgLayerSchema>;
 export type ListLayer = z.infer<typeof listLayerSchema>;

@@ -22,6 +22,7 @@ import {
   Brush,
   ChevronRight,
   Circle,
+  Crop,
   Diamond,
   Eye,
   EyeOff,
@@ -30,6 +31,7 @@ import {
   Image as ImageIcon,
   Layers,
   List,
+  Loader2,
   Lock,
   Minus,
   MousePointer2,
@@ -39,6 +41,9 @@ import {
   PenTool,
   Pipette,
   Plus,
+  Repeat,
+  RotateCcw,
+  Scissors,
   Shapes,
   Smile,
   Square,
@@ -61,6 +66,8 @@ import {
   stackSelectedLayers,
   beginHistoryCoalescing,
   endHistoryCoalescing,
+  applyImageBackgroundRemovalPasses,
+  resetImageBackgroundRemoval,
   replaceLayerAsset,
   addListItem,
   removeListItem,
@@ -85,6 +92,7 @@ import type {
   CalqoAssetRef,
   Fill,
   ImageLayer,
+  ImageBackgroundRemovalPass,
   ImageMask,
   ListLayer,
   ListMarker,
@@ -121,6 +129,7 @@ import { TextVariants } from './ContentControls';
 import { useFontOptions } from '@/lib/hooks/useFontOptions';
 import { useFontVariants } from '@/lib/hooks/useFontVariants';
 import { FontMenuField, TextStyleButtons } from '@/components/inspector';
+import { createId } from '@/lib/utils/ids';
 
 const LAYER_TYPE_ICON: Record<CalqoLayer['type'], LucideIcon> = {
   text: Type,
@@ -1932,15 +1941,18 @@ function ImageControls({
         )}
         <InlineButton
           label={t('properties.cropImage')}
+          icon={Crop}
           onClick={() => setCroppingLayerId(layer.id)}
         />
         {(layer.crop || layer.focalPoint) && (
           <InlineButton
             label={t('properties.resetCrop')}
+            icon={RotateCcw}
             onClick={() => update({ crop: null, focalPoint: null })}
           />
         )}
         <ReplaceAssetButton projectId={projectId} layer={layer} />
+        <BackgroundRemovalControls projectId={projectId} layer={layer} />
       </Section>
 
       <Section title={t('properties.mask')}>
@@ -2023,6 +2035,329 @@ function ImageControls({
 
       <FrameControls layer={layer} locale={locale} update={update} />
     </>
+  );
+}
+
+function BackgroundRemovalControls({
+  projectId,
+  layer,
+}: {
+  projectId: string;
+  layer: ImageLayer;
+}) {
+  const { t } = useTranslation('editor');
+  const [color, setColor] = useState('#FFFFFF');
+  const [tolerance, setTolerance] = useState(12);
+  const [softness, setSoftness] = useState(18);
+  const [mode, setMode] =
+    useState<ImageBackgroundRemovalPass['mode']>('connected');
+  const [open, setOpen] = useState(false);
+  const [editingPassId, setEditingPassId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const passes = layer.backgroundRemoval?.passes ?? [];
+  const editing = passes.find((pass) => pass.id === editingPassId) ?? null;
+
+  const applyPasses = async (nextPasses: ImageBackgroundRemovalPass[]) => {
+    setBusy(true);
+    setError(null);
+    try {
+      if (nextPasses.length === 0) {
+        resetImageBackgroundRemoval(projectId, layer.id);
+      } else {
+        await applyImageBackgroundRemovalPasses(projectId, layer.id, nextPasses);
+      }
+    } catch {
+      setError(t('properties.bgRemoveError'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const draftPass: ImageBackgroundRemovalPass = {
+    id: editing?.id ?? createId('pass'),
+    color,
+    tolerance,
+    softness,
+    mode,
+  };
+
+  const applyDraft = () => {
+    const nextPasses = editing
+      ? passes.map((pass) => (pass.id === editing.id ? draftPass : pass))
+      : [...passes, draftPass];
+    setEditingPassId(null);
+    void applyPasses(nextPasses);
+  };
+
+  const loadPass = (pass: ImageBackgroundRemovalPass) => {
+    setEditingPassId(pass.id);
+    setColor(pass.color);
+    setTolerance(pass.tolerance);
+    setSoftness(pass.softness);
+    setMode(pass.mode);
+  };
+
+  const removePass = (id: string) => {
+    if (editingPassId === id) setEditingPassId(null);
+    void applyPasses(passes.filter((pass) => pass.id !== id));
+  };
+
+  if (!open) {
+    return (
+      <div className="mt-1 border-t border-[var(--calqo-divider)] px-2 py-2">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex h-8 w-full items-center justify-center gap-1.5 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+        >
+          <Scissors size={13} className="shrink-0" />
+          {t('properties.bgRemove')}
+        </button>
+        {passes.length > 0 && (
+          <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[var(--calqo-text-3)]">
+            <span>
+              {t('properties.bgRemoveActive', { count: passes.length })}
+            </span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void applyPasses([])}
+              className="rounded-[6px] px-2 py-1 transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t('properties.bgRemoveReset')}
+            </button>
+          </div>
+        )}
+        {error && (
+          <p className="mt-1 text-[11px] text-[var(--calqo-danger)]">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-1 border-t border-[var(--calqo-divider)] px-2 pb-1 pt-2.5">
+      <div className="mb-1.5 flex items-center justify-between gap-2 px-2">
+        <span className="eyebrow flex items-center gap-1.5">
+          <Scissors size={11} className="shrink-0" />
+          {t('properties.bgRemove')}
+        </span>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="-mr-1 rounded-[6px] px-1.5 py-0.5 text-[11px] text-[var(--calqo-text-3)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+        >
+          {t('properties.bgRemoveClose')}
+        </button>
+      </div>
+      <CompactColorField
+        label={t('properties.bgRemoveColor')}
+        value={color}
+        onChange={setColor}
+      />
+      <SliderField
+        label={t('properties.bgRemoveTolerance')}
+        value={tolerance}
+        min={0}
+        max={100}
+        onChange={setTolerance}
+      />
+      <SliderField
+        label={t('properties.bgRemoveSoftness')}
+        value={softness}
+        min={0}
+        max={100}
+        onChange={setSoftness}
+      />
+      <div className="grid grid-cols-[88px_1fr] items-center gap-2 py-1.5 text-[12px]">
+        <span className="text-[var(--calqo-text-3)]">
+          {t('properties.bgRemoveScope')}
+        </span>
+        <GlassSegmentedControl
+          ariaLabel={t('properties.bgRemoveScope')}
+          className="flex w-full [&>button]:flex-1"
+          value={mode}
+          onChange={(value) =>
+            setMode(value as ImageBackgroundRemovalPass['mode'])
+          }
+          options={[
+            { value: 'connected', label: t('properties.bgRemoveConnected') },
+            { value: 'global', label: t('properties.bgRemoveGlobal') },
+          ]}
+        />
+      </div>
+      <div className="px-2 py-1.5">
+        <button
+          type="button"
+          onClick={applyDraft}
+          disabled={busy}
+          className="flex h-8 w-full items-center justify-center gap-1.5 rounded-[var(--calqo-radius-sm)] bg-[var(--calqo-accent)] px-3 text-[12px] font-medium text-[var(--calqo-text-on-accent)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {busy ? (
+            <Loader2 size={13} className="shrink-0 animate-spin" />
+          ) : (
+            <Scissors size={13} className="shrink-0" />
+          )}
+          {busy
+            ? t('properties.bgRemoveProcessing')
+            : editing
+              ? t('properties.bgRemoveUpdate')
+              : t('properties.bgRemoveApply')}
+        </button>
+      </div>
+      {passes.length > 0 && (
+        <div className="mt-1.5 border-t border-[var(--calqo-divider)] px-2 pb-1 pt-2">
+          <div className="eyebrow mb-1.5">
+            {t('properties.bgRemoveApplied')}
+          </div>
+          <div className="space-y-1">
+            {passes.map((pass, index) => (
+              <div
+                key={pass.id}
+                className={[
+                  'flex items-center gap-2 rounded-[var(--calqo-radius-sm)] border px-2 py-1.5 text-[11px] transition-colors',
+                  pass.id === editingPassId
+                    ? 'border-[var(--calqo-accent)] bg-[var(--calqo-accent-soft)]'
+                    : 'border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)]',
+                ].join(' ')}
+              >
+                <span
+                  aria-hidden
+                  className="h-5 w-5 shrink-0 rounded-[6px] border border-black/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]"
+                  style={{ background: pass.color }}
+                />
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => loadPass(pass)}
+                  className="min-w-0 flex-1 truncate text-left text-[var(--calqo-text-2)] transition-colors hover:text-[var(--calqo-text)] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {t('properties.bgRemoveStep', {
+                    index: index + 1,
+                    tolerance: pass.tolerance,
+                  })}
+                </button>
+                <span className="shrink-0 rounded-full border border-[var(--calqo-divider)] px-1.5 py-0.5 text-[10px] text-[var(--calqo-text-3)]">
+                  {t(
+                    pass.mode === 'connected'
+                      ? 'properties.bgRemoveConnected'
+                      : 'properties.bgRemoveGlobal',
+                  )}
+                </span>
+                <button
+                  type="button"
+                  aria-label={t('properties.bgRemoveRemovePass')}
+                  title={t('properties.bgRemoveRemovePass')}
+                  disabled={busy}
+                  onClick={() => removePass(pass.id)}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] text-[var(--calqo-text-3)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-danger)] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {error && (
+        <p className="py-1 text-[11px] text-[var(--calqo-danger)]">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CompactColorField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { t } = useTranslation('editor');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pipetteStatus, setPipetteStatus] = useState<string | null>(null);
+  const pickerRef = useRef<HTMLButtonElement>(null);
+
+  const pickWithEyedropper = async () => {
+    if (window.EyeDropper) {
+      setPipetteStatus(t('color.pickWaiting'));
+      try {
+        const result = await new window.EyeDropper().open();
+        onChange(result.sRGBHex.toUpperCase());
+        setPipetteStatus(t('color.picked'));
+        window.setTimeout(() => setPipetteStatus(null), 1400);
+      } catch {
+        setPipetteStatus(t('color.pickCancelled'));
+      }
+      return;
+    }
+    if (isStageSamplerAvailable()) {
+      setPipetteStatus(t('color.pickWaiting'));
+      const hex = await sampleColorFromStage();
+      if (hex) {
+        onChange(hex.toUpperCase());
+        setPipetteStatus(t('color.picked'));
+        window.setTimeout(() => setPipetteStatus(null), 1400);
+      } else {
+        setPipetteStatus(t('color.pickCancelled'));
+      }
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-[88px_1fr] items-center gap-2 py-1.5 text-[12px]">
+      <span className="text-[var(--calqo-text-3)]">{label}</span>
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <button
+            ref={pickerRef}
+            type="button"
+            aria-label={`${label} ${value}`}
+            aria-haspopup="dialog"
+            aria-expanded={pickerOpen}
+            onClick={() => setPickerOpen((open) => !open)}
+            className="h-7 w-7 shrink-0 rounded-[8px] border border-black/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] transition-transform duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-spring)] hover:scale-[1.08]"
+            style={{ background: value }}
+          />
+          <input
+            aria-label={`${label} value`}
+            value={value.toUpperCase()}
+            onChange={(event) => onChange(event.target.value.toUpperCase())}
+            spellCheck={false}
+            className="mono h-7 min-w-0 flex-1 rounded-[7px] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] px-2 text-[11px] uppercase text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent-ring)]"
+          />
+          {(window.EyeDropper || isStageSamplerAvailable()) && (
+            <button
+              type="button"
+              aria-label={`${label} ${t('color.pickFromScreen')}`}
+              onClick={pickWithEyedropper}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] text-[var(--calqo-text-2)] transition-colors hover:text-[var(--calqo-text)]"
+            >
+              <Pipette size={13} />
+            </button>
+          )}
+        </div>
+        {pipetteStatus && (
+          <p className="mt-1 text-[10.5px] text-[var(--calqo-text-3)]">
+            {pipetteStatus}
+          </p>
+        )}
+        <ColorPickerPopover
+          open={pickerOpen}
+          anchorRef={pickerRef}
+          value={value}
+          onChange={onChange}
+          onClose={() => setPickerOpen(false)}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -2924,9 +3259,10 @@ function ReplaceAssetButton({
       />
       <button
         type="button"
-        className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12.5px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)]"
+        className="flex h-8 w-full items-center justify-center gap-1.5 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
         onClick={() => inputRef.current?.click()}
       >
+        <Repeat size={13} className="shrink-0" />
         {t('properties.replaceAsset')}
       </button>
     </div>
@@ -3141,21 +3477,28 @@ function ArrangeButton({
   );
 }
 
-/** A quiet full-width text button used for inline reset actions. */
+/** A quiet full-width text button used for inline image actions. An optional
+ * leading icon keeps the image-tool buttons (crop, replace, cut-out) coherent. */
 function InlineButton({
   label,
   onClick,
+  disabled,
+  icon: Icon,
 }: {
   label: string;
   onClick: () => void;
+  disabled?: boolean;
+  icon?: LucideIcon;
 }) {
   return (
     <div className="px-2 py-1.5">
       <button
         type="button"
         onClick={onClick}
-        className="h-8 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+        disabled={disabled}
+        className="flex h-8 w-full items-center justify-center gap-1.5 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] px-3 text-[12px] text-[var(--calqo-text-2)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
       >
+        {Icon && <Icon size={13} className="shrink-0" />}
         {label}
       </button>
     </div>

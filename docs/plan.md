@@ -1,7 +1,7 @@
 # Calqo Beta And 1.0 Roadmap
 
 **Planning date:** 2026-06-27  
-**Current app version observed:** `0.2.4` in `package.json` and Tauri metadata
+**Current app version observed:** `0.2.5` in `package.json` and Tauri metadata
 **Planning inputs:** `docs/calqo-post-phase-m-implementation-plan.md`,
 `docs/calqo-mcp-live-drawing-implementation-plan.md`,
 `docs/PRD-calqo-v0.5.md`, README, package scripts, schema/export/adapter code,
@@ -45,7 +45,8 @@ Implemented and worth protecting:
 - Responsive phone browser surface: project browser, active-artboard editor,
   bottom sheets, text/image/color/layer/arrange/translate/export/share flows.
 - Creative tools: image frames, masks, filters, sticker outlines, stroke looks,
-  freehand brush presets, SVG library, mobile styling parity.
+  editable raster background removal, freehand brush presets, SVG library,
+  mobile styling parity.
 - Tests: unit suites by phase plus one public-alpha Playwright smoke file.
 
 Clear gaps observed:
