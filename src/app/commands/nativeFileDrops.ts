@@ -1,10 +1,11 @@
 import { platformRuntime } from '@/lib/platform/runtime';
-import { assetStorage, files } from '@/lib/adapters';
+import { files } from '@/lib/adapters';
 import { useWorkspaceStore } from '@/lib/state/workspaceStore';
 import { useProjectStore } from '@/lib/state/projectStore';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { addImportedAssetLayer } from '@/editor/commands/projectCommands';
 import { importProjectText } from '@/editor/export/calqoFile';
+import { saveImageBlobAsset } from '@/lib/utils/imageAsset';
 
 function mimeFromPath(path: string): string {
   const ext = path.split('.').pop()?.toLowerCase();
@@ -36,8 +37,7 @@ async function addImage(path: string): Promise<void> {
   const mimeType = mimeFromPath(path);
   const bytes = await files.readBinaryFileFromDisk(path);
   const blob = new Blob([blobPart(bytes)], { type: mimeType });
-  const asset = await assetStorage.saveAsset(project.id, blob, {
-    kind: mimeType === 'image/svg+xml' ? 'svg' : 'raster',
+  const asset = await saveImageBlobAsset(project.id, blob, {
     name: nameFromPath(path),
     mimeType,
   });

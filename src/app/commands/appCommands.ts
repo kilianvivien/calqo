@@ -1,5 +1,5 @@
 import i18n from '@/lib/i18n';
-import { assetStorage, clipboard, files } from '@/lib/adapters';
+import { clipboard, files } from '@/lib/adapters';
 import { isTauri } from '@/lib/platform/runtime';
 import { useUiStore, type EditorTool } from '@/lib/state/uiStore';
 import { useWorkspaceStore } from '@/lib/state/workspaceStore';
@@ -31,6 +31,7 @@ import {
 import { aiSettingsStore, isAiEnabled } from '@/editor/ai/aiSettings';
 import { exportArtboardRaster } from '@/editor/export/rasterExport';
 import { shareArtboardPng } from '@/editor/export/share';
+import { saveImageBlobAsset } from '@/lib/utils/imageAsset';
 
 export type AppCommandId =
   | 'app.about'
@@ -212,8 +213,7 @@ async function openImageFiles(): Promise<void> {
   const images = await openImages();
   for (const image of images) {
     const blob = new Blob([blobPart(image.bytes)], { type: image.mimeType });
-    const asset = await assetStorage.saveAsset(project.id, blob, {
-      kind: image.mimeType === 'image/svg+xml' ? 'svg' : 'raster',
+    const asset = await saveImageBlobAsset(project.id, blob, {
       name: image.name,
       mimeType: image.mimeType,
     });
@@ -227,8 +227,7 @@ async function pasteImageFromClipboard(): Promise<void> {
   if (!project || !artboard || !clipboard.readImage) return;
   const blob = await clipboard.readImage();
   if (!blob) return;
-  const asset = await assetStorage.saveAsset(project.id, blob, {
-    kind: 'raster',
+  const asset = await saveImageBlobAsset(project.id, blob, {
     name: `Clipboard image ${new Date().toLocaleTimeString()}`,
     mimeType: 'image/png',
   });

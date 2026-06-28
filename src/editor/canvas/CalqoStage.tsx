@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Arrow, Circle, Image as KonvaImage, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import { useTranslation } from 'react-i18next';
-import { assetStorage } from '@/lib/adapters';
 import {
   addImportedAssetLayer,
   addLayerToActiveArtboard,
@@ -33,6 +32,7 @@ import type {
 } from '@/lib/schema';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
+import { saveImageAsset } from '@/lib/utils/imageAsset';
 import { TextEditOverlay } from './TextEditOverlay';
 import { LayerRenderer, type NodeRegistry } from './LayerRenderer';
 import { ArtboardBackground } from './ArtboardBackground';
@@ -103,23 +103,6 @@ function isLineLikeSelection(layers: CalqoLayer[]): boolean {
   if (layers.length !== 1) return false;
   const only = layers[0];
   return only.type === 'shape' && (only.shape === 'line' || only.shape === 'arrow');
-}
-
-function measureImage(file: File): Promise<{ width?: number; height?: number }> {
-  if (file.type === 'image/svg+xml') return Promise.resolve({});
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve({ width: image.naturalWidth, height: image.naturalHeight });
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve({});
-    };
-    image.src = url;
-  });
 }
 
 function fitZoom(size: StageSize, width: number, height: number): number {
@@ -421,14 +404,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'].includes(candidate.type),
     );
     if (!file) return;
-    const measured = await measureImage(file);
-    const asset = await assetStorage.saveAsset(project.id, file, {
-      kind: file.type === 'image/svg+xml' ? 'svg' : 'raster',
-      name: file.name,
-      mimeType: file.type,
-      width: measured.width,
-      height: measured.height,
-    });
+    const asset = await saveImageAsset(project.id, file);
     addImportedAssetLayer(project.id, asset, point.x, point.y);
     setActiveTool('select');
   };
