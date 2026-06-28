@@ -37,9 +37,6 @@ surface.
 The current alpha release is
 [Calqo v0.2.4](https://github.com/kilianvivien/calqo/releases/tag/v0.2.4).
 
-- macOS Apple Silicon DMG: release asset pending.
-- SHA-256: pending binary upload.
-
 The desktop build is currently unsigned and not notarized. On first launch,
 macOS Gatekeeper may require approving the app manually.
 
