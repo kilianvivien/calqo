@@ -67,6 +67,26 @@ Package manager: **pnpm**.
 - **Layout.** The shell is a rounded glass window with rows
   titlebar / tab bar / workspace / status bar; tool rail · left dock · canvas ·
   inspector. Components are under `src/app/shell/`.
+- **Export.** `src/editor/export/` renders artboards to PNG/JPG/WebP/SVG/HTML.
+  `ExportDialog` (`src/app/shell/`) batches over two independent scopes —
+  **artboards** (active / all) and **content locales** (active / all, shown only
+  when the project has >1 locale). Any batch producing more than one file is
+  bundled into a single `.zip` (dependency-free writer in `export/zip.ts`) so the
+  browser never blocks sequential downloads; multi-locale batches nest each
+  locale's files in a `<locale>/` folder. The export button surfaces live
+  per-file progress while rendering.
+- **Assets are owned per project.** Asset rows are keyed globally by id but
+  Dexie deletes them `where projectId equals`, so any *copy* of a project
+  (`duplicateStoredProject`, backup restore) must clone its asset blobs under
+  fresh ids and rewrite every reference via `remapProjectAssetIds`
+  (`src/editor/assets/assetRemap.ts`) — sharing ids would strand one project's
+  images when the other is deleted.
+- **Backup.** `src/editor/backup/appBackup.ts` bundles every stored project
+  (assets inlined as `.calqo` envelopes), the adapter-backed settings, and the
+  localStorage UI prefs into one portable `.calqobackup` JSON. Restore is
+  additive (projects re-imported under fresh ids; nothing overwritten) and
+  reloads to apply settings. **API keys are scrubbed from backups** — never
+  write secrets to the downloadable file. UI lives in the Settings ▸ Backup tab.
 
 ## Status
 

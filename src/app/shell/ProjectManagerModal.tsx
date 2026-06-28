@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FolderOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Copy, Download, FolderOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { dialog } from '@/lib/adapters';
 import type { ProjectSummary } from '@/lib/adapters';
 import { useProjectSummaries } from '@/lib/hooks/useProjectSummaries';
 import { ProjectThumbnail } from './ProjectThumbnail';
 import {
   deleteProject,
+  duplicateStoredProject,
   openProject,
   renameStoredProject,
 } from '@/editor/commands/projectCommands';
+import { exportProjectFile } from '@/editor/export/calqoFile';
 import { GlassButton, GlassIconButton, ModalOverlay } from '@/components/glass';
 
 interface ProjectManagerModalProps {
@@ -37,12 +39,16 @@ function ProjectManagerRow({
   summary,
   locale,
   onOpen,
+  onDuplicate,
+  onExport,
   onDelete,
   onRenamed,
 }: {
   summary: ProjectSummary;
   locale: string;
   onOpen: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onExport: (id: string) => void;
   onDelete: (id: string, name: string) => void;
   onRenamed: () => void;
 }) {
@@ -55,52 +61,82 @@ function ProjectManagerRow({
     onRenamed();
   };
 
+  const updated = (
+    <span className="block text-[11px] text-[var(--calqo-text-3)]">
+      {t('projects.updated', { date: formatDate(summary.updatedAt, locale) })}
+    </span>
+  );
+
   return (
-    <li className="group flex items-center gap-2 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] pr-1.5 transition-colors hover:bg-[var(--calqo-hover)]">
-      <ProjectThumbnail projectId={summary.id} />
-      <div className="min-w-0 flex-1 py-2.5">
-        {renaming ? (
-          <input
-            autoFocus
-            defaultValue={summary.name}
-            aria-label={t('projects.rename')}
-            onFocus={(event) => event.target.select()}
-            onBlur={(event) => void commit(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') event.currentTarget.blur();
-              if (event.key === 'Escape') setRenaming(false);
-            }}
-            className="h-8 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-accent)] bg-[var(--calqo-glass)] px-2 text-[13.5px] font-medium text-[var(--calqo-text)] outline-none ring-2 ring-[var(--calqo-accent-ring)]"
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => onOpen(summary.id)}
-            className="block max-w-full truncate text-left text-[13.5px] font-medium text-[var(--calqo-text)]"
-          >
-            {summary.name}
-          </button>
-        )}
-        <span className="block text-[11px] text-[var(--calqo-text-3)]">
-          {t('projects.updated', {
-            date: formatDate(summary.updatedAt, locale),
-          })}
-        </span>
+    <li className="group flex items-center gap-2 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] pr-1.5 transition-colors hover:border-[var(--calqo-accent-ring)] hover:bg-[var(--calqo-hover)]">
+      {renaming ? (
+        <>
+          <ProjectThumbnail projectId={summary.id} />
+          <div className="min-w-0 flex-1 py-2.5">
+            <input
+              autoFocus
+              defaultValue={summary.name}
+              aria-label={t('projects.rename')}
+              onFocus={(event) => event.target.select()}
+              onBlur={(event) => void commit(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur();
+                if (event.key === 'Escape') setRenaming(false);
+              }}
+              className="h-8 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-accent)] bg-[var(--calqo-glass)] px-2 text-[13.5px] font-medium text-[var(--calqo-text)] outline-none ring-2 ring-[var(--calqo-accent-ring)]"
+            />
+            {updated}
+          </div>
+        </>
+      ) : (
+        // The whole thumbnail + text region is the open target, so the click
+        // area isn't limited to the name string.
+        <button
+          type="button"
+          onClick={() => onOpen(summary.id)}
+          className="flex min-w-0 flex-1 items-center gap-2 py-2.5 text-left"
+        >
+          <ProjectThumbnail projectId={summary.id} />
+          <div className="min-w-0 flex-1">
+            <span className="block max-w-full truncate text-[13.5px] font-medium text-[var(--calqo-text)]">
+              {summary.name}
+            </span>
+            {updated}
+          </div>
+        </button>
+      )}
+      {/* Row actions rest hidden and reveal on hover or keyboard focus, keeping
+          the list calm while staying reachable. */}
+      <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+        <GlassIconButton
+          label={t('projects.duplicate')}
+          showTitle={false}
+          onClick={() => onDuplicate(summary.id)}
+        >
+          <Copy size={14} />
+        </GlassIconButton>
+        <GlassIconButton
+          label={t('projects.exportFile')}
+          showTitle={false}
+          onClick={() => onExport(summary.id)}
+        >
+          <Download size={14} />
+        </GlassIconButton>
+        <GlassIconButton
+          label={t('projects.rename')}
+          showTitle={false}
+          onClick={() => setRenaming(true)}
+        >
+          <Pencil size={14} />
+        </GlassIconButton>
+        <GlassIconButton
+          label={t('projects.delete')}
+          showTitle={false}
+          onClick={() => onDelete(summary.id, summary.name)}
+        >
+          <Trash2 size={14} />
+        </GlassIconButton>
       </div>
-      <GlassIconButton
-        label={t('projects.rename')}
-        showTitle={false}
-        onClick={() => setRenaming(true)}
-      >
-        <Pencil size={14} />
-      </GlassIconButton>
-      <GlassIconButton
-        label={t('projects.delete')}
-        showTitle={false}
-        onClick={() => onDelete(summary.id, summary.name)}
-      >
-        <Trash2 size={14} />
-      </GlassIconButton>
     </li>
   );
 }
@@ -131,6 +167,11 @@ export function ProjectManagerModal({
     refresh();
   };
 
+  const duplicate = async (id: string) => {
+    await duplicateStoredProject(id);
+    refresh();
+  };
+
   const empty = summaries !== null && summaries.length === 0;
 
   return (
@@ -148,6 +189,11 @@ export function ProjectManagerModal({
           >
             <FolderOpen size={17} className="text-[var(--calqo-accent)]" />
             {t('projects.title')}
+            {summaries && summaries.length > 0 && (
+              <span className="rounded-full bg-[var(--calqo-glass-thin)] px-2 py-0.5 text-[11px] font-medium tabular-nums text-[var(--calqo-text-3)]">
+                {summaries.length}
+              </span>
+            )}
           </h2>
           <p className="mt-0.5 text-[12px] text-[var(--calqo-text-3)]">
             {t('projects.subtitle')}
@@ -159,7 +205,11 @@ export function ProjectManagerModal({
       </header>
 
       <div className="calqo-scroll min-h-0 flex-1 overflow-y-auto pr-1">
-        {empty ? (
+        {summaries === null ? (
+          <p className="px-1 py-10 text-center text-[13px] text-[var(--calqo-text-3)]">
+            {t('projects.loading')}
+          </p>
+        ) : empty ? (
           <p className="px-1 py-10 text-center text-[13px] text-[var(--calqo-text-3)]">
             {t('projects.empty')}
           </p>
@@ -171,6 +221,8 @@ export function ProjectManagerModal({
                 summary={summary}
                 locale={i18n.language}
                 onOpen={openAndClose}
+                onDuplicate={(id) => void duplicate(id)}
+                onExport={(id) => void exportProjectFile(id)}
                 onDelete={(id, name) => void remove(id, name)}
                 onRenamed={refresh}
               />

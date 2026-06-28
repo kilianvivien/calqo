@@ -1,5 +1,6 @@
 import type { Draft } from 'immer';
-import { dialog, storage } from '@/lib/adapters';
+import { assetStorage, dialog, storage } from '@/lib/adapters';
+import { remapProjectAssetIds } from '@/editor/assets/assetRemap';
 import {
   createArtboard,
   createDefaultProject,
@@ -256,6 +257,45 @@ export async function duplicateProject(id: string): Promise<string | null> {
   selectionStore.getState().setActiveArtboard(copy.artboards[0]?.id ?? null);
   selectionStore.getState().clearSelection();
   await saveProject(copy.id);
+  return copy.id;
+}
+
+/**
+ * Duplicate a project that may only live in storage (project-manager row), as
+ * opposed to {@link duplicateProject} which copies an open in-memory document
+ * and opens it. The copy gets its own asset rows (blobs cloned under fresh ids)
+ * so deleting either project never strands the other's images. The duplicate is
+ * persisted but not opened — the caller refreshes its list. Returns the new id.
+ */
+export async function duplicateStoredProject(id: string): Promise<string | null> {
+  const source =
+    projectStore.getState().projects[id] ?? (await storage.getProject(id));
+  if (!source) return null;
+
+  const newProjectId = createId('proj');
+  const idMap = new Map<string, string>();
+  for (const ref of source.assets) {
+    const blob = await assetStorage.getAssetBlob(ref.id);
+    if (!blob) continue;
+    const newRef = await assetStorage.saveAsset(newProjectId, blob, {
+      name: ref.name,
+      mimeType: ref.mimeType,
+      kind: ref.kind,
+      width: ref.width,
+      height: ref.height,
+    });
+    idMap.set(ref.id, newRef.id);
+  }
+
+  const now = new Date().toISOString();
+  const copy: CalqoProject = {
+    ...remapProjectAssetIds(source, idMap),
+    id: newProjectId,
+    name: `${source.name} copy`,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await storage.saveProject(copy);
   return copy.id;
 }
 

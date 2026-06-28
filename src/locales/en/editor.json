@@ -345,6 +345,9 @@
     "scope": "Artboards",
     "activeArtboard": "Active",
     "allArtboards": "All ({{count}})",
+    "localeScope": "Languages",
+    "activeLocale": "{{locale}}",
+    "allLocales": "All ({{count}})",
     "filename": "Filename",
     "warnings": "Before you export",
     "warnOverflow": "{{name}}: some layers fall outside the artboard.",
@@ -353,6 +356,7 @@
     "warnManyArtboards": "Exporting {{count}} artboards at once may take a while.",
     "download": "Export",
     "working": "Exporting…",
+    "workingCount": "Exporting… ({{done}}/{{total}})",
     "copyImage": "Copy image",
     "copySnippet": "Copy snippet",
     "done": "Exported.",
@@ -588,13 +592,16 @@
     "title": "Projects",
     "subtitle": "Open or remove a locally stored project.",
     "empty": "No projects yet. Create one to get started.",
+    "loading": "Loading projects…",
     "updated": "Updated {{date}}",
     "delete": "Delete project",
     "deleteTitle": "Delete project",
     "deleteMessage": "Delete “{{name}}”? This cannot be undone.",
     "import": "Open file…",
     "new": "New project",
-    "rename": "Rename project"
+    "rename": "Rename project",
+    "duplicate": "Duplicate project",
+    "exportFile": "Export .calqo file"
   },
   "mobile": {
     "common": {

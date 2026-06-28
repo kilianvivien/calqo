@@ -1,4 +1,4 @@
-import { assetStorage, files } from '@/lib/adapters';
+import { assetStorage, files, storage } from '@/lib/adapters';
 import type { CalqoFile } from '@/lib/adapters';
 import { safeImportProject, type CalqoProject } from '@/lib/schema';
 import { createId } from '@/lib/utils/ids';
@@ -25,7 +25,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   const response = await fetch(dataUrl);
   return response.blob();
 }
@@ -57,9 +57,12 @@ export async function buildCalqoFileText(project: CalqoProject): Promise<string>
   return JSON.stringify(await buildCalqoFile(project), null, 2);
 }
 
-/** Export the active project to a downloaded `.calqo` JSON file. */
+/** Export a project to a downloaded `.calqo` JSON file. Works for an open
+ * document or one that only lives in storage (project-manager rows). */
 export async function exportProjectFile(projectId: string): Promise<void> {
-  const project = projectStore.getState().projects[projectId];
+  const project =
+    projectStore.getState().projects[projectId] ??
+    (await storage.getProject(projectId));
   if (!project) return;
   const blob = new Blob([await buildCalqoFileText(project)], {
     type: 'application/json',

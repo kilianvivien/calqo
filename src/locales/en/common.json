@@ -87,6 +87,17 @@
     "general": "General",
     "appearance": "Appearance",
     "diagnostics": "Diagnostics",
+    "data": {
+      "title": "Backup",
+      "hint": "Save a single file with every project and your app preferences — keep it safe or move it to another machine. Restoring adds the file's projects to your library; nothing is overwritten.",
+      "export": "Back up everything",
+      "restore": "Restore from backup…",
+      "exported": "Backed up {{count}} project(s).",
+      "restoreTitle": "Restore from backup",
+      "restoreConfirm": "Add {{count}} project(s) from this backup and apply its settings? The app will reload.",
+      "secretsNote": "API keys are not included in backups — you'll re-enter them after restoring.",
+      "failed": "Something went wrong with the backup file."
+    },
     "languageMode": "App language",
     "autoLanguage": "Auto",
     "autoLanguageHint": "Uses your browser language when supported.",

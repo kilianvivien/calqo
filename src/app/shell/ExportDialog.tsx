@@ -20,8 +20,9 @@ import {
   collectExportWarnings,
   uniqueArtboardStems,
 } from '@/editor/export/exportReadiness';
+import { localeLabel } from '@/editor/i18n-content/contentLocaleService';
 import { useActiveArtboard, useActiveProject } from '@/lib/state/selectors';
-import type { CalqoArtboard } from '@/lib/schema';
+import type { CalqoArtboard, LocaleCode } from '@/lib/schema';
 
 type Format = RasterFormat | 'svg' | 'html';
 type Scope = 'active' | 'all';
@@ -48,7 +49,7 @@ export function ExportDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const { t } = useTranslation('editor');
+  const { t, i18n } = useTranslation('editor');
   const project = useActiveProject();
   const artboard = useActiveArtboard();
   const [format, setFormat] = useState<Format>('png');
@@ -57,14 +58,23 @@ export function ExportDialog({
   const [transparent, setTransparent] = useState(false);
   const [quality, setQuality] = useState(0.92);
   const [scope, setScope] = useState<Scope>('active');
+  const [localeScope, setLocaleScope] = useState<Scope>('active');
   const [htmlMode, setHtmlMode] = useState<HtmlMode>('standalone');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  // Live render counter so a long multi-artboard/multi-locale export shows
+  // progress rather than an indefinite spinner.
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
   const targets = useMemo<CalqoArtboard[]>(() => {
     if (!project || !artboard) return [];
     return scope === 'all' ? project.artboards : [artboard];
   }, [project, artboard, scope]);
+
+  const localeTargets = useMemo<LocaleCode[]>(() => {
+    if (!project) return [];
+    return localeScope === 'all' ? project.contentLocales : [project.activeContentLocale];
+  }, [project, localeScope]);
 
   const warnings = useMemo(
     () =>
@@ -76,9 +86,10 @@ export function ExportDialog({
 
   const transparentSupported = format === 'png' || format === 'webp';
   const qualitySupported = format === 'jpeg' || format === 'webp';
-  // A multi-artboard export is bundled into a single .zip so the browser never
-  // suppresses the follow-up downloads.
-  const bundling = targets.length > 1;
+  // A batch spanning multiple artboards and/or content locales is bundled into a
+  // single .zip so the browser never suppresses the follow-up downloads.
+  const totalOutputs = targets.length * localeTargets.length;
+  const bundling = totalOutputs > 1;
   const filename = bundling
     ? `${slug(project.name)}.zip`
     : format === 'html'
@@ -87,37 +98,43 @@ export function ExportDialog({
         ? `${slug(project.name)}-${slug(artboard.name)}.svg`
         : rasterFilename(project.name, artboard.name, format, pixelRatio);
 
-  const renderRaster = (target: CalqoArtboard, fmt: RasterFormat) =>
+  const renderRaster = (target: CalqoArtboard, fmt: RasterFormat, locale: LocaleCode) =>
     exportArtboardRaster({
       artboard: target,
-      locale: project.activeContentLocale,
+      locale,
       format: fmt,
       pixelRatio,
       transparent: transparent && (fmt === 'png' || fmt === 'webp'),
       quality,
     });
 
-  /** Render one artboard to a named file blob for the current format. */
+  /**
+   * Render one artboard at one content locale to a named file blob. When the
+   * batch spans more than one locale, files are nested in a per-locale folder so
+   * the same artboard's variants never collide inside the archive.
+   */
   const renderTarget = async (
     target: CalqoArtboard,
     stem: string,
+    locale: LocaleCode,
   ): Promise<{ name: string; blob: Blob }> => {
     const projectSlug = slug(project.name);
+    const dir = localeTargets.length > 1 ? `${locale}/` : '';
     const scaleSuffix = pixelRatio > 1 ? `@${pixelRatio}x` : '';
     if (isRaster(format)) {
       const ext = format === 'jpeg' ? 'jpg' : format;
-      const blob = await renderRaster(target, format);
-      return { name: `${projectSlug}-${stem}${scaleSuffix}.${ext}`, blob };
+      const blob = await renderRaster(target, format, locale);
+      return { name: `${dir}${projectSlug}-${stem}${scaleSuffix}.${ext}`, blob };
     }
     if (format === 'svg') {
-      const { svg } = await exportArtboardSvg(target, project.activeContentLocale);
+      const { svg } = await exportArtboardSvg(target, locale);
       return {
-        name: `${projectSlug}-${stem}.svg`,
+        name: `${dir}${projectSlug}-${stem}.svg`,
         blob: new Blob([svg], { type: 'image/svg+xml' }),
       };
     }
     // HTML wrapper — always a PNG of the artboard.
-    const blob = await renderRaster(target, 'png');
+    const blob = await renderRaster(target, 'png', locale);
     const pngDataUrl = await blobToDataUrl(blob);
     const html = (htmlMode === 'snippet' ? htmlSnippet : htmlStandalone)({
       title: `${project.name} — ${target.name}`,
@@ -126,7 +143,7 @@ export function ExportDialog({
       pngDataUrl,
     });
     return {
-      name: `${projectSlug}-${stem}.html`,
+      name: `${dir}${projectSlug}-${stem}.html`,
       blob: new Blob([html], { type: 'text/html' }),
     };
   };
@@ -137,10 +154,15 @@ export function ExportDialog({
     // Collision-free stems so a batch with duplicate artboard names never
     // overwrites earlier files (plan Phase K).
     const stems = uniqueArtboardStems(targets, slug);
+    const total = totalOutputs;
+    setProgress({ done: 0, total });
     try {
       const outputs = [];
-      for (let i = 0; i < targets.length; i++) {
-        outputs.push(await renderTarget(targets[i], stems[i]));
+      for (const locale of localeTargets) {
+        for (let i = 0; i < targets.length; i++) {
+          outputs.push(await renderTarget(targets[i], stems[i], locale));
+          setProgress({ done: outputs.length, total });
+        }
       }
       if (outputs.length === 1) {
         await files.downloadBlob(outputs[0].blob, outputs[0].name);
@@ -158,6 +180,7 @@ export function ExportDialog({
       setStatus(t('export.failed'));
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   };
 
@@ -166,7 +189,7 @@ export function ExportDialog({
     setBusy(true);
     setStatus(null);
     try {
-      const blob = await renderRaster(artboard, 'png');
+      const blob = await renderRaster(artboard, 'png', project.activeContentLocale);
       const ok = await clipboard.writeImage(blob);
       setStatus(ok ? t('export.copied') : t('export.copyUnsupported'));
     } catch {
@@ -180,7 +203,7 @@ export function ExportDialog({
     setBusy(true);
     setStatus(null);
     try {
-      const blob = await renderRaster(artboard, 'png');
+      const blob = await renderRaster(artboard, 'png', project.activeContentLocale);
       const pngDataUrl = await blobToDataUrl(blob);
       const html = htmlSnippet({
         title: `${project.name} — ${artboard.name}`,
@@ -308,6 +331,28 @@ export function ExportDialog({
             />
           </Field>
 
+          {project.contentLocales.length > 1 && (
+            <Field label={t('export.localeScope')}>
+              <GlassSegmentedControl<Scope>
+                ariaLabel={t('export.localeScope')}
+                value={localeScope}
+                onChange={setLocaleScope}
+                options={[
+                  {
+                    value: 'active',
+                    label: t('export.activeLocale', {
+                      locale: localeLabel(project.activeContentLocale, i18n.language),
+                    }),
+                  },
+                  {
+                    value: 'all',
+                    label: t('export.allLocales', { count: project.contentLocales.length }),
+                  },
+                ]}
+              />
+            </Field>
+          )}
+
           <div className="rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] px-3 py-2">
             <span className="text-[11px] text-[var(--calqo-text-3)]">{t('export.filename')}</span>
             <p className="mono mt-0.5 truncate text-[12px] text-[var(--calqo-text-2)]">{filename}</p>
@@ -348,9 +393,18 @@ export function ExportDialog({
                 {t('export.copySnippet')}
               </GlassButton>
             )}
-            <GlassButton variant="primary" onClick={handleExport} disabled={busy}>
-              <Download size={14} />
-              {busy ? t('export.working') : t('export.download')}
+            <GlassButton
+              variant="primary"
+              onClick={handleExport}
+              disabled={busy}
+              loading={busy}
+            >
+              {!busy && <Download size={14} />}
+              {busy
+                ? progress && progress.total > 1
+                  ? t('export.workingCount', { done: progress.done, total: progress.total })
+                  : t('export.working')
+                : t('export.download')}
             </GlassButton>
           </div>
         </footer>

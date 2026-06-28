@@ -345,6 +345,9 @@
     "scope": "Plans de travail",
     "activeArtboard": "Actif",
     "allArtboards": "Tous ({{count}})",
+    "localeScope": "Langues",
+    "activeLocale": "{{locale}}",
+    "allLocales": "Toutes ({{count}})",
     "filename": "Nom du fichier",
     "warnings": "Avant d'exporter",
     "warnOverflow": "{{name}} : certains calques dépassent du plan de travail.",
@@ -353,6 +356,7 @@
     "warnManyArtboards": "Exporter {{count}} plans de travail à la fois peut prendre du temps.",
     "download": "Exporter",
     "working": "Exportation…",
+    "workingCount": "Exportation… ({{done}}/{{total}})",
     "copyImage": "Copier l'image",
     "copySnippet": "Copier l'extrait",
     "done": "Exporté.",
@@ -588,13 +592,16 @@
     "title": "Projets",
     "subtitle": "Ouvrir ou supprimer un projet stocké localement.",
     "empty": "Aucun projet. Créez-en un pour commencer.",
+    "loading": "Chargement des projets…",
     "updated": "Modifié le {{date}}",
     "delete": "Supprimer le projet",
     "deleteTitle": "Supprimer le projet",
     "deleteMessage": "Supprimer « {{name}} » ? Cette action est irréversible.",
     "import": "Ouvrir un fichier…",
     "new": "Nouveau projet",
-    "rename": "Renommer le projet"
+    "rename": "Renommer le projet",
+    "duplicate": "Dupliquer le projet",
+    "exportFile": "Exporter le fichier .calqo"
   },
   "mobile": {
     "common": {

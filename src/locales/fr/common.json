@@ -87,6 +87,17 @@
     "general": "Général",
     "appearance": "Apparence",
     "diagnostics": "Diagnostic",
+    "data": {
+      "title": "Sauvegarde",
+      "hint": "Enregistrez un seul fichier contenant tous vos projets et vos préférences — conservez-le précieusement ou transférez-le sur une autre machine. La restauration ajoute les projets du fichier à votre bibliothèque ; rien n'est écrasé.",
+      "export": "Tout sauvegarder",
+      "restore": "Restaurer depuis une sauvegarde…",
+      "exported": "{{count}} projet(s) sauvegardé(s).",
+      "restoreTitle": "Restaurer depuis une sauvegarde",
+      "restoreConfirm": "Ajouter {{count}} projet(s) de cette sauvegarde et appliquer ses réglages ? L'application va se recharger.",
+      "secretsNote": "Les clés API ne sont pas incluses dans les sauvegardes — vous les saisirez à nouveau après la restauration.",
+      "failed": "Un problème est survenu avec le fichier de sauvegarde."
+    },
     "languageMode": "Langue de l'app",
     "autoLanguage": "Auto",
     "autoLanguageHint": "Utilise la langue de votre navigateur si elle est prise en charge.",

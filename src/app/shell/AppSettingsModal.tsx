@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
+  DatabaseBackup,
   Download,
   FileCode2,
   Palette,
   Settings2,
   Sparkles,
+  Upload,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -32,6 +34,13 @@ import {
   downloadCalqoAgentSkill,
   downloadClaudeAgentSkill,
 } from '@/editor/ai/agentSkillFile';
+import {
+  downloadAppBackup,
+  parseBackup,
+  restoreAppBackup,
+} from '@/editor/backup/appBackup';
+import { flushPendingSaves } from '@/editor/commands/projectCommands';
+import { dialog } from '@/lib/adapters';
 import { platformRuntime } from '@/lib/platform/runtime';
 import { DiagnosticsPane } from './inspector/DiagnosticsPane';
 
@@ -41,6 +50,7 @@ export type SettingsTab =
   | 'appearance'
   | 'ai'
   | 'agent'
+  | 'data'
   | 'diagnostics';
 
 const LANGUAGE_KEY = 'calqo-language';
@@ -103,6 +113,54 @@ export function AppSettingsModal({
   );
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const secureSettings = platformRuntime.capabilities.secureSettings;
+  const restoreInputRef = useRef<HTMLInputElement>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupStatus, setBackupStatus] = useState<string | null>(null);
+
+  const handleExportBackup = async () => {
+    setBackupBusy(true);
+    setBackupStatus(null);
+    try {
+      const count = await downloadAppBackup();
+      setBackupStatus(t('settings.data.exported', { count }));
+    } catch (error) {
+      console.error('[Calqo] backup export failed', error);
+      setBackupStatus(t('settings.data.failed'));
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleRestoreFile = async (file: File) => {
+    setBackupBusy(true);
+    setBackupStatus(null);
+    try {
+      const backup = parseBackup(await file.text());
+      const confirmed = await dialog.confirm({
+        title: t('settings.data.restoreTitle'),
+        message: t('settings.data.restoreConfirm', {
+          count: backup.projects.length,
+        }),
+      });
+      if (!confirmed) {
+        setBackupBusy(false);
+        return;
+      }
+      await flushPendingSaves();
+      await restoreAppBackup(backup);
+      // Settings and UI preferences are read at startup, so reload to apply the
+      // restored theme, language, and provider config cleanly.
+      window.location.reload();
+    } catch (error) {
+      console.error('[Calqo] backup restore failed', error);
+      setBackupStatus(
+        error instanceof Error && error.message
+          ? error.message
+          : t('settings.data.failed'),
+      );
+      setBackupBusy(false);
+    }
+  };
 
   // Deep-link to a tab each time the modal opens (e.g. Help ▸ Diagnostics).
   useEffect(() => {
@@ -123,6 +181,7 @@ export function AppSettingsModal({
       { id: 'appearance' as const, label: t('settings.appearance'), icon: Palette },
       { id: 'ai' as const, label: t('settings.ai.title'), icon: Sparkles },
       { id: 'agent' as const, label: t('settings.ai.agentSkill'), icon: FileCode2 },
+      { id: 'data' as const, label: t('settings.data.title'), icon: DatabaseBackup },
       { id: 'diagnostics' as const, label: t('settings.diagnostics'), icon: Activity },
     ],
     [t],
@@ -388,6 +447,58 @@ export function AppSettingsModal({
                     {t('settings.ai.downloadClaudeSkill')}
                   </GlassButton>
                 </div>
+              </section>
+            )}
+
+            {activeTab === 'data' && (
+              <section className="flex flex-col items-start gap-4 rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-5">
+                <span className="flex h-11 w-11 items-center justify-center rounded-[var(--calqo-radius-sm)] bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]">
+                  <DatabaseBackup size={22} />
+                </span>
+                <div className="space-y-1.5">
+                  <p className="text-[14px] font-semibold text-[var(--calqo-text)]">
+                    {t('settings.data.title')}
+                  </p>
+                  <p className="max-w-md text-[12.5px] leading-relaxed text-[var(--calqo-text-3)]">
+                    {t('settings.data.hint')}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <GlassButton
+                    variant="primary"
+                    onClick={() => void handleExportBackup()}
+                    disabled={backupBusy}
+                    loading={backupBusy}
+                  >
+                    {!backupBusy && <Download size={14} />}
+                    {t('settings.data.export')}
+                  </GlassButton>
+                  <GlassButton
+                    onClick={() => restoreInputRef.current?.click()}
+                    disabled={backupBusy}
+                  >
+                    <Upload size={14} />
+                    {t('settings.data.restore')}
+                  </GlassButton>
+                  <input
+                    ref={restoreInputRef}
+                    type="file"
+                    accept=".calqobackup,application/json"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = '';
+                      if (file) void handleRestoreFile(file);
+                    }}
+                  />
+                </div>
+                <p className="flex items-start gap-2 rounded-[var(--calqo-radius-sm)] bg-[#E8B339]/10 px-3 py-2.5 text-[12px] text-[#B7791F]">
+                  <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+                  {t('settings.data.secretsNote')}
+                </p>
+                {backupStatus && (
+                  <p className="text-[12px] text-[var(--calqo-text-2)]">{backupStatus}</p>
+                )}
               </section>
             )}
 
