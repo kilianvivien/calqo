@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
+import { isTauri } from '@/lib/platform/runtime';
 import { useUiStore, applyUiAttributes } from '@/lib/state/uiStore';
 import { useWorkspaceStore } from '@/lib/state/workspaceStore';
 import {
@@ -177,6 +179,8 @@ export function App() {
       <ConfirmHost />
       <PwaUpdatePrompt />
       <PwaInstallPrompt />
+      {/* Vercel Web Analytics — browser deploy only, not the Tauri shell. */}
+      {!isTauri && <Analytics />}
     </ErrorBoundary>
   );
 }
