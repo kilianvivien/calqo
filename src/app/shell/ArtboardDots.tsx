@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { setActiveArtboard } from '@/editor/commands/projectCommands';
+import { LayoutGrid, Plus } from 'lucide-react';
+import { addArtboard, setActiveArtboard } from '@/editor/commands/projectCommands';
 import { useActiveProject } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
+import { useUiStore } from '@/lib/state/uiStore';
 import { cn } from '@/lib/utils/cn';
 
 /** Carousel-style page indicators for a project's artboards, floating at the
@@ -12,8 +14,27 @@ export function ArtboardDots() {
   const { t } = useTranslation('editor');
   const project = useActiveProject();
   const activeArtboardId = useSelectionStore((s) => s.activeArtboardId);
+  const toggleOverviewMode = useUiStore((s) => s.toggleOverviewMode);
 
-  if (!project || project.artboards.length < 2) return null;
+  if (!project) return null;
+
+  // With a single artboard there's nothing to switch between, so the pill becomes
+  // a plain "+" that hints at — and creates — additional workspaces.
+  if (project.artboards.length < 2) {
+    return (
+      <div className="glass absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full p-1 shadow-[0_8px_28px_rgba(0,0,0,0.18)]">
+        <button
+          type="button"
+          title={t('artboards.add')}
+          aria-label={t('artboards.add')}
+          onClick={() => addArtboard(project.id)}
+          className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--calqo-text-3)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+        >
+          <Plus size={15} />
+        </button>
+      </div>
+    );
+  }
 
   const activeIndex = Math.max(
     0,
@@ -53,6 +74,29 @@ export function ArtboardDots() {
           );
         })}
       </div>
+      <span className="h-3 w-px bg-[var(--calqo-divider)]" aria-hidden="true" />
+      <OverviewToggle label={t('overview.toggle')} onClick={toggleOverviewMode} />
     </div>
+  );
+}
+
+/** Grid-icon button that opens the artboard overview ("see all"). */
+function OverviewToggle({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--calqo-text-3)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+    >
+      <LayoutGrid size={14} />
+    </button>
   );
 }

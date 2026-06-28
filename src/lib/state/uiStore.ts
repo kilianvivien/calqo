@@ -114,6 +114,9 @@ interface UiState {
   shapeDefaults: ShapeDefaults;
   fitRequest: number;
   aiDialog: AiDialog;
+  /** Whether the "see all" artboard overview grid is open. Transient (not
+   * persisted): a Figma-like contact sheet of every artboard in the project. */
+  overviewMode: boolean;
   /** Whether the insert-SVG dialog (library / AI / upload) is open. */
   svgDialog: boolean;
   /** Whether the emoji picker dialog is open. */
@@ -135,6 +138,8 @@ interface UiState {
   setShapeDefaults: (patch: Partial<ShapeDefaults>) => void;
   requestFit: () => void;
   setAiDialog: (dialog: AiDialog) => void;
+  setOverviewMode: (open: boolean) => void;
+  toggleOverviewMode: () => void;
   setSvgDialog: (open: boolean) => void;
   setEmojiDialog: (open: boolean) => void;
   setMarkerPickerLayerId: (id: string | null) => void;
@@ -159,6 +164,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   },
   fitRequest: 0,
   aiDialog: 'none',
+  overviewMode: false,
   svgDialog: false,
   emojiDialog: false,
   markerPickerLayerId: null,
@@ -186,6 +192,8 @@ export const useUiStore = create<UiState>((set, get) => ({
     set({ shapeDefaults: { ...get().shapeDefaults, ...patch } }),
   requestFit: () => set({ fitRequest: get().fitRequest + 1 }),
   setAiDialog: (aiDialog) => set({ aiDialog }),
+  setOverviewMode: (overviewMode) => set({ overviewMode }),
+  toggleOverviewMode: () => set({ overviewMode: !get().overviewMode }),
   setSvgDialog: (svgDialog) => set({ svgDialog }),
   setEmojiDialog: (emojiDialog) => set({ emojiDialog }),
   setMarkerPickerLayerId: (markerPickerLayerId) => set({ markerPickerLayerId }),

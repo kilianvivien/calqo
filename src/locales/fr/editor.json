@@ -319,6 +319,14 @@
     "resizeReview": "{{name}} : {{count}} calque(s) dépassent après redimensionnement. Vérifier.",
     "dismissReview": "Ignorer"
   },
+  "overview": {
+    "toggle": "Tout afficher",
+    "title": "Tous les plans de travail",
+    "addPage": "Ajouter une page",
+    "exit": "Fermer la vue d'ensemble",
+    "rename": "Renommer",
+    "changeFormat": "Changer le format"
+  },
   "export": {
     "title": "Exporter",
     "subtitle": "Exportez le plan de travail en image, SVG ou wrapper HTML.",

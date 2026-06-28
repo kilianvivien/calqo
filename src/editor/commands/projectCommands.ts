@@ -34,6 +34,7 @@ import { historyStore } from '@/lib/state/historyStore';
 import { projectStore } from '@/lib/state/projectStore';
 import { selectionStore } from '@/lib/state/selectionStore';
 import { workspaceStore } from '@/lib/state/workspaceStore';
+import { useUiStore } from '@/lib/state/uiStore';
 import { desktopFileStore } from '@/lib/state/desktopFileStore';
 import {
   applyLayerPatch,
@@ -190,6 +191,8 @@ export async function createProject(
   workspaceStore.getState().openTab(project.id, true);
   selectionStore.getState().setActiveArtboard(project.artboards[0]?.id ?? null);
   selectionStore.getState().clearSelection();
+  // A fresh project should land on its canvas, never the overview.
+  useUiStore.getState().setOverviewMode(false);
   await saveProject(project.id);
   return project.id;
 }
@@ -200,6 +203,7 @@ export async function adoptProject(project: CalqoProject): Promise<string> {
   workspaceStore.getState().openTab(project.id, true);
   selectionStore.getState().setActiveArtboard(project.artboards[0]?.id ?? null);
   selectionStore.getState().clearSelection();
+  useUiStore.getState().setOverviewMode(false);
   await saveProject(project.id);
   return project.id;
 }
@@ -1360,6 +1364,43 @@ export function duplicateArtboard(
   );
   setActiveArtboard(copy.id);
   return copy.id;
+}
+
+/** Change an artboard's format/size in place, retargeting it to a preset. Layers
+ * are scaled to fit the new bounds and recentred (same math as the duplicate-to-
+ * preset path). No-op if the target size matches the current one. */
+export function resizeArtboard(
+  projectId: string,
+  artboardId: string,
+  targetPreset: ArtboardPresetId,
+): void {
+  const project = projectStore.getState().projects[projectId];
+  const source = project?.artboards.find((ab) => ab.id === artboardId);
+  if (!source) return;
+  const preset = ARTBOARD_PRESETS[targetPreset];
+  if (preset.width === source.width && preset.height === source.height) return;
+
+  const scale = Math.min(preset.width / source.width, preset.height / source.height);
+  const offsetX = (preset.width - source.width * scale) / 2;
+  const offsetY = (preset.height - source.height * scale) / 2;
+
+  editProject(
+    projectId,
+    (draft) => {
+      const target = draft.artboards.find((ab) => ab.id === artboardId);
+      if (!target) return;
+      target.preset = preset.id;
+      target.width = preset.width;
+      target.height = preset.height;
+      target.layers = target.layers.map((layer) => {
+        const scaled = scaleLayerAroundOrigin(layer, scale);
+        scaled.x += offsetX;
+        scaled.y += offsetY;
+        return scaled;
+      });
+    },
+    { undoable: true },
+  );
 }
 
 /** Scale a layer (and group children) about the artboard origin by a factor. */

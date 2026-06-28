@@ -32,6 +32,15 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // Honour the `_`-prefix convention for intentionally unused args/vars.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
   prettier,

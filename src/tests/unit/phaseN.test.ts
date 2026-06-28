@@ -7,20 +7,26 @@ import { safeImportProject } from '@/lib/schema';
 const echoT = (key: string) => key;
 
 describe('phase N — sample project and diagnostics', () => {
-  it('ships a valid editable sample with multilingual content and export warnings', () => {
+  it('ships a valid, clean, multi-format sample with multilingual content', () => {
     const sample = createSampleProject('2026-06-20T00:00:00.000Z');
     const imported = safeImportProject(sample);
 
     expect(imported.ok).toBe(true);
     expect(sample.contentLocales).toEqual(['en', 'fr', 'tr']);
-    expect(sample.assets).toHaveLength(1);
-    expect(
-      sample.artboards[0].layers.some((layer) => layer.type === 'image'),
-    ).toBe(true);
+    // A multi-format campaign — showcases the workspace overview.
+    expect(sample.artboards.length).toBeGreaterThanOrEqual(3);
 
+    // Every copy layer carries all three locales (translation demo).
+    const headline = sample.artboards[0].layers.find((l) => l.id === 'sq_headline');
+    expect(headline?.type).toBe('text');
+    if (headline?.type === 'text') {
+      expect(Object.keys(headline.text).sort()).toEqual(['en', 'fr', 'tr']);
+    }
+
+    // The sample renders complete — no missing-asset or overflow warnings.
     const diagnostics = buildProjectDiagnostics(sample, DEFAULT_AI_SETTINGS, echoT);
-    expect(diagnostics.warnings.unique).toContain('export.warnMissingAsset');
-    expect(diagnostics.warnings.unique).toContain('export.warnOverflow');
+    expect(diagnostics.warnings.unique).not.toContain('export.warnMissingAsset');
+    expect(diagnostics.warnings.unique).not.toContain('export.warnOverflow');
   });
 
   it('summarizes schema, layer mix, warnings, and provider state without secrets', () => {
@@ -42,9 +48,9 @@ describe('phase N — sample project and diagnostics', () => {
     const serialized = JSON.stringify(diagnostics);
 
     expect(diagnostics.project.schemaVersion).toBe(sample.schemaVersion);
-    expect(diagnostics.project.assets).toBe(1);
+    expect(diagnostics.project.assets).toBe(0);
     expect(diagnostics.artboards[0].layers.byType.text).toBeGreaterThan(0);
-    expect(diagnostics.artboards[0].layers.byType.image).toBe(1);
+    expect(diagnostics.artboards[0].layers.byType.shape).toBeGreaterThan(0);
     expect(diagnostics.provider.label).toBe('Google Gemini');
     expect(diagnostics.provider.keyConfigured).toBe(true);
     expect(serialized).not.toContain('secret-test-key');

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, FolderOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { FolderOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { dialog } from '@/lib/adapters';
 import type { ProjectSummary } from '@/lib/adapters';
 import { useProjectSummaries } from '@/lib/hooks/useProjectSummaries';
+import { ProjectThumbnail } from './ProjectThumbnail';
 import {
   deleteProject,
   openProject,
@@ -56,9 +57,7 @@ function ProjectManagerRow({
 
   return (
     <li className="group flex items-center gap-2 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] pr-1.5 transition-colors hover:bg-[var(--calqo-hover)]">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[var(--calqo-radius-sm)] bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)] ml-3">
-        <FileText size={16} />
-      </span>
+      <ProjectThumbnail projectId={summary.id} />
       <div className="min-w-0 flex-1 py-2.5">
         {renaming ? (
           <input

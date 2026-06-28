@@ -319,6 +319,14 @@
     "resizeReview": "{{name}}: {{count}} layer(s) fall outside after resize. Review.",
     "dismissReview": "Dismiss"
   },
+  "overview": {
+    "toggle": "See all",
+    "title": "All artboards",
+    "addPage": "Add page",
+    "exit": "Close overview",
+    "rename": "Rename",
+    "changeFormat": "Change format"
+  },
   "export": {
     "title": "Export",
     "subtitle": "Render the artboard to an image, SVG, or HTML wrapper.",

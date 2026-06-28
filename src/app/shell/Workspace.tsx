@@ -5,7 +5,9 @@ import { adoptProject, createProject } from '@/editor/commands/projectCommands';
 import { CalqoStage } from '@/editor/canvas/CalqoStage';
 import { createSampleProject } from '@/lib/schema/sampleProject';
 import { GlassButton } from '@/components/glass';
+import { useUiStore } from '@/lib/state/uiStore';
 import { ArtboardDots } from './ArtboardDots';
+import { ArtboardOverview } from './ArtboardOverview';
 import { FormatGrid } from './NewProjectModal';
 import { ZoomControl } from './ZoomControl';
 
@@ -14,6 +16,7 @@ export function Workspace() {
   const { t } = useTranslation('editor');
   const project = useActiveProject();
   const artboard = useActiveArtboard();
+  const overviewMode = useUiStore((s) => s.overviewMode);
 
   return (
     <div
@@ -50,7 +53,8 @@ export function Workspace() {
         <>
           <CalqoStage project={project} artboard={artboard} />
           <ArtboardDots />
-          <ZoomControl />
+          {!overviewMode && <ZoomControl />}
+          <ArtboardOverview />
         </>
       )}
     </div>

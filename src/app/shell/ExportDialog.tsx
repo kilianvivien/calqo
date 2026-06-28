@@ -15,6 +15,7 @@ import {
 } from '@/editor/export/rasterExport';
 import { exportArtboardSvg } from '@/editor/export/svgExport';
 import { htmlSnippet, htmlStandalone } from '@/editor/export/htmlExport';
+import { blobToBytes, createZip } from '@/editor/export/zip';
 import {
   collectExportWarnings,
   uniqueArtboardStems,
@@ -39,8 +40,6 @@ function blobToDataUrl(blob: Blob): Promise<string> {
     reader.readAsDataURL(blob);
   });
 }
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function ExportDialog({
   open,
@@ -77,8 +76,12 @@ export function ExportDialog({
 
   const transparentSupported = format === 'png' || format === 'webp';
   const qualitySupported = format === 'jpeg' || format === 'webp';
-  const filename =
-    format === 'html'
+  // A multi-artboard export is bundled into a single .zip so the browser never
+  // suppresses the follow-up downloads.
+  const bundling = targets.length > 1;
+  const filename = bundling
+    ? `${slug(project.name)}.zip`
+    : format === 'html'
       ? `${slug(project.name)}-${slug(artboard.name)}.html`
       : format === 'svg'
         ? `${slug(project.name)}-${slug(artboard.name)}.svg`
@@ -94,50 +97,60 @@ export function ExportDialog({
       quality,
     });
 
+  /** Render one artboard to a named file blob for the current format. */
+  const renderTarget = async (
+    target: CalqoArtboard,
+    stem: string,
+  ): Promise<{ name: string; blob: Blob }> => {
+    const projectSlug = slug(project.name);
+    const scaleSuffix = pixelRatio > 1 ? `@${pixelRatio}x` : '';
+    if (isRaster(format)) {
+      const ext = format === 'jpeg' ? 'jpg' : format;
+      const blob = await renderRaster(target, format);
+      return { name: `${projectSlug}-${stem}${scaleSuffix}.${ext}`, blob };
+    }
+    if (format === 'svg') {
+      const { svg } = await exportArtboardSvg(target, project.activeContentLocale);
+      return {
+        name: `${projectSlug}-${stem}.svg`,
+        blob: new Blob([svg], { type: 'image/svg+xml' }),
+      };
+    }
+    // HTML wrapper — always a PNG of the artboard.
+    const blob = await renderRaster(target, 'png');
+    const pngDataUrl = await blobToDataUrl(blob);
+    const html = (htmlMode === 'snippet' ? htmlSnippet : htmlStandalone)({
+      title: `${project.name} — ${target.name}`,
+      width: target.width,
+      height: target.height,
+      pngDataUrl,
+    });
+    return {
+      name: `${projectSlug}-${stem}.html`,
+      blob: new Blob([html], { type: 'text/html' }),
+    };
+  };
+
   const handleExport = async () => {
     setBusy(true);
     setStatus(null);
     // Collision-free stems so a batch with duplicate artboard names never
     // overwrites earlier files (plan Phase K).
     const stems = uniqueArtboardStems(targets, slug);
-    const projectSlug = slug(project.name);
-    const scaleSuffix = pixelRatio > 1 ? `@${pixelRatio}x` : '';
     try {
-      if (isRaster(format)) {
-        const ext = format === 'jpeg' ? 'jpg' : format;
-        for (let i = 0; i < targets.length; i++) {
-          const blob = await renderRaster(targets[i], format);
-          await files.downloadBlob(blob, `${projectSlug}-${stems[i]}${scaleSuffix}.${ext}`);
-          if (targets.length > 1) await delay(250);
-        }
-      } else if (format === 'svg') {
-        for (let i = 0; i < targets.length; i++) {
-          const { svg } = await exportArtboardSvg(targets[i], project.activeContentLocale);
-          await files.downloadBlob(
-            new Blob([svg], { type: 'image/svg+xml' }),
-            `${projectSlug}-${stems[i]}.svg`,
-          );
-          if (targets.length > 1) await delay(250);
-        }
+      const outputs = [];
+      for (let i = 0; i < targets.length; i++) {
+        outputs.push(await renderTarget(targets[i], stems[i]));
+      }
+      if (outputs.length === 1) {
+        await files.downloadBlob(outputs[0].blob, outputs[0].name);
       } else {
-        // HTML wrapper — always a PNG of the chosen scope's artboards.
-        for (let i = 0; i < targets.length; i++) {
-          const target = targets[i];
-          const blob = await renderRaster(target, 'png');
-          const pngDataUrl = await blobToDataUrl(blob);
-          const input = {
-            title: `${project.name} — ${target.name}`,
-            width: target.width,
-            height: target.height,
-            pngDataUrl,
-          };
-          const html = htmlMode === 'snippet' ? htmlSnippet(input) : htmlStandalone(input);
-          await files.downloadBlob(
-            new Blob([html], { type: 'text/html' }),
-            `${projectSlug}-${stems[i]}.html`,
-          );
-          if (targets.length > 1) await delay(250);
-        }
+        // Bundle every artboard into one ZIP — a single download the browser
+        // won't block, unlike a burst of per-file downloads.
+        const entries = await Promise.all(
+          outputs.map(async (o) => ({ name: o.name, data: await blobToBytes(o.blob) })),
+        );
+        await files.downloadBlob(createZip(entries), `${slug(project.name)}.zip`);
       }
       setStatus(t('export.done'));
     } catch (error) {
