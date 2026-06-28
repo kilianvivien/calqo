@@ -35,26 +35,25 @@ surface.
 ## Download
 
 The current alpha release is
-[Calqo v0.2.2](https://github.com/kilianvivien/calqo/releases/tag/v0.2.2).
+[Calqo v0.2.4](https://github.com/kilianvivien/calqo/releases/tag/v0.2.4).
 
-- macOS Apple Silicon: `Calqo_0.2.2_aarch64.dmg`
-- SHA-256:
-  `c479ef78e2fc487b6ea3d4442886dca11d71bac7dbe64e848f2c1be582a452b6`
+- macOS Apple Silicon DMG: release asset pending.
+- SHA-256: pending binary upload.
 
 The desktop build is currently unsigned and not notarized. On first launch,
 macOS Gatekeeper may require approving the app manually.
 
 ## Status
 
-**Public alpha, current app version 0.2.2.** The core editor is implemented and
+**Public alpha, current app version 0.2.4.** The core editor is implemented and
 usable locally: create projects, edit multi-artboard social visuals, save in the
 browser or native desktop shell, export files, translate content, and generate
 editable AI templates. The macOS desktop build includes localized native menus,
 native `.calqo` open/save flows, secure desktop AI key storage, native
 clipboard/image drop support, local font discovery, and Apple Silicon
 `.app`/`.dmg` packaging. The browser app also includes a responsive phone
-quick-edit surface, PWA install/update prompts, and recent modal keyboard
-handling polish.
+quick-edit surface, PWA install/update prompts, workspace overview, saved AI SVG
+library, emoji insertion, app backup/restore, and multi-locale ZIP exports.
 
 - [x] Vite + React + TypeScript project
 - [x] Tailwind v4 + Liquid Glass design tokens & primitives
@@ -81,7 +80,9 @@ handling polish.
 - [x] Modal keyboard shortcut isolation and focus-trap polish (`v0.1.7`)
 - [x] Creative frames, stroke looks, sticker outlines, and mobile styling parity (Phase R)
 - [x] Font/style controls, system font enumeration, and inspector section polish (`v0.2.2`)
-- [x] Current GitHub release with Apple Silicon macOS DMG (`v0.2.2`)
+- [x] Saved AI SVG library, emoji tool, and in-app glass confirmations (`v0.2.3`)
+- [x] Workspace overview, ZIP export, backup/restore, and project duplicate/export (`v0.2.4`)
+- [x] Current GitHub release notes for `v0.2.4`; Apple Silicon DMG asset pending upload
 
 ## What you can make
 
@@ -111,17 +112,28 @@ animation timeline, no realtime multiplayer, and no hosted template marketplace.
   stroke controls, sticker/frame chips, arrange/layers panels, translation, and
   mobile export/share paths.
 - **Multi-artboard projects:** design several social sizes in one project, then
-  duplicate or resize content into another preset.
+  duplicate or resize content into another preset. The workspace overview shows
+  every artboard as a drag-reorderable grid with inline rename, duplicate,
+  delete, and format-change actions.
 - **Local-first storage:** browser projects are persisted with IndexedDB/Dexie,
-  and the `.calqo` format is validated through the shared project schema.
+  and the `.calqo` format is validated through the shared project schema. Saved
+  projects can be duplicated/exported individually, and the backup flow exports
+  projects plus non-secret settings to a `.calqobackup` file.
 - **Export workflow:** PNG/JPG/WebP with scale options, SVG with fidelity
-  warnings, simple HTML wrappers, batch export, and clipboard/share paths where
-  the browser supports them.
+  warnings, simple HTML wrappers, batch export, ZIP bundles for multi-artboard
+  or multi-locale output, and clipboard/share paths where the browser supports
+  them.
 - **Multilingual content:** text layers can store variants per content locale,
   so switching from French to English or Turkish changes the design content, not
-  the app chrome.
+  the app chrome. Export can target the active locale or every project locale in
+  per-locale ZIP folders.
 - **Prompt-a-template:** describe a design and get an editable Calqo project
   instead of a flattened image.
+- **Reusable generated assets:** AI-generated SVG marks can be saved to a local
+  "Generated" category, deleted later, and reused from the desktop or mobile SVG
+  picker.
+- **Fast decorative text:** the emoji tool inserts selected emoji as editable
+  text layers using the OS emoji font.
 - **Bring-your-own AI provider:** AI is off until a provider is configured;
   Gemini has a provider-specific GenAI path, while OpenAI-compatible,
   Ollama/local, Mistral, OpenRouter, and custom endpoints are supported through
