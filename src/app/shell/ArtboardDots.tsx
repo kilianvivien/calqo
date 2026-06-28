@@ -22,7 +22,7 @@ export function ArtboardDots() {
   // a plain "+" that hints at — and creates — additional workspaces.
   if (project.artboards.length < 2) {
     return (
-      <div className="glass absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full p-1 shadow-[0_8px_28px_rgba(0,0,0,0.18)]">
+      <div className="glass absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full p-1 shadow-[0_8px_28px_rgba(0,0,0,0.18)]">
         <button
           type="button"
           title={t('artboards.add')}
@@ -46,7 +46,7 @@ export function ArtboardDots() {
     <div
       role="tablist"
       aria-label={t('panels.artboards')}
-      className="glass absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1.5 shadow-[0_8px_28px_rgba(0,0,0,0.18)]"
+      className="glass absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1.5 shadow-[0_8px_28px_rgba(0,0,0,0.18)]"
     >
       <span className="max-w-[160px] truncate text-[11px] font-medium text-[var(--calqo-text-2)]">
         {activeArtboard?.name}
