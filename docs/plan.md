@@ -1,7 +1,7 @@
 # Calqo Beta And 1.0 Roadmap
 
 **Planning date:** 2026-06-27  
-**Current app version observed:** `0.2.2` in `package.json`  
+**Current app version observed:** `0.2.4` in `package.json` and Tauri metadata
 **Planning inputs:** `docs/calqo-post-phase-m-implementation-plan.md`,
 `docs/calqo-mcp-live-drawing-implementation-plan.md`,
 `docs/PRD-calqo-v0.5.md`, README, package scripts, schema/export/adapter code,
@@ -50,8 +50,9 @@ Implemented and worth protecting:
 
 Clear gaps observed:
 
-- Release metadata is drifting: README download/status copy still names
-  `v0.2.0`, while `package.json` is `0.2.2`.
+- Release metadata should be checked before every package: README, package
+  metadata, Tauri config, and Cargo package version all need to name the same
+  release.
 - No `.github` CI workflow is present.
 - Desktop release is unsigned/not notarized and Apple Silicon only.
 - PWA install/update exists, but is not yet a release gate.
