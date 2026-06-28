@@ -1,102 +1,73 @@
 # CLAUDE.md
 
-Guidance for working in the Calqo repo.
+Concise guidance for working in Calqo.
 
-## What Calqo is
+## Product
 
-An open-source, local-first **social-visual maker** — the focused 20% of Canva
-for static social posts (square, portrait, story, thumbnail, banner). Browser
-React app first; a Tauri desktop shell comes later. Two AI differentiators:
-**prompt-a-template** (an LLM emits the editor's own project JSON) and
-**multilingual content + instant translation** (per-locale text variants).
+Calqo is an open-source, local-first social visual maker: the focused 20% of
+Canva for static social posts. Browser React app first; Tauri shell later.
+
+Core AI bets:
+
+- Prompt-to-template: LLM output must be valid Calqo project JSON.
+- Multilingual content: project text can have per-locale variants.
 
 Source of truth:
 
-- `docs/PRD-calqo-v0.5.md` — the product spec.
-- `docs/calqo-browser-prototype-implementation-plan.md` — the phased build plan
-  (Phases A–F). **Keep its status banners up to date as work lands.**
-- `docs/GeoCarto-design.md` — the Liquid Glass design system Calqo reuses.
+- `docs/PRD-calqo-v0.5.md` - product spec.
+- `docs/calqo-browser-prototype-implementation-plan.md` - phased plan; keep
+  status banners current.
+- `docs/GeoCarto-design.md` - Liquid Glass design system.
 
 ## Commands
 
 ```bash
-pnpm dev         # dev server (Vite, port 5173)
-pnpm build       # tsc --noEmit && vite build
-pnpm typecheck   # type-check only
-pnpm test        # vitest run
-pnpm lint        # eslint
-pnpm format      # prettier --write
+pnpm dev        # Vite dev server, port 5173
+pnpm build      # typecheck + production build
+pnpm typecheck  # TypeScript only
+pnpm test       # Vitest
+pnpm lint       # ESLint
+pnpm format     # Prettier write
 ```
 
-Always run `pnpm typecheck` and `pnpm test` before committing.
+Run `pnpm typecheck` and `pnpm test` before committing.
 
 ## Stack
 
-React 19 · TypeScript · Vite · Tailwind v4 (`@tailwindcss/vite`) · Konva /
-react-konva · Zustand (+ immer) · Dexie · Zod · react-i18next · lucide-react.
-Package manager: **pnpm**.
+React 19, TypeScript, Vite, Tailwind v4, Konva/react-konva, Zustand + immer,
+Dexie, Zod, react-i18next, lucide-react. Package manager: pnpm.
 
-## Architecture & conventions
+## Conventions
 
-- **Adapter boundary (important).** Anything that will later need native (Tauri)
-  support sits behind an adapter in `src/lib/adapters/` (`storage`, `assets`,
-  `file`, `clipboard`, `fonts`). App code imports the interface-typed singletons
-  from `src/lib/adapters/index.ts` — **never import Dexie or browser storage
-  APIs directly** in editor/UI components.
-- **The project schema is the contract.** `src/lib/schema/` (Zod) is shared by
-  the editor, Dexie persistence, `.calqo` import/export, and AI output. It is
-  versioned (`CURRENT_SCHEMA_VERSION`) and migration-ready. Validate all
-  imported/AI-generated documents with `safeImportProject`.
-- **Mutations flow through commands.** Project changes go through
-  `src/editor/commands/projectCommands.ts` (`editProject`, `createProject`,
-  `renameProject`, `duplicateProject`, `closeProject`, `saveProject`, …), which
-  apply an immer patch, mark dirty, and debounce-autosave. Don't mutate store
-  state ad hoc from components.
-- **State is split** (`src/lib/state/`): `uiStore` (theme/transparency),
-  `projectStore` (normalized docs + save state), `workspaceStore` (tab order +
-  active id, persisted to localStorage). Selection/history stores land in Phase B.
-- **Design system.** Tokens are CSS variables prefixed `--calqo-*` in
-  `src/styles/tokens.css`; the four-layer `.glass` recipe is in `glass.css`.
-  Build UI from the primitives in `src/components/glass/`. Keep to: one accent
-  (system blue), radii descending with nesting (14→10→8→6), spring easing on
-  tactile feedback / ease-out elsewhere, and always support light + dark + a
-  reduced-transparency fallback (`html[data-transparency="solid"]`).
-- **i18n.** App UI strings live in `src/locales/{en,fr}/*.json` (namespaces:
-  `common`, `editor`, `errors`). Every user-facing string must be translated in
-  both. **App UI language is distinct from per-project content locales.**
-- **Layout.** The shell is a rounded glass window with rows
-  titlebar / tab bar / workspace / status bar; tool rail · left dock · canvas ·
-  inspector. Components are under `src/app/shell/`.
-- **Export.** `src/editor/export/` renders artboards to PNG/JPG/WebP/SVG/HTML.
-  `ExportDialog` (`src/app/shell/`) batches over two independent scopes —
-  **artboards** (active / all) and **content locales** (active / all, shown only
-  when the project has >1 locale). Any batch producing more than one file is
-  bundled into a single `.zip` (dependency-free writer in `export/zip.ts`) so the
-  browser never blocks sequential downloads; multi-locale batches nest each
-  locale's files in a `<locale>/` folder. The export button surfaces live
-  per-file progress while rendering.
-- **Assets are owned per project.** Asset rows are keyed globally by id but
-  Dexie deletes them `where projectId equals`, so any *copy* of a project
-  (`duplicateStoredProject`, backup restore) must clone its asset blobs under
-  fresh ids and rewrite every reference via `remapProjectAssetIds`
-  (`src/editor/assets/assetRemap.ts`) — sharing ids would strand one project's
-  images when the other is deleted.
-- **Backup.** `src/editor/backup/appBackup.ts` bundles every stored project
-  (assets inlined as `.calqo` envelopes), the adapter-backed settings, and the
-  localStorage UI prefs into one portable `.calqobackup` JSON. Restore is
-  additive (projects re-imported under fresh ids; nothing overwritten) and
-  reloads to apply settings. **API keys are scrubbed from backups** — never
-  write secrets to the downloadable file. UI lives in the Settings ▸ Backup tab.
+- Keep native-ready APIs behind `src/lib/adapters/`; app/editor UI imports
+  singletons from `src/lib/adapters/index.ts`, not Dexie or browser storage.
+- Treat `src/lib/schema/` as the contract. Validate imported or AI-generated
+  projects with `safeImportProject`.
+- Route project mutations through `src/editor/commands/projectCommands.ts`; do
+  not mutate project store state directly from components.
+- Respect split state in `src/lib/state/`: `uiStore`, `projectStore`,
+  `workspaceStore`.
+- Build Liquid Glass UI from `src/components/glass/` and tokens in
+  `src/styles/tokens.css`. Support light, dark, and
+  `html[data-transparency="solid"]`.
+- Put every user-facing UI string in both `src/locales/en` and
+  `src/locales/fr`. App UI language is separate from project content locales.
+- Shell layout lives under `src/app/shell/`: titlebar, tab bar, workspace,
+  status bar; tool rail, left dock, canvas, inspector.
+- Export lives in `src/editor/export/`; multi-file exports zip outputs and
+  multi-locale exports group files by locale.
+- Project copies and backup restores must clone asset blobs, assign fresh ids,
+  and rewrite references with `remapProjectAssetIds`.
+- Backups must not include secrets or API keys.
 
 ## Status
 
-**Phase A (browser foundation) is complete.** Next up is **Phase B**: the Konva
-canvas editor (stage, layer renderers, selection/transform, tools, text overlay,
-undo/redo). See the plan's Phase B section for the task breakdown.
+Phase A is complete. Phase B is next: Konva canvas editor, layer renderers,
+selection/transform, tools, text overlay, undo/redo. Update the implementation
+plan when steps land.
 
-## House rules
+## House Rules
 
-- Match the surrounding code's style; keep comments purposeful, not narration.
-- Don't commit or push unless asked. Default branch is `main`.
-- When a phase or step completes, tick its box / update its status banner in the
-  implementation plan.
+- Match surrounding style; keep comments purposeful.
+- Do not commit or push unless asked. Default branch: `main`.
+- Keep changes scoped and update the phased plan when work changes status.
