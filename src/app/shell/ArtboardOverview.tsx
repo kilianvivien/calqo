@@ -142,7 +142,7 @@ export function ArtboardOverview() {
         </GlassIconButton>
       </header>
 
-      <div className="relative min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+      <div className="relative min-h-0 flex-1 overflow-y-auto px-5 pt-1 pb-6">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
