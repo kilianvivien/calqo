@@ -303,7 +303,7 @@
     "framePreset_photo-booth-strip": "Photo booth"
   },
   "crop": {
-    "hint": "Drag to reposition · scroll to zoom",
+    "hint": "Drag to reposition · scroll to zoom · drag handles to reframe",
     "apply": "Apply crop",
     "cancel": "Cancel"
   },
