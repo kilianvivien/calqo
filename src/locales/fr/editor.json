@@ -303,7 +303,7 @@
     "framePreset_photo-booth-strip": "Photomaton"
   },
   "crop": {
-    "hint": "Glissez pour repositionner · molette pour zoomer",
+    "hint": "Glissez pour repositionner · molette pour zoomer · poignées pour recadrer",
     "apply": "Appliquer le recadrage",
     "cancel": "Annuler"
   },

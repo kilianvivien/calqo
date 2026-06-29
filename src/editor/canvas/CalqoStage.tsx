@@ -43,9 +43,11 @@ import { computeSnap, SNAP_DISTANCE } from './snapping';
 import {
   clampCropView,
   initCropView,
+  resizeCropFrame,
   viewToCropRect,
   zoomCropView,
   type CropFrame,
+  type CropHandle,
   type CropView,
 } from './cropGeometry';
 
@@ -77,6 +79,36 @@ type ContextMenuState = { x: number; y: number };
 type ShapeTool = 'rect' | 'ellipse' | 'line' | 'arrow' | PolygonPreset;
 
 const TRANSFORMER_ANCHOR_SIZE = 5;
+/** On-screen size (px, pre-zoom) of a crop reframe handle. */
+const CROP_HANDLE_SIZE = 12;
+/** CSS cursor for each crop reframe handle, by compass direction. */
+const CROP_HANDLE_CURSOR: Record<CropHandle, string> = {
+  nw: 'nwse-resize',
+  n: 'ns-resize',
+  ne: 'nesw-resize',
+  e: 'ew-resize',
+  se: 'nwse-resize',
+  s: 'ns-resize',
+  sw: 'nesw-resize',
+  w: 'ew-resize',
+};
+/** The eight handle anchor points of a crop frame, in artboard coordinates. */
+function cropHandleAnchors(frame: CropFrame): [CropHandle, number, number][] {
+  const cx = frame.x + frame.w / 2;
+  const cy = frame.y + frame.h / 2;
+  const right = frame.x + frame.w;
+  const bottom = frame.y + frame.h;
+  return [
+    ['nw', frame.x, frame.y],
+    ['n', cx, frame.y],
+    ['ne', right, frame.y],
+    ['e', right, cy],
+    ['se', right, bottom],
+    ['s', cx, bottom],
+    ['sw', frame.x, bottom],
+    ['w', frame.x, cy],
+  ];
+}
 const SHAPE_TOOLS = new Set<string>([
   'rect',
   'ellipse',
@@ -175,9 +207,14 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   }, [artboard, croppingLayerId]);
   const { image: cropImage } = useAssetImage(croppingLayer?.assetId ?? null);
   const [cropView, setCropView] = useState<CropView | null>(null);
-  const cropFrame: CropFrame | null = croppingLayer
-    ? { x: croppingLayer.x, y: croppingLayer.y, w: croppingLayer.w, h: croppingLayer.h }
-    : null;
+  // The crop frame is the layer's footprint on the artboard; reframe handles
+  // resize it live, so it lives in state (seeded from the layer on entry) rather
+  // than being derived. Committing writes the resized frame back as the layer
+  // rect along with the image-pixel crop rect.
+  const [cropFrame, setCropFrame] = useState<CropFrame | null>(null);
+  // Frame captured when a reframe handle drag begins, so each move resolves
+  // relative to a stable origin rather than the live (already-moving) frame.
+  const cropResizeStart = useRef<CropFrame | null>(null);
   const cropIw = cropImage?.naturalWidth ?? 0;
   const cropIh = cropImage?.naturalHeight ?? 0;
 
@@ -246,20 +283,36 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     transformer.getLayer()?.batchDraw();
   }, [selectedLayers, croppingLayerId]);
 
-  // Seed the crop view when entering crop mode (or when the bitmap loads).
+  // Seed the crop frame and view when entering crop mode (or when the bitmap
+  // loads): the frame starts as the layer's current rect.
   useEffect(() => {
-    if (!croppingLayerId || !cropImage || !cropFrame) {
+    if (!croppingLayerId || !cropImage || !croppingLayer) {
       setCropView(null);
+      setCropFrame(null);
       return;
     }
-    setCropView(initCropView(cropIw, cropIh, cropFrame, croppingLayer?.crop));
+    const frame: CropFrame = {
+      x: croppingLayer.x,
+      y: croppingLayer.y,
+      w: croppingLayer.w,
+      h: croppingLayer.h,
+    };
+    setCropFrame(frame);
+    setCropView(initCropView(cropIw, cropIh, frame, croppingLayer.crop));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [croppingLayerId, cropImage]);
 
   const commitCrop = () => {
     if (croppingLayer && cropView && cropFrame) {
       const crop = viewToCropRect(cropView, cropFrame, cropIw, cropIh);
-      updateLayerInActiveArtboard(project.id, croppingLayer.id, { crop });
+      // The reframed crop frame becomes the layer's new footprint.
+      updateLayerInActiveArtboard(project.id, croppingLayer.id, {
+        crop,
+        x: cropFrame.x,
+        y: cropFrame.y,
+        w: cropFrame.w,
+        h: cropFrame.h,
+      });
     }
     setCroppingLayerId(null);
   };
@@ -1013,6 +1066,61 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
                 strokeWidth={1.5 / zoom}
                 listening={false}
               />
+              {/* Reframe handles — drag to change the crop frame's format. */}
+              {cropHandleAnchors(cropFrame).map(([handle, ax, ay]) => {
+                const handleSize = CROP_HANDLE_SIZE / zoom;
+                return (
+                  <Rect
+                    key={handle}
+                    x={ax - handleSize / 2}
+                    y={ay - handleSize / 2}
+                    width={handleSize}
+                    height={handleSize}
+                    fill="#FFFFFF"
+                    stroke="#007AFF"
+                    strokeWidth={1.5 / zoom}
+                    cornerRadius={handleSize / 4}
+                    draggable
+                    onMouseEnter={(event) => {
+                      const stage = event.target.getStage();
+                      if (stage) stage.container().style.cursor = CROP_HANDLE_CURSOR[handle];
+                    }}
+                    onMouseLeave={(event) => {
+                      const stage = event.target.getStage();
+                      if (stage) stage.container().style.cursor = '';
+                    }}
+                    onDragStart={() => {
+                      cropResizeStart.current = cropFrame;
+                    }}
+                    onDragMove={(event) => {
+                      const start = cropResizeStart.current;
+                      if (!start || !cropView) return;
+                      const [, sx, sy] = cropHandleAnchors(start).find(
+                        ([h]) => h === handle,
+                      )!;
+                      const node = event.target;
+                      const dx = node.x() + handleSize / 2 - sx;
+                      const dy = node.y() + handleSize / 2 - sy;
+                      const next = resizeCropFrame(start, handle, dx, dy, {
+                        x: 0,
+                        y: 0,
+                        w: artboard.width,
+                        h: artboard.height,
+                      });
+                      setCropFrame(next);
+                      setCropView(clampCropView(cropView, cropIw, cropIh, next));
+                      // Snap the handle back onto the clamped frame so it tracks it.
+                      const [, nx, ny] = cropHandleAnchors(next).find(
+                        ([h]) => h === handle,
+                      )!;
+                      node.position({ x: nx - handleSize / 2, y: ny - handleSize / 2 });
+                    }}
+                    onDragEnd={() => {
+                      cropResizeStart.current = null;
+                    }}
+                  />
+                );
+              })}
             </>
           )}
           <Transformer
