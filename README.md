@@ -42,7 +42,7 @@ macOS Gatekeeper may require approving the app manually.
 
 ## Status
 
-**Public alpha, current app version 0.2.5.** The core editor is implemented and
+**Public alpha, current app version 0.2.6.** The core editor is implemented and
 usable locally: create projects, edit multi-artboard social visuals, save in the
 browser or native desktop shell, export files, translate content, and generate
 editable AI templates. The macOS desktop build includes localized native menus,

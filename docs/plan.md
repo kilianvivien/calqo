@@ -1,7 +1,7 @@
 # Calqo Beta And 1.0 Roadmap
 
 **Planning date:** 2026-06-27  
-**Current app version observed:** `0.2.5` in `package.json` and Tauri metadata
+**Current app version observed:** `0.2.6` in `package.json` and Tauri metadata
 **Planning inputs:** `docs/calqo-post-phase-m-implementation-plan.md`,
 `docs/calqo-mcp-live-drawing-implementation-plan.md`,
 `docs/PRD-calqo-v0.5.md`, README, package scripts, schema/export/adapter code,
