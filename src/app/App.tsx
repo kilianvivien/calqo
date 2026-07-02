@@ -11,6 +11,7 @@ import {
 } from '@/editor/commands/projectCommands';
 import { invokeAppCommandSync } from './commands/appCommands';
 import { installNativeFileDrops } from './commands/nativeFileDrops';
+import { initAgentDrawing } from '@/editor/mcp/bridge';
 import {
   isEditableKeyboardTarget,
   isKeyboardEventInsideModal,
@@ -39,6 +40,10 @@ export function App() {
   }, [theme, transparency]);
 
   useEffect(() => installNativeFileDrops(), []);
+
+  // Agent drawing (desktop only): listen for forwarded MCP requests and
+  // auto-start the embedded server when the settings toggle is enabled.
+  useEffect(() => initAgentDrawing(), []);
 
   // Reopen last session's tabs from IndexedDB, and flush saves before unload.
   useEffect(() => {

@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
+  Bot,
   DatabaseBackup,
   Download,
-  FileCode2,
   Palette,
   Settings2,
   Sparkles,
@@ -31,10 +31,6 @@ import {
   PROVIDER_PRESETS,
 } from '@/editor/ai/aiSettings';
 import {
-  downloadCalqoAgentSkill,
-  downloadClaudeAgentSkill,
-} from '@/editor/ai/agentSkillFile';
-import {
   downloadAppBackup,
   parseBackup,
   restoreAppBackup,
@@ -43,6 +39,7 @@ import { flushPendingSaves } from '@/editor/commands/projectCommands';
 import { dialog } from '@/lib/adapters';
 import { platformRuntime } from '@/lib/platform/runtime';
 import { DiagnosticsPane } from './inspector/DiagnosticsPane';
+import { AgentDrawingPane } from './AgentDrawingPane';
 
 type LanguageMode = 'auto' | AppLanguage;
 export type SettingsTab =
@@ -180,7 +177,7 @@ export function AppSettingsModal({
       { id: 'general' as const, label: t('settings.general'), icon: Settings2 },
       { id: 'appearance' as const, label: t('settings.appearance'), icon: Palette },
       { id: 'ai' as const, label: t('settings.ai.title'), icon: Sparkles },
-      { id: 'agent' as const, label: t('settings.ai.agentSkill'), icon: FileCode2 },
+      { id: 'agent' as const, label: t('settings.agentDrawing.title'), icon: Bot },
       { id: 'data' as const, label: t('settings.data.title'), icon: DatabaseBackup },
       { id: 'diagnostics' as const, label: t('settings.diagnostics'), icon: Activity },
     ],
@@ -421,34 +418,7 @@ export function AppSettingsModal({
               </section>
             )}
 
-            {activeTab === 'agent' && (
-              <section className="flex flex-col items-start gap-4 rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-5">
-                <span className="flex h-11 w-11 items-center justify-center rounded-[var(--calqo-radius-sm)] bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]">
-                  <FileCode2 size={22} />
-                </span>
-                <div className="space-y-1.5">
-                  <p className="text-[14px] font-semibold text-[var(--calqo-text)]">
-                    {t('settings.ai.agentSkill')}
-                  </p>
-                  <p className="max-w-md text-[12.5px] leading-relaxed text-[var(--calqo-text-3)]">
-                    {t('settings.ai.agentSkillHint')}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <GlassButton
-                    variant="primary"
-                    onClick={() => void downloadCalqoAgentSkill()}
-                  >
-                    <Download size={14} />
-                    {t('settings.ai.downloadSkill')}
-                  </GlassButton>
-                  <GlassButton onClick={() => void downloadClaudeAgentSkill()}>
-                    <Download size={14} />
-                    {t('settings.ai.downloadClaudeSkill')}
-                  </GlassButton>
-                </div>
-              </section>
-            )}
+            {activeTab === 'agent' && <AgentDrawingPane />}
 
             {activeTab === 'data' && (
               <section className="flex flex-col items-start gap-4 rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-5">

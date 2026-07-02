@@ -34,15 +34,16 @@ surface.
 
 ## Download
 
-The current alpha release is
-[Calqo v0.2.6](https://github.com/kilianvivien/calqo/releases/tag/v0.2.6).
+The latest packaged alpha release is
+[Calqo v0.2.6](https://github.com/kilianvivien/calqo/releases/tag/v0.2.6);
+v0.3.0 (agent drawing) has not been packaged yet.
 
 The desktop build is currently unsigned and not notarized. On first launch,
 macOS Gatekeeper may require approving the app manually.
 
 ## Status
 
-**Public alpha, current app version 0.2.6.** The core editor is implemented and
+**Public alpha, current app version 0.3.0.** The core editor is implemented and
 usable locally: create projects, edit multi-artboard social visuals, save in the
 browser or native desktop shell, export files, translate content, and generate
 editable AI templates. The macOS desktop build includes localized native menus,
@@ -82,6 +83,7 @@ library, emoji insertion, app backup/restore, and multi-locale ZIP exports.
 - [x] Editable background removal tool with stacked, non-destructive passes (`v0.2.5`)
 - [x] Desktop crop reframe handles and workspace overview ring polish (`v0.2.6`)
 - [x] Current GitHub release notes for `v0.2.6`; Apple Silicon DMG asset pending upload
+- [x] Agent drawing: embedded desktop MCP server so coding agents draw editable layers live (`v0.3.0`)
 
 ## What you can make
 
@@ -142,6 +144,12 @@ animation timeline, no realtime multiplayer, and no hosted template marketplace.
 - **Desktop shell:** native menus, file open/save, clipboard/image-drop support,
   local font discovery, secure AI key storage, and packaged Apple Silicon DMGs
   through Tauri.
+- **Agent drawing (desktop):** an opt-in local MCP server lets coding agents
+  such as Claude Code draw editable layers live in the running app — off by
+  default, loopback-only with a pairing token, one in-app approval per session,
+  every agent batch is a single undo step, and an activity log shows each call.
+  Enable it in Settings ▸ Agent drawing, which includes copy-paste setup for
+  common agents.
 
 ## Tech stack
 
@@ -219,6 +227,10 @@ reports unsupported copy operations instead of throwing.
 - SVG export approximates some creative frame, sticker, glow, double, offset,
   outline, and marker stroke looks; use PNG for pixel-faithful output.
 - Clipboard behavior depends on browser permissions and feature support.
+- Agent drawing (MCP) is desktop-only and experimental: agents can create and
+  edit layers but cannot import image assets or export files yet, and the
+  pairing token grants drawing access to any local process that has it — treat
+  it like a local secret and regenerate it if in doubt.
 - Complex vector editing, editable HTML/CSS export, signing/notarization, and
   production-grade phone-first editing remain future work.
 

@@ -1,6 +1,9 @@
 # Calqo MCP Live Drawing Implementation Plan
 
-**Status:** Future plan  
+**Status:** Superseded by `docs/calqo-tauri-agent-drawing-plan.md` (2026-07-02).
+The feature is now planned as Tauri-only with an embedded Rust MCP server; the
+browser companion/WebSocket path described below is not being built. Kept for
+reference on tool surface, operation design, and safety analysis.  
 **Last updated:** 2026-06-20  
 **Related docs:** `PRD-calqo-v0.5.md`, `calqo-browser-prototype-implementation-plan.md`, `calqo-project-maker.skill`
 

@@ -329,49 +329,49 @@ predictable.
 **Theme:** let local coding agents safely create editable Calqo graphics without
 making the main app less stable.
 
-This milestone incorporates `docs/calqo-mcp-live-drawing-implementation-plan.md`
-at MVP scope. It is not a beta blocker and should not block 1.0 unless it is
-complete, disabled by default, and well tested.
+This milestone is now specified by `docs/calqo-tauri-agent-drawing-plan.md`,
+which supersedes the older browser-companion plan: agent drawing is
+**Tauri-only**, served by an MCP server embedded in the Rust backend, with no
+companion process or sidecar. Browser users keep the static agent-skill
+`.calqo` fallback. It is not a beta blocker and should not block 1.0 unless it
+is complete, disabled by default, and well tested.
 
 ### MVP Scope
 
-- [ ] Add shared MCP operation contracts.
+- [x] Add shared MCP operation contracts.
   - `src/editor/mcp/operationSchemas.ts`
   - command-level operations, not arbitrary project patches.
   - Zod validation for add/update/delete/reorder/group/artboard operations.
   - `baseRevision` support to avoid stale writes.
-- [ ] Add an in-app operation executor.
+- [x] Add an in-app operation executor.
   - Resolve project/artboard.
   - Validate all operations before mutation.
   - Apply one batch through `editProject` as one undoable step.
   - Return changed ids and structured warnings.
   - Keep autosave, history, and selection behavior in the normal command path.
-- [ ] Add read-only context serializers.
+- [x] Add read-only context serializers.
   - App status.
   - Active project/artboard summary.
   - Current schema/operation guidance.
   - Social preset list.
   - No raw secrets, no default asset blobs.
-- [ ] Add "Agent drawing" UI.
+- [x] Add "Agent drawing" UI.
   - Disabled by default.
   - Pairing status.
   - Session token.
   - Permission mode: off, read only, ask, session write.
   - Audit log of tool calls and changed layer ids.
-- [ ] Implement browser companion MVP.
-  - Local `calqo-mcp` companion process.
-  - WebSocket bridge on `127.0.0.1`.
-  - MCP resources and tools:
-    - `calqo.get_status`
-    - `calqo.request_control`
-    - `calqo.create_project`
-    - `calqo.apply_operations`
-    - `calqo.validate_template`
-  - Prompt: `make_social_post`.
-- [ ] Defer Tauri embedded Rust MCP server until the browser MVP proves the
-  contract.
-  - Preferred long-term desktop path remains embedded Rust MCP over loopback.
-  - Sidecar remains a fallback, not the default architecture.
+- [x] Implement the embedded Tauri Rust MCP server.
+  - `rmcp` Streamable HTTP server on `127.0.0.1`, bearer-token auth.
+  - Auto-start with the app when the settings toggle is enabled.
+  - Tools: `calqo_get_status`, `calqo_get_guide`, `calqo_request_control`,
+    `calqo_create_project`, `calqo_apply_operations`,
+    `calqo_validate_operations`, `calqo_get_preview`.
+  - Copy-paste host setup snippets (Claude Code, Codex CLI, generic) in the
+    Agent drawing settings tab.
+- [x] Keep the browser app out of scope for live drawing.
+  - Browser users get the static agent-skill `.calqo` fallback instead.
+  - No companion process, WebSocket bridge, or sidecar.
 
 ### Safety Requirements
 
@@ -391,7 +391,7 @@ complete, disabled by default, and well tested.
 
 - A local MCP Inspector or fake client can read status/resources.
 - After explicit user approval, a local agent can add/edit editable layers in
-  the browser app.
+  the desktop app.
 - Undo treats one agent batch as one user-visible step.
 - Invalid, malicious, stale, or oversized operation payloads fail cleanly.
 - Disabling Agent drawing leaves no active bridge connection.

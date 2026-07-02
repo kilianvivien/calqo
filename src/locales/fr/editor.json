@@ -602,7 +602,9 @@
     "snap": "Magnétisme grille",
     "fitToScreen": "Ajuster à l'écran",
     "zoomIn": "Zoom avant",
-    "zoomOut": "Zoom arrière"
+    "zoomOut": "Zoom arrière",
+    "agentConnected": "{{client}} connecté",
+    "agentDrawing": "{{client}} dessine…"
   },
   "projects": {
     "menu": "Ouvrir des projets…",

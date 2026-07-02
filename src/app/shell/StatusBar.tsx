@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { CircleHelp, Settings } from 'lucide-react';
+import { Bot, CircleHelp, Settings } from 'lucide-react';
 import { GlassIconButton } from '@/components/glass';
 import { useActiveSaveState } from '@/lib/state/selectors';
 import type { SaveState } from '@/lib/state/projectStore';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
+import { useMcpStore } from '@/lib/state/mcpStore';
 import { APP_VERSION } from '@/lib/appInfo';
 
 const DOT_COLOR: Record<SaveState, string> = {
@@ -35,6 +36,9 @@ export function StatusBar({
   const zoom = useUiStore((s) => s.zoom);
   const snapEnabled = useUiStore((s) => s.snapEnabled);
   const setSnapEnabled = useUiStore((s) => s.setSnapEnabled);
+  const agentClient = useMcpStore((s) => s.connectedClient);
+  const agentServerRunning = useMcpStore((s) => s.status === 'running');
+  const agentApplying = useMcpStore((s) => s.applying);
   const state: SaveState = save ?? 'saved';
 
   return (
@@ -64,6 +68,22 @@ export function StatusBar({
           />
           {t('editor:status.snap')}
         </label>
+        {agentServerRunning && agentClient && (
+          <>
+            <span className="h-3 w-px bg-[var(--calqo-divider)]" />
+            <span
+              className={[
+                'flex items-center gap-1.5 text-[var(--calqo-accent)]',
+                agentApplying ? 'animate-pulse' : '',
+              ].join(' ')}
+            >
+              <Bot size={12} />
+              {agentApplying
+                ? t('editor:status.agentDrawing', { client: agentClient.name })
+                : t('editor:status.agentConnected', { client: agentClient.name })}
+            </span>
+          </>
+        )}
       </div>
       <div className="flex items-center gap-3">
         <span>

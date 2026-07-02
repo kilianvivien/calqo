@@ -1,6 +1,6 @@
 [package]
 name = "calqo"
-version = "0.2.6"
+version = "0.3.0"
 description = "A simple, glass-native social visual maker"
 authors = ["Calqo contributors"]
 edition = "2021"
@@ -23,3 +23,16 @@ tauri-plugin-store = "2"
 tauri-plugin-stronghold = "2"
 font-kit = "0.14"
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Embedded MCP server for Agent drawing (loopback Streamable HTTP).
+rmcp = { version = "2.0", default-features = false, features = [
+    "server",
+    "macros",
+    "base64",
+    "transport-streamable-http-server",
+] }
+axum = "0.8"
+schemars = "1.0"
+tokio = { version = "1", features = ["net", "sync", "time", "macros", "rt"] }
+tokio-util = "0.7"
+rand = "0.9"

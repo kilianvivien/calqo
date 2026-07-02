@@ -602,7 +602,9 @@
     "snap": "Snap to grid",
     "fitToScreen": "Fit to screen",
     "zoomIn": "Zoom in",
-    "zoomOut": "Zoom out"
+    "zoomOut": "Zoom out",
+    "agentConnected": "{{client}} connected",
+    "agentDrawing": "{{client}} is drawing…"
   },
   "projects": {
     "menu": "Open projects…",

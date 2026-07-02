@@ -3,6 +3,8 @@
 // up the native macOS menu bar (so it has the standard App/Edit/Window submenus,
 // predefined items, and a native About) and system-font discovery. Menu
 // selections are emitted into the webview so React still owns command behavior.
+mod mcp;
+
 use std::collections::HashMap;
 use tauri::{
     menu::{
@@ -492,13 +494,18 @@ pub fn run() {
             list_system_fonts,
             list_font_variants,
             set_menu_locale,
-            set_menu_enabled
+            set_menu_enabled,
+            mcp::mcp_start_server,
+            mcp::mcp_stop_server,
+            mcp::mcp_server_status,
+            mcp::mcp_bridge_respond
         ])
         .setup(|app| {
             // Default to English; the web shell pushes the resolved locale via
             // `set_menu_locale` as soon as it mounts.
             let menu = build_menu(app.handle(), "en")?;
             app.set_menu(menu)?;
+            mcp::init(app.handle());
             Ok(())
         })
         .on_menu_event(|app, event| {
