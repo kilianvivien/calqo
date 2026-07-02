@@ -59,7 +59,8 @@ export function MobileToolbar({
   children?: ReactNode;
   vertical?: boolean;
 }) {
-  const fillRow = !vertical && Boolean(items?.length && items.length <= 6);
+  const itemCount = items?.length ?? 0;
+  const fillRow = !vertical && itemCount > 0 && itemCount <= 6;
   const fadeStyle =
     !fillRow && !vertical
       ? {
@@ -68,6 +69,11 @@ export function MobileToolbar({
           maskImage: 'linear-gradient(to right, #000 calc(100% - 34px), transparent)',
         }
       : undefined;
+  // Match the column count to the actual item count so a row with fewer than
+  // 6 items still spans the full width instead of leaving a trailing gap.
+  const gridStyle = fillRow
+    ? { gridTemplateColumns: `repeat(${itemCount}, minmax(0, 1fr))` }
+    : undefined;
 
   return (
     <div
@@ -84,12 +90,12 @@ export function MobileToolbar({
       <div
         className={cn(
         fillRow
-          ? 'grid grid-cols-6 gap-1'
+          ? 'grid gap-1'
           : vertical
             ? 'calqo-scroll flex h-full flex-col items-stretch gap-1 overflow-y-auto'
             : 'calqo-scroll flex items-stretch gap-1 overflow-x-auto',
         )}
-        style={fadeStyle}
+        style={fillRow ? gridStyle : fadeStyle}
       >
         {items?.map((item) => (
           <MobileToolButton key={item.id} item={item} fill={fillRow} />
