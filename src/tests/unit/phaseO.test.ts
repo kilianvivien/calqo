@@ -4,6 +4,7 @@ import { platformRuntime } from '@/lib/platform/runtime';
 import {
   appCommandDefinitions,
   getAppCommandState,
+  invokeAppCommand,
 } from '@/app/commands/appCommands';
 import {
   DEFAULT_AI_SETTINGS,
@@ -16,6 +17,7 @@ import { useSelectionStore } from '@/lib/state/selectionStore';
 
 describe('phase O — Tauri foundation contracts', () => {
   beforeEach(() => {
+    document.body.replaceChildren();
     const projectState = useProjectStore.getState();
     for (const id of Object.keys(projectState.projects)) {
       projectState.removeProject(id);
@@ -67,6 +69,34 @@ describe('phase O — Tauri foundation contracts', () => {
     expect(getAppCommandState('file.save').enabled).toBe(true);
     expect(getAppCommandState('object.group').enabled).toBe(true);
     expect(getAppCommandState('edit.delete').enabled).toBe(true);
+  });
+
+  it('routes native edit commands to modal text controls', async () => {
+    const clipboard = {
+      readText: vi.fn().mockResolvedValue(' pasted'),
+      writeText: vi.fn().mockResolvedValue(undefined),
+    };
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: clipboard,
+    });
+    const dialog = document.createElement('section');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    const input = document.createElement('input');
+    input.value = 'copy here';
+    dialog.append(input);
+    document.body.append(dialog);
+    input.focus();
+    input.setSelectionRange(0, 4);
+
+    expect(getAppCommandState('edit.copy').enabled).toBe(true);
+    await invokeAppCommand('edit.copy');
+    expect(clipboard.writeText).toHaveBeenCalledWith('copy');
+
+    input.setSelectionRange(input.value.length, input.value.length);
+    await invokeAppCommand('edit.paste');
+    expect(input.value).toBe('copy here pasted');
   });
 
   it('persists remembered API keys and strips unremembered keys', () => {

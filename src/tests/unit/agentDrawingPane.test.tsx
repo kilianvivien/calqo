@@ -1,7 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AgentDrawingPane } from '@/app/shell/AgentDrawingPane';
 import { useMcpStore, DEFAULT_MCP_SETTINGS } from '@/lib/state/mcpStore';
+
+const clipboardMock = vi.hoisted(() => ({
+  writeText: vi.fn<() => Promise<boolean>>(),
+}));
+
+vi.mock('@/lib/adapters', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/lib/adapters')>();
+  return {
+    ...original,
+    clipboard: {
+      ...original.clipboard,
+      writeText: clipboardMock.writeText,
+    },
+    appSettings: {
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    },
+  };
+});
 
 // Render the desktop variant: the pane branches on the Tauri runtime.
 vi.mock('@/lib/platform/runtime', async (importOriginal) => {
@@ -21,6 +41,8 @@ vi.mock('@/editor/mcp/bridge', () => ({
 
 describe('AgentDrawingPane (desktop)', () => {
   beforeEach(() => {
+    clipboardMock.writeText.mockReset();
+    clipboardMock.writeText.mockResolvedValue(true);
     useMcpStore.setState({
       settings: { ...DEFAULT_MCP_SETTINGS },
       loaded: true,
@@ -74,5 +96,24 @@ describe('AgentDrawingPane (desktop)', () => {
     });
     render(<AgentDrawingPane />);
     expect(screen.getByText(/apply_operations/)).toBeTruthy();
+  });
+
+  it('copies setup snippets through the clipboard adapter', async () => {
+    useMcpStore.setState({
+      settings: { ...DEFAULT_MCP_SETTINGS, enabled: true, token: 'x'.repeat(32) },
+      port: 22576,
+    });
+    render(<AgentDrawingPane />);
+
+    fireEvent.click(screen.getByRole('button', { name: /copy setup|copier la config/i }));
+
+    await waitFor(() => {
+      expect(clipboardMock.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('http://127.0.0.1:22576/mcp'),
+      );
+      expect(clipboardMock.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('Authorization: Bearer'),
+      );
+    });
   });
 });

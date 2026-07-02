@@ -165,6 +165,117 @@ function activeArtboard() {
     : null;
 }
 
+function modalOpen(): boolean {
+  return document.querySelector('[role="dialog"][aria-modal="true"]') !== null;
+}
+
+function activeTextControl(): HTMLInputElement | HTMLTextAreaElement | null {
+  const el = document.activeElement;
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    return el;
+  }
+  return null;
+}
+
+function activeContentEditable(): HTMLElement | null {
+  const el = document.activeElement;
+  if (el instanceof HTMLElement && el.isContentEditable) return el;
+  return null;
+}
+
+function hasDomTextSurface(): boolean {
+  const selection = window.getSelection()?.toString() ?? '';
+  return Boolean(
+    modalOpen() ||
+      activeTextControl() ||
+      activeContentEditable() ||
+      selection.length > 0,
+  );
+}
+
+function selectedDomText(): string {
+  const control = activeTextControl();
+  if (control) {
+    const start = control.selectionStart ?? 0;
+    const end = control.selectionEnd ?? start;
+    return control.value.slice(start, end);
+  }
+  return window.getSelection()?.toString() ?? '';
+}
+
+async function copyDomSelection(): Promise<boolean> {
+  const text = selectedDomText();
+  if (text.length > 0) return clipboard.writeText(text);
+  if (document.queryCommandSupported?.('copy')) {
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+function dispatchTextInput(target: HTMLElement, text: string): void {
+  try {
+    target.dispatchEvent(
+      new InputEvent('input', {
+        bubbles: true,
+        inputType: 'insertFromPaste',
+        data: text,
+      }),
+    );
+  } catch {
+    target.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
+async function pasteIntoDomTarget(): Promise<boolean> {
+  const text = await clipboard.readText?.();
+  if (text == null) return false;
+
+  const control = activeTextControl();
+  if (control) {
+    const start = control.selectionStart ?? control.value.length;
+    const end = control.selectionEnd ?? start;
+    control.setRangeText(text, start, end, 'end');
+    dispatchTextInput(control, text);
+    control.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
+  const editable = activeContentEditable();
+  if (editable) {
+    editable.focus();
+    const inserted = document.execCommand('insertText', false, text);
+    if (!inserted) editable.textContent = `${editable.textContent ?? ''}${text}`;
+    dispatchTextInput(editable, text);
+    return true;
+  }
+
+  return false;
+}
+
+function selectAllDomTarget(): boolean {
+  const control = activeTextControl();
+  if (control) {
+    control.select();
+    return true;
+  }
+
+  const editable = activeContentEditable();
+  if (editable) {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(editable);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    return true;
+  }
+
+  return false;
+}
+
 function blobPart(bytes: Uint8Array): ArrayBuffer {
   const copy = new Uint8Array(bytes.byteLength);
   copy.set(bytes);
@@ -175,6 +286,12 @@ export function getAppCommandState(id: AppCommandId): { enabled: boolean } {
   const project = activeProject();
   const selectedCount = useSelectionStore.getState().selectedLayerIds.length;
   const history = project ? historyStore.getState().histories[project.id] : undefined;
+  if (
+    (id === 'edit.copy' || id === 'edit.paste' || id === 'edit.selectAll') &&
+    hasDomTextSurface()
+  ) {
+    return { enabled: true };
+  }
   if (
     id.startsWith('file.') ||
     id.startsWith('edit.') ||
@@ -304,12 +421,24 @@ export async function invokeAppCommand(id: AppCommandId): Promise<void> {
       if (projectId) redoProject(projectId);
       return;
     case 'edit.copy':
+      if (hasDomTextSurface()) {
+        await copyDomSelection();
+        return;
+      }
       if (projectId) copySelectedLayers(projectId);
       return;
     case 'edit.paste':
+      if (hasDomTextSurface()) {
+        await pasteIntoDomTarget();
+        return;
+      }
       if (projectId) pasteLayers(projectId);
       return;
     case 'edit.selectAll':
+      if (hasDomTextSurface()) {
+        selectAllDomTarget();
+        return;
+      }
       if (projectId) selectAllLayers(projectId);
       return;
     case 'edit.duplicate':

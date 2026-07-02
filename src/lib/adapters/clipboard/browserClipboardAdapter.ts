@@ -37,4 +37,19 @@ export const browserClipboardAdapter: ClipboardAdapter = {
       return false;
     }
   },
+
+  async readText(): Promise<string | null> {
+    if (
+      typeof navigator === 'undefined' ||
+      !('clipboard' in navigator) ||
+      typeof navigator.clipboard.readText !== 'function'
+    ) {
+      return null;
+    }
+    try {
+      return await navigator.clipboard.readText();
+    } catch {
+      return null;
+    }
+  },
 };

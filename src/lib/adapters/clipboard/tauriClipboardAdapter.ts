@@ -40,6 +40,15 @@ export const tauriClipboardAdapter: ClipboardAdapter = {
     }
   },
 
+  async readText(): Promise<string | null> {
+    try {
+      const { readText } = await import('@tauri-apps/plugin-clipboard-manager');
+      return await readText();
+    } catch {
+      return null;
+    }
+  },
+
   async readImage(): Promise<Blob | null> {
     try {
       const { readImage } = await import('@tauri-apps/plugin-clipboard-manager');
@@ -51,4 +60,3 @@ export const tauriClipboardAdapter: ClipboardAdapter = {
     }
   },
 };
-

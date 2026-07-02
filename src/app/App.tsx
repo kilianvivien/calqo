@@ -112,7 +112,9 @@ export function App() {
         return;
       }
       if ((e.metaKey || e.ctrlKey) && key === 'c') {
+        e.preventDefault();
         invokeAppCommandSync('edit.copy');
+        return;
       }
       if ((e.metaKey || e.ctrlKey) && key === 'v') {
         e.preventDefault();

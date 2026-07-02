@@ -88,7 +88,17 @@ export function AppShell() {
 
   useEffect(() => {
     scheduleNativeMenuRefresh();
-  }, [activeProjectId, saveState, selection, histories]);
+  }, [
+    activeProjectId,
+    saveState,
+    selection,
+    histories,
+    settingsOpen,
+    shortcutsOpen,
+    exportOpen,
+    newProjectOpen,
+    projectsOpen,
+  ]);
 
   useEffect(() => {
     const openShortcuts = () => setShortcutsOpen(true);
