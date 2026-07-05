@@ -35,8 +35,8 @@ surface.
 ## Download
 
 The latest packaged alpha release is
-[Calqo v0.2.6](https://github.com/kilianvivien/calqo/releases/tag/v0.2.6);
-v0.3.0 (agent drawing) has not been packaged yet.
+[Calqo v0.3.0](https://github.com/kilianvivien/calqo/releases/tag/v0.3.0)
+(agent drawing).
 
 The desktop build is currently unsigned and not notarized. On first launch,
 macOS Gatekeeper may require approving the app manually.
@@ -84,6 +84,7 @@ library, emoji insertion, app backup/restore, and multi-locale ZIP exports.
 - [x] Desktop crop reframe handles and workspace overview ring polish (`v0.2.6`)
 - [x] Current GitHub release notes for `v0.2.6`; Apple Silicon DMG asset pending upload
 - [x] Agent drawing: embedded desktop MCP server so coding agents draw editable layers live (`v0.3.0`)
+- [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.3.0`
 
 ## What you can make
 
