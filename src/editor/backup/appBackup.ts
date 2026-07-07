@@ -1,5 +1,12 @@
-import { appSettings, assetStorage, files, storage } from '@/lib/adapters';
-import type { CalqoFile } from '@/lib/adapters';
+import {
+  appSettings,
+  assetStorage,
+  brandProfiles,
+  files,
+  storage,
+  BRAND_ASSET_SCOPE,
+} from '@/lib/adapters';
+import type { BrandProfileRecord, CalqoFile } from '@/lib/adapters';
 import { safeImportProject, type CalqoProject } from '@/lib/schema';
 import { createId } from '@/lib/utils/ids';
 import { APP_VERSION } from '@/lib/appInfo';
@@ -29,6 +36,13 @@ export interface CalqoBackup {
   projects: CalqoFile[];
   settings: Record<string, unknown>;
   localStorage: Record<string, string>;
+  /** Brand Lite profiles with their logo blobs inlined (never API keys). */
+  brandProfiles?: BackupBrandProfile[];
+}
+
+export interface BackupBrandProfile {
+  profile: BrandProfileRecord;
+  logo?: { name: string; mimeType: string; dataUrl: string };
 }
 
 /** App-level settings persisted via the settings adapter (Dexie / Tauri). */
@@ -91,6 +105,23 @@ export async function buildAppBackup(): Promise<CalqoBackup> {
     if (value != null) localPrefs[key] = value;
   }
 
+  const profiles: BackupBrandProfile[] = [];
+  for (const profile of await brandProfiles.listProfiles()) {
+    let logo: BackupBrandProfile['logo'];
+    if (profile.logoAssetId) {
+      const blob = await assetStorage.getAssetBlob(profile.logoAssetId);
+      const meta = await assetStorage.getAssetMeta(profile.logoAssetId);
+      if (blob && meta) {
+        logo = {
+          name: meta.name,
+          mimeType: meta.mimeType,
+          dataUrl: await blobToDataUrlSafe(blob),
+        };
+      }
+    }
+    profiles.push({ profile, logo });
+  }
+
   return {
     kind: 'calqo.backup',
     formatVersion: 1,
@@ -100,7 +131,28 @@ export async function buildAppBackup(): Promise<CalqoBackup> {
     projects,
     settings,
     localStorage: localPrefs,
+    brandProfiles: profiles,
   };
+}
+
+/** Encode a blob as a data URL. Prefers `arrayBuffer()` (accepts blobs from
+ * any realm), falling back to FileReader where the Blob API is minimal. */
+async function blobToDataUrlSafe(blob: Blob): Promise<string> {
+  if (typeof blob.arrayBuffer === 'function') {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    return `data:${blob.type || 'application/octet-stream'};base64,${btoa(binary)}`;
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Failed to read logo blob.'));
+    reader.readAsDataURL(blob);
+  });
 }
 
 /** Serialize and download a backup as a single `.calqobackup` file. */
@@ -174,9 +226,36 @@ export interface RestoreResult {
  * ids, so nothing already in the app is overwritten) and the settings / UI
  * preferences are applied. A reload afterward lets the settings take effect.
  */
+/** Restore one brand profile additively under a fresh id, re-storing its logo
+ * blob (if any) in the app-brand asset scope. */
+async function restoreBrandProfile(entry: BackupBrandProfile): Promise<void> {
+  let logoAssetId: string | undefined;
+  if (entry.logo) {
+    const blob = await dataUrlToBlob(entry.logo.dataUrl);
+    const ref = await assetStorage.saveAsset(BRAND_ASSET_SCOPE, blob, {
+      kind: entry.logo.mimeType === 'image/svg+xml' ? 'svg' : 'raster',
+      name: entry.logo.name,
+      mimeType: entry.logo.mimeType,
+    });
+    logoAssetId = ref.id;
+  }
+  const now = new Date().toISOString();
+  await brandProfiles.saveProfile({
+    ...entry.profile,
+    id: createId('brand'),
+    logoAssetId,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
 export async function restoreAppBackup(backup: CalqoBackup): Promise<RestoreResult> {
   for (const file of backup.projects) {
     await restoreProject(file);
+  }
+
+  for (const entry of backup.brandProfiles ?? []) {
+    await restoreBrandProfile(entry);
   }
 
   for (const [key, value] of Object.entries(backup.settings ?? {})) {

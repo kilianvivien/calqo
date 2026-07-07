@@ -23,6 +23,9 @@ export interface TemplatePromptInput {
   locale: LocaleCode;
   /** Optional brand palette the model is asked to use. */
   palette?: string[];
+  /** Optional brand font preferences (Brand Lite). Never carries key material
+   * or asset blobs — family names only. */
+  brandFonts?: { heading?: string; body?: string };
   /** Optional style reference (sample image / URL) to mimic. */
   styleReference?: StyleReference;
   /** Hard cap on layers the model may emit (plan §14.6). */

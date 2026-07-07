@@ -1,0 +1,142 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-multilingual-card",
+    "name": "Multilingual card",
+    "createdAt": "2026-07-07T00:00:00.000Z",
+    "updatedAt": "2026-07-07T00:00:00.000Z",
+    "contentLocales": [
+      "en",
+      "fr",
+      "tr"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#0A2540",
+      "#FFFFFF",
+      "#E8B339"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-040",
+        "name": "Instagram square",
+        "preset": "ig-square",
+        "width": 1080,
+        "height": 1080,
+        "background": {
+          "type": "solid",
+          "color": "#FFF8EE"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-036",
+            "name": "Frame",
+            "x": 70,
+            "y": 70,
+            "w": 940,
+            "h": 940,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "transparent"
+            },
+            "stroke": {
+              "color": "#0A2540",
+              "width": 6
+            },
+            "cornerRadius": 24
+          },
+          {
+            "id": "layer-starter-037",
+            "name": "Greeting",
+            "x": 140,
+            "y": 300,
+            "w": 800,
+            "h": 180,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Welcome!",
+              "fr": "Bienvenue !",
+              "tr": "Hoş geldiniz!"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 110,
+              "fontWeight": 800,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#0A2540",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-038",
+            "name": "Message",
+            "x": 140,
+            "y": 520,
+            "w": 800,
+            "h": 200,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "We now speak your language — same design, three markets.",
+              "fr": "Nous parlons désormais votre langue — un design, trois marchés.",
+              "tr": "Artık sizin dilinizi konuşuyoruz — aynı tasarım, üç pazar."
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 44,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#4A5A6E",
+              "align": "center",
+              "lineHeight": 1.35,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-039",
+            "name": "Underline",
+            "x": 460,
+            "y": 780,
+            "w": 160,
+            "h": 10,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#E8B339"
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "One card, three content locales — translate-ready."
+    }
+  },
+  "assets": []
+}

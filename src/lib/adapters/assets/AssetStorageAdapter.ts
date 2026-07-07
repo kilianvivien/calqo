@@ -17,6 +17,8 @@ export interface AssetStorageAdapter {
     meta: AssetMeta,
   ): Promise<CalqoAssetRef>;
   getAssetBlob(assetId: string): Promise<Blob | null>;
+  /** Read back an asset's stored metadata (name, mime, dimensions). */
+  getAssetMeta(assetId: string): Promise<AssetMeta | null>;
   deleteAsset(assetId: string): Promise<void>;
   /** Re-create an asset under an existing ref id (used by `.calqo` import). */
   restoreAsset(

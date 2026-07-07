@@ -43,6 +43,37 @@ export type BrushStyle =
   | 'chalk'
   | 'crayon';
 
+/** Soft limits driving asset-health warnings (import + export). Power users
+ * can raise them at runtime; they are app preferences, not project data. */
+export interface AssetHealthThresholds {
+  /** Decoded (RGBA) size above which a single raster asset is flagged. */
+  maxAssetDecodedBytes: number;
+  /** Long-edge pixel count above which a single raster asset is flagged. */
+  maxAssetEdge: number;
+  /** Estimated `.calqo` envelope size above which export warns. */
+  maxEnvelopeBytes: number;
+}
+
+export const DEFAULT_ASSET_HEALTH_THRESHOLDS: AssetHealthThresholds = {
+  maxAssetDecodedBytes: 8 * 1024 * 1024,
+  maxAssetEdge: 4096,
+  maxEnvelopeBytes: 50 * 1024 * 1024,
+};
+
+/** Non-blocking notice raised when an oversized raster asset is imported. */
+export interface AssetHealthNotice {
+  name: string;
+  width?: number;
+  height?: number;
+}
+
+/** Brand-profile font defaults applied to the workspace: the text tool seeds
+ * new text layers with the heading font, lists with the body font. */
+export interface BrandFontDefaults {
+  heading?: string;
+  body?: string;
+}
+
 /** Style applied to the next shape a draw tool places — surfaced as the
  * tool-defaults inspector (GeoCarto's "Réglages {outil}" card). */
 export interface ShapeDefaults {
@@ -127,6 +158,16 @@ interface UiState {
   markerPickerLayerId: string | null;
   /** Image layer currently in interactive crop mode, or null. */
   croppingLayerId: string | null;
+  /** Whether the repair-assets modal (missing-asset relink flow) is open. */
+  repairAssetsOpen: boolean;
+  /** Whether the optimize-assets modal (downscale oversized rasters) is open. */
+  optimizeAssetsOpen: boolean;
+  /** Non-blocking toast raised when an oversized raster asset is imported. */
+  assetHealthNotice: AssetHealthNotice | null;
+  /** Soft limits for asset-health warnings; app preference, not project data. */
+  assetHealthThresholds: AssetHealthThresholds;
+  /** Brand-profile font defaults the text/list tools read, or null. */
+  brandFontDefaults: BrandFontDefaults | null;
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
   setTransparency: (mode: TransparencyMode) => void;
@@ -144,6 +185,11 @@ interface UiState {
   setEmojiDialog: (open: boolean) => void;
   setMarkerPickerLayerId: (id: string | null) => void;
   setCroppingLayerId: (id: string | null) => void;
+  setRepairAssetsOpen: (open: boolean) => void;
+  setOptimizeAssetsOpen: (open: boolean) => void;
+  setAssetHealthNotice: (notice: AssetHealthNotice | null) => void;
+  setAssetHealthThresholds: (patch: Partial<AssetHealthThresholds>) => void;
+  setBrandFontDefaults: (defaults: BrandFontDefaults | null) => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -169,6 +215,11 @@ export const useUiStore = create<UiState>((set, get) => ({
   emojiDialog: false,
   markerPickerLayerId: null,
   croppingLayerId: null,
+  repairAssetsOpen: false,
+  optimizeAssetsOpen: false,
+  assetHealthNotice: null,
+  assetHealthThresholds: { ...DEFAULT_ASSET_HEALTH_THRESHOLDS },
+  brandFontDefaults: null,
   setTheme: (theme) => {
     safeSet(THEME_KEY, theme);
     applyUiAttributes(theme, get().transparency);
@@ -198,4 +249,10 @@ export const useUiStore = create<UiState>((set, get) => ({
   setEmojiDialog: (emojiDialog) => set({ emojiDialog }),
   setMarkerPickerLayerId: (markerPickerLayerId) => set({ markerPickerLayerId }),
   setCroppingLayerId: (croppingLayerId) => set({ croppingLayerId }),
+  setRepairAssetsOpen: (repairAssetsOpen) => set({ repairAssetsOpen }),
+  setOptimizeAssetsOpen: (optimizeAssetsOpen) => set({ optimizeAssetsOpen }),
+  setAssetHealthNotice: (assetHealthNotice) => set({ assetHealthNotice }),
+  setAssetHealthThresholds: (patch) =>
+    set({ assetHealthThresholds: { ...get().assetHealthThresholds, ...patch } }),
+  setBrandFontDefaults: (brandFontDefaults) => set({ brandFontDefaults }),
 }));

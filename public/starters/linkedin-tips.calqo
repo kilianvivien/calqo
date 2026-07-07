@@ -1,0 +1,190 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-linkedin-tips",
+    "name": "Tips list (LinkedIn)",
+    "createdAt": "2026-07-07T00:00:00.000Z",
+    "updatedAt": "2026-07-07T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#0B3B36",
+      "#0E4D46",
+      "#7FDCC3",
+      "#FFFFFF"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-029",
+        "name": "LinkedIn post",
+        "preset": "linkedin-post",
+        "width": 1200,
+        "height": 627,
+        "background": {
+          "type": "solid",
+          "color": "#0B3B36"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-021",
+            "name": "Headline",
+            "x": 70,
+            "y": 60,
+            "w": 760,
+            "h": 170,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "3 habits of teams that ship weekly"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 62,
+              "fontWeight": 800,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.15,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-022",
+            "name": "Tips",
+            "x": 70,
+            "y": 270,
+            "w": 780,
+            "h": 280,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "list",
+            "items": [
+              {
+                "id": "item-starter-023",
+                "text": {
+                  "en": "Keep a single source of truth"
+                }
+              },
+              {
+                "id": "item-starter-024",
+                "text": {
+                  "en": "Automate the boring exports"
+                }
+              },
+              {
+                "id": "item-starter-025",
+                "text": {
+                  "en": "Translate as you design, not after"
+                }
+              }
+            ],
+            "marker": {
+              "kind": "arrow",
+              "color": "#7FDCC3"
+            },
+            "markerGap": 12,
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 38,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#D9F2EC",
+              "align": "left",
+              "lineHeight": 1.5,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-026",
+            "name": "Side panel",
+            "x": 900,
+            "y": 0,
+            "w": 300,
+            "h": 627,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#0E4D46"
+            }
+          },
+          {
+            "id": "layer-starter-027",
+            "name": "Number",
+            "x": 930,
+            "y": 150,
+            "w": 240,
+            "h": 200,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "3×"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 160,
+              "fontWeight": 800,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#7FDCC3",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-028",
+            "name": "Panel caption",
+            "x": 930,
+            "y": 380,
+            "w": 240,
+            "h": 120,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "faster reviews"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 40,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "center",
+              "lineHeight": 1.2,
+              "letterSpacing": 0
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "List-driven tips layout for LinkedIn."
+    }
+  },
+  "assets": []
+}

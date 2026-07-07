@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, ImagePlus, Sparkles, X } from 'lucide-react';
 import { GlassButton, GlassIconButton, ModalOverlay } from '@/components/glass';
@@ -12,7 +12,9 @@ import { ARTBOARD_PRESET_LIST, type ArtboardPresetId } from '@/lib/schema/preset
 import { generateTemplate } from '@/editor/ai/promptTemplateService';
 import { getProvider } from '@/editor/ai/providerRegistry';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
-import { adoptProject } from '@/editor/commands/projectCommands';
+import { listBrandProfiles } from '@/editor/brand/brandService';
+import type { BrandProfileRecord } from '@/lib/adapters';
+import { adoptProject, applyBrandProfile } from '@/editor/commands/projectCommands';
 import { useActiveProject } from '@/lib/state/selectors';
 import { useUiStore } from '@/lib/state/uiStore';
 import type { LocaleCode } from '@/lib/schema';
@@ -46,6 +48,18 @@ function PromptTemplateDialogInner() {
   const [usePalette, setUsePalette] = useState(
     (project?.palette.length ?? 0) > 0,
   );
+  const [profiles, setProfiles] = useState<BrandProfileRecord[]>([]);
+  const [profileId, setProfileId] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    void listBrandProfiles().then((list) => {
+      if (alive) setProfiles(list);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [referenceUrl, setReferenceUrl] = useState('');
   const [referencePalette, setReferencePalette] = useState<string[]>([]);
   const [referenceName, setReferenceName] = useState<string | null>(null);
@@ -76,16 +90,25 @@ function PromptTemplateDialogInner() {
         return;
       }
       const hasReference = referencePalette.length > 0 || referenceUrl.trim().length > 0;
+      const brandProfile = profiles.find((candidate) => candidate.id === profileId);
+      // Precedence: an explicit style-reference palette wins, then the brand
+      // profile, then the open project's palette. Only family names and colours
+      // enter the prompt — never keys or blobs.
       const effectivePalette = referencePalette.length
         ? referencePalette
-        : usePalette
-          ? project?.palette
-          : undefined;
+        : brandProfile?.palette.length
+          ? brandProfile.palette
+          : usePalette
+            ? project?.palette
+            : undefined;
       const validation = await generateTemplate(provider, {
         prompt: prompt.trim(),
         preset,
         locale,
         palette: effectivePalette,
+        brandFonts: brandProfile
+          ? { heading: brandProfile.headingFont, body: brandProfile.bodyFont }
+          : undefined,
         styleReference: hasReference
           ? {
               url: referenceUrl.trim() || undefined,
@@ -94,7 +117,8 @@ function PromptTemplateDialogInner() {
           : undefined,
       });
       if (validation.ok) {
-        await adoptProject(validation.project);
+        const newProjectId = await adoptProject(validation.project);
+        if (brandProfile) applyBrandProfile(newProjectId, brandProfile);
         close();
       } else {
         setFailure({
@@ -173,6 +197,23 @@ function PromptTemplateDialogInner() {
               ))}
             </select>
           </Field>
+
+          {profiles.length > 0 && (
+            <Field label={t('promptTemplate.brandProfile')}>
+              <select
+                value={profileId}
+                onChange={(event) => setProfileId(event.target.value)}
+                className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 text-[12.5px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
+              >
+                <option value="">{t('promptTemplate.noBrandProfile')}</option>
+                {profiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
 
           {(project?.palette.length ?? 0) > 0 && (
             <label className="flex cursor-pointer items-center gap-2 px-1 text-[12px] text-[var(--calqo-text-2)]">

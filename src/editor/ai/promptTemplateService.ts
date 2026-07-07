@@ -14,6 +14,8 @@ export interface TemplateRequest {
   preset: ArtboardPresetId;
   locale: LocaleCode;
   palette?: string[];
+  /** Brand-profile font preferences to seed the generation context. */
+  brandFonts?: { heading?: string; body?: string };
   styleReference?: StyleReference;
 }
 
@@ -28,6 +30,7 @@ export function buildTemplateInput(request: TemplateRequest): TemplatePromptInpu
     height: preset.height,
     locale: request.locale,
     palette: request.palette,
+    brandFonts: request.brandFonts,
     styleReference: request.styleReference,
     maxLayers: MAX_TEMPLATE_LAYERS,
     fonts: BUNDLED_FONTS.map((f) => f.family),

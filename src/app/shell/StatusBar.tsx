@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { Bot, CircleHelp, Settings } from 'lucide-react';
+import { Bot, CircleHelp, FileWarning, Settings } from 'lucide-react';
 import { GlassIconButton } from '@/components/glass';
 import { useActiveSaveState } from '@/lib/state/selectors';
 import type { SaveState } from '@/lib/state/projectStore';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
+import { useWorkspaceStore } from '@/lib/state/workspaceStore';
+import { useMissingAssetsStore } from '@/editor/assets/missingAssetsStore';
 import { useMcpStore } from '@/lib/state/mcpStore';
 import { APP_VERSION } from '@/lib/appInfo';
 
@@ -39,6 +41,11 @@ export function StatusBar({
   const agentClient = useMcpStore((s) => s.connectedClient);
   const agentServerRunning = useMcpStore((s) => s.status === 'running');
   const agentApplying = useMcpStore((s) => s.applying);
+  const activeProjectId = useWorkspaceStore((s) => s.activeProjectId);
+  const missingAssetCount = useMissingAssetsStore((s) =>
+    activeProjectId ? (s.byProject[activeProjectId]?.length ?? 0) : 0,
+  );
+  const setRepairAssetsOpen = useUiStore((s) => s.setRepairAssetsOpen);
   const state: SaveState = save ?? 'saved';
 
   return (
@@ -68,6 +75,19 @@ export function StatusBar({
           />
           {t('editor:status.snap')}
         </label>
+        {missingAssetCount > 0 && (
+          <>
+            <span className="h-3 w-px bg-[var(--calqo-divider)]" />
+            <button
+              type="button"
+              onClick={() => setRepairAssetsOpen(true)}
+              className="flex items-center gap-1.5 text-[#B7791F] hover:underline"
+            >
+              <FileWarning size={12} />
+              {t('editor:repairAssets.badge', { count: missingAssetCount })}
+            </button>
+          </>
+        )}
         {agentServerRunning && agentClient && (
           <>
             <span className="h-3 w-px bg-[var(--calqo-divider)]" />

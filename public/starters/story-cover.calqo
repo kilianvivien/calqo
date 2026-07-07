@@ -1,0 +1,196 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-story-cover",
+    "name": "Story cover",
+    "createdAt": "2026-07-07T00:00:00.000Z",
+    "updatedAt": "2026-07-07T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#1E2B58",
+      "#7C3AED",
+      "#E8B339",
+      "#FFFFFF"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-014",
+        "name": "Story / Reel cover",
+        "preset": "story",
+        "width": 1080,
+        "height": 1920,
+        "background": {
+          "type": "linear",
+          "angle": 160,
+          "stops": [
+            {
+              "offset": 0,
+              "color": "#1E2B58"
+            },
+            {
+              "offset": 1,
+              "color": "#7C3AED"
+            }
+          ]
+        },
+        "layers": [
+          {
+            "id": "layer-starter-008",
+            "name": "Glow",
+            "x": 640,
+            "y": -160,
+            "w": 720,
+            "h": 720,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "#8B5CF6"
+            }
+          },
+          {
+            "id": "layer-starter-009",
+            "name": "Kicker",
+            "x": 100,
+            "y": 620,
+            "w": 620,
+            "h": 60,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "EPISODE 07"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 40,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#C4B5FD",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 6
+            }
+          },
+          {
+            "id": "layer-starter-010",
+            "name": "Title",
+            "x": 100,
+            "y": 720,
+            "w": 880,
+            "h": 480,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Design faster,\nship sooner."
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 130,
+              "fontWeight": 800,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-011",
+            "name": "Divider",
+            "x": 100,
+            "y": 1280,
+            "w": 220,
+            "h": 10,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#E8B339"
+            }
+          },
+          {
+            "id": "layer-starter-012",
+            "name": "Byline",
+            "x": 100,
+            "y": 1330,
+            "w": 800,
+            "h": 80,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "A 5-minute walkthrough with the Calqo team"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 44,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#DDD6FE",
+              "align": "left",
+              "lineHeight": 1.3,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-013",
+            "name": "Swipe",
+            "x": 100,
+            "y": 1720,
+            "w": 880,
+            "h": 60,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "↑ Watch now"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 44,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Vertical gradient cover for stories and reels."
+    }
+  },
+  "assets": []
+}

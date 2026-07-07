@@ -1,0 +1,191 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-sticker-sheet",
+    "name": "Sticker sheet",
+    "createdAt": "2026-07-07T00:00:00.000Z",
+    "updatedAt": "2026-07-07T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#E8383A",
+      "#0A2540",
+      "#FFE27A",
+      "#7FDCC3"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-046",
+        "name": "Sticker sheet",
+        "preset": "ig-square",
+        "width": 1080,
+        "height": 1080,
+        "background": {
+          "type": "solid",
+          "color": "#E9EDF3"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-041",
+            "name": "Sticker 1",
+            "x": 90,
+            "y": 120,
+            "w": 560,
+            "h": 130,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "NEW DROP"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 96,
+              "fontWeight": 800,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#E8383A",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 0,
+              "sticker": {
+                "color": "#FFFFFF",
+                "width": 16,
+                "shadow": {
+                  "color": "#0A2540",
+                  "blur": 24,
+                  "offsetX": 0,
+                  "offsetY": 8,
+                  "opacity": 0.18
+                }
+              }
+            }
+          },
+          {
+            "id": "layer-starter-042",
+            "name": "Sticker 2",
+            "x": 470,
+            "y": 340,
+            "w": 540,
+            "h": 120,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "limited edition"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 76,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#0A2540",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 0,
+              "sticker": {
+                "color": "#FFE27A",
+                "width": 14
+              }
+            }
+          },
+          {
+            "id": "layer-starter-043",
+            "name": "Badge",
+            "x": 120,
+            "y": 560,
+            "w": 340,
+            "h": 340,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "#0A2540"
+            },
+            "sticker": {
+              "color": "#FFFFFF",
+              "width": 14
+            }
+          },
+          {
+            "id": "layer-starter-044",
+            "name": "Badge label",
+            "x": 120,
+            "y": 690,
+            "w": 340,
+            "h": 90,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "-30%"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 84,
+              "fontWeight": 800,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFE27A",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-045",
+            "name": "Sticker 3",
+            "x": 540,
+            "y": 760,
+            "w": 460,
+            "h": 110,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "shop now →"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 68,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#0B3B36",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 0,
+              "sticker": {
+                "color": "#7FDCC3",
+                "width": 14
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Sticker-outlined marks made for transparent PNG export."
+    }
+  },
+  "assets": []
+}

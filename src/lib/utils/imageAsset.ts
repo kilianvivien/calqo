@@ -1,5 +1,23 @@
 import { assetStorage } from '@/lib/adapters';
+import { useUiStore } from '@/lib/state/uiStore';
 import type { CalqoAssetRef } from '@/lib/schema';
+
+/** Raise the non-blocking oversized-import notice when a raster exceeds the
+ * app's soft limits (long edge or decoded RGBA size). Import always succeeds —
+ * the notice just points at the optimize-assets flow. */
+function noticeIfOversized(
+  name: string,
+  kind: 'raster' | 'svg',
+  width?: number,
+  height?: number,
+): void {
+  if (kind !== 'raster' || !width || !height) return;
+  const { assetHealthThresholds, setAssetHealthNotice } = useUiStore.getState();
+  const oversized =
+    Math.max(width, height) > assetHealthThresholds.maxAssetEdge ||
+    width * height * 4 > assetHealthThresholds.maxAssetDecodedBytes;
+  if (oversized) setAssetHealthNotice({ name, width, height });
+}
 
 /** Read a raster image blob's intrinsic pixel size. SVGs have no fixed raster
  * size, so they resolve to an empty measurement. */
@@ -29,6 +47,7 @@ export async function saveImageAsset(
 ): Promise<CalqoAssetRef> {
   const kind = file.type === 'image/svg+xml' ? 'svg' : 'raster';
   const measured = await measureImageFile(file);
+  noticeIfOversized(file.name, kind, measured.width, measured.height);
   return assetStorage.saveAsset(projectId, file, {
     kind,
     name: file.name,
@@ -47,6 +66,7 @@ export async function saveImageBlobAsset(
 ): Promise<CalqoAssetRef> {
   const kind = meta.mimeType === 'image/svg+xml' ? 'svg' : 'raster';
   const measured = await measureImageFile(blob);
+  noticeIfOversized(meta.name, kind, measured.width, measured.height);
   return assetStorage.saveAsset(projectId, blob, {
     kind,
     name: meta.name,

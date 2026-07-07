@@ -5,6 +5,7 @@ import {
   Bot,
   DatabaseBackup,
   Download,
+  Gem,
   Palette,
   Settings2,
   Sparkles,
@@ -40,11 +41,13 @@ import { dialog } from '@/lib/adapters';
 import { platformRuntime } from '@/lib/platform/runtime';
 import { DiagnosticsPane } from './inspector/DiagnosticsPane';
 import { AgentDrawingPane } from './AgentDrawingPane';
+import { BrandSettingsPane } from './BrandSettingsPane';
 
 type LanguageMode = 'auto' | AppLanguage;
 export type SettingsTab =
   | 'general'
   | 'appearance'
+  | 'brand'
   | 'ai'
   | 'agent'
   | 'data'
@@ -176,6 +179,7 @@ export function AppSettingsModal({
     () => [
       { id: 'general' as const, label: t('settings.general'), icon: Settings2 },
       { id: 'appearance' as const, label: t('settings.appearance'), icon: Palette },
+      { id: 'brand' as const, label: t('settings.brand.title'), icon: Gem },
       { id: 'ai' as const, label: t('settings.ai.title'), icon: Sparkles },
       { id: 'agent' as const, label: t('settings.agentDrawing.title'), icon: Bot },
       { id: 'data' as const, label: t('settings.data.title'), icon: DatabaseBackup },
@@ -305,6 +309,8 @@ export function AppSettingsModal({
                 </SettingsRow>
               </section>
             )}
+
+            {activeTab === 'brand' && <BrandSettingsPane />}
 
             {activeTab === 'ai' && (
               <section className="space-y-5">
