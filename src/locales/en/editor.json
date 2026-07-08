@@ -42,7 +42,12 @@
   },
   "newProject": {
     "title": "Choose a format",
-    "subtitle": "Pick a social-media size to start your new project."
+    "subtitle": "Pick a social-media size to start your new project.",
+    "tabs": "Project source",
+    "tabBlank": "Blank",
+    "tabStarters": "Starters",
+    "brandProfile": "Brand",
+    "noBrandProfile": "No brand profile"
   },
   "sample": {
     "open": "Open sample project"
@@ -379,7 +384,13 @@
     "done": "Exported.",
     "failed": "Export failed.",
     "copied": "Copied to clipboard.",
-    "copyUnsupported": "Copy is not supported in this browser."
+    "copyUnsupported": "Copy is not supported in this browser.",
+    "htmlKind": "HTML output",
+    "htmlWrapper": "Image wrapper",
+    "htmlEditable": "Editable",
+    "htmlEditableHint": "Editable HTML keeps text selectable and shapes as CSS/SVG. PNG stays the pixel-faithful path; unsupported layers embed as images with a note.",
+    "warnEnvelopeSize": "The portable .calqo file is estimated at {{size}} MB — consider optimizing assets before moving it.",
+    "fidelityNotes": "Editable HTML notes"
   },
   "recovery": {
     "title": "Import recovery",
@@ -474,7 +485,9 @@
     "styleReference": "Style reference (optional)",
     "referenceImage": "Sample image",
     "referenceUrl": "…or paste an image URL to mimic",
-    "removeReference": "Remove reference"
+    "removeReference": "Remove reference",
+    "brandProfile": "Brand",
+    "noBrandProfile": "No brand profile"
   },
   "svgLibrary": {
     "title": "Insert SVG",
@@ -751,5 +764,45 @@
       "downloaded": "Saved to your device",
       "failed": "Export failed"
     }
+  },
+  "starters": {
+    "loading": "Loading starters…",
+    "badgeBundled": "Bundled",
+    "badgeMine": "Mine",
+    "mineTitle": "My starters",
+    "rename": "Rename starter",
+    "delete": "Delete starter",
+    "deleteTitle": "Delete starter",
+    "deleteMessage": "Delete the starter “{{name}}”? This cannot be undone.",
+    "saveAs": "Save as starter",
+    "saved": "Saved “{{name}}” to your starters.",
+    "saveFailed": "Could not save this project as a starter."
+  },
+  "repairAssets": {
+    "title": "Repair assets",
+    "subtitle": "{{count}} asset reference(s) cannot be resolved. Relink a replacement file, remove the layers, or keep the placeholders.",
+    "badge": "{{count}} missing asset(s)",
+    "allResolved": "All asset references are resolved.",
+    "unknownAsset": "Missing {{kind}} asset",
+    "usedBy": "Used by: {{layers}}",
+    "relink": "Relink…",
+    "removeLayers": "Remove layer(s)",
+    "keepHint": "Keeping placeholders never blocks editing — you can repair later from the status bar.",
+    "keepPlaceholders": "Keep placeholders",
+    "open": "Repair assets…"
+  },
+  "optimizeAssets": {
+    "title": "Optimize assets",
+    "subtitle": "Downscale oversized images to the largest size they are actually used at. Nothing changes without your approval, and every change is undoable.",
+    "loading": "Measuring assets…",
+    "empty": "No assets would benefit from downscaling.",
+    "approve": "Optimize {{name}}",
+    "oversized": "Oversized",
+    "apply": "Apply ({{count}})",
+    "working": "Optimizing…",
+    "done": "Optimized {{count}} asset(s).",
+    "failed": "Optimization failed.",
+    "open": "Optimize assets…",
+    "importNotice": "“{{name}}” is large ({{width}}×{{height}}px) and may slow editing and bloat exports."
   }
 }

@@ -59,16 +59,15 @@ Clear gaps observed:
 - PWA install/update exists, but is not yet a release gate.
 - Existing E2E coverage is useful but narrow; it does not yet act as a full
   browser/desktop/mobile release confidence suite.
-- Missing assets are warned about, but the user still needs a repair/relink
-  workflow.
+- ~~Missing assets are warned about, but the user still needs a repair/relink
+  workflow.~~ Closed: see Milestone B.
 - Portable `.calqo` envelopes exist, but compatibility, size, malformed asset,
   and old-file behavior should be tested and documented as first-class release
   promises.
-- Editable HTML/CSS export is not implemented. For beta and 1.0, keep this
-  deferred; the PRD allows the current raster-in-wrapper HTML path for v1.
-- Brand/template production workflows are not implemented. For 1.0, shrink this
-  to local starter templates and lightweight brand defaults, not a campaign
-  system or marketplace.
+- ~~Editable HTML/CSS export is not implemented.~~ Closed: see Milestone B
+  ("HTML (editable)" mode).
+- ~~Brand/template production workflows are not implemented.~~ Closed: see
+  Milestone D (local starter gallery + Brand Lite).
 - MCP live drawing is a compelling future differentiator, but it introduces a
   local-agent security surface. It should be a labs track, not a beta blocker.
 
@@ -182,20 +181,28 @@ predictable.
   - Add fixture files for current envelope, bare project JSON, missing asset
     references, malformed asset payloads, and older schema inputs.
   - Assert assets restore under the expected refs and layer geometry survives.
-- [ ] Add missing asset repair UX.
-  - Detect missing image/SVG assets on open/import and in diagnostics.
-  - Let users relink, remove, or keep placeholders.
+- [x] Add missing asset repair UX.
+  - Detect missing image/SVG assets on open/import and in diagnostics
+    (`src/editor/assets/missingAssets.ts`, watched via
+    `useMissingAssetsWatcher`).
+  - Let users relink, remove, or keep placeholders (`RepairAssetsModal.tsx`).
   - Preserve layer geometry, frame, mask, filters, crop, and focal point when
-    relinking.
-  - Surface unresolved missing assets before export.
-- [ ] Add package size and asset health warnings.
-  - Warn before exporting huge `.calqo` files.
-  - Flag oversized raster assets earlier in import and export flows.
-  - Offer user-approved downscale/compress later only if it can be done without
-    hidden quality loss.
-- [ ] Polish export mode language.
-  - Rename or explain the current HTML mode as an HTML raster wrapper.
-  - Keep editable HTML/CSS explicitly deferred.
+    relinking (`relinkAsset` in `projectCommands.ts`, one undo step).
+  - Surface unresolved missing assets before export (export dialog warning +
+    status-bar badge).
+- [x] Add package size and asset health warnings.
+  - Warn before exporting huge `.calqo` files (`estimateEnvelopeBytes`, export
+    dialog).
+  - Flag oversized raster assets earlier in import and export flows
+    (`assetHealth.ts`, import-time toast).
+  - Offer user-approved downscale via `OptimizeAssetsModal.tsx` /
+    `downscaleImageBlob`, applied through the same `relinkAsset` machinery
+    (undoable, no hidden quality loss below rendered size × export ratio).
+- [x] Polish export mode language.
+  - Renamed the raster HTML mode to "HTML (image wrapper)"; added a new
+    "HTML (editable)" mode producing real text/CSS/SVG
+    (`htmlLayoutExport.ts`), with per-layer fidelity tiers and rasterized
+    fallback for unsupported layers.
   - Make PNG the recommended pixel-faithful path for frames, effects, masks,
     blend modes, and creative strokes.
 - [ ] Improve SVG/export warning specificity.
@@ -267,20 +274,32 @@ predictable.
 
 ### Deliverables
 
-- [ ] Add a small local starter gallery.
-  - Include license-clean `.calqo` samples for common social formats.
-  - Cover multilingual content, creative frames/strokes, transparent export,
-    and a simple campaign-like multi-artboard project.
-  - Keep this local and editable, not hosted.
-- [ ] Add "save as starter" or "duplicate from starter" if it stays simple.
-  - Starters remain normal Calqo projects or project fragments.
-  - Avoid a separate marketplace/template schema until real pressure appears.
-- [ ] Add lightweight brand defaults.
-  - Store palette, preferred fonts, optional logo asset, and glossary defaults
-    as local app data or project metadata.
-  - Let new projects/prompt-a-template use selected defaults.
-  - Do not build full brand-kit governance, campaign-set generation, or
-    template constraint systems for 1.0.
+- [x] Add a small local starter gallery.
+  - 8 license-clean `.calqo` samples under `public/starters/` (self-made
+    text/shape content, no binary assets) covering IG square, story cover, X
+    quote, LinkedIn list, YouTube thumbnail, an EN/FR/TR multilingual card, a
+    sticker sheet, and a 3-artboard campaign kit; credited in
+    `public/starters/CREDITS.md` and schema-validated in CI
+    (`src/tests/unit/starters.test.ts`).
+  - Bundled and user starters both live in the *Starters* tab of
+    `NewProjectModal.tsx`; instantiation clones fresh asset ids via
+    `starterService.ts`/`remapProjectAssetIds`.
+- [x] Add "save as starter" or "duplicate from starter" if it stays simple.
+  - "Save as starter" in the project manager (`ProjectManagerModal.tsx`)
+    snapshots the current `.calqo` envelope plus a rendered thumbnail into a
+    local `starters` Dexie table (`starterLibrary` adapter); starters remain
+    normal Calqo projects, no new schema or marketplace.
+- [x] Add lightweight brand defaults.
+  - Named Brand Lite profiles (palette, heading/body font, optional logo,
+    glossary defaults) live in a `brandProfiles` Dexie table as app data, never
+    in the project document (`brandService.ts`, Settings ▸ Brand).
+  - New-project and prompt-a-template both offer a profile selector
+    (`applyBrandProfile` sets palette/glossary in one undo step; fonts flow
+    through workspace defaults; logo insertion copies the blob into the
+    project's own asset store).
+  - No governance/enforcement — profiles only seed defaults, always
+    overridable, and are excluded from `.calqo` exports (app-backup round-trip
+    only, no keys).
 - [ ] Improve AI reliability for current flows.
   - Better preflight: selected provider, key status, network expectations,
     provider-specific caveats.
@@ -313,7 +332,6 @@ predictable.
 
 ### Explicitly Deferred Beyond 1.0
 
-- Editable HTML/CSS export.
 - Full brand kit governance.
 - Template slot constraints and campaign-set generation.
 - Hosted template/gallery infrastructure.

@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { GlassPanel } from '@/components/glass';
-import { createProject } from '@/editor/commands/projectCommands';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
 import { useSavedSvgStore } from '@/editor/assets/savedSvgStore';
+import { useMissingAssetsWatcher } from '@/editor/assets/useMissingAssetsWatcher';
 import { registerAppCommandHandlers, invokeAppCommandSync } from '@/app/commands/appCommands';
 import { isTauri } from '@/lib/platform/runtime';
 import { installNativeMenus, scheduleNativeMenuRefresh } from '@/app/commands/nativeMenu';
 import { AppSettingsModal, type SettingsTab } from './AppSettingsModal';
+import { AssetHealthToast } from './AssetHealthToast';
 import { ExportDialog } from './ExportDialog';
 import { NewProjectModal } from './NewProjectModal';
+import { OptimizeAssetsModal } from './OptimizeAssetsModal';
+import { RepairAssetsModal } from './RepairAssetsModal';
 import { ProjectManagerModal } from './ProjectManagerModal';
 import { PromptTemplateDialog } from './PromptTemplateDialog';
 import { SvgLibraryDialog } from './SvgLibraryDialog';
@@ -43,6 +46,9 @@ export function AppShell() {
   const [projectsOpen, setProjectsOpen] = useState(false);
   const loadAiSettings = useAiSettingsStore((s) => s.load);
   const loadSavedSvgs = useSavedSvgStore((s) => s.load);
+
+  // Watch the active project for broken asset references (repair flow).
+  useMissingAssetsWatcher();
 
   useEffect(() => {
     void loadAiSettings();
@@ -152,13 +158,14 @@ export function AppShell() {
       <TranslateDialog />
       <NewProjectModal
         open={newProjectOpen}
-        onClose={() => setNewProjectOpen(false)}
-        onSelect={(preset) => {
-          void createProject({ preset });
+        onClose={() => {
           setNewProjectOpen(false);
           scheduleNativeMenuRefresh();
         }}
       />
+      <RepairAssetsModal />
+      <OptimizeAssetsModal />
+      <AssetHealthToast />
       <ProjectManagerModal
         open={projectsOpen}
         onClose={() => setProjectsOpen(false)}

@@ -10,13 +10,11 @@ import { frameRender, type FrameNodeSpec } from '@/editor/canvas/frameNodes';
 import { EXPORT_WARNINGS } from './exportWarnings';
 import type { ArrowStyle, CalqoArtboard, CalqoLayer, ListLayer, ShapeLayer, StrokeStyle, TextLayer } from '@/lib/schema';
 
+import { escapeMarkup, round } from './styleConversions';
+
 interface TextLine {
   text: string;
   width: number;
-}
-
-function round(value: number): number {
-  return Math.round(value * 100) / 100;
 }
 
 /** Reproduce Konva.Text's wrapped, height-clipped lines so the SVG output keeps
@@ -59,13 +57,7 @@ export interface SvgExportResult {
   warnings: string[];
 }
 
-function esc(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+const esc = escapeMarkup;
 
 function solidFill(fill: ShapeLayer['fill'], warnings: string[]): string {
   if (fill.type === 'solid') return fill.color;
@@ -215,7 +207,10 @@ function arrowHeadSvg(
   return `<polygon points="${arrowHeadPoints(tipX, tipY, radians, length, width)}" fill="${lineColor}" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linejoin="round" />`;
 }
 
-function serializeLayer(
+/** Serialize one layer (recursively) to SVG markup in artboard coordinates.
+ * Exported so the editable HTML serializer can embed vector shapes as inline
+ * SVG instead of duplicating the geometry math. */
+export function serializeLayer(
   layer: CalqoLayer,
   assets: Map<string, string>,
   locale: string,
@@ -444,7 +439,9 @@ function serializeList(
   return `${open}${parts.join('')}${close}`;
 }
 
-async function loadAssetDataUrls(artboard: CalqoArtboard): Promise<Map<string, string>> {
+/** Resolve every asset referenced by an artboard's layers into a data URL map.
+ * Shared with the editable HTML serializer. */
+export async function loadAssetDataUrls(artboard: CalqoArtboard): Promise<Map<string, string>> {
   const ids = new Set<string>();
   const collect = (layers: CalqoLayer[]) => {
     for (const layer of layers) {

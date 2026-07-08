@@ -11,6 +11,37 @@ import type { CalqoProject } from '@/lib/schema';
  * left untouched so a project with a missing asset degrades the same way the
  * original would.
  */
+/**
+ * Rewrite every `assetId` / `storageKey` reference inside {@link value} through
+ * {@link idMap}, mutating in place. This is the mutable sibling of
+ * {@link remapProjectAssetIds} for use inside immer recipes (e.g. relinking a
+ * missing asset as a single undoable edit). References without a mapping are
+ * left untouched.
+ */
+export function rewriteAssetIdsInPlace(
+  value: unknown,
+  idMap: Map<string, string>,
+): void {
+  if (Array.isArray(value)) {
+    value.forEach((entry) => rewriteAssetIdsInPlace(entry, idMap));
+    return;
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    for (const [key, val] of Object.entries(record)) {
+      if (
+        (key === 'assetId' || key === 'storageKey') &&
+        typeof val === 'string' &&
+        idMap.has(val)
+      ) {
+        record[key] = idMap.get(val)!;
+      } else {
+        rewriteAssetIdsInPlace(val, idMap);
+      }
+    }
+  }
+}
+
 export function remapProjectAssetIds(
   project: CalqoProject,
   idMap: Map<string, string>,

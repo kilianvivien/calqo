@@ -1,0 +1,23 @@
+# Starter gallery credits
+
+Every bundled starter in this directory was authored from scratch for Calqo
+using only schema-native content: text layers, shape layers (solid and
+gradient fills), and list layers. No photographs, third-party icons, fonts
+beyond the app's bundled families, or external assets of any kind are
+embedded — each `.calqo` file ships with an empty `assets` array.
+
+| Starter | File | Content |
+| --- | --- | --- |
+| Announcement — Instagram square | `ig-announcement.calqo` | Original copy + shapes |
+| Story / reel cover | `story-cover.calqo` | Original copy + gradient shapes |
+| Quote card — X post | `x-quote.calqo` | Original copy + shapes |
+| Tips list — LinkedIn post | `linkedin-tips.calqo` | Original copy + list layer |
+| YouTube thumbnail | `youtube-thumbnail.calqo` | Original copy + shapes |
+| Multilingual card (EN/FR/TR) | `multilingual-card.calqo` | Original copy in three locales |
+| Sticker sheet | `sticker-sheet.calqo` | Original copy + sticker outlines |
+| Campaign kit (3 formats) | `campaign-kit.calqo` | Original copy across 3 artboards |
+
+License: same as the repository (see `LICENSE`). All starter content is
+self-made and may be redistributed with the app. A schema-validation unit test
+walks `index.json` so these files cannot drift from the current project
+schema.

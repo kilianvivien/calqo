@@ -1,0 +1,78 @@
+{
+  "starters": [
+    {
+      "id": "ig-announcement",
+      "name": "Announcement — Instagram square",
+      "file": "ig-announcement.calqo",
+      "tags": [
+        "ig-square",
+        "announcement"
+      ]
+    },
+    {
+      "id": "story-cover",
+      "name": "Story / reel cover",
+      "file": "story-cover.calqo",
+      "tags": [
+        "story",
+        "cover"
+      ]
+    },
+    {
+      "id": "x-quote",
+      "name": "Quote card — X post",
+      "file": "x-quote.calqo",
+      "tags": [
+        "x-post",
+        "quote"
+      ]
+    },
+    {
+      "id": "linkedin-tips",
+      "name": "Tips list — LinkedIn post",
+      "file": "linkedin-tips.calqo",
+      "tags": [
+        "linkedin-post",
+        "list"
+      ]
+    },
+    {
+      "id": "youtube-thumbnail",
+      "name": "YouTube thumbnail",
+      "file": "youtube-thumbnail.calqo",
+      "tags": [
+        "youtube-thumbnail",
+        "video"
+      ]
+    },
+    {
+      "id": "multilingual-card",
+      "name": "Multilingual card (EN/FR/TR)",
+      "file": "multilingual-card.calqo",
+      "tags": [
+        "ig-square",
+        "multilingual"
+      ]
+    },
+    {
+      "id": "sticker-sheet",
+      "name": "Sticker sheet (transparent export)",
+      "file": "sticker-sheet.calqo",
+      "tags": [
+        "ig-square",
+        "stickers"
+      ]
+    },
+    {
+      "id": "campaign-kit",
+      "name": "Campaign kit (3 formats)",
+      "file": "campaign-kit.calqo",
+      "tags": [
+        "ig-square",
+        "story",
+        "x-post",
+        "campaign"
+      ]
+    }
+  ]
+}

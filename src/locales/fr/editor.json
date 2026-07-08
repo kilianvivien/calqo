@@ -42,7 +42,12 @@
   },
   "newProject": {
     "title": "Choisissez un format",
-    "subtitle": "Choisissez une taille de réseau social pour démarrer votre projet."
+    "subtitle": "Choisissez une taille de réseau social pour démarrer votre projet.",
+    "tabs": "Source du projet",
+    "tabBlank": "Vierge",
+    "tabStarters": "Modèles",
+    "brandProfile": "Marque",
+    "noBrandProfile": "Aucun profil de marque"
   },
   "sample": {
     "open": "Ouvrir l'exemple"
@@ -379,7 +384,13 @@
     "done": "Exporté.",
     "failed": "Échec de l'export.",
     "copied": "Copié dans le presse-papiers.",
-    "copyUnsupported": "La copie n'est pas prise en charge dans ce navigateur."
+    "copyUnsupported": "La copie n'est pas prise en charge dans ce navigateur.",
+    "htmlKind": "Sortie HTML",
+    "htmlWrapper": "Image encapsulée",
+    "htmlEditable": "Éditable",
+    "htmlEditableHint": "Le HTML éditable garde le texte sélectionnable et les formes en CSS/SVG. Le PNG reste la sortie fidèle au pixel ; les calques non pris en charge sont intégrés en image avec une note.",
+    "warnEnvelopeSize": "Le fichier .calqo portable est estimé à {{size}} Mo — pensez à optimiser les ressources avant de le déplacer.",
+    "fidelityNotes": "Notes HTML éditable"
   },
   "recovery": {
     "title": "Récupération d'import",
@@ -474,7 +485,9 @@
     "styleReference": "Référence de style (facultatif)",
     "referenceImage": "Image d'exemple",
     "referenceUrl": "…ou collez l'URL d'une image à imiter",
-    "removeReference": "Retirer la référence"
+    "removeReference": "Retirer la référence",
+    "brandProfile": "Marque",
+    "noBrandProfile": "Aucun profil de marque"
   },
   "svgLibrary": {
     "title": "Insérer un SVG",
@@ -751,5 +764,45 @@
       "downloaded": "Enregistré sur l'appareil",
       "failed": "Échec de l'export"
     }
+  },
+  "starters": {
+    "loading": "Chargement des modèles…",
+    "badgeBundled": "Inclus",
+    "badgeMine": "À moi",
+    "mineTitle": "Mes modèles",
+    "rename": "Renommer le modèle",
+    "delete": "Supprimer le modèle",
+    "deleteTitle": "Supprimer le modèle",
+    "deleteMessage": "Supprimer le modèle « {{name}} » ? Cette action est irréversible.",
+    "saveAs": "Enregistrer comme modèle",
+    "saved": "« {{name}} » ajouté à vos modèles.",
+    "saveFailed": "Impossible d'enregistrer ce projet comme modèle."
+  },
+  "repairAssets": {
+    "title": "Réparer les ressources",
+    "subtitle": "{{count}} référence(s) de ressource introuvable(s). Reliez un fichier de remplacement, supprimez les calques ou conservez les espaces réservés.",
+    "badge": "{{count}} ressource(s) manquante(s)",
+    "allResolved": "Toutes les références de ressources sont résolues.",
+    "unknownAsset": "Ressource {{kind}} manquante",
+    "usedBy": "Utilisée par : {{layers}}",
+    "relink": "Relier…",
+    "removeLayers": "Supprimer le(s) calque(s)",
+    "keepHint": "Conserver les espaces réservés ne bloque jamais l'édition — réparez plus tard depuis la barre d'état.",
+    "keepPlaceholders": "Conserver les espaces réservés",
+    "open": "Réparer les ressources…"
+  },
+  "optimizeAssets": {
+    "title": "Optimiser les ressources",
+    "subtitle": "Réduisez les images surdimensionnées à la plus grande taille réellement utilisée. Rien ne change sans votre accord et chaque changement est annulable.",
+    "loading": "Analyse des ressources…",
+    "empty": "Aucune ressource ne bénéficierait d'une réduction.",
+    "approve": "Optimiser {{name}}",
+    "oversized": "Surdimensionnée",
+    "apply": "Appliquer ({{count}})",
+    "working": "Optimisation…",
+    "done": "{{count}} ressource(s) optimisée(s).",
+    "failed": "Échec de l'optimisation.",
+    "open": "Optimiser les ressources…",
+    "importNotice": "« {{name}} » est volumineuse ({{width}}×{{height}} px) et peut ralentir l'édition et alourdir les exports."
   }
 }

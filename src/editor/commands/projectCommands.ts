@@ -1,6 +1,10 @@
 import type { Draft } from 'immer';
 import { assetStorage, dialog, storage } from '@/lib/adapters';
-import { remapProjectAssetIds } from '@/editor/assets/assetRemap';
+import type { AssetMeta } from '@/lib/adapters';
+import {
+  remapProjectAssetIds,
+  rewriteAssetIdsInPlace,
+} from '@/editor/assets/assetRemap';
 import {
   createArtboard,
   createDefaultProject,
@@ -421,7 +425,8 @@ export function createTextLayer(
     type: 'text',
     text: { [project.activeContentLocale]: 'Double-click to edit' },
     style: {
-      fontFamily: 'Inter',
+      // Brand-profile workspace defaults seed the heading font (Brand Lite).
+      fontFamily: useUiStore.getState().brandFontDefaults?.heading ?? 'Inter',
       fontSize: 48,
       fontWeight: 700,
       fontStyle: 'normal',
@@ -452,7 +457,8 @@ export function createListLayer(
     marker: { kind: 'bullet', color: '#111827' },
     markerGap: 8,
     style: {
-      fontFamily: 'Inter',
+      // Brand-profile workspace defaults seed the body font (Brand Lite).
+      fontFamily: useUiStore.getState().brandFontDefaults?.body ?? 'Inter',
       fontSize: 36,
       fontWeight: 500,
       fontStyle: 'normal',
@@ -783,6 +789,86 @@ export function replaceLayerAsset(
     },
     { undoable: true },
   );
+}
+
+/**
+ * Repair a broken asset reference by storing a replacement blob under a fresh
+ * id and rewriting every reference to the old asset (layers, fills, list
+ * markers, backgrounds, background-removal refs) in one undoable step. Layer
+ * geometry, frames, masks, filters, crops, and focal points are untouched —
+ * only the asset reference changes. Also used by the optimize-assets flow to
+ * swap in a downscaled blob.
+ */
+export async function relinkAsset(
+  projectId: string,
+  oldAssetId: string,
+  blob: Blob,
+  meta: AssetMeta,
+): Promise<CalqoAssetRef | null> {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return null;
+  const newRef = await assetStorage.saveAsset(projectId, blob, meta);
+  editProject(
+    projectId,
+    (draft) => {
+      rewriteAssetIdsInPlace(draft.artboards, new Map([[oldAssetId, newRef.id]]));
+      draft.assets = draft.assets.filter((ref) => ref.id !== oldAssetId);
+      draft.assets.push(newRef);
+    },
+    { undoable: true },
+  );
+  return newRef;
+}
+
+/**
+ * Remove every layer that renders a given asset (image/svg layers and shapes
+ * with an image fill), reset image backgrounds and asset list markers that
+ * reference it, and drop the manifest entry — one undoable step. Used by the
+ * repair-assets flow when the user chooses deletion over relinking.
+ */
+export function removeLayersForAsset(projectId: string, assetId: string): void {
+  editProject(
+    projectId,
+    (draft) => {
+      const rendersAsset = (layer: CalqoLayer): boolean => {
+        if ((layer.type === 'image' || layer.type === 'svg') && layer.assetId === assetId) {
+          return true;
+        }
+        return (
+          layer.type === 'shape' &&
+          layer.fill.type === 'image' &&
+          layer.fill.assetId === assetId
+        );
+      };
+      const prune = (layers: CalqoLayer[]): CalqoLayer[] =>
+        layers
+          .filter((layer) => !rendersAsset(layer))
+          .map((layer) => {
+            if (isGroupLayer(layer)) layer.children = prune(layer.children);
+            // List markers keep their rows; fall back to a plain bullet.
+            if (
+              layer.type === 'list' &&
+              layer.marker.kind === 'asset' &&
+              layer.marker.assetId === assetId
+            ) {
+              layer.marker = { ...layer.marker, kind: 'bullet', assetId: undefined };
+            }
+            return layer;
+          });
+      draft.artboards.forEach((artboard) => {
+        artboard.layers = prune(artboard.layers as CalqoLayer[]);
+        if (
+          artboard.background.type === 'image' &&
+          artboard.background.assetId === assetId
+        ) {
+          artboard.background = { type: 'solid', color: '#FFFFFF' };
+        }
+      });
+      draft.assets = draft.assets.filter((ref) => ref.id !== assetId);
+    },
+    { undoable: true },
+  );
+  selectionStore.getState().clearSelection();
 }
 
 export async function applyImageBackgroundRemovalPasses(
@@ -1830,6 +1916,73 @@ export function commitListInlineEdit(
     },
     { undoable: true },
   );
+}
+
+/**
+ * Apply a brand profile to a project (Brand Lite): the profile palette becomes
+ * the project palette and glossary terms merge into the project glossary
+ * (deduplicated by source term) — one undoable step, no layer mutation. Font
+ * preferences flow through the workspace defaults the text/list tools read;
+ * they are not stored on the document, so everything stays overridable.
+ */
+export function applyBrandProfile(
+  projectId: string,
+  profile: {
+    palette: string[];
+    glossary: GlossaryEntry[];
+    headingFont?: string;
+    bodyFont?: string;
+  },
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      if (profile.palette.length > 0) {
+        draft.palette = [...profile.palette];
+      }
+      const existing = new Set(
+        draft.glossary.map((entry) => entry.source.toLowerCase()),
+      );
+      for (const entry of profile.glossary) {
+        if (existing.has(entry.source.toLowerCase())) continue;
+        existing.add(entry.source.toLowerCase());
+        draft.glossary.push(structuredClone(entry));
+      }
+    },
+    { undoable: true },
+  );
+  if (profile.headingFont || profile.bodyFont) {
+    useUiStore.getState().setBrandFontDefaults({
+      heading: profile.headingFont,
+      body: profile.bodyFont,
+    });
+  }
+}
+
+/**
+ * Insert a brand profile's logo into a project as an image/svg layer. The blob
+ * is copied out of the app-brand asset scope into the project's own asset store
+ * under a fresh id, so exported `.calqo` files stay self-contained and never
+ * reference cross-project assets. Never auto-placed — explicit action only.
+ */
+export async function insertBrandLogo(
+  projectId: string,
+  profile: { name: string; logoAssetId?: string },
+  position: { x: number; y: number } = { x: 48, y: 48 },
+): Promise<boolean> {
+  if (!profile.logoAssetId) return false;
+  const blob = await assetStorage.getAssetBlob(profile.logoAssetId);
+  if (!blob) return false;
+  const meta = await assetStorage.getAssetMeta(profile.logoAssetId);
+  const asset = await assetStorage.saveAsset(projectId, blob, {
+    kind: meta?.kind ?? (blob.type === 'image/svg+xml' ? 'svg' : 'raster'),
+    name: meta?.name ?? `${profile.name} logo`,
+    mimeType: meta?.mimeType ?? blob.type ?? 'image/png',
+    width: meta?.width,
+    height: meta?.height,
+  });
+  addImportedAssetLayer(projectId, asset, position.x, position.y);
+  return true;
 }
 
 /** Replace the project glossary (translation dialog edits it inline). */

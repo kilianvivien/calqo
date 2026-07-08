@@ -1,0 +1,163 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-youtube-thumbnail",
+    "name": "YouTube thumbnail",
+    "createdAt": "2026-07-07T00:00:00.000Z",
+    "updatedAt": "2026-07-07T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#101014",
+      "#E8383A",
+      "#FFFFFF"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-035",
+        "name": "YouTube thumbnail",
+        "preset": "youtube-thumbnail",
+        "width": 1280,
+        "height": 720,
+        "background": {
+          "type": "solid",
+          "color": "#101014"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-030",
+            "name": "Accent circle",
+            "x": 880,
+            "y": -140,
+            "w": 620,
+            "h": 620,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "#E8383A"
+            }
+          },
+          {
+            "id": "layer-starter-031",
+            "name": "Tag",
+            "x": 70,
+            "y": 80,
+            "w": 260,
+            "h": 74,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#E8383A"
+            },
+            "cornerRadius": 12
+          },
+          {
+            "id": "layer-starter-032",
+            "name": "Tag label",
+            "x": 70,
+            "y": 96,
+            "w": 260,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "TUTORIAL"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 34,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 3
+            }
+          },
+          {
+            "id": "layer-starter-033",
+            "name": "Title",
+            "x": 70,
+            "y": 210,
+            "w": 860,
+            "h": 330,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Stop exporting\nby hand"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 120,
+              "fontWeight": 800,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.05,
+              "letterSpacing": 0,
+              "sticker": {
+                "color": "#101014",
+                "width": 10
+              }
+            }
+          },
+          {
+            "id": "layer-starter-034",
+            "name": "Duration",
+            "x": 70,
+            "y": 580,
+            "w": 500,
+            "h": 60,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "12 min · beginner friendly"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 36,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#B9B9C6",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "High-contrast video thumbnail."
+    }
+  },
+  "assets": []
+}

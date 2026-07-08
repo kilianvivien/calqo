@@ -49,6 +49,12 @@ export function buildTemplatePrompt(input: TemplatePromptInput): {
     input.palette?.length
       ? `- Prefer this palette: ${input.palette.join(', ')}.`
       : '- Choose a tasteful, high-contrast palette.',
+    input.brandFonts?.heading
+      ? `- Prefer "${input.brandFonts.heading}" for headlines.`
+      : '',
+    input.brandFonts?.body
+      ? `- Prefer "${input.brandFonts.body}" for body and list text.`
+      : '',
     ...styleReferenceLines(input),
     '- Keep every layer fully inside the artboard bounds.',
     '- Do not reference external images or URLs.',

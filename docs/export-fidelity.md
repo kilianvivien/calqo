@@ -8,23 +8,45 @@ fidelity for editability and small file size.
 
 Use this table when an export looks different from the canvas.
 
-| Feature | PNG / JPG / WebP | SVG | HTML (PNG wrapper) |
-| --- | --- | --- | --- |
-| Layout, fills, strokes, text | Exact | Exact (flat fills) | Exact (it embeds a PNG) |
-| Gradient / pattern / image fills | Exact | Flattened to a solid colour | Exact |
-| Image filters (brightness, contrast, saturation, blur) | Baked in | Not applied | Baked in |
-| Image masks (rounded, circle, ellipse, triangle, star, hexagon) | Exact | Not applied (full image shown) | Exact |
-| Layer blur | Exact | Omitted | Exact |
-| Drop shadow | Exact | Omitted | Exact |
-| Blend modes (multiply, screen, overlay, …) | Exact | Omitted (normal compositing) | Exact |
-| Text stroke / text shadow | Exact | May differ | Exact |
-| Image frames — classic (inset, centered, outside, rounded, circle, double-line, polaroid) | Exact | Approximated (borders as rects/ellipse; caption/shadow may differ) | Exact |
-| Image frames — creative (soft-mat, thick-poster-border, shadowed-cutout, tape-corners, postage-stamp, scalloped-edges, torn-paper, photo-booth-strip) | Exact | Approximated (paths/dashes export; shadows, rotation, and sprocket/tape detail may differ) | Exact |
-| Stroke looks — dashed / dotted | Exact | Exact (`stroke-dasharray`) | Exact |
-| Stroke looks — neon / glow / double / offset / outline / marker | Exact | Approximated (drawn as a plain stroke) | Exact |
-| Stroke looks — hand-drawn / rough / scribble / sketch / inner | Exact | Approximated (drawn as a plain stroke) | Exact |
-| Sticker outline (white/coloured halo) | Exact | Approximated | Exact |
-| Editable after export | No (flat pixels) | Yes (vector shapes/text) | No (embedded PNG) |
+| Feature | PNG / JPG / WebP | SVG | HTML (image wrapper) | HTML (editable) |
+| --- | --- | --- | --- | --- |
+| Layout, fills, strokes, text | Exact | Exact (flat fills) | Exact (it embeds a PNG) | Exact (real text/CSS nodes) |
+| Gradient / pattern / image fills | Exact | Flattened to a solid colour | Exact | Gradients exact (CSS); patterns rasterized per layer |
+| Image filters (brightness, contrast, saturation, blur) | Baked in | Not applied | Baked in | Rasterized per layer (warned) |
+| Image masks (rounded, circle, ellipse, triangle, star, hexagon) | Exact | Not applied (full image shown) | Exact | Rounded/circle/ellipse exact (CSS); others rasterized (warned) |
+| Layer blur | Exact | Omitted | Exact | Approximated via CSS `filter: blur()` (warned) |
+| Drop shadow | Exact | Omitted | Exact | Approximated via CSS `filter: drop-shadow()` (warned) |
+| Blend modes (multiply, screen, overlay, …) | Exact | Omitted (normal compositing) | Exact | Exact (`mix-blend-mode` — same keywords) |
+| Text stroke / text shadow | Exact | May differ | Exact | Exact (`-webkit-text-stroke` / `text-shadow`) |
+| Image frames | Exact | Approximated | Exact | Rasterized per layer (warned) |
+| Sticker outline | Exact | Approximated | Exact | Rasterized per layer (warned) |
+| Freehand brush strokes | Exact | Approximated | Exact | Rasterized per layer (warned) |
+| Fonts | Exact (baked in) | Referenced by family | Exact (baked in) | Referenced by family — falls back if not installed on the viewer (warned) |
+| Editable after export | No (flat pixels) | Yes (vector shapes/text) | No (embedded PNG) | Yes (real text nodes; rasterized-fallback layers stay images) |
+
+## Editable HTML fidelity tiers
+
+"HTML (editable)" exports a single self-contained `.html` file per artboard
+from the **project document**, not the live Konva tree — the same
+source-of-truth choice the SVG serializer makes. Every layer falls into one of
+three tiers, and the export dialog always names which tier a layer landed in:
+
+- **Faithful** — real `<p>`/`<img>`/`<div>`/inline-`<svg>` nodes: text (family,
+  size, weight, style, decoration, colour, alignment, line height, letter
+  spacing, shadow, stroke), images (position, size, rotation, opacity, rounded/
+  circle/ellipse mask), solid and linear/radial gradient fills, rect/ellipse/
+  line/polygon/arrow shapes, and blend modes.
+- **Approximated (warn)** — blur and drop-shadow via CSS `filter`, which is
+  visually close but not pixel-identical to the canvas renderer.
+- **Rasterized fallback (warn)** — masks the CSS clip-path can't express
+  (star, hexagon, triangle), manual crops, decorative frames, image filters,
+  sticker outlines, freehand strokes, pattern/image fills, and icon list
+  markers render as an embedded PNG of just that layer. The rest of the
+  document — and every faithful-tier layer — stays real, editable markup.
+
+The old "HTML" export mode is renamed **"HTML (image wrapper)"** so it can no
+longer be mistaken for editable output; PNG remains the recommended
+pixel-faithful path.
 
 ## Why SVG drops some effects
 

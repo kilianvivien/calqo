@@ -36,6 +36,18 @@ export const dexieAssetStorageAdapter: AssetStorageAdapter = {
     return record?.blob ?? null;
   },
 
+  async getAssetMeta(assetId) {
+    const record = await db.assets.get(assetId);
+    if (!record) return null;
+    return {
+      name: record.name,
+      mimeType: record.mimeType,
+      kind: record.kind,
+      width: record.width,
+      height: record.height,
+    };
+  },
+
   async deleteAsset(assetId): Promise<void> {
     await db.assets.delete(assetId);
   },

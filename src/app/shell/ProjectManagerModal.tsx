@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Copy, Download, FolderOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Copy, Download, FolderOpen, Pencil, Plus, Star, Trash2, X } from 'lucide-react';
 import { dialog } from '@/lib/adapters';
 import type { ProjectSummary } from '@/lib/adapters';
 import { useProjectSummaries } from '@/lib/hooks/useProjectSummaries';
@@ -12,6 +12,7 @@ import {
   renameStoredProject,
 } from '@/editor/commands/projectCommands';
 import { exportProjectFile } from '@/editor/export/calqoFile';
+import { saveProjectAsStarter } from '@/editor/starters/starterService';
 import { GlassButton, GlassIconButton, ModalOverlay } from '@/components/glass';
 
 interface ProjectManagerModalProps {
@@ -41,6 +42,7 @@ function ProjectManagerRow({
   onOpen,
   onDuplicate,
   onExport,
+  onSaveStarter,
   onDelete,
   onRenamed,
 }: {
@@ -49,6 +51,7 @@ function ProjectManagerRow({
   onOpen: (id: string) => void;
   onDuplicate: (id: string) => void;
   onExport: (id: string) => void;
+  onSaveStarter: (id: string) => void;
   onDelete: (id: string, name: string) => void;
   onRenamed: () => void;
 }) {
@@ -123,6 +126,13 @@ function ProjectManagerRow({
           <Download size={14} />
         </GlassIconButton>
         <GlassIconButton
+          label={t('starters.saveAs')}
+          showTitle={false}
+          onClick={() => onSaveStarter(summary.id)}
+        >
+          <Star size={14} />
+        </GlassIconButton>
+        <GlassIconButton
           label={t('projects.rename')}
           showTitle={false}
           onClick={() => setRenaming(true)}
@@ -152,9 +162,21 @@ export function ProjectManagerModal({
 }: ProjectManagerModalProps) {
   const { t, i18n } = useTranslation('editor');
   const { summaries, refresh } = useProjectSummaries(open);
+  const [starterStatus, setStarterStatus] = useState<string | null>(null);
 
   const openAndClose = (id: string) => {
     void openProject(id).then(onClose);
+  };
+
+  const saveStarter = async (id: string) => {
+    setStarterStatus(null);
+    try {
+      const record = await saveProjectAsStarter(id);
+      if (record) setStarterStatus(t('starters.saved', { name: record.name }));
+    } catch (error) {
+      console.error('[Calqo] save-as-starter failed', error);
+      setStarterStatus(t('starters.saveFailed'));
+    }
   };
 
   const remove = async (id: string, name: string) => {
@@ -223,6 +245,7 @@ export function ProjectManagerModal({
                 onOpen={openAndClose}
                 onDuplicate={(id) => void duplicate(id)}
                 onExport={(id) => void exportProjectFile(id)}
+                onSaveStarter={(id) => void saveStarter(id)}
                 onDelete={(id, name) => void remove(id, name)}
                 onRenamed={refresh}
               />
@@ -231,7 +254,11 @@ export function ProjectManagerModal({
         )}
       </div>
 
-      <footer className="mt-4 flex items-center justify-end gap-2 border-t border-[var(--calqo-divider)] pt-4">
+      <footer className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--calqo-divider)] pt-4">
+        <span className="min-w-0 truncate text-[12px] text-[var(--calqo-text-3)]">
+          {starterStatus}
+        </span>
+        <div className="flex items-center gap-2">
         <GlassButton
           onClick={() => {
             onClose();
@@ -251,6 +278,7 @@ export function ProjectManagerModal({
           <Plus size={14} />
           {t('projects.new')}
         </GlassButton>
+        </div>
       </footer>
     </ModalOverlay>
   );

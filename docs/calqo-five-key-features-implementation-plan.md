@@ -1,7 +1,7 @@
 # Calqo — Five Key Features Implementation Plan
 
 **Planning date:** 2026-07-06
-**Status:** Proposed — not started
+**Status:** Implemented (2026-07-07) — all five features landed; see PR for detail.
 **Planning inputs:** `docs/PRD-calqo-v0.5.md`, `docs/plan.md` (Beta/1.0 roadmap),
 current source tree (`src/editor/`, `src/lib/`, `src/app/`).
 

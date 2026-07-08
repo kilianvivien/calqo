@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Check, Copy, Download, X } from 'lucide-react';
 import {
@@ -7,7 +7,7 @@ import {
   GlassSegmentedControl,
   ModalOverlay,
 } from '@/components/glass';
-import { clipboard, files } from '@/lib/adapters';
+import { assetStorage, clipboard, files } from '@/lib/adapters';
 import {
   exportArtboardRaster,
   rasterFilename,
@@ -15,17 +15,22 @@ import {
 } from '@/editor/export/rasterExport';
 import { exportArtboardSvg } from '@/editor/export/svgExport';
 import { htmlSnippet, htmlStandalone } from '@/editor/export/htmlExport';
+import { exportArtboardHtmlLayout } from '@/editor/export/htmlLayoutExport';
 import { blobToBytes, createZip } from '@/editor/export/zip';
 import {
   collectExportWarnings,
   uniqueArtboardStems,
 } from '@/editor/export/exportReadiness';
+import { estimateEnvelopeBytes } from '@/editor/assets/assetHealth';
+import { useMissingAssetsStore } from '@/editor/assets/missingAssetsStore';
 import { localeLabel } from '@/editor/i18n-content/contentLocaleService';
 import { useActiveArtboard, useActiveProject } from '@/lib/state/selectors';
+import { useUiStore } from '@/lib/state/uiStore';
 import type { CalqoArtboard, LocaleCode } from '@/lib/schema';
 
 type Format = RasterFormat | 'svg' | 'html';
 type Scope = 'active' | 'all';
+type HtmlKind = 'wrapper' | 'editable';
 type HtmlMode = 'standalone' | 'snippet';
 type Scale = '1' | '2' | '3';
 
@@ -59,12 +64,23 @@ export function ExportDialog({
   const [quality, setQuality] = useState(0.92);
   const [scope, setScope] = useState<Scope>('active');
   const [localeScope, setLocaleScope] = useState<Scope>('active');
+  const [htmlKind, setHtmlKind] = useState<HtmlKind>('wrapper');
   const [htmlMode, setHtmlMode] = useState<HtmlMode>('standalone');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   // Live render counter so a long multi-artboard/multi-locale export shows
   // progress rather than an indefinite spinner.
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  // Fidelity notes returned by the last editable-HTML export.
+  const [fidelityNotes, setFidelityNotes] = useState<string[]>([]);
+  // Estimated `.calqo` envelope size (project JSON + base64 assets).
+  const [envelopeEstimate, setEnvelopeEstimate] = useState<number | null>(null);
+  const thresholds = useUiStore((s) => s.assetHealthThresholds);
+  const setOptimizeAssetsOpen = useUiStore((s) => s.setOptimizeAssetsOpen);
+  const setRepairAssetsOpen = useUiStore((s) => s.setRepairAssetsOpen);
+  const missingAssetCount = useMissingAssetsStore((s) =>
+    project ? (s.byProject[project.id]?.length ?? 0) : 0,
+  );
 
   const targets = useMemo<CalqoArtboard[]>(() => {
     if (!project || !artboard) return [];
@@ -82,7 +98,35 @@ export function ExportDialog({
     [project, targets, scope, t],
   );
 
+  // Estimate the portable `.calqo` payload while the dialog is open so heavy
+  // projects are flagged before they ship (asset-health soft limit).
+  const projectId = project?.id ?? null;
+  const assetSignature = project?.assets.map((a) => a.id).join('|') ?? '';
+  useEffect(() => {
+    if (!open || !project) return undefined;
+    let alive = true;
+    void (async () => {
+      const bytes = new Map<string, number>();
+      await Promise.all(
+        project.assets.map(async (ref) => {
+          const blob = await assetStorage.getAssetBlob(ref.id).catch(() => null);
+          if (blob) bytes.set(ref.id, blob.size);
+        }),
+      );
+      if (!alive) return;
+      const jsonBytes = JSON.stringify(project).length;
+      setEnvelopeEstimate(estimateEnvelopeBytes(jsonBytes, bytes));
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, projectId, assetSignature]);
+
   if (!project || !artboard) return null;
+
+  const envelopeTooBig =
+    envelopeEstimate !== null && envelopeEstimate > thresholds.maxEnvelopeBytes;
 
   const transparentSupported = format === 'png' || format === 'webp';
   const qualitySupported = format === 'jpeg' || format === 'webp';
@@ -133,7 +177,19 @@ export function ExportDialog({
         blob: new Blob([svg], { type: 'image/svg+xml' }),
       };
     }
-    // HTML wrapper — always a PNG of the artboard.
+    if (htmlKind === 'editable') {
+      // Editable HTML: real text/CSS nodes from the document, with per-layer
+      // raster fallbacks and grouped fidelity notes.
+      const result = await exportArtboardHtmlLayout(target, locale, {
+        title: `${project.name} — ${target.name}`,
+      });
+      setFidelityNotes(result.warnings);
+      return {
+        name: `${dir}${projectSlug}-${stem}.html`,
+        blob: new Blob([result.html], { type: 'text/html' }),
+      };
+    }
+    // HTML (image wrapper) — always a PNG of the artboard.
     const blob = await renderRaster(target, 'png', locale);
     const pngDataUrl = await blobToDataUrl(blob);
     const html = (htmlMode === 'snippet' ? htmlSnippet : htmlStandalone)({
@@ -306,6 +362,26 @@ export function ExportDialog({
           )}
 
           {format === 'html' && (
+            <Field label={t('export.htmlKind')}>
+              <GlassSegmentedControl<HtmlKind>
+                ariaLabel={t('export.htmlKind')}
+                value={htmlKind}
+                onChange={setHtmlKind}
+                options={[
+                  { value: 'wrapper', label: t('export.htmlWrapper') },
+                  { value: 'editable', label: t('export.htmlEditable') },
+                ]}
+              />
+            </Field>
+          )}
+
+          {format === 'html' && htmlKind === 'editable' && (
+            <p className="px-1 text-[11px] text-[var(--calqo-text-3)]">
+              {t('export.htmlEditableHint')}
+            </p>
+          )}
+
+          {format === 'html' && htmlKind === 'wrapper' && (
             <Field label={t('export.htmlMode')}>
               <GlassSegmentedControl<HtmlMode>
                 ariaLabel={t('export.htmlMode')}
@@ -358,7 +434,7 @@ export function ExportDialog({
             <p className="mono mt-0.5 truncate text-[12px] text-[var(--calqo-text-2)]">{filename}</p>
           </div>
 
-          {warnings.length > 0 && (
+          {(warnings.length > 0 || envelopeTooBig || missingAssetCount > 0) && (
             <div className="rounded-[var(--calqo-radius-sm)] border border-[#E8B339]/40 bg-[#E8B339]/10 px-3 py-2">
               <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-[#B7791F]">
                 <AlertTriangle size={12} />
@@ -368,6 +444,48 @@ export function ExportDialog({
                 {warnings.map((w) => (
                   <li key={w} className="text-[11px] text-[var(--calqo-text-2)]">
                     {w}
+                  </li>
+                ))}
+                {envelopeTooBig && envelopeEstimate !== null && (
+                  <li className="text-[11px] text-[var(--calqo-text-2)]">
+                    {t('export.warnEnvelopeSize', {
+                      size: (envelopeEstimate / (1024 * 1024)).toFixed(0),
+                    })}
+                  </li>
+                )}
+              </ul>
+              <div className="mt-1.5 flex flex-wrap gap-3">
+                {missingAssetCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setRepairAssetsOpen(true)}
+                    className="text-[11px] font-medium text-[var(--calqo-accent)] hover:underline"
+                  >
+                    {t('repairAssets.open')}
+                  </button>
+                )}
+                {envelopeTooBig && (
+                  <button
+                    type="button"
+                    onClick={() => setOptimizeAssetsOpen(true)}
+                    className="text-[11px] font-medium text-[var(--calqo-accent)] hover:underline"
+                  >
+                    {t('optimizeAssets.open')}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {fidelityNotes.length > 0 && format === 'html' && htmlKind === 'editable' && (
+            <div className="rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] px-3 py-2">
+              <p className="mb-1 text-[11px] font-semibold text-[var(--calqo-text-2)]">
+                {t('export.fidelityNotes')}
+              </p>
+              <ul className="max-h-28 space-y-0.5 overflow-y-auto calqo-scroll">
+                {fidelityNotes.map((note) => (
+                  <li key={note} className="text-[11px] text-[var(--calqo-text-3)]">
+                    {note}
                   </li>
                 ))}
               </ul>
@@ -387,7 +505,7 @@ export function ExportDialog({
                 {t('export.copyImage')}
               </GlassButton>
             )}
-            {format === 'html' && (
+            {format === 'html' && htmlKind === 'wrapper' && (
               <GlassButton onClick={handleCopyHtml} disabled={busy}>
                 <Copy size={14} />
                 {t('export.copySnippet')}
