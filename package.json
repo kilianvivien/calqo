@@ -1,7 +1,7 @@
 {
   "name": "calqo",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.5",
   "type": "module",
   "description": "An open-source, simple, glass-native social visual maker",
   "license": "MIT",
