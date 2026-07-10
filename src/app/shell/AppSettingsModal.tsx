@@ -478,7 +478,7 @@ export function AppSettingsModal({
               </section>
             )}
 
-            {activeTab === 'diagnostics' && <DiagnosticsPane />}
+            {activeTab === 'diagnostics' && <DiagnosticsPane onNavigate={onClose} />}
           </div>
         </div>
     </ModalOverlay>

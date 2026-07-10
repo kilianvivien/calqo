@@ -13,6 +13,7 @@ import {
 } from '@/editor/assets/missingAssetsStore';
 import type { MissingAsset } from '@/editor/assets/missingAssets';
 import { useActiveProject } from '@/lib/state/selectors';
+import { projectStore } from '@/lib/state/projectStore';
 import { useUiStore } from '@/lib/state/uiStore';
 
 // Stable fallback so the store selector never mints a new array per snapshot
@@ -53,6 +54,11 @@ export function RepairAssetsModal() {
     fileInputRef.current?.click();
   };
 
+  // Re-detect against the post-command project state — the render-scope
+  // `project` still holds the broken reference the command just rewrote.
+  const refresh = () =>
+    refreshMissingAssets(projectStore.getState().projects[project.id] ?? project);
+
   const handleFile = async (file: File) => {
     if (!pending) return;
     setBusy(true);
@@ -66,7 +72,7 @@ export function RepairAssetsModal() {
         width: measured.width,
         height: measured.height,
       });
-      await refreshMissingAssets(project);
+      await refresh();
     } finally {
       setPending(null);
       setBusy(false);
@@ -75,7 +81,7 @@ export function RepairAssetsModal() {
 
   const removeLayers = async (item: MissingAsset) => {
     removeLayersForAsset(project.id, item.assetId);
-    await refreshMissingAssets(project);
+    await refresh();
   };
 
   return (

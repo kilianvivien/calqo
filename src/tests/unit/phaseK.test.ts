@@ -175,6 +175,44 @@ describe('phase K — export readiness', () => {
     );
     expect(batch).toContain('export.warnManyArtboards');
   });
+
+  it('flags missing assets referenced from groups, fills, and backgrounds', () => {
+    const project = createDefaultProject();
+    const artboard = project.artboards[0];
+    // No manifest entries at all: every reference below is broken.
+    artboard.background = { type: 'image', assetId: 'asset-bg', fit: 'cover' };
+    artboard.layers.push({
+      id: 'group-1',
+      name: 'Group',
+      type: 'group',
+      x: 0,
+      y: 0,
+      w: 200,
+      h: 200,
+      rotation: 0,
+      opacity: 1,
+      visible: true,
+      locked: false,
+      children: [
+        {
+          ...createShapeLayer('rect', 0, 0, 100, 100),
+          type: 'image',
+          assetId: 'asset-nested',
+          fit: 'cover',
+        } as CalqoLayer,
+      ],
+    } as CalqoLayer);
+    artboard.layers.push({
+      ...createShapeLayer('rect', 0, 0, 100, 100),
+      fill: { type: 'image', assetId: 'asset-fill', fit: 'cover' },
+    } as CalqoLayer);
+
+    const warnings = collectExportWarnings(
+      { project, targets: [artboard], exportingAll: false },
+      echoT,
+    );
+    expect(warnings).toContain('export.warnMissingAsset');
+  });
 });
 
 describe('phase K — arrange commands', () => {

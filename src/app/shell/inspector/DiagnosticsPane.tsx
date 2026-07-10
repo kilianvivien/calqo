@@ -1,11 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, Download, ShieldCheck } from 'lucide-react';
+import { Activity, Download, FileWarning, ShieldCheck, Shrink } from 'lucide-react';
 import { GlassButton } from '@/components/glass';
-import { files } from '@/lib/adapters';
+import { assetStorage, files } from '@/lib/adapters';
 import { useActiveProject } from '@/lib/state/selectors';
+import { useUiStore } from '@/lib/state/uiStore';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
 import { buildProjectDiagnostics } from '@/editor/diagnostics/projectDiagnostics';
+import { buildAssetHealthReport } from '@/editor/assets/assetHealth';
+import { useMissingAssetsStore } from '@/editor/assets/missingAssetsStore';
 
 function slug(value: string): string {
   return (
@@ -17,7 +20,7 @@ function slug(value: string): string {
   );
 }
 
-export function DiagnosticsPane() {
+export function DiagnosticsPane({ onNavigate }: { onNavigate?: () => void } = {}) {
   const { t } = useTranslation('editor');
   const project = useActiveProject();
   const settings = useAiSettingsStore((s) => s.settings);
@@ -26,6 +29,37 @@ export function DiagnosticsPane() {
     () => (project ? buildProjectDiagnostics(project, settings, t) : null),
     [project, settings, t],
   );
+  const thresholds = useUiStore((s) => s.assetHealthThresholds);
+  const setRepairAssetsOpen = useUiStore((s) => s.setRepairAssetsOpen);
+  const setOptimizeAssetsOpen = useUiStore((s) => s.setOptimizeAssetsOpen);
+  const missingCount = useMissingAssetsStore((s) =>
+    project ? (s.byProject[project.id]?.length ?? 0) : 0,
+  );
+  // Oversized-raster count against the app's soft limits (asset health, plan
+  // five-key-features §2); blob sizes load lazily so the pane opens instantly.
+  const [oversizedCount, setOversizedCount] = useState<number | null>(null);
+  const projectId = project?.id ?? null;
+  const assetSignature = project?.assets.map((ref) => ref.id).join('|') ?? '';
+  useEffect(() => {
+    if (!project) return undefined;
+    let alive = true;
+    void (async () => {
+      const bytes = new Map<string, number>();
+      await Promise.all(
+        project.assets.map(async (ref) => {
+          const blob = await assetStorage.getAssetBlob(ref.id).catch(() => null);
+          if (blob) bytes.set(ref.id, blob.size);
+        }),
+      );
+      if (!alive) return;
+      const report = buildAssetHealthReport(project, bytes, thresholds);
+      setOversizedCount(report.filter((entry) => entry.oversized).length);
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, assetSignature, thresholds]);
 
   if (!project || !diagnostics) {
     return (
@@ -78,6 +112,62 @@ export function DiagnosticsPane() {
         {status && (
           <p className="mt-2 text-[11px] text-[var(--calqo-text-3)]">{status}</p>
         )}
+      </section>
+
+      <section>
+        <span className="eyebrow">{t('diagnostics.assetHealth')}</span>
+        <div className="mt-2 space-y-2">
+          <div className="flex items-center justify-between gap-3 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-3">
+            <p className="flex min-w-0 items-center gap-2 text-[12px] text-[var(--calqo-text-2)]">
+              <FileWarning
+                size={14}
+                className={missingCount > 0 ? 'text-[#B7791F]' : 'text-[var(--calqo-text-3)]'}
+              />
+              <span className="truncate">
+                {missingCount > 0
+                  ? t('repairAssets.badge', { count: missingCount })
+                  : t('repairAssets.allResolved')}
+              </span>
+            </p>
+            {missingCount > 0 && (
+              <GlassButton
+                onClick={() => {
+                  onNavigate?.();
+                  setRepairAssetsOpen(true);
+                }}
+              >
+                {t('repairAssets.open')}
+              </GlassButton>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-3">
+            <p className="flex min-w-0 items-center gap-2 text-[12px] text-[var(--calqo-text-2)]">
+              <Shrink
+                size={14}
+                className={
+                  (oversizedCount ?? 0) > 0 ? 'text-[#B7791F]' : 'text-[var(--calqo-text-3)]'
+                }
+              />
+              <span className="truncate">
+                {oversizedCount === null
+                  ? t('optimizeAssets.loading')
+                  : oversizedCount > 0
+                    ? t('diagnostics.oversizedCount', { count: oversizedCount })
+                    : t('optimizeAssets.empty')}
+              </span>
+            </p>
+            {(oversizedCount ?? 0) > 0 && (
+              <GlassButton
+                onClick={() => {
+                  onNavigate?.();
+                  setOptimizeAssetsOpen(true);
+                }}
+              >
+                {t('optimizeAssets.open')}
+              </GlassButton>
+            )}
+          </div>
+        </div>
       </section>
 
       <section>

@@ -390,6 +390,7 @@
     "htmlEditable": "Editable",
     "htmlEditableHint": "Editable HTML keeps text selectable and shapes as CSS/SVG. PNG stays the pixel-faithful path; unsupported layers embed as images with a note.",
     "warnEnvelopeSize": "The portable .calqo file is estimated at {{size}} MB — consider optimizing assets before moving it.",
+    "warnEnvelopeContributors": "Largest assets: {{names}}.",
     "fidelityNotes": "Editable HTML notes"
   },
   "recovery": {
@@ -419,7 +420,9 @@
     },
     "artboardDetails": "Artboard details",
     "layers": "layers",
-    "layerMix": "{{text}} text/list · {{shape}} shape · {{media}} media"
+    "layerMix": "{{text}} text/list · {{shape}} shape · {{media}} media",
+    "assetHealth": "Asset health",
+    "oversizedCount": "{{count}} oversized raster asset(s)"
   },
   "ai": {
     "promptTemplate": "Prompt a template",
@@ -776,7 +779,8 @@
     "deleteMessage": "Delete the starter “{{name}}”? This cannot be undone.",
     "saveAs": "Save as starter",
     "saved": "Saved “{{name}}” to your starters.",
-    "saveFailed": "Could not save this project as a starter."
+    "saveFailed": "Could not save this project as a starter.",
+    "empty": "No starters could be loaded. Check your connection, or save an open project as a starter from the project manager."
   },
   "repairAssets": {
     "title": "Repair assets",

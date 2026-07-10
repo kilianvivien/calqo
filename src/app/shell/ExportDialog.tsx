@@ -73,8 +73,10 @@ export function ExportDialog({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   // Fidelity notes returned by the last editable-HTML export.
   const [fidelityNotes, setFidelityNotes] = useState<string[]>([]);
-  // Estimated `.calqo` envelope size (project JSON + base64 assets).
+  // Estimated `.calqo` envelope size (project JSON + base64 assets), plus the
+  // asset names contributing most to it so the warning is actionable.
   const [envelopeEstimate, setEnvelopeEstimate] = useState<number | null>(null);
+  const [envelopeContributors, setEnvelopeContributors] = useState<string[]>([]);
   const thresholds = useUiStore((s) => s.assetHealthThresholds);
   const setOptimizeAssetsOpen = useUiStore((s) => s.setOptimizeAssetsOpen);
   const setRepairAssetsOpen = useUiStore((s) => s.setRepairAssetsOpen);
@@ -116,6 +118,16 @@ export function ExportDialog({
       if (!alive) return;
       const jsonBytes = JSON.stringify(project).length;
       setEnvelopeEstimate(estimateEnvelopeBytes(jsonBytes, bytes));
+      setEnvelopeContributors(
+        [...bytes.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .filter(([, size]) => size > 512 * 1024)
+          .map(
+            ([id, size]) =>
+              `${project.assets.find((ref) => ref.id === id)?.name ?? id} (${(size / (1024 * 1024)).toFixed(1)} MB)`,
+          ),
+      );
     })();
     return () => {
       alive = false;
@@ -161,6 +173,7 @@ export function ExportDialog({
     target: CalqoArtboard,
     stem: string,
     locale: LocaleCode,
+    notes: string[],
   ): Promise<{ name: string; blob: Blob }> => {
     const projectSlug = slug(project.name);
     const dir = localeTargets.length > 1 ? `${locale}/` : '';
@@ -183,7 +196,7 @@ export function ExportDialog({
       const result = await exportArtboardHtmlLayout(target, locale, {
         title: `${project.name} — ${target.name}`,
       });
-      setFidelityNotes(result.warnings);
+      notes.push(...result.warnings);
       return {
         name: `${dir}${projectSlug}-${stem}.html`,
         blob: new Blob([result.html], { type: 'text/html' }),
@@ -212,14 +225,19 @@ export function ExportDialog({
     const stems = uniqueArtboardStems(targets, slug);
     const total = totalOutputs;
     setProgress({ done: 0, total });
+    // Fidelity notes accumulate across the whole batch (deduplicated), so a
+    // multi-artboard export never shows only the last artboard's notes.
+    const notes: string[] = [];
+    setFidelityNotes([]);
     try {
       const outputs = [];
       for (const locale of localeTargets) {
         for (let i = 0; i < targets.length; i++) {
-          outputs.push(await renderTarget(targets[i], stems[i], locale));
+          outputs.push(await renderTarget(targets[i], stems[i], locale, notes));
           setProgress({ done: outputs.length, total });
         }
       }
+      setFidelityNotes([...new Set(notes)]);
       if (outputs.length === 1) {
         await files.downloadBlob(outputs[0].blob, outputs[0].name);
       } else {
@@ -450,6 +468,13 @@ export function ExportDialog({
                   <li className="text-[11px] text-[var(--calqo-text-2)]">
                     {t('export.warnEnvelopeSize', {
                       size: (envelopeEstimate / (1024 * 1024)).toFixed(0),
+                    })}
+                  </li>
+                )}
+                {envelopeTooBig && envelopeContributors.length > 0 && (
+                  <li className="text-[11px] text-[var(--calqo-text-2)]">
+                    {t('export.warnEnvelopeContributors', {
+                      names: envelopeContributors.join(', '),
                     })}
                   </li>
                 )}

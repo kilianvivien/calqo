@@ -5,31 +5,17 @@ import {
   type AssetHealthThresholds,
 } from '@/lib/state/uiStore';
 
+import { decodedBytes, isOversizedImport } from '@/lib/utils/imageAsset';
+
 export { DEFAULT_ASSET_HEALTH_THRESHOLDS };
 export type { AssetHealthThresholds };
+// The pure size helpers live beside the import path that raises the notice.
+export { decodedBytes, isOversizedImport };
 
 /** Highest export pixel ratio the UI offers; downscale recommendations never go
  * below the largest rendered size × this ratio, so quality is never visibly
  * lost. */
 export const MAX_EXPORT_PIXEL_RATIO = 3;
-
-/** Decoded RGBA size of a raster in memory. */
-export function decodedBytes(width: number, height: number): number {
-  return width * height * 4;
-}
-
-/** Whether a freshly imported raster should raise the oversized-import notice. */
-export function isOversizedImport(
-  width: number | undefined,
-  height: number | undefined,
-  thresholds: AssetHealthThresholds = DEFAULT_ASSET_HEALTH_THRESHOLDS,
-): boolean {
-  if (!width || !height) return false;
-  return (
-    Math.max(width, height) > thresholds.maxAssetEdge ||
-    decodedBytes(width, height) > thresholds.maxAssetDecodedBytes
-  );
-}
 
 /** The largest edge (in artboard px) an asset is rendered at anywhere in the
  * project: image/svg layer boxes, image-filled shapes, list markers, and

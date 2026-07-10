@@ -42,11 +42,17 @@ export function OptimizeAssetsModal() {
   const projectId = project?.id ?? null;
   const assetSignature = project?.assets.map((ref) => ref.id).join('|') ?? '';
 
+  // Reset the status line only when the modal opens — the list-reload effect
+  // below also fires after an apply (the asset set changes), and clearing the
+  // status there would wipe the "Optimized N assets" confirmation instantly.
+  useEffect(() => {
+    if (open) setStatus(null);
+  }, [open]);
+
   useEffect(() => {
     if (!open || !project) return undefined;
     let alive = true;
     setEntries(null);
-    setStatus(null);
     void (async () => {
       const bytes = new Map<string, number>();
       await Promise.all(

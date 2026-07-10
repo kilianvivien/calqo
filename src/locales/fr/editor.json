@@ -390,6 +390,7 @@
     "htmlEditable": "Éditable",
     "htmlEditableHint": "Le HTML éditable garde le texte sélectionnable et les formes en CSS/SVG. Le PNG reste la sortie fidèle au pixel ; les calques non pris en charge sont intégrés en image avec une note.",
     "warnEnvelopeSize": "Le fichier .calqo portable est estimé à {{size}} Mo — pensez à optimiser les ressources avant de le déplacer.",
+    "warnEnvelopeContributors": "Ressources les plus volumineuses : {{names}}.",
     "fidelityNotes": "Notes HTML éditable"
   },
   "recovery": {
@@ -419,7 +420,9 @@
     },
     "artboardDetails": "Détails des plans",
     "layers": "calques",
-    "layerMix": "{{text}} texte/liste · {{shape}} forme · {{media}} média"
+    "layerMix": "{{text}} texte/liste · {{shape}} forme · {{media}} média",
+    "assetHealth": "Santé des ressources",
+    "oversizedCount": "{{count}} ressource(s) raster surdimensionnée(s)"
   },
   "ai": {
     "promptTemplate": "Générer un modèle",
@@ -776,7 +779,8 @@
     "deleteMessage": "Supprimer le modèle « {{name}} » ? Cette action est irréversible.",
     "saveAs": "Enregistrer comme modèle",
     "saved": "« {{name}} » ajouté à vos modèles.",
-    "saveFailed": "Impossible d'enregistrer ce projet comme modèle."
+    "saveFailed": "Impossible d'enregistrer ce projet comme modèle.",
+    "empty": "Aucun modèle n'a pu être chargé. Vérifiez votre connexion, ou enregistrez un projet ouvert comme modèle depuis le gestionnaire de projets."
   },
   "repairAssets": {
     "title": "Réparer les ressources",

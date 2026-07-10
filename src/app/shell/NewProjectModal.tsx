@@ -256,6 +256,10 @@ export function NewProjectModal({
           <p className="px-1 py-10 text-center text-[13px] text-[var(--calqo-text-3)]">
             {t('starters.loading')}
           </p>
+        ) : bundled.length === 0 && (userStarters?.length ?? 0) === 0 ? (
+          <p className="px-1 py-10 text-center text-[13px] text-[var(--calqo-text-3)]">
+            {t('starters.empty')}
+          </p>
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

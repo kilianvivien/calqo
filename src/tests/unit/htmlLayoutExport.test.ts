@@ -196,6 +196,9 @@ describe('exportArtboardHtmlLayout', () => {
       { rasterizeLayer },
     );
     expect(rasterizeLayer).toHaveBeenCalledTimes(1);
+    // The export locale reaches the fallback rasterizer, so rasterized layers
+    // containing text render the right language in multi-locale batches.
+    expect(rasterizeLayer).toHaveBeenCalledWith(masked, expect.anything(), 'en');
     expect(html).toContain('data-rasterized="unsupported mask shape"');
     expect(html).toContain('data:image/png;base64,RASTER');
     expect(

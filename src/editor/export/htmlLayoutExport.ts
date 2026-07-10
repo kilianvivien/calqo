@@ -44,6 +44,7 @@ export interface HtmlLayoutOptions {
   rasterizeLayer?: (
     layer: CalqoLayer,
     artboard: CalqoArtboard,
+    locale: string,
   ) => Promise<string | null>;
 }
 
@@ -61,11 +62,12 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 async function defaultRasterizeLayer(
   layer: CalqoLayer,
   artboard: CalqoArtboard,
+  locale: string,
 ): Promise<string | null> {
   try {
     const blob = await exportArtboardRaster({
       artboard: { ...artboard, layers: [layer] },
-      locale: '',
+      locale,
       format: 'png',
       pixelRatio: 2,
       transparent: true,
@@ -257,7 +259,7 @@ async function layerHtml(
     // Rasterized fallback is only positionable at the top level (nested layers
     // are group-relative); groups with raster-needing children rasterize whole.
     if (!context.topLevel) return '';
-    const dataUrl = await context.rasterizeLayer(layer, artboard);
+    const dataUrl = await context.rasterizeLayer(layer, artboard, locale);
     if (!dataUrl) {
       warnings.push(`Layer "${layer.name}" could not be rendered and was skipped.`);
       return '';

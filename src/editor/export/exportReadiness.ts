@@ -1,5 +1,6 @@
 import type { CalqoArtboard, CalqoProject } from '@/lib/schema';
 import { artboardOverflowLayerIds } from '@/editor/commands/projectCommands';
+import { collectAssetUsage } from '@/editor/assets/missingAssets';
 
 /** Pixel area above which a raster asset is flagged as heavy for the browser
  * canvas (≈ 16 MP, e.g. a 4000×4000 image). */
@@ -46,34 +47,44 @@ export function collectExportWarnings(
   if (!project) return [];
   const messages: string[] = [];
   const assets = new Map(project.assets.map((a) => [a.id, a]));
+  const targetIds = new Set(targets.map((target) => target.id));
 
   for (const artboard of targets) {
     if (artboardOverflowLayerIds(artboard).length > 0) {
       messages.push(t('export.warnOverflow', { name: artboard.name }));
     }
-    let missing = false;
-    for (const layer of artboard.layers) {
-      if (layer.type !== 'image' && layer.type !== 'svg') continue;
-      const asset = assets.get(layer.assetId);
-      if (!asset) {
-        missing = true;
-        continue;
-      }
-      if (
-        asset.width &&
-        asset.height &&
-        asset.width * asset.height > LARGE_ASSET_PIXELS
-      ) {
-        messages.push(
-          t('export.warnLargeAsset', {
-            name: asset.name,
-            width: asset.width,
-            height: asset.height,
-          }),
-        );
-      }
+  }
+
+  // Walk every rendered asset reference — nested group layers, shape image
+  // fills, list markers, and artboard backgrounds — so the warnings match
+  // what the canvas actually draws.
+  const missingArtboardIds = new Set<string>();
+  for (const [assetId, refs] of collectAssetUsage(project)) {
+    const targetRefs = refs.filter((ref) => targetIds.has(ref.artboardId));
+    if (targetRefs.length === 0) continue;
+    const asset = assets.get(assetId);
+    if (!asset) {
+      for (const ref of targetRefs) missingArtboardIds.add(ref.artboardId);
+      continue;
     }
-    if (missing) messages.push(t('export.warnMissingAsset', { name: artboard.name }));
+    if (
+      asset.width &&
+      asset.height &&
+      asset.width * asset.height > LARGE_ASSET_PIXELS
+    ) {
+      messages.push(
+        t('export.warnLargeAsset', {
+          name: asset.name,
+          width: asset.width,
+          height: asset.height,
+        }),
+      );
+    }
+  }
+  for (const artboard of targets) {
+    if (missingArtboardIds.has(artboard.id)) {
+      messages.push(t('export.warnMissingAsset', { name: artboard.name }));
+    }
   }
 
   if (exportingAll && targets.length > MANY_ARTBOARDS) {

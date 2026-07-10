@@ -1,6 +1,28 @@
 import { assetStorage } from '@/lib/adapters';
-import { useUiStore } from '@/lib/state/uiStore';
+import {
+  DEFAULT_ASSET_HEALTH_THRESHOLDS,
+  useUiStore,
+  type AssetHealthThresholds,
+} from '@/lib/state/uiStore';
 import type { CalqoAssetRef } from '@/lib/schema';
+
+/** Decoded RGBA size of a raster in memory. */
+export function decodedBytes(width: number, height: number): number {
+  return width * height * 4;
+}
+
+/** Whether a freshly imported raster should raise the oversized-import notice. */
+export function isOversizedImport(
+  width: number | undefined,
+  height: number | undefined,
+  thresholds: AssetHealthThresholds = DEFAULT_ASSET_HEALTH_THRESHOLDS,
+): boolean {
+  if (!width || !height) return false;
+  return (
+    Math.max(width, height) > thresholds.maxAssetEdge ||
+    decodedBytes(width, height) > thresholds.maxAssetDecodedBytes
+  );
+}
 
 /** Raise the non-blocking oversized-import notice when a raster exceeds the
  * app's soft limits (long edge or decoded RGBA size). Import always succeeds —
@@ -11,12 +33,11 @@ function noticeIfOversized(
   width?: number,
   height?: number,
 ): void {
-  if (kind !== 'raster' || !width || !height) return;
+  if (kind !== 'raster') return;
   const { assetHealthThresholds, setAssetHealthNotice } = useUiStore.getState();
-  const oversized =
-    Math.max(width, height) > assetHealthThresholds.maxAssetEdge ||
-    width * height * 4 > assetHealthThresholds.maxAssetDecodedBytes;
-  if (oversized) setAssetHealthNotice({ name, width, height });
+  if (isOversizedImport(width, height, assetHealthThresholds)) {
+    setAssetHealthNotice({ name, width: width ?? 0, height: height ?? 0 });
+  }
 }
 
 /** Read a raster image blob's intrinsic pixel size. SVGs have no fixed raster
