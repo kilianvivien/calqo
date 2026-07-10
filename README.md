@@ -35,8 +35,9 @@ surface.
 ## Download
 
 The latest packaged alpha release is
-[Calqo v0.3.0](https://github.com/kilianvivien/calqo/releases/tag/v0.3.0)
-(agent drawing).
+[Calqo v0.3.5](https://github.com/kilianvivien/calqo/releases/tag/v0.3.5)
+(missing asset repair, asset optimization, bundled starters, brand profiles,
+and editable HTML export).
 
 The desktop build is currently unsigned and not notarized. On first launch,
 macOS Gatekeeper may require approving the app manually.
@@ -85,6 +86,12 @@ library, emoji insertion, app backup/restore, and multi-locale ZIP exports.
 - [x] Current GitHub release notes for `v0.2.6`; Apple Silicon DMG asset pending upload
 - [x] Agent drawing: embedded desktop MCP server so coding agents draw editable layers live (`v0.3.0`)
 - [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.3.0`
+- [x] Missing asset detection & repair, with status-bar badge and auto-opened repair modal
+- [x] Asset optimization: oversized-import notices and one-step downscale/relink
+- [x] 8 bundled starter templates plus user-saved starters with thumbnails
+- [x] Brand profiles (lite): palettes, fonts, logos, and glossary applied in one undo step
+- [x] Editable HTML export with Faithful/Approximated/Rasterized-fallback fidelity tiers
+- [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.3.5`
 
 ## What you can make
 
@@ -122,9 +129,16 @@ animation timeline, no realtime multiplayer, and no hosted template marketplace.
   projects can be duplicated/exported individually, and the backup flow exports
   projects plus non-secret settings to a `.calqobackup` file.
 - **Export workflow:** PNG/JPG/WebP with scale options, SVG with fidelity
-  warnings, simple HTML wrappers, batch export, ZIP bundles for multi-artboard
-  or multi-locale output, and clipboard/share paths where the browser supports
-  them.
+  warnings, HTML wrapper or editable HTML (real text/image/shape nodes with a
+  Faithful/Approximated/Rasterized-fallback fidelity report and envelope-size
+  warning), batch export, ZIP bundles for multi-artboard or multi-locale
+  output, and clipboard/share paths where the browser supports them.
+- **Asset health:** missing-asset detection with an auto-opened repair modal
+  (relink, remove, or keep placeholders) and oversized-import detection with
+  one-step downscale/relink, both surfaced in the diagnostics pane.
+- **Starters & brand profiles:** 8 bundled starter templates plus user-saved
+  starters, and Brand profiles (lite) for palettes, fonts, logos, and glossary
+  terms that apply in one undo step and seed AI template generation.
 - **Multilingual content:** text layers can store variants per content locale,
   so switching from French to English or Turkish changes the design content, not
   the app chrome. Export can target the active locale or every project locale in
@@ -232,8 +246,8 @@ reports unsupported copy operations instead of throwing.
   edit layers but cannot import image assets or export files yet, and the
   pairing token grants drawing access to any local process that has it — treat
   it like a local secret and regenerate it if in doubt.
-- Complex vector editing, editable HTML/CSS export, signing/notarization, and
-  production-grade phone-first editing remain future work.
+- Complex vector editing, signing/notarization, and production-grade
+  phone-first editing remain future work.
 
 ## Design language
 
