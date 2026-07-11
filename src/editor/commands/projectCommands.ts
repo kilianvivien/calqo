@@ -35,6 +35,7 @@ import {
   ARTBOARD_PRESETS,
   type ArtboardPresetId,
 } from '@/lib/schema/presets';
+import { pressuresToWidths } from '@/editor/canvas/freehandGeometry';
 import { createId } from '@/lib/utils/ids';
 import { historyStore } from '@/lib/state/historyStore';
 import { projectStore } from '@/lib/state/projectStore';
@@ -557,10 +558,13 @@ export function createArrowLayer(
 }
 
 /** Build a freehand stroke from a flat list of absolute artboard points,
- * normalised to a layer box (brush / hand-drawing tool). */
+ * normalised to a layer box (brush / hand-drawing tool). `pressures` carries
+ * one 0–1 force sample per point pair when the input device reported real
+ * pressure (Apple Pencil / stylus); it becomes per-point widths. */
 export function createFreehandLayer(
   absolutePoints: number[],
   defaults?: ShapeStyleDefaults,
+  pressures?: number[],
 ): CalqoLayer | null {
   if (absolutePoints.length < 4) return null;
   let minX = Infinity;
@@ -586,6 +590,14 @@ export function createFreehandLayer(
       }),
     );
     if (layer.blendMode === 'normal') delete layer.blendMode;
+    if (pressures && pressures.length > 0) {
+      // Align the trace to the point pairs: capture can be a sample ahead or
+      // behind the pointer positions, so truncate or pad with the last value.
+      const pairs = relative.length / 2;
+      const trace = pressures.slice(0, pairs);
+      while (trace.length < pairs) trace.push(trace[trace.length - 1]);
+      layer.pointWidths = pressuresToWidths(trace, defaults?.brushSize ?? 6);
+    }
   }
   return layer;
 }
@@ -1617,6 +1629,9 @@ function scaleLayerAroundOrigin(layer: CalqoLayer, scale: number): CalqoLayer {
     }
     if (target.type === 'shape' && target.points) {
       target.points = target.points.map((value) => value * scale);
+      if (target.pointWidths) {
+        target.pointWidths = target.pointWidths.map((value) => value * scale);
+      }
     }
     if (isGroupLayer(target)) target.children.forEach(apply);
   };

@@ -19,6 +19,7 @@ import { isGroupLayer } from '@/editor/utils/layers';
 import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
 import { fillProps, imageFillProps } from '@/editor/canvas/shapeStyle';
 import { strokeLookConfig } from '@/editor/canvas/strokeStyle';
+import { pressureOutlinePoints } from '@/editor/canvas/freehandGeometry';
 import { stickerStrokeConfig } from '@/editor/canvas/stickerOutline';
 import { frameRender, type FrameNodeSpec } from '@/editor/canvas/frameNodes';
 import { drawMaskPath } from '@/editor/canvas/maskClip';
@@ -402,6 +403,22 @@ function buildNode(
         });
       }
       if (layer.shape === 'freehand') {
+        // Pressure-sensitive stroke: fill the variable-width ribbon outline.
+        const ribbon =
+          layer.pointWidths && layer.pointWidths.length >= 2 && points.length >= 4
+            ? pressureOutlinePoints(points, layer.pointWidths)
+            : null;
+        if (ribbon && ribbon.length >= 6) {
+          return new Line({
+            ...nb,
+            x: ox,
+            y: oy,
+            points: ribbon,
+            closed: true,
+            fill: sColor,
+            lineJoin: 'round',
+          });
+        }
         return new Line({
           ...nb,
           ...strokeCfg,

@@ -56,6 +56,7 @@ export const layerPatchSchema = z
     stroke: strokeSchema,
     cornerRadius: z.number().nonnegative(),
     points: z.array(z.number()).nullable(),
+    pointWidths: z.array(z.number().nonnegative()).nullable(),
     tension: z.number(),
     // Image / SVG fields.
     fit: z.enum(['cover', 'contain', 'stretch']),

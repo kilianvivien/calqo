@@ -14,6 +14,12 @@ import { LayerRenderer, type NodeRegistry } from '@/editor/canvas/LayerRenderer'
 import { ArtboardBackground } from '@/editor/canvas/ArtboardBackground';
 import { computeSnap, SNAP_DISTANCE } from '@/editor/canvas/snapping';
 import {
+  appendPressure,
+  pressureOutlinePoints,
+  pressuresToWidths,
+  type PressureTrace,
+} from '@/editor/canvas/freehandGeometry';
+import {
   DEFAULT_ARROW_HEAD,
   lineEndpoints,
   lineSegmentPatch,
@@ -103,6 +109,10 @@ function commitNode(projectId: string, layer: CalqoLayer, node: Konva.Node): voi
       h: height,
       rotation: node.rotation(),
       points: layer.points.map((value, i) => value * (i % 2 === 0 ? scaleX : scaleY)),
+      // Pressure widths follow the average axis scale (no per-axis width).
+      ...(layer.pointWidths
+        ? { pointWidths: layer.pointWidths.map((value) => (value * (scaleX + scaleY)) / 2) }
+        : {}),
     });
     return;
   }
@@ -138,6 +148,8 @@ export function MobileStage({
   const drawing = useRef(false);
   const draftRef = useRef<number[] | null>(null);
   draftRef.current = draft;
+  // Pressure samples for the draft stroke (Apple Pencil / stylus force).
+  const draftPressures = useRef<PressureTrace | null>(null);
   // Endpoint drag: the fixed end + which handle moves, so we can rebuild the
   // segment from the live handle position. Long-press: a timer armed on a
   // line/arrow press that fires only if the finger stays put.
@@ -379,6 +391,8 @@ export function MobileStage({
     const p = stage && toArtboard(stage);
     if (!p) return;
     drawing.current = true;
+    draftPressures.current = { values: [], real: false };
+    appendPressure(draftPressures.current, evt);
     setDraft([p.x, p.y]);
   };
 
@@ -399,6 +413,7 @@ export function MobileStage({
     const stage = event.target.getStage();
     const p = stage && toArtboard(stage);
     if (!p) return;
+    if (draftPressures.current) appendPressure(draftPressures.current, event.evt);
     setDraft((prev) => (prev ? [...prev, p.x, p.y] : [p.x, p.y]));
   };
 
@@ -407,9 +422,15 @@ export function MobileStage({
     if (!drawing.current) return;
     drawing.current = false;
     const points = draftRef.current;
+    const trace = draftPressures.current;
+    draftPressures.current = null;
     setDraft(null);
     if (points && points.length >= 4) {
-      const layer = createFreehandLayer(points, useUiStore.getState().shapeDefaults);
+      const layer = createFreehandLayer(
+        points,
+        useUiStore.getState().shapeDefaults,
+        trace?.real ? trace.values : undefined,
+      );
       if (layer) addLayerToActiveArtboard(project.id, layer);
     }
   };
@@ -584,17 +605,30 @@ export function MobileStage({
                   />
                 );
               })}
-            {draft && draft.length >= 2 && (
-              <Line
-                points={draft}
-                stroke={brushDefaults.stroke}
-                strokeWidth={brushDefaults.brushSize}
-                lineCap="round"
-                lineJoin="round"
-                tension={0.4}
-                listening={false}
-              />
-            )}
+            {draft &&
+              draft.length >= 2 &&
+              (draftPressures.current?.real && draft.length >= 4 ? (
+                <Line
+                  points={pressureOutlinePoints(
+                    draft,
+                    pressuresToWidths(draftPressures.current.values, brushDefaults.brushSize),
+                  )}
+                  closed
+                  fill={brushDefaults.stroke}
+                  lineJoin="round"
+                  listening={false}
+                />
+              ) : (
+                <Line
+                  points={draft}
+                  stroke={brushDefaults.stroke}
+                  strokeWidth={brushDefaults.brushSize}
+                  lineCap="round"
+                  lineJoin="round"
+                  tension={0.4}
+                  listening={false}
+                />
+              ))}
             {guides.map((guide) => (
               <Line
                 key={`${guide.axis}-${guide.position}`}

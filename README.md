@@ -44,7 +44,7 @@ macOS Gatekeeper may require approving the app manually.
 
 ## Status
 
-**Public alpha, current app version 0.3.5.** The core editor is implemented and
+**Public alpha, current app version 0.3.6.** The core editor is implemented and
 usable locally: create projects, edit multi-artboard social visuals, save in the
 browser or native desktop shell, export files, translate content, and generate
 editable AI templates. The macOS desktop build includes localized native menus,
@@ -92,6 +92,7 @@ library, emoji insertion, app backup/restore, and multi-locale ZIP exports.
 - [x] Brand profiles (lite): palettes, fonts, logos, and glossary applied in one undo step
 - [x] Editable HTML export with Faithful/Approximated/Rasterized-fallback fidelity tiers
 - [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.3.5`
+- [x] Pressure-sensitive brush strokes: Apple Pencil / stylus force maps to per-point widths (`v0.3.6`)
 
 ## What you can make
 

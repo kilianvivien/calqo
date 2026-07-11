@@ -6,6 +6,7 @@ import { isGroupLayer } from '@/editor/utils/layers';
 import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
 import { strokeProps } from '@/editor/canvas/shapeStyle';
 import { strokeLookNeedsRasterWarning } from '@/editor/canvas/strokeStyle';
+import { pressureOutlinePoints } from '@/editor/canvas/freehandGeometry';
 import { frameRender, type FrameNodeSpec } from '@/editor/canvas/frameNodes';
 import { EXPORT_WARNINGS } from './exportWarnings';
 import type { ArrowStyle, CalqoArtboard, CalqoLayer, ListLayer, ShapeLayer, StrokeStyle, TextLayer } from '@/lib/schema';
@@ -250,6 +251,19 @@ export function serializeLayer(
     const join = layer.stroke?.join ?? 'round';
     if (layer.shape === 'freehand') {
       const pts = layer.points ?? [0, 0, layer.w, layer.h];
+      // Pressure-sensitive stroke: fill the variable-width ribbon outline
+      // (SVG strokes, like Konva's, cannot vary width along the path).
+      const ribbon =
+        layer.pointWidths && layer.pointWidths.length >= 2 && pts.length >= 4
+          ? pressureOutlinePoints(pts, layer.pointWidths)
+          : null;
+      if (ribbon && ribbon.length >= 6) {
+        const pairs: string[] = [];
+        for (let i = 0; i < ribbon.length; i += 2) {
+          pairs.push(`${round(ribbon[i])},${round(ribbon[i + 1])}`);
+        }
+        return `${open}<polygon points="${pairs.join(' ')}" fill="${lineColor}" stroke="none" stroke-linejoin="round" />${close}`;
+      }
       const d = strokePathData(pts, layer.tension ?? 0.4);
       return `${open}<path d="${d}" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-linecap="${cap}" stroke-linejoin="${join}"${dashAttr(layer.stroke)} />${close}`;
     }
