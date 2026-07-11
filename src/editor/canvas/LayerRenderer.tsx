@@ -8,6 +8,7 @@ import type { ArrowStyle, CalqoLayer, ImageLayer, ListLayer } from '@/lib/schema
 import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
 import { fillProps, imageFillProps } from './shapeStyle';
 import { strokeLookConfig } from './strokeStyle';
+import { pressureOutlinePoints } from './freehandGeometry';
 import { stickerStrokeConfig } from './stickerOutline';
 import { frameRender, type FrameNodeSpec } from './frameNodes';
 import { buildImageFilterPipeline, coverCropRect } from './imageFilters';
@@ -580,6 +581,29 @@ export function LayerRenderer(props: LayerRendererProps) {
         );
       }
       if (layer.shape === 'freehand') {
+        // Pressure-sensitive stroke: fill the variable-width ribbon outline
+        // (a constant-width Konva stroke cannot vary along the path).
+        const ribbon =
+          layer.pointWidths && layer.pointWidths.length >= 2 && points.length >= 4
+            ? pressureOutlinePoints(points, layer.pointWidths)
+            : null;
+        if (ribbon && ribbon.length >= 6) {
+          return (
+            <Line
+              key={key}
+              {...common}
+              points={ribbon}
+              closed
+              fill={(paint.stroke.stroke as string) ?? lineColor}
+              lineJoin="round"
+              shadowColor={paint.stroke.shadowColor as string | undefined}
+              shadowBlur={paint.stroke.shadowBlur as number | undefined}
+              shadowOffsetX={paint.stroke.shadowOffsetX as number | undefined}
+              shadowOffsetY={paint.stroke.shadowOffsetY as number | undefined}
+              shadowOpacity={paint.stroke.shadowOpacity as number | undefined}
+            />
+          );
+        }
         return (
           <Line
             key={key}

@@ -183,6 +183,11 @@ export const shapeLayerSchema = z.object({
   stroke: strokeSchema.optional(),
   cornerRadius: z.number().nonnegative().optional(),
   points: z.array(z.number()).optional(),
+  /** Per-point stroke widths in px for pressure-sensitive freehand strokes
+   * (Apple Pencil / stylus force): one width per x/y pair in `points`. When
+   * present the renderer fills a variable-width ribbon instead of stroking a
+   * constant-width line. */
+  pointWidths: z.array(z.number().nonnegative()).optional(),
   /** Smoothing for freehand strokes (Konva line tension). */
   tension: z.number().optional(),
   /** Head configuration for arrow shapes. */

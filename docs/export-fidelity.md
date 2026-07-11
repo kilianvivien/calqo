@@ -21,6 +21,7 @@ Use this table when an export looks different from the canvas.
 | Image frames | Exact | Approximated | Exact | Rasterized per layer (warned) |
 | Sticker outline | Exact | Approximated | Exact | Rasterized per layer (warned) |
 | Freehand brush strokes | Exact | Approximated | Exact | Rasterized per layer (warned) |
+| Pressure-sensitive strokes (per-point widths) | Exact | Exact (filled ribbon polygon) | Exact | Rasterized per layer (warned) |
 | Fonts | Exact (baked in) | Referenced by family | Exact (baked in) | Referenced by family — falls back if not installed on the viewer (warned) |
 | Editable after export | No (flat pixels) | Yes (vector shapes/text) | No (embedded PNG) | Yes (real text nodes; rasterized-fallback layers stay images) |
 

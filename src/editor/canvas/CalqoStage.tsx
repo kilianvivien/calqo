@@ -42,6 +42,12 @@ import { registerStageSampler } from './stageSampler';
 import { useAssetImage } from './useAssetImage';
 import { computeSnap, SNAP_DISTANCE } from './snapping';
 import {
+  appendPressure,
+  pressureOutlinePoints,
+  pressuresToWidths,
+  type PressureTrace,
+} from './freehandGeometry';
+import {
   clampCropView,
   initCropView,
   resizeCropFrame,
@@ -188,6 +194,8 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const [penCursor, setPenCursor] = useState<{ x: number; y: number } | null>(null);
   // Brush tool: the in-progress freehand path (null when not drawing).
   const [drawPoints, setDrawPoints] = useState<number[] | null>(null);
+  // Pressure samples for the stroke above (Apple Pencil / stylus force).
+  const drawPressures = useRef<PressureTrace | null>(null);
   // Colour-sampling mode (eyedropper fallback): a click reads a stage pixel.
   const [sampling, setSampling] = useState(false);
   const samplerCbRef = useRef<((hex: string | null) => void) | null>(null);
@@ -688,6 +696,8 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       return;
     }
     if (activeTool === 'brush') {
+      drawPressures.current = { values: [], real: false };
+      appendPressure(drawPressures.current, evt);
       setDrawPoints([point.x, point.y]);
       return;
     }
@@ -784,6 +794,10 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
         h: height,
         rotation: node.rotation(),
         points: layer.points.map((value, i) => value * (i % 2 === 0 ? scaleX : scaleY)),
+        // Pressure widths follow the average axis scale (no per-axis width).
+        ...(layer.pointWidths
+          ? { pointWidths: layer.pointWidths.map((value) => (value * (scaleX + scaleY)) / 2) }
+          : {}),
       });
       return;
     }
@@ -905,7 +919,13 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
 
   const commitFreehand = () => {
     if (!drawPoints) return;
-    const layer = createFreehandLayer(drawPoints, shapeDefaults);
+    const trace = drawPressures.current;
+    drawPressures.current = null;
+    const layer = createFreehandLayer(
+      drawPoints,
+      shapeDefaults,
+      trace?.real ? trace.values : undefined,
+    );
     setDrawPoints(null);
     if (layer) {
       addLayerToActiveArtboard(project.id, layer);
@@ -963,6 +983,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     }
     if (drawPoints) {
       const point = toArtboardPoint();
+      if (drawPressures.current) appendPressure(drawPressures.current, evt);
       setDrawPoints([...drawPoints, point.x, point.y]);
       return;
     }
@@ -1210,17 +1231,30 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
               listening={false}
             />
           )}
-          {drawPoints && drawPoints.length >= 4 && (
-            <Line
-              points={drawPoints}
-              stroke={shapeDefaults.stroke}
-              strokeWidth={shapeDefaults.brushSize}
-              tension={0.4}
-              lineCap="round"
-              lineJoin="round"
-              listening={false}
-            />
-          )}
+          {drawPoints &&
+            drawPoints.length >= 4 &&
+            (drawPressures.current?.real ? (
+              <Line
+                points={pressureOutlinePoints(
+                  drawPoints,
+                  pressuresToWidths(drawPressures.current.values, shapeDefaults.brushSize),
+                )}
+                closed
+                fill={shapeDefaults.stroke}
+                lineJoin="round"
+                listening={false}
+              />
+            ) : (
+              <Line
+                points={drawPoints}
+                stroke={shapeDefaults.stroke}
+                strokeWidth={shapeDefaults.brushSize}
+                tension={0.4}
+                lineCap="round"
+                lineJoin="round"
+                listening={false}
+              />
+            ))}
           {penPoints.length > 0 && (
             <>
               <Line
