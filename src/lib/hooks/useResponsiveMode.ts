@@ -10,6 +10,10 @@ export const PHONE_MAX_HEIGHT = 480;
 
 const PHONE_QUERY = `(max-width: ${PHONE_MAX_WIDTH}px), (max-height: ${PHONE_MAX_HEIGHT}px)`;
 const LANDSCAPE_QUERY = '(orientation: landscape)';
+/** `any-pointer` (not `pointer`): an iPad with a trackpad or Sidecar reports a
+ * fine primary pointer, but fingers and the Pencil still need touch-sized
+ * targets whenever any coarse pointer is present. */
+const COARSE_POINTER_QUERY = '(any-pointer: coarse)';
 
 function makeMediaSubscription(query: string) {
   function getMediaQuery(): MediaQueryList | null {
@@ -38,6 +42,7 @@ function makeMediaSubscription(query: string) {
 
 const phoneMedia = makeMediaSubscription(PHONE_QUERY);
 const landscapeMedia = makeMediaSubscription(LANDSCAPE_QUERY);
+const coarsePointerMedia = makeMediaSubscription(COARSE_POINTER_QUERY);
 
 /** True when the phone quick-edit interface should be shown. The native (Tauri)
  * shell always uses the desktop editor regardless of window size, so resizing a
@@ -58,6 +63,17 @@ export function useIsLandscape(): boolean {
   return useSyncExternalStore(
     landscapeMedia.subscribe,
     landscapeMedia.getSnapshot,
+    () => false,
+  );
+}
+
+/** True when a coarse pointer (finger / Apple Pencil on a touch screen) can
+ * drive the UI — the desktop editor then grows its grab handles and tap
+ * targets (iPad running the desktop shell, PRD §5.9). */
+export function useCoarsePointer(): boolean {
+  return useSyncExternalStore(
+    coarsePointerMedia.subscribe,
+    coarsePointerMedia.getSnapshot,
     () => false,
   );
 }

@@ -125,7 +125,7 @@ export function GlassIconButton({
         aria-disabled={softDisabled || undefined}
         style={{ width: size, height: size }}
         className={cn(
-          'inline-flex items-center justify-center rounded-[var(--calqo-radius-sm)]',
+          'touch-hitarea inline-flex items-center justify-center rounded-[var(--calqo-radius-sm)]',
           'transition-[transform,background,color] duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-spring)]',
           softDisabled
             ? 'cursor-not-allowed opacity-40 text-[var(--calqo-text-2)]'
@@ -144,7 +144,9 @@ export function GlassIconButton({
           onClick?.(e);
         }}
         onPointerEnter={(e) => {
-          if (showTitle) open();
+          // No tooltip for finger taps — it would linger over the pressed
+          // button. Pencil hover (pointerType 'pen') keeps it, like a mouse.
+          if (showTitle && e.pointerType !== 'touch') open();
           onPointerEnter?.(e);
         }}
         onPointerLeave={(e) => {

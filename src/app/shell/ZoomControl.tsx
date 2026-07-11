@@ -15,7 +15,7 @@ export function ZoomControl() {
         type="button"
         aria-label={t('status.zoomOut')}
         onClick={() => setZoom(zoom * 0.9)}
-        className="flex h-7 w-7 items-center justify-center rounded-[var(--calqo-radius-xs)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+        className="touch-hitarea flex h-7 w-7 items-center justify-center rounded-[var(--calqo-radius-xs)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
       >
         <Minus size={15} />
       </button>
@@ -26,7 +26,7 @@ export function ZoomControl() {
         type="button"
         aria-label={t('status.zoomIn')}
         onClick={() => setZoom(zoom * 1.1)}
-        className="flex h-7 w-7 items-center justify-center rounded-[var(--calqo-radius-xs)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+        className="touch-hitarea flex h-7 w-7 items-center justify-center rounded-[var(--calqo-radius-xs)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
       >
         <Plus size={15} />
       </button>
@@ -35,7 +35,7 @@ export function ZoomControl() {
         type="button"
         aria-label={t('status.fitToScreen')}
         onClick={requestFit}
-        className="flex h-7 w-7 items-center justify-center rounded-[var(--calqo-radius-xs)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+        className="touch-hitarea flex h-7 w-7 items-center justify-center rounded-[var(--calqo-radius-xs)] hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
       >
         <Maximize2 size={14} />
       </button>

@@ -28,7 +28,7 @@ export function ArtboardDots() {
           title={t('artboards.add')}
           aria-label={t('artboards.add')}
           onClick={() => addArtboard(project.id)}
-          className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--calqo-text-3)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+          className="touch-hitarea flex h-6 w-6 items-center justify-center rounded-full text-[var(--calqo-text-3)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
         >
           <Plus size={15} />
         </button>
@@ -65,7 +65,7 @@ export function ArtboardDots() {
               title={artboard.name}
               onClick={() => setActiveArtboard(artboard.id)}
               className={cn(
-                'h-2 rounded-full transition-all duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-spring)]',
+                'touch-hitarea h-2 rounded-full transition-all duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-spring)]',
                 active
                   ? 'w-5 bg-[var(--calqo-accent)]'
                   : 'w-2 bg-[var(--calqo-text-3)]/40 hover:bg-[var(--calqo-text-3)]/70',
@@ -94,7 +94,7 @@ function OverviewToggle({
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--calqo-text-3)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+      className="touch-hitarea flex h-6 w-6 items-center justify-center rounded-full text-[var(--calqo-text-3)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
     >
       <LayoutGrid size={14} />
     </button>

@@ -32,6 +32,7 @@ import type {
 } from '@/lib/schema';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
+import { useCoarsePointer } from '@/lib/hooks/useResponsiveMode';
 import { saveImageAsset } from '@/lib/utils/imageAsset';
 import { TextEditOverlay } from './TextEditOverlay';
 import { LayerRenderer, type NodeRegistry } from './LayerRenderer';
@@ -79,8 +80,24 @@ type ContextMenuState = { x: number; y: number };
 type ShapeTool = 'rect' | 'ellipse' | 'line' | 'arrow' | PolygonPreset;
 
 const TRANSFORMER_ANCHOR_SIZE = 5;
+/** Finger-sized transform anchor for coarse pointers (iPad / touch screens). */
+const TRANSFORMER_ANCHOR_SIZE_TOUCH = 11;
 /** On-screen size (px, pre-zoom) of a crop reframe handle. */
 const CROP_HANDLE_SIZE = 12;
+/** Finger-sized crop reframe handle for coarse pointers. */
+const CROP_HANDLE_SIZE_TOUCH = 22;
+/** Long-press (ms) on the canvas opens the context menu — touch has no
+ * right-click. Movement beyond the tolerance means a drag, not a hold. */
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_MOVE_TOLERANCE = 12;
+/** Zoom bounds during a pinch — mirrors the clamp in `uiStore.setZoom` so the
+ * pan computed alongside the scale stays consistent with what the store keeps. */
+const PINCH_MIN_ZOOM = 0.05;
+const PINCH_MAX_ZOOM = 4;
+
+function touchDistance(a: Touch, b: Touch): number {
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+}
 /** CSS cursor for each crop reframe handle, by compass direction. */
 const CROP_HANDLE_CURSOR: Record<CropHandle, string> = {
   nw: 'nwse-resize',
@@ -174,6 +191,15 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   // Colour-sampling mode (eyedropper fallback): a click reads a stage pixel.
   const [sampling, setSampling] = useState(false);
   const samplerCbRef = useRef<((hex: string | null) => void) | null>(null);
+  // Two-finger pinch in progress: the content layer stops listening so a pinch
+  // never doubles as a layer drag.
+  const [pinching, setPinching] = useState(false);
+  // Armed long-press (touch): fires the context menu if the finger stays put.
+  const longPress = useRef<{ timer: number; x: number; y: number } | null>(null);
+  // Pen tool on touch: the vertex commits on finger-up so a second finger
+  // (pinch) never leaves a stray point behind.
+  const penTapCandidate = useRef<{ x: number; y: number; point: { x: number; y: number } } | null>(null);
+  const coarsePointer = useCoarsePointer();
   const stageWidth = size.width;
   const stageHeight = size.height;
 
@@ -260,6 +286,131 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
+
+  // Live values for the imperative pinch handlers below, which bind once.
+  const pinchState = useRef({
+    zoom,
+    pan,
+    stageWidth,
+    stageHeight,
+    artW: artboard.width,
+    artH: artboard.height,
+    croppingLayerId,
+    cropView,
+    cropFrame,
+    cropIw,
+    cropIh,
+  });
+  pinchState.current = {
+    zoom,
+    pan,
+    stageWidth,
+    stageHeight,
+    artW: artboard.width,
+    artH: artboard.height,
+    croppingLayerId,
+    cropView,
+    cropFrame,
+    cropIw,
+    cropIh,
+  };
+
+  // Two-finger pinch-zoom + pan (iPad / touch screens). One finger stays with
+  // Konva for selecting, dragging, and the drawing tools, so the gestures never
+  // fight. Bound natively so we can preventDefault (React touch listeners are
+  // passive). While cropping, the pinch zooms the image inside the crop frame.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return undefined;
+    let gesture: {
+      dist: number;
+      cx: number;
+      cy: number;
+      zoom: number;
+      pan: { x: number; y: number };
+    } | null = null;
+    let cropDist = 0;
+
+    const localCenter = (a: Touch, b: Touch) => {
+      const rect = el.getBoundingClientRect();
+      return {
+        x: (a.clientX + b.clientX) / 2 - rect.left,
+        y: (a.clientY + b.clientY) / 2 - rect.top,
+      };
+    };
+
+    const onStart = (event: TouchEvent) => {
+      if (event.touches.length !== 2) return;
+      event.preventDefault();
+      const [a, b] = [event.touches[0], event.touches[1]];
+      const s = pinchState.current;
+      const c = localCenter(a, b);
+      gesture = { dist: touchDistance(a, b), cx: c.x, cy: c.y, zoom: s.zoom, pan: s.pan };
+      cropDist = gesture.dist;
+      // A second finger means a gesture, never tool input — drop in-progress
+      // drafts and the armed long-press so nothing half-drawn commits.
+      if (longPress.current) {
+        window.clearTimeout(longPress.current.timer);
+        longPress.current = null;
+      }
+      penTapCandidate.current = null;
+      setDraftShape(null);
+      setMarquee(null);
+      setDrawPoints(null);
+      setGuides([]);
+      setPinching(true);
+    };
+
+    const onMove = (event: TouchEvent) => {
+      if (!gesture || event.touches.length !== 2) return;
+      event.preventDefault();
+      const [a, b] = [event.touches[0], event.touches[1]];
+      const s = pinchState.current;
+      if (s.croppingLayerId && s.cropView && s.cropFrame) {
+        const dist = touchDistance(a, b);
+        const factor = dist / (cropDist || dist);
+        cropDist = dist;
+        setCropView(zoomCropView(s.cropView, s.cropFrame, factor, s.cropIw, s.cropIh));
+        return;
+      }
+      const ratio = touchDistance(a, b) / gesture.dist;
+      const scale = Math.min(
+        PINCH_MAX_ZOOM,
+        Math.max(PINCH_MIN_ZOOM, gesture.zoom * ratio),
+      );
+      // Anchor the zoom on the artboard point under the initial midpoint, and
+      // pan with the midpoint so a two-finger drag also moves the canvas. The
+      // origin mirrors the artboardX/artboardY layout math.
+      const ox = (s.stageWidth - s.artW * gesture.zoom) / 2 + gesture.pan.x;
+      const oy = (s.stageHeight - s.artH * gesture.zoom) / 2 + gesture.pan.y;
+      const wx = (gesture.cx - ox) / gesture.zoom;
+      const wy = (gesture.cy - oy) / gesture.zoom;
+      const c = localCenter(a, b);
+      setZoom(scale);
+      setPan({
+        x: c.x - wx * scale - (s.stageWidth - s.artW * scale) / 2,
+        y: c.y - wy * scale - (s.stageHeight - s.artH * scale) / 2,
+      });
+    };
+
+    const onEnd = (event: TouchEvent) => {
+      if (event.touches.length < 2) {
+        gesture = null;
+        setPinching(false);
+      }
+    };
+
+    el.addEventListener('touchstart', onStart, { passive: false });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd);
+    el.addEventListener('touchcancel', onEnd);
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onEnd);
+    };
+  }, [setGuides, setPan, setZoom]);
 
   useEffect(() => {
     if (fitRequest === 0) return;
@@ -467,14 +618,43 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     fileInputRef.current?.click();
   };
 
-  const handleStagePointerDown = (event: Konva.KonvaEventObject<MouseEvent>) => {
-    // A left-click anywhere dismisses an open context menu.
-    if (event.evt.button === 0) setContextMenu(null);
+  const cancelLongPress = () => {
+    if (longPress.current) {
+      window.clearTimeout(longPress.current.timer);
+      longPress.current = null;
+    }
+  };
+
+  const handleStagePointerDown = (
+    event: Konva.KonvaEventObject<MouseEvent | TouchEvent>,
+  ) => {
+    const evt = event.evt;
+    const isTouch = 'touches' in evt;
+    // A second finger is the pinch gesture (handled natively), never tool input.
+    if (isTouch && evt.touches.length > 1) return;
+    // Touch: arm a long-press to open the context menu (no right-click on iPad).
+    if (isTouch && activeTool === 'select' && !croppingLayerId && !sampling) {
+      cancelLongPress();
+      const touch = evt.touches[0];
+      if (touch) {
+        const target = event.target === event.target.getStage() ? null : event.target;
+        const { clientX, clientY } = touch;
+        const timer = window.setTimeout(() => {
+          longPress.current = null;
+          // A hold that turned into a transform is not a context-menu press.
+          if (transformerRef.current?.isTransforming()) return;
+          openContextMenuAt(clientX, clientY, target);
+        }, LONG_PRESS_MS);
+        longPress.current = { timer, x: clientX, y: clientY };
+      }
+    }
+    // A left-click or tap anywhere dismisses an open context menu.
+    if (!('button' in evt) || evt.button === 0) setContextMenu(null);
     // While cropping, the crop editor owns all canvas interaction.
     if (croppingLayerId) return;
     // Sampling intercepts every click (including over shapes) before any tool.
     if (sampling) {
-      event.evt.preventDefault();
+      evt.preventDefault();
       sampleStageColor();
       return;
     }
@@ -494,6 +674,15 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       return;
     }
     if (activeTool === 'pen') {
+      if (isTouch) {
+        // Defer to finger-up: if this touch becomes a pinch or a drag, no
+        // vertex should land.
+        const touch = evt.touches[0];
+        if (touch) {
+          penTapCandidate.current = { x: touch.clientX, y: touch.clientY, point };
+        }
+        return;
+      }
       setPenPoints((prev) => [...prev, point.x, point.y]);
       setPenCursor(point);
       return;
@@ -685,19 +874,33 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     return null;
   };
 
-  const handleContextMenu = (event: Konva.KonvaEventObject<PointerEvent>) => {
-    event.evt.preventDefault();
-    const stage = stageRef.current;
-    if (!stage) return;
-    const targetId = topLevelLayerIdFor(event.target === stage ? null : event.target);
+  /** Open the canvas context menu at a client point, selecting the top-level
+   * layer under it first (shared by right-click and touch long-press). */
+  const openContextMenuAt = (
+    clientX: number,
+    clientY: number,
+    target: Konva.Node | null,
+  ) => {
+    const targetId = topLevelLayerIdFor(target);
     if (targetId) {
       if (!selectedLayerIds.includes(targetId)) selectOne(targetId);
     }
     const rect = containerRef.current?.getBoundingClientRect();
     setContextMenu({
-      x: event.evt.clientX - (rect?.left ?? 0),
-      y: event.evt.clientY - (rect?.top ?? 0),
+      x: clientX - (rect?.left ?? 0),
+      y: clientY - (rect?.top ?? 0),
     });
+  };
+
+  const handleContextMenu = (event: Konva.KonvaEventObject<PointerEvent>) => {
+    event.evt.preventDefault();
+    const stage = stageRef.current;
+    if (!stage) return;
+    openContextMenuAt(
+      event.evt.clientX,
+      event.evt.clientY,
+      event.target === stage ? null : event.target,
+    );
   };
 
   const commitFreehand = () => {
@@ -725,11 +928,85 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     }
   };
 
+  const handleStagePointerMove = (
+    event: Konva.KonvaEventObject<MouseEvent | TouchEvent>,
+  ) => {
+    const evt = event.evt;
+    if ('touches' in evt) {
+      // Real movement means a drag, not a long-press hold or a pen tap.
+      const touch = evt.touches[0];
+      const lp = longPress.current;
+      if (lp && touch) {
+        if (
+          Math.hypot(touch.clientX - lp.x, touch.clientY - lp.y) >
+          LONG_PRESS_MOVE_TOLERANCE
+        ) {
+          cancelLongPress();
+        }
+      }
+      const penTap = penTapCandidate.current;
+      if (penTap && touch) {
+        if (
+          Math.hypot(touch.clientX - penTap.x, touch.clientY - penTap.y) >
+          LONG_PRESS_MOVE_TOLERANCE
+        ) {
+          penTapCandidate.current = null;
+        }
+      }
+      // Two-finger moves belong to the native pinch handlers.
+      if (evt.touches.length > 1) return;
+    }
+    if (pinching) return;
+    if (marquee) {
+      setMarquee({ ...marquee, current: toArtboardPoint() });
+      return;
+    }
+    if (drawPoints) {
+      const point = toArtboardPoint();
+      setDrawPoints([...drawPoints, point.x, point.y]);
+      return;
+    }
+    if (activeTool === 'pen' && penPoints.length > 0) {
+      setPenCursor(toArtboardPoint());
+      return;
+    }
+    if (!draftShape) return;
+    setDraftShape({ ...draftShape, current: toArtboardPoint() });
+  };
+
+  const handleStagePointerUp = () => {
+    cancelLongPress();
+    const penTap = penTapCandidate.current;
+    penTapCandidate.current = null;
+    if (pinching) return;
+    if (penTap && activeTool === 'pen') {
+      setPenPoints((prev) => [...prev, penTap.point.x, penTap.point.y]);
+      setPenCursor(penTap.point);
+      return;
+    }
+    if (marquee) {
+      commitMarquee();
+      return;
+    }
+    if (drawPoints) {
+      commitFreehand();
+      return;
+    }
+    commitDraftShape();
+  };
+
   return (
     <div
       ref={containerRef}
       className="relative h-full w-full"
-      style={sampling || activeTool === 'marquee' ? { cursor: 'crosshair' } : undefined}
+      style={{
+        // The canvas owns every touch gesture (pinch-zoom, tool drags); without
+        // this iOS scrolls/zooms the page instead of driving the editor.
+        touchAction: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        ...(sampling || activeTool === 'marquee' ? { cursor: 'crosshair' } : undefined),
+      }}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
@@ -762,38 +1039,20 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
         height={size.height}
         draggable={activeTool === 'pan'}
         onMouseDown={handleStagePointerDown}
+        onTouchStart={handleStagePointerDown}
         onDblClick={() => {
           if (activeTool === 'pen') finalizePenPolygon();
         }}
+        onDblTap={() => {
+          if (activeTool === 'pen') finalizePenPolygon();
+        }}
         onContextMenu={handleContextMenu}
-        onMouseMove={() => {
-          if (marquee) {
-            setMarquee({ ...marquee, current: toArtboardPoint() });
-            return;
-          }
-          if (drawPoints) {
-            const point = toArtboardPoint();
-            setDrawPoints([...drawPoints, point.x, point.y]);
-            return;
-          }
-          if (activeTool === 'pen' && penPoints.length > 0) {
-            setPenCursor(toArtboardPoint());
-            return;
-          }
-          if (!draftShape) return;
-          setDraftShape({ ...draftShape, current: toArtboardPoint() });
-        }}
-        onMouseUp={() => {
-          if (marquee) {
-            commitMarquee();
-            return;
-          }
-          if (drawPoints) {
-            commitFreehand();
-            return;
-          }
-          commitDraftShape();
-        }}
+        onMouseMove={handleStagePointerMove}
+        onTouchMove={handleStagePointerMove}
+        onMouseUp={handleStagePointerUp}
+        onTouchEnd={handleStagePointerUp}
+        // Layer/crop drags bubble here; a drag is never a long-press hold.
+        onDragStart={cancelLongPress}
         onDragEnd={(event) => {
           if (activeTool !== 'pan') return;
           setPan({ x: pan.x + event.target.x(), y: pan.y + event.target.y() });
@@ -827,7 +1086,9 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             }}
           />
         </Layer>
-        <Layer x={artboardX} y={artboardY} scaleX={zoom} scaleY={zoom} clipX={0} clipY={0} clipWidth={artboard.width} clipHeight={artboard.height}>
+        {/* While pinching, the content stops listening so the gesture never
+            doubles as a layer drag or transform. */}
+        <Layer x={artboardX} y={artboardY} scaleX={zoom} scaleY={zoom} clipX={0} clipY={0} clipWidth={artboard.width} clipHeight={artboard.height} listening={!pinching}>
           {artboard.layers.map((layer) => (
             <LayerRenderer
               key={layer.id}
@@ -1068,7 +1329,8 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
               />
               {/* Reframe handles — drag to change the crop frame's format. */}
               {cropHandleAnchors(cropFrame).map(([handle, ax, ay]) => {
-                const handleSize = CROP_HANDLE_SIZE / zoom;
+                const handleSize =
+                  (coarsePointer ? CROP_HANDLE_SIZE_TOUCH : CROP_HANDLE_SIZE) / zoom;
                 return (
                   <Rect
                     key={handle}
@@ -1130,8 +1392,11 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             useSingleNodeRotation
             // Lines/arrows have a near-flat bounding box; pad it and push the
             // rotate handle further out so it can be grabbed like other shapes.
-            padding={lineLikeSelection ? 14 / zoom : 0}
-            rotateAnchorOffset={(lineLikeSelection ? 36 : 24) / zoom}
+            // Coarse pointers (iPad) get finger-sized anchors and offsets.
+            padding={(lineLikeSelection ? (coarsePointer ? 20 : 14) : 0) / zoom}
+            rotateAnchorOffset={
+              ((lineLikeSelection ? 36 : 24) + (coarsePointer ? 12 : 0)) / zoom
+            }
             boundBoxFunc={(oldBox, next) =>
               // Lines/arrows are legitimately thin — never reject their box, or
               // both rotation and resize get blocked. Other shapes keep a floor.
@@ -1139,7 +1404,13 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             }
             anchorStroke="#007AFF"
             anchorFill="#FFFFFF"
-            anchorSize={(lineLikeSelection ? 8 : TRANSFORMER_ANCHOR_SIZE) / zoom}
+            anchorSize={
+              (coarsePointer
+                ? (lineLikeSelection ? 14 : TRANSFORMER_ANCHOR_SIZE_TOUCH)
+                : lineLikeSelection
+                  ? 8
+                  : TRANSFORMER_ANCHOR_SIZE) / zoom
+            }
             rotateAnchorCursor="grab"
             borderStroke="#007AFF"
             borderDash={[6 / zoom, 4 / zoom]}
