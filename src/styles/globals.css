@@ -40,10 +40,12 @@ body {
   box-sizing: border-box;
 }
 
-/* On phones, lock the document to the viewport. Without this, an overscroll
- * bounce in standalone (PWA) mode drags the fixed shell up and reveals a blank
- * strip beneath the toolbar. */
-@media (max-width: 640px), (max-height: 480px) {
+/* On phones and touch devices (iPad running the desktop shell), lock the
+ * document to the viewport. Without this, an overscroll bounce in standalone
+ * (PWA) mode drags the fixed shell up and reveals a blank strip beneath the
+ * toolbar. Both shells are fixed-height and scroll internally, so the document
+ * itself never needs to scroll. */
+@media (max-width: 640px), (max-height: 480px), (any-pointer: coarse) {
   html,
   body {
     overflow: hidden;
@@ -78,6 +80,36 @@ body {
 :focus-visible {
   outline: 2px solid var(--calqo-accent-ring);
   outline-offset: 2px;
+}
+
+/* Touch ergonomics (iPad / touch screens): taps fire immediately instead of
+ * waiting out the double-tap-zoom delay, and no grey tap flash on controls. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+[role='button'],
+a,
+input,
+select,
+textarea,
+label {
+  touch-action: manipulation;
+}
+
+/* Expand small icon buttons' tap targets on coarse-pointer devices without
+ * shifting layout: an invisible halo around the button catches nearby touches.
+ * -4px turns the 36px tool-rail buttons into ~44px targets (Apple HIG) while
+ * keeping overlap between neighbours minimal. */
+@media (any-pointer: coarse) {
+  .touch-hitarea {
+    position: relative;
+  }
+  .touch-hitarea::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+  }
 }
 
 /* Calm scrollbars inside panels. */

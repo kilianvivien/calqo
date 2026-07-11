@@ -44,6 +44,12 @@ Implemented and worth protecting:
   flows, Apple Silicon DMG packaging.
 - Responsive phone browser surface: project browser, active-artboard editor,
   bottom sheets, text/image/color/layer/arrange/translate/export/share flows.
+- Tablet-ready desktop editor (iPad PWA / touch screens): the full desktop
+  shell drives with touch and Apple Pencil — stage touch handlers, two-finger
+  pinch-zoom/pan (canvas and crop editor), long-press context menu,
+  finger-sized transform/crop handles on coarse pointers, expanded tap targets
+  on shell chrome, and viewport/overscroll locking in standalone mode. The
+  macOS Tauri app inherits the same interactions for Sidecar + Pencil use.
 - Creative tools: image frames, masks, filters, sticker outlines, stroke looks,
   editable raster background removal, freehand brush presets, SVG library,
   mobile styling parity.
