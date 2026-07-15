@@ -16,6 +16,7 @@ use toml_edit::{value, DocumentMut};
 pub enum McpSetupClient {
     Claude,
     Codex,
+    Antigravity,
     Opencode,
 }
 
@@ -123,6 +124,33 @@ fn opencode_config(source: &str, url: &str, token: &str) -> Result<String, Strin
         .map_err(|error| format!("could not serialize OpenCode config: {error}"))
 }
 
+fn antigravity_config(source: &str, url: &str, token: &str) -> Result<String, String> {
+    let mut root = if source.trim().is_empty() {
+        json!({})
+    } else {
+        serde_json::from_str::<Value>(source)
+            .map_err(|error| format!("Antigravity MCP config is not valid JSON: {error}"))?
+    };
+    let object = root
+        .as_object_mut()
+        .ok_or_else(|| "Antigravity MCP config must be a JSON object".to_string())?;
+    let servers = object
+        .entry("mcpServers")
+        .or_insert_with(|| Value::Object(Map::new()))
+        .as_object_mut()
+        .ok_or_else(|| "Antigravity's mcpServers setting is not an object".to_string())?;
+    servers.insert(
+        "calqo".into(),
+        json!({
+            "serverUrl": url,
+            "headers": { "Authorization": format!("Bearer {token}") }
+        }),
+    );
+    serde_json::to_string_pretty(&root)
+        .map(|serialized| format!("{serialized}\n"))
+        .map_err(|error| format!("could not serialize Antigravity MCP config: {error}"))
+}
+
 fn find_claude() -> Option<PathBuf> {
     let mut candidates = Vec::new();
     if let Some(home) = dirs::home_dir() {
@@ -187,6 +215,16 @@ pub fn mcp_setup_client(
                 restart_required: true,
             })
         }
+        McpSetupClient::Antigravity => {
+            let path = home_path(".gemini/config/mcp_config.json")?;
+            let source = read_config(&path)?;
+            atomic_write(&path, &antigravity_config(&source, &url, &token)?)?;
+            Ok(McpSetupResult {
+                client: "Antigravity",
+                config_path: Some(path.display().to_string()),
+                restart_required: true,
+            })
+        }
         McpSetupClient::Opencode => {
             let path = home_path(".config/opencode/opencode.json")?;
             let jsonc_path = path.with_extension("jsonc");
@@ -209,7 +247,7 @@ pub fn mcp_setup_client(
 
 #[cfg(test)]
 mod tests {
-    use super::{codex_config, opencode_config, validate_connection};
+    use super::{antigravity_config, codex_config, opencode_config, validate_connection};
 
     #[test]
     fn codex_merge_preserves_unrelated_settings() {
@@ -244,6 +282,27 @@ mod tests {
         let value: serde_json::Value = serde_json::from_str(&merged).expect("valid JSON");
         assert_eq!(value["model"], "glm");
         assert_eq!(value["mcp"]["calqo"]["type"], "remote");
+    }
+
+    #[test]
+    fn antigravity_merge_preserves_unrelated_servers() {
+        let merged = antigravity_config(
+            r#"{"theme":"dark","mcpServers":{"other":{"command":"other"}}}"#,
+            "http://127.0.0.1:22576/mcp",
+            "a_secure_token_123",
+        )
+        .expect("merge succeeds");
+        let value: serde_json::Value = serde_json::from_str(&merged).expect("valid JSON");
+        assert_eq!(value["theme"], "dark");
+        assert_eq!(value["mcpServers"]["other"]["command"], "other");
+        assert_eq!(
+            value["mcpServers"]["calqo"]["serverUrl"],
+            "http://127.0.0.1:22576/mcp"
+        );
+        assert_eq!(
+            value["mcpServers"]["calqo"]["headers"]["Authorization"],
+            "Bearer a_secure_token_123"
+        );
     }
 
     #[test]

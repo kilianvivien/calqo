@@ -400,8 +400,8 @@ is complete, disabled by default, and well tested.
     `calqo_create_project`, `calqo_apply_operations`,
     `calqo_apply_and_preview`, `calqo_validate_operations`, `calqo_get_preview`,
     `calqo_insert_image`.
-  - Copy-paste host setup snippets (Claude Code, Codex CLI, generic) in the
-    Agent drawing settings tab.
+  - Copy-paste host setup snippets (Claude Code, Codex CLI, Antigravity,
+    OpenCode, generic) in the Agent drawing settings tab.
 - [x] Tighten the first-use and visual iteration loop from independent agent
   field reports (Claude Code / Opus 4.8 and OpenCode / GLM 5.2).
   - Publish typed operation, layer, fill, stroke, and patch schemas through
@@ -414,8 +414,9 @@ is complete, disabled by default, and well tested.
     workflow automatically; keep downloadable skills as a file-based fallback,
     not a prerequisite for live drawing.
   - Add user-triggered one-click setup that safely merges only Calqo's entry
-    into Codex/OpenCode user config (or uses Claude Code's own CLI); retain
-    native copy/paste fallbacks, explicit restart guidance, and a starter request.
+    into Codex, Antigravity, and OpenCode user config (or uses Claude Code's
+    own CLI); retain native copy/paste fallbacks, explicit restart guidance,
+    and a starter request.
 - [x] Let capable agents add generated or web-sourced raster assets.
   - `calqo_insert_image` accepts bounded PNG/JPEG/WebP data URLs produced or
     fetched by the connected agent, persists the blob through the asset adapter,

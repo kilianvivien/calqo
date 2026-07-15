@@ -166,8 +166,8 @@ animation timeline, no realtime multiplayer, and no hosted template marketplace.
   every agent batch is a single undo step, and an activity log shows each call.
   Agents receive typed drawing schemas and a one-call apply-and-preview loop.
   Enable it in Settings ▸ Agent drawing, which includes one-click setup plus
-  guided copy-paste fallbacks for Claude Code, Codex, OpenCode, and other
-  Streamable HTTP clients.
+  guided copy-paste fallbacks for Claude Code, Codex, Antigravity, OpenCode,
+  and other Streamable HTTP clients.
 
 ## Tech stack
 

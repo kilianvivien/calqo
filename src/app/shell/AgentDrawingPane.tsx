@@ -20,7 +20,7 @@ import {
  * browser the live server is unavailable, so the pane explains that and offers
  * the file-based agent skill instead. */
 
-type SnippetHost = 'claude' | 'codex' | 'opencode' | 'generic';
+type SnippetHost = 'claude' | 'codex' | 'antigravity' | 'opencode' | 'generic';
 
 function buildSnippet(host: SnippetHost, port: number, token: string): string {
   const url = `http://127.0.0.1:${port}/mcp`;
@@ -38,6 +38,19 @@ function buildSnippet(host: SnippetHost, port: number, token: string): string {
       `url = "${url}"`,
       `http_headers = { Authorization = "Bearer ${token}" }`,
       'tool_timeout_sec = 180',
+    ].join('\n');
+  }
+  if (host === 'antigravity') {
+    return [
+      '// ~/.gemini/config/mcp_config.json',
+      '{',
+      '  "mcpServers": {',
+      '    "calqo": {',
+      `      "serverUrl": "${url}",`,
+      `      "headers": { "Authorization": "Bearer ${token}" }`,
+      '    }',
+      '  }',
+      '}',
     ].join('\n');
   }
   if (host === 'opencode') {
@@ -260,6 +273,7 @@ export function AgentDrawingPane() {
               options={[
                 { value: 'claude', label: 'Claude Code' },
                 { value: 'codex', label: 'Codex' },
+                { value: 'antigravity', label: 'Antigravity' },
                 { value: 'opencode', label: 'OpenCode' },
                 {
                   value: 'generic',

@@ -180,6 +180,39 @@ describe('AgentDrawingPane (desktop)', () => {
     );
   });
 
+  it('provides Antigravity setup using its global remote MCP schema', async () => {
+    useMcpStore.setState({
+      settings: {
+        ...DEFAULT_MCP_SETTINGS,
+        enabled: true,
+        token: 'x'.repeat(32),
+      },
+      port: 22576,
+    });
+    render(<AgentDrawingPane />);
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Antigravity' }));
+    const snippet = screen.getByText(/\.gemini\/config\/mcp_config\.json/);
+    expect(snippet.textContent).toContain('"mcpServers"');
+    expect(snippet.textContent).toContain(
+      '"serverUrl": "http://127.0.0.1:22576/mcp"',
+    );
+    expect(snippet.textContent).toContain('Authorization');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /set up automatically|configurer automatiquement/i,
+      }),
+    );
+    await waitFor(() => {
+      expect(tauriMock.invoke).toHaveBeenCalledWith('mcp_setup_client', {
+        client: 'antigravity',
+        url: 'http://127.0.0.1:22576/mcp',
+        token: 'x'.repeat(32),
+      });
+    });
+  });
+
   it('can install the selected client connection automatically', async () => {
     useMcpStore.setState({
       settings: {
