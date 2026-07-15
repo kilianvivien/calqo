@@ -152,7 +152,7 @@
       "autoSetupSuccess": "Calqo was added. Restart the agent or open a new session, then use the starter request.",
       "autoSetupError": "Automatic setup did not finish: {{error}} Use Copy connection setup instead.",
       "copyStarterPrompt": "Copy starter request",
-      "starterPrompt": "Use Calqo to create or improve this design. Work in editable layers, use calqo_apply_and_preview for each iteration, inspect the preview, and refine it until it looks polished. Ask me for the subject, format, and copy if I have not provided them.",
+      "starterPrompt": "Use Calqo to create or improve this design. Work in editable layers, use calqo_apply_and_preview for each iteration, inspect the preview, and refine it until it looks polished. If I ask for imagery, use your image-generation or web capability and calqo_insert_image. Ask me for the subject, format, and copy if I have not provided them.",
       "copyToken": "Copy token",
       "regenerateToken": "New token",
       "advancedSecurity": "Advanced connection security",

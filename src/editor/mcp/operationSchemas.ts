@@ -25,6 +25,10 @@ export const MAX_OPERATIONS_PER_BATCH = 50;
 export const MAX_LAYERS_PER_ARTBOARD = 100;
 /** Max serialized batch payload accepted by the executor, in bytes. */
 export const MAX_BATCH_BYTES = 512 * 1024;
+/** Largest decoded raster accepted from an agent-generated or fetched image.
+ * The encoded data URL is larger, but this is the actual blob size persisted
+ * in Calqo. */
+export const MAX_AGENT_IMAGE_BYTES = 10 * 1024 * 1024;
 
 const presetIdSchema = z.enum(
   Object.keys(ARTBOARD_PRESETS) as [ArtboardPresetId, ...ArtboardPresetId[]],
@@ -190,10 +194,35 @@ export const getPreviewInputSchema = z
   })
   .strict();
 
+/** An agent-supplied raster plus its initial placement. Agents obtain the bytes
+ * from their own image-generation or web capability; Calqo never receives
+ * provider credentials and never fetches an arbitrary remote URL. */
+export const insertImageInputSchema = z
+  .object({
+    projectId: z.string().min(1).optional(),
+    artboardId: z.string().min(1).optional(),
+    baseRevision: z.string().min(1).optional(),
+    /** A base64 data URL using one of the supported raster MIME types. */
+    dataUrl: z
+      .string()
+      .min(1)
+      .max(Math.ceil((MAX_AGENT_IMAGE_BYTES * 4) / 3) + 128),
+    name: z.string().trim().min(1).max(120).optional(),
+    /** Placement defaults to the full artboard when omitted. */
+    x: z.number().optional(),
+    y: z.number().optional(),
+    w: z.number().positive().optional(),
+    h: z.number().positive().optional(),
+    fit: z.enum(['cover', 'contain', 'stretch']).optional(),
+  })
+  .strict();
+
 export type McpOperation = z.infer<typeof mcpOperationSchema>;
 export type ApplyOperationsInput = z.infer<typeof applyOperationsInputSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectInputSchema>;
 export type GetPreviewInput = z.infer<typeof getPreviewInputSchema>;
+export type InsertImageInput = z.infer<typeof insertImageInputSchema>;
+export type AgentImageMimeType = 'image/png' | 'image/jpeg' | 'image/webp';
 
 /** Structured error codes agents can branch on (plan §3.3). */
 export type McpErrorCode =

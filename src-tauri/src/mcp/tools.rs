@@ -18,7 +18,7 @@ use rmcp::{tool, tool_handler, tool_router, ErrorData, ServerHandler};
 use serde_json::{json, Value};
 
 use super::bridge::{BridgeCallError, ClientInfo, McpBridge};
-use super::contracts::McpOperationParam;
+use super::contracts::{ImageFit, McpOperationParam};
 
 /// Plain reads answered from live app state.
 const READ_TIMEOUT: Duration = Duration::from_secs(30);
@@ -92,6 +92,37 @@ pub struct GetPreviewParams {
     /// Artboard id; defaults to the active artboard.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub artboard_id: Option<String>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct InsertImageParams {
+    /// Base64 PNG, JPEG, or WebP data URL from an image-generation tool or an
+    /// image the agent fetched from the web. Calqo does not fetch remote URLs.
+    pub data_url: String,
+    /// Asset/layer name; defaults to agent-image with the matching extension.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Target project id; defaults to the active project.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+    /// Target artboard id; defaults to the active artboard.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artboard_id: Option<String>,
+    /// Revision from calqo_get_status; stale values are rejected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_revision: Option<String>,
+    /// Placement in artboard pixels. Omit geometry to fill the artboard.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub w: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub h: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fit: Option<ImageFit>,
 }
 
 #[derive(Clone)]
@@ -275,6 +306,52 @@ impl CalqoMcpServer {
     }
 
     #[tool(
+        name = "calqo_insert_image",
+        description = "Import a PNG/JPEG/WebP produced by your image-generation capability or fetched from the web, place it as an editable Calqo image layer, and return a preview. Pass the final bytes as a base64 data URL; Calqo never fetches URLs. Use image generation only when the user asks for it."
+    )]
+    pub async fn insert_image(
+        &self,
+        Parameters(params): Parameters<InsertImageParams>,
+        ctx: RequestContext<RoleServer>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let args = to_args(&params)?;
+        let outcome = self
+            .bridge
+            .call("insert_image", args, client_of(&ctx), WRITE_TIMEOUT)
+            .await;
+        match outcome {
+            Ok(value) => {
+                let insert = value.get("insert").cloned().unwrap_or(Value::Null);
+                let preview = value.get("preview").cloned().unwrap_or(Value::Null);
+                let data = preview
+                    .get("data")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
+                let mime = preview
+                    .get("mimeType")
+                    .and_then(Value::as_str)
+                    .unwrap_or("image/png");
+                let result = json!({
+                    "insert": insert,
+                    "preview": {
+                        "artboardId": preview.get("artboardId"),
+                        "width": preview.get("width"),
+                        "height": preview.get("height"),
+                    },
+                    "previewError": value.get("previewError"),
+                });
+                let mut content = Vec::new();
+                if !data.is_empty() {
+                    content.push(ContentBlock::image(data, mime));
+                }
+                content.push(ContentBlock::text(result.to_string()));
+                Ok(CallToolResult::success(content))
+            }
+            other => to_tool_result(other),
+        }
+    }
+
+    #[tool(
         name = "calqo_validate_operations",
         description = "Dry-run a calqo_apply_operations batch: validates and simulates without changing anything. Returns validity, warnings, and structured errors."
     )]
@@ -348,6 +425,8 @@ impl ServerHandler for CalqoMcpServer {
              returns the PNG plus the new revision in one call. Inspect the image, then refine \
              with small updateLayer batches using that revision. Tool input schemas describe \
              operations and layers; call calqo_get_guide only for advanced fields/design advice. \
+             If the user asks for generated imagery, or wants an image found on the web, use your \
+             own image/search capability and pass the final base64 data URL to calqo_insert_image. \
              Never erase existing work unless asked. Writes require one in-app approval per session."
                 .into(),
         );
@@ -430,7 +509,7 @@ impl ServerHandler for CalqoMcpServer {
 
 #[cfg(test)]
 mod tests {
-    use super::ApplyOperationsParams;
+    use super::{ApplyOperationsParams, InsertImageParams};
 
     #[test]
     fn operation_tool_schema_is_typed() {
@@ -442,5 +521,14 @@ mod tests {
         assert!(json.contains("fontSize"));
         assert!(json.contains("assetId"));
         assert!(!json.contains("\"items\":true"));
+    }
+
+    #[test]
+    fn image_tool_schema_exposes_data_url_and_placement() {
+        let schema = schemars::schema_for!(InsertImageParams);
+        let json = serde_json::to_string(&schema).expect("schema serializes");
+        assert!(json.contains("dataUrl"));
+        assert!(json.contains("baseRevision"));
+        assert!(json.contains("fit"));
     }
 }

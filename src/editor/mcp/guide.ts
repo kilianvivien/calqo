@@ -1,4 +1,5 @@
 import {
+  MAX_AGENT_IMAGE_BYTES,
   MAX_LAYERS_PER_ARTBOARD,
   MAX_OPERATIONS_PER_BATCH,
 } from './operationSchemas';
@@ -23,6 +24,9 @@ editable for the user: real text, shape, SVG, and list layers on artboards.
    you do not need an image on every edit.
 5. \`calqo_validate_operations\` — optional dry run when diagnosing a payload;
    the two apply tools already run the same validation before committing.
+6. \`calqo_insert_image\` — when the user asks for generated imagery or an
+   image found on the web, generate/download it with your own capability, turn
+   the final PNG/JPEG/WebP bytes into a base64 data URL, and import + place it.
 
 The first write asks the user for approval in Calqo; if a write fails with
 PERMISSION_DENIED, tell the user to approve agent drawing (or call
@@ -114,6 +118,29 @@ List layer (bullet lists / agendas):
 }
 \`\`\`
 
+## Generated and web images
+
+Use \`calqo_insert_image\` only when imagery serves the user's request. Calqo
+does not call an image provider and does not fetch remote URLs; use your own
+image-generation or web-fetch capability, then send the final bytes:
+
+\`\`\`json
+{
+  "baseRevision": "<revision from calqo_get_status>",
+  "dataUrl": "data:image/png;base64,...",
+  "name": "sunset-product-photo.png",
+  "x": 72, "y": 280, "w": 936, "h": 620,
+  "fit": "cover"
+}
+\`\`\`
+
+PNG, JPEG, and WebP are supported up to ${MAX_AGENT_IMAGE_BYTES / (1024 * 1024)} MiB decoded.
+Geometry is optional and defaults to a full-artboard image. The call stores the
+asset, adds an editable image layer in one undo step, and returns a preview plus
+the new asset/layer ids. Keep text and logos as editable Calqo layers rather
+than baking them into a generated image. Respect image licenses and attribution
+requirements when sourcing an image from the web.
+
 ## Design rules
 
 - Editable first: text layers for copy, list layers for bullets, shape layers
@@ -128,8 +155,8 @@ List layer (bullet lists / agendas):
 - Respect the user's existing layers — edit or add, don't wipe, unless asked.
 - Keep compositions modest: strong hierarchy, few fonts, colors from the
   project palette when one exists.
-- Image layers need an \`assetId\` that already exists in the project; you
-  cannot import new image assets over MCP yet.
+- Reuse an existing project image by adding an image layer with its \`assetId\`;
+  use \`calqo_insert_image\` to create a new raster asset.
 
 ## Errors
 

@@ -152,7 +152,7 @@
       "autoSetupSuccess": "Calqo a été ajouté. Redémarrez l'agent ou ouvrez une nouvelle session, puis utilisez la demande de départ.",
       "autoSetupError": "La configuration automatique n'a pas abouti : {{error}} Utilisez plutôt Copier la connexion.",
       "copyStarterPrompt": "Copier la demande de départ",
-      "starterPrompt": "Utilise Calqo pour créer ou améliorer ce visuel. Travaille avec des calques modifiables, utilise calqo_apply_and_preview à chaque itération, examine l'aperçu et affine le résultat jusqu'à ce qu'il soit soigné. Demande-moi le sujet, le format et le texte si je ne les ai pas fournis.",
+      "starterPrompt": "Utilise Calqo pour créer ou améliorer ce visuel. Travaille avec des calques modifiables, utilise calqo_apply_and_preview à chaque itération, examine l'aperçu et affine le résultat jusqu'à ce qu'il soit soigné. Si je demande une image, utilise tes capacités de génération d'images ou de recherche web avec calqo_insert_image. Demande-moi le sujet, le format et le texte si je ne les ai pas fournis.",
       "copyToken": "Copier le jeton",
       "regenerateToken": "Nouveau jeton",
       "advancedSecurity": "Sécurité avancée de la connexion",

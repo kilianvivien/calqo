@@ -25,6 +25,7 @@ import {
 import { MCP_AGENT_GUIDE } from './guide';
 import { currentWriteAccess, ensureWritePermission } from './permissions';
 import { renderMcpPreview } from './preview';
+import { executeInsertAgentImage } from './agentImage';
 
 /** Webview side of the Tauri MCP bridge. The embedded Rust server forwards
  * every tool/resource call here as a `calqo-mcp-request` event; this module
@@ -129,6 +130,10 @@ function describeResult(method: string, result: unknown): string {
   if (method === 'create_project' && result && typeof result === 'object') {
     return `project ${(result as { projectId?: string }).projectId ?? ''}`.trim();
   }
+  if (method === 'insert_image' && result && typeof result === 'object') {
+    const insert = (result as { insert?: { asset?: { id?: string } } }).insert;
+    return `image asset ${insert?.asset?.id ?? 'inserted'}`;
+  }
   if (
     method === 'validate_operations' &&
     result &&
@@ -186,6 +191,29 @@ async function dispatch(request: McpBridgeRequest): Promise<unknown> {
             // the new revision so agents do not retry and duplicate the batch.
             return {
               apply,
+              preview: null,
+              previewError: toErrorPayload(error),
+            };
+          }
+        } finally {
+          mcpStore.getState().setApplying(false);
+        }
+      });
+    case 'insert_image':
+      return enqueueWrite(async () => {
+        await ensureWritePermission(client);
+        mcpStore.getState().setApplying(true);
+        try {
+          const insert = await executeInsertAgentImage(request.args);
+          try {
+            const preview = await renderMcpPreview({
+              projectId: insert.projectId,
+              artboardId: insert.artboardId,
+            });
+            return { insert, preview };
+          } catch (error) {
+            return {
+              insert,
               preview: null,
               previewError: toErrorPayload(error),
             };

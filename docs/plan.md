@@ -398,7 +398,8 @@ is complete, disabled by default, and well tested.
   - Auto-start with the app when the settings toggle is enabled.
   - Tools: `calqo_get_status`, `calqo_get_guide`, `calqo_request_control`,
     `calqo_create_project`, `calqo_apply_operations`,
-    `calqo_apply_and_preview`, `calqo_validate_operations`, `calqo_get_preview`.
+    `calqo_apply_and_preview`, `calqo_validate_operations`, `calqo_get_preview`,
+    `calqo_insert_image`.
   - Copy-paste host setup snippets (Claude Code, Codex CLI, generic) in the
     Agent drawing settings tab.
 - [x] Tighten the first-use and visual iteration loop from independent agent
@@ -415,6 +416,15 @@ is complete, disabled by default, and well tested.
   - Add user-triggered one-click setup that safely merges only Calqo's entry
     into Codex/OpenCode user config (or uses Claude Code's own CLI); retain
     native copy/paste fallbacks, explicit restart guidance, and a starter request.
+- [x] Let capable agents add generated or web-sourced raster assets.
+  - `calqo_insert_image` accepts bounded PNG/JPEG/WebP data URLs produced or
+    fetched by the connected agent, persists the blob through the asset adapter,
+    and places an editable image layer as one undoable change.
+  - Return the updated preview and asset/layer ids for immediate visual
+    iteration; reject stale revisions, invalid MIME signatures, undecodable
+    images, oversized blobs, and layer-cap violations.
+  - Calqo does not fetch agent-supplied URLs, keeping remote credentials and
+    local-network targets outside the MCP trust boundary.
 - [x] Keep the browser app out of scope for live drawing.
   - Browser users get the static agent-skill `.calqo` fallback instead.
   - No companion process, WebSocket bridge, or sidecar.

@@ -59,7 +59,7 @@ export function projectRevision(project: CalqoProject): string {
   return project.updatedAt;
 }
 
-function resolveProject(projectId?: string): CalqoProject {
+export function resolveMcpProject(projectId?: string): CalqoProject {
   const id =
     projectId ?? workspaceStore.getState().activeProjectId ?? undefined;
   if (!id) {
@@ -77,7 +77,7 @@ function resolveProject(projectId?: string): CalqoProject {
   return project;
 }
 
-function resolveArtboard(
+export function resolveMcpArtboard(
   project: CalqoProject,
   artboardId?: string,
 ): CalqoArtboard {
@@ -553,8 +553,8 @@ interface PreparedBatch {
 /** Validate + simulate a batch without touching live state. */
 export function prepareApplyOperations(raw: unknown): PreparedBatch {
   const input = parseInput(raw);
-  const project = resolveProject(input.projectId);
-  const artboard = resolveArtboard(project, input.artboardId);
+  const project = resolveMcpProject(input.projectId);
+  const artboard = resolveMcpArtboard(project, input.artboardId);
   if (input.baseRevision && input.baseRevision !== projectRevision(project)) {
     fail(
       'REVISION_MISMATCH',
