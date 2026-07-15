@@ -35,12 +35,13 @@ surface.
 ## Download
 
 The latest packaged alpha release is
-[Calqo v0.3.5](https://github.com/kilianvivien/calqo/releases/tag/v0.3.5)
-(missing asset repair, asset optimization, bundled starters, brand profiles,
-and editable HTML export).
+[Calqo v0.4.0](https://github.com/kilianvivien/calqo/releases/tag/v0.4.0)
+for macOS on Apple Silicon. It adds tablet and Apple Pencil support,
+pressure-sensitive drawing, richer local agent drawing through MCP, and more
+portable editable HTML/SVG typography.
 
-The desktop build is currently unsigned and not notarized. On first launch,
-macOS Gatekeeper may require approving the app manually.
+The desktop build is ad-hoc signed, not Developer ID signed or notarized. On
+first launch, macOS Gatekeeper may require approving the app manually.
 
 ## Status
 
@@ -83,7 +84,6 @@ library, emoji insertion, app backup/restore, and multi-locale ZIP exports.
 - [x] Workspace overview, ZIP export, backup/restore, and project duplicate/export (`v0.2.4`)
 - [x] Editable background removal tool with stacked, non-destructive passes (`v0.2.5`)
 - [x] Desktop crop reframe handles and workspace overview ring polish (`v0.2.6`)
-- [x] Current GitHub release notes for `v0.2.6`; Apple Silicon DMG asset pending upload
 - [x] Agent drawing: embedded desktop MCP server so coding agents draw editable layers live (`v0.3.0`)
 - [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.3.0`
 - [x] Missing asset detection & repair, with status-bar badge and auto-opened repair modal
@@ -92,7 +92,12 @@ library, emoji insertion, app backup/restore, and multi-locale ZIP exports.
 - [x] Brand profiles (lite): palettes, fonts, logos, and glossary applied in one undo step
 - [x] Editable HTML export with Faithful/Approximated/Rasterized-fallback fidelity tiers
 - [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.3.5`
-- [x] Pressure-sensitive brush strokes: Apple Pencil / stylus force maps to per-point widths (`v0.3.6`)
+- [x] Pressure-sensitive brush strokes: Apple Pencil / stylus force maps to per-point widths (`v0.4.0`)
+- [x] Tablet-ready desktop editor with touch gestures, long-press menus, and larger coarse-pointer controls
+- [x] Typed MCP operations, apply-and-preview iteration, content-locale commands, and agent-supplied image insertion
+- [x] One-click Agent Drawing setup for Codex, Claude Code, Antigravity, and OpenCode
+- [x] Embedded used Google Font faces in editable HTML and SVG exports
+- [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.4.0`
 
 ## What you can make
 
@@ -238,17 +243,19 @@ reports unsupported copy operations instead of throwing.
 
 ## Known limitations
 
-- The macOS DMG is currently Apple Silicon only and is not signed or notarized
-  yet, so Gatekeeper may require manual approval on first launch.
+- The macOS DMG is currently Apple Silicon only and is ad-hoc signed, not
+  Developer ID signed or notarized, so Gatekeeper may require manual approval
+  on first launch.
 - Calqo focuses on static social visuals, not animation/video.
 - SVG export is intentionally limited and warns for unsupported fidelity.
 - SVG export approximates some creative frame, sticker, glow, double, offset,
   outline, and marker stroke looks; use PNG for pixel-faithful output.
 - Clipboard behavior depends on browser permissions and feature support.
-- Agent drawing (MCP) is desktop-only and experimental: agents can create and
-  edit layers but cannot import image assets or export files yet, and the
-  pairing token grants drawing access to any local process that has it — treat
-  it like a local secret and regenerate it if in doubt.
+- Agent drawing (MCP) is desktop-only and experimental. Agents can create and
+  edit layers, manage content locales, and insert bounded PNG/JPEG/WebP image
+  data, but cannot export files yet. The pairing token grants drawing access to
+  any local process that has it — treat it like a local secret and regenerate
+  it if in doubt.
 - Complex vector editing, signing/notarization, and production-grade
   phone-first editing remain future work.
 
