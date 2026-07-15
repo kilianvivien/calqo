@@ -1,0 +1,237 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-blog-header",
+    "name": "Blog link header (Facebook)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#10182B",
+      "#3E7BFA",
+      "#FFFFFF",
+      "#93A5C4"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-blog",
+        "name": "Facebook link",
+        "preset": "facebook-link",
+        "width": 1200,
+        "height": 630,
+        "background": {
+          "type": "solid",
+          "color": "#10182B"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-501",
+            "name": "Grid panel",
+            "x": 840,
+            "y": 0,
+            "w": 360,
+            "h": 630,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "pattern",
+              "pattern": "grid",
+              "color": "#22304F",
+              "background": "#10182B",
+              "scale": 1.6,
+              "angle": 0
+            }
+          },
+          {
+            "id": "layer-starter-502",
+            "name": "Panel fade",
+            "x": 780,
+            "y": 0,
+            "w": 120,
+            "h": 630,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "linear",
+              "angle": 0,
+              "stops": [
+                {
+                  "offset": 0,
+                  "color": "#10182B"
+                },
+                {
+                  "offset": 1,
+                  "color": "rgba(16,24,43,0)"
+                }
+              ]
+            }
+          },
+          {
+            "id": "layer-starter-503",
+            "name": "Category chip",
+            "x": 72,
+            "y": 84,
+            "w": 260,
+            "h": 56,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#3E7BFA"
+            },
+            "cornerRadius": 28
+          },
+          {
+            "id": "layer-starter-504",
+            "name": "Category",
+            "x": 72,
+            "y": 100,
+            "w": 260,
+            "h": 30,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "ENGINEERING"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 24,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 3
+            }
+          },
+          {
+            "id": "layer-starter-505",
+            "name": "Headline",
+            "x": 72,
+            "y": 196,
+            "w": 760,
+            "h": 220,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "How we cut our build\ntimes by 80%"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 76,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.18,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-506",
+            "name": "Avatar",
+            "x": 72,
+            "y": 472,
+            "w": 72,
+            "h": 72,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "#3E7BFA"
+            }
+          },
+          {
+            "id": "layer-starter-507",
+            "name": "Initials",
+            "x": 72,
+            "y": 492,
+            "w": 72,
+            "h": 34,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "AR"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 28,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-508",
+            "name": "Byline",
+            "x": 168,
+            "y": 490,
+            "w": 560,
+            "h": 40,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "By Alex Rivera  ·  8 min read"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 30,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#93A5C4",
+              "align": "left",
+              "lineHeight": 1.2,
+              "letterSpacing": 0
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Clean tech-blog link preview with category chip, byline, and grid texture."
+    }
+  },
+  "assets": []
+}

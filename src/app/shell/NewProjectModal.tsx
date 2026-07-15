@@ -6,8 +6,15 @@ import {
   GlassSegmentedControl,
   ModalOverlay,
 } from '@/components/glass';
-import { ARTBOARD_PRESET_LIST, type ArtboardPresetId } from '@/lib/schema/presets';
-import type { BrandProfileRecord, CalqoFile, StarterRecord } from '@/lib/adapters';
+import {
+  ARTBOARD_PRESET_LIST,
+  type ArtboardPresetId,
+} from '@/lib/schema/presets';
+import type {
+  BrandProfileRecord,
+  CalqoFile,
+  StarterRecord,
+} from '@/lib/adapters';
 import { dialog } from '@/lib/adapters';
 import { ArtboardThumbnail } from '@/editor/canvas/ArtboardThumbnail';
 import {
@@ -34,15 +41,17 @@ export function FormatGrid({
 }: {
   onSelect: (preset: ArtboardPresetId) => void;
 }) {
+  const { t } = useTranslation('editor');
   return (
     <div className="grid grid-cols-2 gap-2 py-1 sm:grid-cols-4">
       {ARTBOARD_PRESET_LIST.map((preset) => {
         const ratio = preset.width / preset.height;
+        const label = t(`presets.${preset.id}`, { defaultValue: preset.name });
         return (
           <button
             key={preset.id}
             type="button"
-            aria-label={`${preset.name} ${preset.width} x ${preset.height}`}
+            aria-label={`${label} ${preset.width} x ${preset.height}`}
             onClick={() => onSelect(preset.id as ArtboardPresetId)}
             className="min-w-0 rounded-[12px] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-3 text-left transition-[border-color,background,box-shadow,transform] duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-out)] hover:-translate-y-0.5 hover:border-[var(--calqo-accent)] hover:bg-[var(--calqo-accent-soft)] hover:shadow-[0_0_0_2px_var(--calqo-accent-ring)]"
           >
@@ -57,7 +66,7 @@ export function FormatGrid({
               />
             </span>
             <span className="block truncate text-[12px] font-semibold text-[var(--calqo-text)]">
-              {preset.name}
+              {label}
             </span>
             <span className="mono mt-0.5 block truncate text-[10px] text-[var(--calqo-text-3)]">
               {preset.width} x {preset.height}
@@ -69,7 +78,19 @@ export function FormatGrid({
   );
 }
 
-type NewProjectTab = 'blank' | 'starters';
+export type NewProjectTab = 'blank' | 'starters';
+
+/** Fixed chip order for bundled-starter categories; only categories present in
+ * the loaded index render. `all` and the user-starter `mine` chip are pinned. */
+const STARTER_CATEGORY_ORDER = [
+  'marketing',
+  'editorial',
+  'event',
+  'media',
+  'lifestyle',
+  'diplomacy',
+  'playful',
+];
 
 interface BundledStarter {
   entry: StarterIndexEntry;
@@ -90,7 +111,11 @@ function StarterPreview({
   return (
     <span className="mb-2 grid h-24 w-full place-items-center overflow-hidden rounded-[10px] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)]">
       {thumbnail ? (
-        <img src={thumbnail} alt="" className="max-h-full max-w-full object-contain" />
+        <img
+          src={thumbnail}
+          alt=""
+          className="max-h-full max-w-full object-contain"
+        />
       ) : project && project.artboards[0] ? (
         <ArtboardThumbnail
           project={project}
@@ -108,18 +133,27 @@ function StarterPreview({
 export function NewProjectModal({
   open,
   onClose,
+  initialTab = 'blank',
 }: {
   open: boolean;
   onClose: () => void;
+  initialTab?: NewProjectTab;
 }) {
   const { t } = useTranslation('editor');
-  const [tab, setTab] = useState<NewProjectTab>('blank');
+  const [tab, setTab] = useState<NewProjectTab>(initialTab);
+  const [category, setCategory] = useState<string>('all');
   const [bundled, setBundled] = useState<BundledStarter[] | null>(null);
-  const [userStarters, setUserStarters] = useState<StarterRecord[] | null>(null);
+  const [userStarters, setUserStarters] = useState<StarterRecord[] | null>(
+    null,
+  );
   const [profiles, setProfiles] = useState<BrandProfileRecord[]>([]);
   const [profileId, setProfileId] = useState<string>('');
   const [busy, setBusy] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) setTab(initialTab);
+  }, [open, initialTab]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -136,7 +170,7 @@ export function NewProjectModal({
     if (open) return;
     setBundled(null);
     setUserStarters(null);
-    setTab('blank');
+    setCategory('all');
     setRenamingId(null);
   }, [open]);
 
@@ -206,6 +240,38 @@ export function NewProjectModal({
     setUserStarters(await listUserStarters());
   };
 
+  const hasMine = (userStarters?.length ?? 0) > 0;
+  const categories = bundled
+    ? STARTER_CATEGORY_ORDER.filter((id) =>
+        bundled.some((starter) => starter.entry.category === id),
+      )
+    : [];
+  const visibleBundled =
+    bundled?.filter((starter) =>
+      category === 'all'
+        ? true
+        : category === 'mine'
+          ? false
+          : starter.entry.category === category,
+    ) ?? [];
+  const showMine = hasMine && (category === 'all' || category === 'mine');
+
+  const categoryChip = (id: string, label: string) => (
+    <button
+      key={id}
+      type="button"
+      onClick={() => setCategory(id)}
+      aria-pressed={category === id}
+      className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors duration-[var(--calqo-t-fast)] ${
+        category === id
+          ? 'border-[var(--calqo-accent)] bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]'
+          : 'border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] text-[var(--calqo-text-2)] hover:border-[var(--calqo-accent)]'
+      }`}
+    >
+      {label}
+    </button>
+  );
+
   return (
     <ModalOverlay
       open={open}
@@ -259,7 +325,21 @@ export function NewProjectModal({
         )}
       </div>
 
-      <div className="calqo-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+      {tab === 'starters' &&
+        bundled !== null &&
+        (categories.length > 0 || hasMine) && (
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            {categoryChip('all', t('starters.categories.all'))}
+            {categories.map((id) =>
+              categoryChip(id, t(`starters.categories.${id}`)),
+            )}
+            {hasMine && categoryChip('mine', t('starters.mineTitle'))}
+          </div>
+        )}
+
+      {/* Negative margin + matching padding gives the cards' hover ring and
+       * lift room to render without being clipped by the scroll container. */}
+      <div className="calqo-scroll -m-1 min-h-0 flex-1 overflow-y-auto p-1">
         {tab === 'blank' ? (
           <FormatGrid onSelect={(preset) => void createBlank(preset)} />
         ) : bundled === null ? (
@@ -272,40 +352,47 @@ export function NewProjectModal({
           </p>
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {bundled.map(({ entry, envelope, project }) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  disabled={busy || !envelope}
-                  onClick={() => envelope && void instantiate(envelope)}
-                  className="min-w-0 rounded-[12px] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-2.5 text-left transition-[border-color,background,box-shadow,transform] duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-out)] hover:-translate-y-0.5 hover:border-[var(--calqo-accent)] hover:bg-[var(--calqo-accent-soft)]"
-                >
-                  <StarterPreview project={project} thumbnail={entry.thumbnail} />
-                  <span className="block truncate text-[12px] font-semibold text-[var(--calqo-text)]">
-                    {entry.name}
-                  </span>
-                  <span className="mono mt-0.5 block text-[9.5px] text-[var(--calqo-text-3)]">
-                    {entry.width}×{entry.height} · {entry.presets.join(', ')}
-                  </span>
-                  <span className="mt-0.5 flex items-center gap-1">
-                    <span className="rounded-full bg-[var(--calqo-accent-soft)] px-1.5 py-0.5 text-[9.5px] font-medium text-[var(--calqo-accent)]">
-                      {t('starters.badgeBundled')}
+            {visibleBundled.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {visibleBundled.map(({ entry, envelope, project }) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    disabled={busy || !envelope}
+                    onClick={() => envelope && void instantiate(envelope)}
+                    className="min-w-0 rounded-[12px] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-2.5 text-left transition-[border-color,background,box-shadow,transform] duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-out)] hover:-translate-y-0.5 hover:border-[var(--calqo-accent)] hover:bg-[var(--calqo-accent-soft)]"
+                  >
+                    <StarterPreview
+                      project={project}
+                      thumbnail={entry.thumbnail}
+                    />
+                    <span className="block truncate text-[12px] font-semibold text-[var(--calqo-text)]">
+                      {t(`starters.names.${entry.id}`, {
+                        defaultValue: entry.name,
+                      })}
                     </span>
-                    {entry.tags.slice(0, 2).map((tag) => (
-                      <span
-                        key={tag}
-                        className="mono truncate text-[9.5px] text-[var(--calqo-text-3)]"
-                      >
-                        {tag}
+                    <span className="mono mt-0.5 block text-[9.5px] text-[var(--calqo-text-3)]">
+                      {entry.width}×{entry.height} · {entry.presets.join(', ')}
+                    </span>
+                    <span className="mt-0.5 flex items-center gap-1">
+                      <span className="rounded-full bg-[var(--calqo-accent-soft)] px-1.5 py-0.5 text-[9.5px] font-medium text-[var(--calqo-accent)]">
+                        {t('starters.badgeBundled')}
                       </span>
-                    ))}
-                  </span>
-                </button>
-              ))}
-            </div>
+                      {entry.tags.slice(0, 2).map((tag) => (
+                        <span
+                          key={tag}
+                          className="mono truncate text-[9.5px] text-[var(--calqo-text-3)]"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
 
-            {userStarters && userStarters.length > 0 && (
+            {showMine && userStarters && (
               <div>
                 <p className="mb-2 text-[11.5px] font-semibold text-[var(--calqo-text-2)]">
                   {t('starters.mineTitle')}
@@ -322,9 +409,16 @@ export function NewProjectModal({
                         onClick={() => void instantiate(starter.envelope)}
                         className="block w-full text-left"
                       >
-                        <StarterPreview project={null} thumbnail={starter.thumbnail} />
+                        <StarterPreview
+                          project={null}
+                          thumbnail={starter.thumbnail}
+                        />
                         <span className="mono mb-0.5 block text-[9.5px] text-[var(--calqo-text-3)]">
-                          {starter.envelope.project.artboards[0]?.width ?? 0}×{starter.envelope.project.artboards[0]?.height ?? 0} · {starter.envelope.project.artboards.map((artboard) => artboard.preset).join(', ')}
+                          {starter.envelope.project.artboards[0]?.width ?? 0}×
+                          {starter.envelope.project.artboards[0]?.height ?? 0} ·{' '}
+                          {starter.envelope.project.artboards
+                            .map((artboard) => artboard.preset)
+                            .join(', ')}
                         </span>
                         {renamingId === starter.id ? null : (
                           <span className="block truncate text-[12px] font-semibold text-[var(--calqo-text)]">
@@ -343,9 +437,12 @@ export function NewProjectModal({
                           defaultValue={starter.name}
                           aria-label={t('starters.rename')}
                           onFocus={(event) => event.target.select()}
-                          onBlur={(event) => void commitRename(starter, event.target.value)}
+                          onBlur={(event) =>
+                            void commitRename(starter, event.target.value)
+                          }
                           onKeyDown={(event) => {
-                            if (event.key === 'Enter') event.currentTarget.blur();
+                            if (event.key === 'Enter')
+                              event.currentTarget.blur();
                             if (event.key === 'Escape') setRenamingId(null);
                           }}
                           className="mt-1 h-7 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-accent)] bg-[var(--calqo-glass)] px-1.5 text-[12px] text-[var(--calqo-text)] outline-none ring-2 ring-[var(--calqo-accent-ring)]"

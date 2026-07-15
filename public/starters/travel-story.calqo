@@ -1,0 +1,255 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-travel-story",
+    "name": "Travel story",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#FFB65C",
+      "#E85D75",
+      "#6C3FA0",
+      "#FFFFFF"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-travel",
+        "name": "Story",
+        "preset": "story",
+        "width": 1080,
+        "height": 1920,
+        "background": {
+          "type": "linear",
+          "angle": 90,
+          "stops": [
+            {
+              "offset": 0,
+              "color": "#FFB65C"
+            },
+            {
+              "offset": 0.55,
+              "color": "#E85D75"
+            },
+            {
+              "offset": 1,
+              "color": "#6C3FA0"
+            }
+          ]
+        },
+        "layers": [
+          {
+            "id": "layer-starter-801",
+            "name": "Sun",
+            "x": 400,
+            "y": 300,
+            "w": 280,
+            "h": 280,
+            "rotation": 0,
+            "opacity": 0.9,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "radial",
+              "stops": [
+                {
+                  "offset": 0,
+                  "color": "#FFF3D6"
+                },
+                {
+                  "offset": 1,
+                  "color": "#FFD98A"
+                }
+              ]
+            }
+          },
+          {
+            "id": "layer-starter-802",
+            "name": "Horizon line",
+            "x": 96,
+            "y": 700,
+            "w": 888,
+            "h": 4,
+            "rotation": 0,
+            "opacity": 0.5,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#FFFFFF"
+            }
+          },
+          {
+            "id": "layer-starter-803",
+            "name": "Kicker",
+            "x": 96,
+            "y": 760,
+            "w": 888,
+            "h": 48,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "TRAVEL DIARY — DAY 03"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 34,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFE9C7",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 8
+            }
+          },
+          {
+            "id": "layer-starter-804",
+            "name": "Destination",
+            "x": 96,
+            "y": 830,
+            "w": 888,
+            "h": 300,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Lisbon"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 230,
+              "fontWeight": 700,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-805",
+            "name": "Caption",
+            "x": 96,
+            "y": 1180,
+            "w": 888,
+            "h": 130,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Tiles, trams, and the best\npastéis de nata in town."
+            },
+            "style": {
+              "fontFamily": "Lora",
+              "fontSize": 44,
+              "fontWeight": 400,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#FFEFE2",
+              "align": "center",
+              "lineHeight": 1.4,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-806",
+            "name": "Itinerary card",
+            "x": 180,
+            "y": 1430,
+            "w": 720,
+            "h": 250,
+            "rotation": 0,
+            "opacity": 0.16,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#FFFFFF"
+            },
+            "cornerRadius": 28
+          },
+          {
+            "id": "layer-starter-807",
+            "name": "Itinerary",
+            "x": 240,
+            "y": 1472,
+            "w": 640,
+            "h": 170,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "9 AM — Alfama walking tour\n2 PM — Tram 28 to Graça\n8 PM — Sunset at the miradouro"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 34,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.55,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-808",
+            "name": "Handle",
+            "x": 96,
+            "y": 1770,
+            "w": 888,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "@wander.notes"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 30,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFE9C7",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 3
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Sunset-gradient travel story with serif destination and itinerary card."
+    }
+  },
+  "assets": []
+}

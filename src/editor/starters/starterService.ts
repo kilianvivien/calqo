@@ -19,6 +19,8 @@ export interface StarterIndexEntry {
   file: string;
   /** Preset tags for the gallery card (e.g. "ig-square", "multilingual"). */
   tags: string[];
+  /** Gallery category id (e.g. "marketing", "editorial") for the filter chips. */
+  category?: string;
   /** Pre-rendered local gallery thumbnail. */
   thumbnail: string;
   /** Primary artboard dimensions displayed on the card. */
@@ -37,7 +39,9 @@ export async function fetchBundledStarterIndex(): Promise<StarterIndexEntry[]> {
   try {
     const response = await fetch(`${STARTERS_BASE}/index.json`);
     if (!response.ok) return [];
-    const parsed = (await response.json()) as { starters?: StarterIndexEntry[] };
+    const parsed = (await response.json()) as {
+      starters?: StarterIndexEntry[];
+    };
     return Array.isArray(parsed.starters) ? parsed.starters : [];
   } catch {
     return [];
@@ -77,9 +81,13 @@ export async function createProjectFromStarter(
   const newProjectId = createId('proj');
   const idMap = new Map<string, string>();
   const inlineAssets =
-    'assets' in envelope && Array.isArray(envelope.assets) ? envelope.assets : [];
+    'assets' in envelope && Array.isArray(envelope.assets)
+      ? envelope.assets
+      : [];
   for (const asset of inlineAssets) {
-    const ref = result.project.assets.find((candidate) => candidate.id === asset.id);
+    const ref = result.project.assets.find(
+      (candidate) => candidate.id === asset.id,
+    );
     if (!ref) continue;
     const blob = await dataUrlToBlob(asset.dataUrl);
     const newRef = await assetStorage.saveAsset(newProjectId, blob, {
@@ -158,7 +166,10 @@ export async function listUserStarters(): Promise<StarterRecord[]> {
   return starterLibrary.listStarters();
 }
 
-export async function renameUserStarter(id: string, name: string): Promise<void> {
+export async function renameUserStarter(
+  id: string,
+  name: string,
+): Promise<void> {
   await starterLibrary.renameStarter(id, name);
 }
 

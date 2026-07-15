@@ -8,10 +8,8 @@
       "width": 1080,
       "height": 1080,
       "presets": ["ig-square"],
-      "tags": [
-        "ig-square",
-        "announcement"
-      ]
+      "tags": ["ig-square", "announcement"],
+      "category": "marketing"
     },
     {
       "id": "story-cover",
@@ -21,10 +19,8 @@
       "width": 1080,
       "height": 1920,
       "presets": ["story"],
-      "tags": [
-        "story",
-        "cover"
-      ]
+      "tags": ["story", "cover"],
+      "category": "media"
     },
     {
       "id": "x-quote",
@@ -34,10 +30,8 @@
       "width": 1600,
       "height": 900,
       "presets": ["x-post"],
-      "tags": [
-        "x-post",
-        "quote"
-      ]
+      "tags": ["x-post", "quote"],
+      "category": "editorial"
     },
     {
       "id": "linkedin-tips",
@@ -47,10 +41,8 @@
       "width": 1200,
       "height": 627,
       "presets": ["linkedin-post"],
-      "tags": [
-        "linkedin-post",
-        "list"
-      ]
+      "tags": ["linkedin-post", "list"],
+      "category": "editorial"
     },
     {
       "id": "youtube-thumbnail",
@@ -60,10 +52,8 @@
       "width": 1280,
       "height": 720,
       "presets": ["youtube-thumbnail"],
-      "tags": [
-        "youtube-thumbnail",
-        "video"
-      ]
+      "tags": ["youtube-thumbnail", "video"],
+      "category": "media"
     },
     {
       "id": "multilingual-card",
@@ -73,10 +63,8 @@
       "width": 1080,
       "height": 1080,
       "presets": ["ig-square"],
-      "tags": [
-        "ig-square",
-        "multilingual"
-      ]
+      "tags": ["ig-square", "multilingual"],
+      "category": "playful"
     },
     {
       "id": "sticker-sheet",
@@ -86,10 +74,8 @@
       "width": 1080,
       "height": 1080,
       "presets": ["ig-square"],
-      "tags": [
-        "ig-square",
-        "stickers"
-      ]
+      "tags": ["ig-square", "stickers"],
+      "category": "playful"
     },
     {
       "id": "campaign-kit",
@@ -99,12 +85,184 @@
       "width": 1080,
       "height": 1080,
       "presets": ["ig-square", "story", "x-post"],
-      "tags": [
-        "ig-square",
-        "story",
-        "x-post",
-        "campaign"
-      ]
+      "tags": ["ig-square", "story", "x-post", "campaign"],
+      "category": "marketing"
+    },
+    {
+      "id": "editorial-carousel",
+      "name": "Editorial carousel opener — IG portrait",
+      "file": "editorial-carousel.calqo",
+      "thumbnail": "/starters/thumbnails/editorial-carousel.svg",
+      "width": 1080,
+      "height": 1350,
+      "presets": ["ig-portrait"],
+      "tags": ["ig-portrait", "editorial", "carousel"],
+      "category": "editorial"
+    },
+    {
+      "id": "pinterest-recipe",
+      "name": "Recipe pin — Pinterest",
+      "file": "pinterest-recipe.calqo",
+      "thumbnail": "/starters/thumbnails/pinterest-recipe.svg",
+      "width": 1000,
+      "height": 1500,
+      "presets": ["pinterest-pin"],
+      "tags": ["pinterest-pin", "recipe", "list"],
+      "category": "lifestyle"
+    },
+    {
+      "id": "event-poster",
+      "name": "Event poster — story",
+      "file": "event-poster.calqo",
+      "thumbnail": "/starters/thumbnails/event-poster.svg",
+      "width": 1080,
+      "height": 1920,
+      "presets": ["story"],
+      "tags": ["story", "event", "poster"],
+      "category": "event"
+    },
+    {
+      "id": "product-sale",
+      "name": "Sale promo — Instagram square",
+      "file": "product-sale.calqo",
+      "thumbnail": "/starters/thumbnails/product-sale.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square"],
+      "tags": ["ig-square", "promo", "sale"],
+      "category": "marketing"
+    },
+    {
+      "id": "blog-header",
+      "name": "Blog link header — Facebook",
+      "file": "blog-header.calqo",
+      "thumbnail": "/starters/thumbnails/blog-header.svg",
+      "width": 1200,
+      "height": 630,
+      "presets": ["facebook-link"],
+      "tags": ["facebook-link", "blog", "article"],
+      "category": "editorial"
+    },
+    {
+      "id": "podcast-episode",
+      "name": "Podcast episode card — Instagram square",
+      "file": "podcast-episode.calqo",
+      "thumbnail": "/starters/thumbnails/podcast-episode.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square"],
+      "tags": ["ig-square", "podcast", "audio"],
+      "category": "media"
+    },
+    {
+      "id": "webinar-invite",
+      "name": "Webinar invite — LinkedIn post",
+      "file": "webinar-invite.calqo",
+      "thumbnail": "/starters/thumbnails/webinar-invite.svg",
+      "width": 1200,
+      "height": 627,
+      "presets": ["linkedin-post"],
+      "tags": ["linkedin-post", "webinar", "event"],
+      "category": "event"
+    },
+    {
+      "id": "travel-story",
+      "name": "Travel story",
+      "file": "travel-story.calqo",
+      "thumbnail": "/starters/thumbnails/travel-story.svg",
+      "width": 1080,
+      "height": 1920,
+      "presets": ["story"],
+      "tags": ["story", "travel", "diary"],
+      "category": "lifestyle"
+    },
+    {
+      "id": "fitness-schedule",
+      "name": "Fitness schedule — Instagram square",
+      "file": "fitness-schedule.calqo",
+      "thumbnail": "/starters/thumbnails/fitness-schedule.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square"],
+      "tags": ["ig-square", "fitness", "schedule"],
+      "category": "lifestyle"
+    },
+    {
+      "id": "music-release",
+      "name": "Single release — Instagram square",
+      "file": "music-release.calqo",
+      "thumbnail": "/starters/thumbnails/music-release.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square"],
+      "tags": ["ig-square", "music", "release"],
+      "category": "media"
+    },
+    {
+      "id": "real-estate-listing",
+      "name": "Open house listing — IG portrait",
+      "file": "real-estate-listing.calqo",
+      "thumbnail": "/starters/thumbnails/real-estate-listing.svg",
+      "width": 1080,
+      "height": 1350,
+      "presets": ["ig-portrait"],
+      "tags": ["ig-portrait", "real-estate", "listing"],
+      "category": "marketing"
+    },
+    {
+      "id": "hiring-post",
+      "name": "Hiring post — X",
+      "file": "hiring-post.calqo",
+      "thumbnail": "/starters/thumbnails/hiring-post.svg",
+      "width": 1600,
+      "height": 900,
+      "presets": ["x-post"],
+      "tags": ["x-post", "hiring", "job"],
+      "category": "marketing"
+    },
+    {
+      "id": "embassy-statement",
+      "name": "Official statement — Instagram square",
+      "file": "embassy-statement.calqo",
+      "thumbnail": "/starters/thumbnails/embassy-statement.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square"],
+      "tags": ["ig-square", "statement", "official"],
+      "category": "diplomacy"
+    },
+    {
+      "id": "national-day-invitation",
+      "name": "Reception invitation — IG portrait",
+      "file": "national-day-invitation.calqo",
+      "thumbnail": "/starters/thumbnails/national-day-invitation.svg",
+      "width": 1080,
+      "height": 1350,
+      "presets": ["ig-portrait"],
+      "tags": ["ig-portrait", "invitation", "reception"],
+      "category": "diplomacy"
+    },
+    {
+      "id": "bilateral-visit",
+      "name": "Official visit — X post",
+      "file": "bilateral-visit.calqo",
+      "thumbnail": "/starters/thumbnails/bilateral-visit.svg",
+      "width": 1600,
+      "height": 900,
+      "presets": ["x-post"],
+      "tags": ["x-post", "visit", "announcement"],
+      "category": "diplomacy"
+    },
+    {
+      "id": "press-release",
+      "name": "Press release — LinkedIn post",
+      "file": "press-release.calqo",
+      "thumbnail": "/starters/thumbnails/press-release.svg",
+      "width": 1200,
+      "height": 627,
+      "presets": ["linkedin-post"],
+      "tags": ["linkedin-post", "press", "communique"],
+      "category": "diplomacy"
     }
   ]
 }

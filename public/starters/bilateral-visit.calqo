@@ -1,0 +1,236 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-bilateral-visit",
+    "name": "Official visit (X post)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#1C2B3A",
+      "#C9A227",
+      "#F7F3EA",
+      "#44576B"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-visit",
+        "name": "X post",
+        "preset": "x-post",
+        "width": 1600,
+        "height": 900,
+        "background": {
+          "type": "solid",
+          "color": "#1C2B3A"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-1501",
+            "name": "Flag band A",
+            "x": 0,
+            "y": 0,
+            "w": 1600,
+            "h": 14,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A227"
+            }
+          },
+          {
+            "id": "layer-starter-1502",
+            "name": "Flag band B",
+            "x": 0,
+            "y": 886,
+            "w": 1600,
+            "h": 14,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A227"
+            }
+          },
+          {
+            "id": "layer-starter-1503",
+            "name": "Kicker",
+            "x": 110,
+            "y": 120,
+            "w": 1200,
+            "h": 48,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "OFFICIAL VISIT · VISITE OFFICIELLE"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 34,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#C9A227",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 6
+            }
+          },
+          {
+            "id": "layer-starter-1504",
+            "name": "Headline",
+            "x": 110,
+            "y": 220,
+            "w": 1380,
+            "h": 260,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "The Minister for Foreign Affairs\nof Examplia visits Ankara"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 92,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#F7F3EA",
+              "align": "left",
+              "lineHeight": 1.25,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1505",
+            "name": "Programme",
+            "x": 110,
+            "y": 560,
+            "w": 1380,
+            "h": 50,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Bilateral talks · Economic forum · Joint press conference"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 38,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#A9B8C9",
+              "align": "left",
+              "lineHeight": 1.3,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1506",
+            "name": "Date chip",
+            "x": 110,
+            "y": 680,
+            "w": 420,
+            "h": 76,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "transparent"
+            },
+            "cornerRadius": 38,
+            "stroke": {
+              "color": "#C9A227",
+              "width": 2.5
+            }
+          },
+          {
+            "id": "layer-starter-1507",
+            "name": "Date",
+            "x": 110,
+            "y": 703,
+            "w": 420,
+            "h": 36,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "21 – 22 SEPTEMBER"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 30,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#C9A227",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 4
+            }
+          },
+          {
+            "id": "layer-starter-1508",
+            "name": "Footer",
+            "x": 110,
+            "y": 810,
+            "w": 1380,
+            "h": 36,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "MINISTRY OF FOREIGN AFFAIRS — PRESS SERVICE"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 25,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#7186A0",
+              "align": "left",
+              "lineHeight": 1.2,
+              "letterSpacing": 4
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Sober bilateral-visit announcement with gold bands and date chip."
+    }
+  },
+  "assets": []
+}

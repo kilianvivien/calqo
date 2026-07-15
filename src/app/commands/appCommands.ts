@@ -29,6 +29,7 @@ import {
   saveNativeProjectFile,
 } from '@/editor/export/calqoFile';
 import { aiSettingsStore, isAiEnabled } from '@/editor/ai/aiSettings';
+import { saveProjectAsStarter } from '@/editor/starters/starterService';
 import { exportArtboardRaster } from '@/editor/export/rasterExport';
 import { shareArtboardPng } from '@/editor/export/share';
 import { saveImageBlobAsset } from '@/lib/utils/imageAsset';
@@ -42,6 +43,7 @@ export type AppCommandId =
   | 'file.manage'
   | 'file.save'
   | 'file.saveAs'
+  | 'file.saveAsStarter'
   | 'file.close'
   | 'file.export'
   | 'file.share'
@@ -94,37 +96,145 @@ export interface CommandDefinition {
 
 export const appCommandDefinitions: CommandDefinition[] = [
   { id: 'app.about', labelKey: 'common:menu.app.about' },
-  { id: 'app.settings', labelKey: 'common:settings.open', accelerator: 'CmdOrCtrl+,' },
-  { id: 'app.quit', labelKey: 'common:menu.app.quit', accelerator: 'CmdOrCtrl+Q' },
-  { id: 'file.new', labelKey: 'common:actions.new', accelerator: 'CmdOrCtrl+N' },
-  { id: 'file.open', labelKey: 'common:actions.open', accelerator: 'CmdOrCtrl+O' },
-  { id: 'file.manage', labelKey: 'editor:projects.menu', accelerator: 'CmdOrCtrl+Shift+O' },
-  { id: 'file.save', labelKey: 'common:actions.save', accelerator: 'CmdOrCtrl+S' },
-  { id: 'file.saveAs', labelKey: 'common:menu.file.saveAs', accelerator: 'CmdOrCtrl+Shift+S' },
-  { id: 'file.close', labelKey: 'common:actions.close', accelerator: 'CmdOrCtrl+W' },
-  { id: 'file.export', labelKey: 'common:actions.export', accelerator: 'CmdOrCtrl+E' },
-  { id: 'file.share', labelKey: 'editor:title.share', accelerator: 'CmdOrCtrl+Shift+E' },
-  { id: 'edit.undo', labelKey: 'common:actions.undo', accelerator: 'CmdOrCtrl+Z' },
-  { id: 'edit.redo', labelKey: 'common:actions.redo', accelerator: 'CmdOrCtrl+Shift+Z' },
-  { id: 'edit.copy', labelKey: 'common:menu.edit.copy', accelerator: 'CmdOrCtrl+C' },
-  { id: 'edit.paste', labelKey: 'common:menu.edit.paste', accelerator: 'CmdOrCtrl+V' },
-  { id: 'edit.selectAll', labelKey: 'common:menu.edit.selectAll', accelerator: 'CmdOrCtrl+A' },
-  { id: 'edit.duplicate', labelKey: 'common:actions.duplicate', accelerator: 'CmdOrCtrl+D' },
-  { id: 'edit.delete', labelKey: 'common:actions.delete', accelerator: 'Delete' },
+  {
+    id: 'app.settings',
+    labelKey: 'common:settings.open',
+    accelerator: 'CmdOrCtrl+,',
+  },
+  {
+    id: 'app.quit',
+    labelKey: 'common:menu.app.quit',
+    accelerator: 'CmdOrCtrl+Q',
+  },
+  {
+    id: 'file.new',
+    labelKey: 'common:actions.new',
+    accelerator: 'CmdOrCtrl+N',
+  },
+  {
+    id: 'file.open',
+    labelKey: 'common:actions.open',
+    accelerator: 'CmdOrCtrl+O',
+  },
+  {
+    id: 'file.manage',
+    labelKey: 'editor:projects.menu',
+    accelerator: 'CmdOrCtrl+Shift+O',
+  },
+  {
+    id: 'file.save',
+    labelKey: 'common:actions.save',
+    accelerator: 'CmdOrCtrl+S',
+  },
+  {
+    id: 'file.saveAs',
+    labelKey: 'common:menu.file.saveAs',
+    accelerator: 'CmdOrCtrl+Shift+S',
+  },
+  { id: 'file.saveAsStarter', labelKey: 'editor:starters.saveAs' },
+  {
+    id: 'file.close',
+    labelKey: 'common:actions.close',
+    accelerator: 'CmdOrCtrl+W',
+  },
+  {
+    id: 'file.export',
+    labelKey: 'common:actions.export',
+    accelerator: 'CmdOrCtrl+E',
+  },
+  {
+    id: 'file.share',
+    labelKey: 'editor:title.share',
+    accelerator: 'CmdOrCtrl+Shift+E',
+  },
+  {
+    id: 'edit.undo',
+    labelKey: 'common:actions.undo',
+    accelerator: 'CmdOrCtrl+Z',
+  },
+  {
+    id: 'edit.redo',
+    labelKey: 'common:actions.redo',
+    accelerator: 'CmdOrCtrl+Shift+Z',
+  },
+  {
+    id: 'edit.copy',
+    labelKey: 'common:menu.edit.copy',
+    accelerator: 'CmdOrCtrl+C',
+  },
+  {
+    id: 'edit.paste',
+    labelKey: 'common:menu.edit.paste',
+    accelerator: 'CmdOrCtrl+V',
+  },
+  {
+    id: 'edit.selectAll',
+    labelKey: 'common:menu.edit.selectAll',
+    accelerator: 'CmdOrCtrl+A',
+  },
+  {
+    id: 'edit.duplicate',
+    labelKey: 'common:actions.duplicate',
+    accelerator: 'CmdOrCtrl+D',
+  },
+  {
+    id: 'edit.delete',
+    labelKey: 'common:actions.delete',
+    accelerator: 'Delete',
+  },
   { id: 'insert.text', labelKey: 'editor:tools.text', accelerator: 'T' },
   { id: 'insert.list', labelKey: 'editor:tools.list', accelerator: 'Shift+L' },
   { id: 'insert.image', labelKey: 'editor:tools.image', accelerator: 'I' },
-  { id: 'insert.imageFromClipboard', labelKey: 'common:menu.insert.imageFromClipboard' },
+  {
+    id: 'insert.imageFromClipboard',
+    labelKey: 'common:menu.insert.imageFromClipboard',
+  },
   { id: 'insert.svg', labelKey: 'editor:tools.svg' },
-  { id: 'object.group', labelKey: 'editor:layersPanel.group', accelerator: 'CmdOrCtrl+G' },
-  { id: 'object.ungroup', labelKey: 'editor:layersPanel.ungroup', accelerator: 'CmdOrCtrl+Shift+G' },
-  { id: 'object.forward', labelKey: 'common:menu.object.forward', accelerator: ']' },
-  { id: 'object.backward', labelKey: 'common:menu.object.backward', accelerator: '[' },
-  { id: 'object.front', labelKey: 'common:menu.object.front', accelerator: 'CmdOrCtrl+]' },
-  { id: 'object.back', labelKey: 'common:menu.object.back', accelerator: 'CmdOrCtrl+[' },
-  { id: 'view.zoomIn', labelKey: 'editor:status.zoomIn', accelerator: 'CmdOrCtrl+=' },
-  { id: 'view.zoomOut', labelKey: 'editor:status.zoomOut', accelerator: 'CmdOrCtrl+-' },
-  { id: 'view.fit', labelKey: 'editor:status.fitToScreen', accelerator: 'CmdOrCtrl+0' },
+  {
+    id: 'object.group',
+    labelKey: 'editor:layersPanel.group',
+    accelerator: 'CmdOrCtrl+G',
+  },
+  {
+    id: 'object.ungroup',
+    labelKey: 'editor:layersPanel.ungroup',
+    accelerator: 'CmdOrCtrl+Shift+G',
+  },
+  {
+    id: 'object.forward',
+    labelKey: 'common:menu.object.forward',
+    accelerator: ']',
+  },
+  {
+    id: 'object.backward',
+    labelKey: 'common:menu.object.backward',
+    accelerator: '[',
+  },
+  {
+    id: 'object.front',
+    labelKey: 'common:menu.object.front',
+    accelerator: 'CmdOrCtrl+]',
+  },
+  {
+    id: 'object.back',
+    labelKey: 'common:menu.object.back',
+    accelerator: 'CmdOrCtrl+[',
+  },
+  {
+    id: 'view.zoomIn',
+    labelKey: 'editor:status.zoomIn',
+    accelerator: 'CmdOrCtrl+=',
+  },
+  {
+    id: 'view.zoomOut',
+    labelKey: 'editor:status.zoomOut',
+    accelerator: 'CmdOrCtrl+-',
+  },
+  {
+    id: 'view.fit',
+    labelKey: 'editor:status.fitToScreen',
+    accelerator: 'CmdOrCtrl+0',
+  },
   { id: 'view.toggleSnap', labelKey: 'editor:status.snap' },
   { id: 'view.theme', labelKey: 'common:theme.toggle' },
   { id: 'view.transparencyAuto', labelKey: 'common:transparency.auto' },
@@ -132,7 +242,11 @@ export const appCommandDefinitions: CommandDefinition[] = [
   { id: 'view.transparencySolid', labelKey: 'common:transparency.solid' },
   { id: 'ai.promptTemplate', labelKey: 'editor:ai.promptTemplate' },
   { id: 'ai.translate', labelKey: 'editor:ai.translate' },
-  { id: 'window.shortcuts', labelKey: 'common:shortcuts.open', accelerator: '?' },
+  {
+    id: 'window.shortcuts',
+    labelKey: 'common:shortcuts.open',
+    accelerator: '?',
+  },
   { id: 'help.github', labelKey: 'editor:title.github' },
   { id: 'help.diagnostics', labelKey: 'editor:diagnostics.title' },
 ];
@@ -187,9 +301,9 @@ function hasDomTextSurface(): boolean {
   const selection = window.getSelection()?.toString() ?? '';
   return Boolean(
     modalOpen() ||
-      activeTextControl() ||
-      activeContentEditable() ||
-      selection.length > 0,
+    activeTextControl() ||
+    activeContentEditable() ||
+    selection.length > 0,
   );
 }
 
@@ -248,7 +362,8 @@ async function pasteIntoDomTarget(): Promise<boolean> {
   if (editable) {
     editable.focus();
     const inserted = document.execCommand('insertText', false, text);
-    if (!inserted) editable.textContent = `${editable.textContent ?? ''}${text}`;
+    if (!inserted)
+      editable.textContent = `${editable.textContent ?? ''}${text}`;
     dispatchTextInput(editable, text);
     return true;
   }
@@ -285,7 +400,9 @@ function blobPart(bytes: Uint8Array): ArrayBuffer {
 export function getAppCommandState(id: AppCommandId): { enabled: boolean } {
   const project = activeProject();
   const selectedCount = useSelectionStore.getState().selectedLayerIds.length;
-  const history = project ? historyStore.getState().histories[project.id] : undefined;
+  const history = project
+    ? historyStore.getState().histories[project.id]
+    : undefined;
   if (
     (id === 'edit.copy' || id === 'edit.paste' || id === 'edit.selectAll') &&
     hasDomTextSurface()
@@ -309,7 +426,10 @@ export function getAppCommandState(id: AppCommandId): { enabled: boolean } {
   if (id === 'edit.delete' || id === 'edit.duplicate' || id === 'edit.copy') {
     return { enabled: selectedCount > 0 };
   }
-  if (id.startsWith('ai.') && !isAiEnabled(aiSettingsStore.getState().settings)) {
+  if (
+    id.startsWith('ai.') &&
+    !isAiEnabled(aiSettingsStore.getState().settings)
+  ) {
     return { enabled: false };
   }
   if (id === 'ai.translate') return { enabled: Boolean(project) };
@@ -334,7 +454,12 @@ async function openImageFiles(): Promise<void> {
       name: image.name,
       mimeType: image.mimeType,
     });
-    addImportedAssetLayer(project.id, asset, artboard.width * 0.15, artboard.height * 0.15);
+    addImportedAssetLayer(
+      project.id,
+      asset,
+      artboard.width * 0.15,
+      artboard.height * 0.15,
+    );
   }
 }
 
@@ -348,7 +473,12 @@ async function pasteImageFromClipboard(): Promise<void> {
     name: `Clipboard image ${new Date().toLocaleTimeString()}`,
     mimeType: 'image/png',
   });
-  addImportedAssetLayer(project.id, asset, artboard.width * 0.15, artboard.height * 0.15);
+  addImportedAssetLayer(
+    project.id,
+    asset,
+    artboard.width * 0.15,
+    artboard.height * 0.15,
+  );
 }
 
 async function copyActiveArtboardPng(): Promise<void> {
@@ -402,6 +532,19 @@ export async function invokeAppCommand(id: AppCommandId): Promise<void> {
       if (isTauri) await saveNativeProjectFile(projectId, 'saveAs');
       else await exportProjectFile(projectId);
       return;
+    case 'file.saveAsStarter': {
+      if (!projectId) return;
+      try {
+        const record = await saveProjectAsStarter(projectId);
+        if (record) {
+          ui.setToast(i18n.t('editor:starters.saved', { name: record.name }));
+        }
+      } catch (error) {
+        console.error('[Calqo] save-as-starter failed', error);
+        ui.setToast(i18n.t('editor:starters.saveFailed'));
+      }
+      return;
+    }
     case 'file.close':
       if (projectId) await closeProject(projectId);
       return;

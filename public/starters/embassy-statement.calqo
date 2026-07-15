@@ -1,0 +1,275 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-embassy-statement",
+    "name": "Official statement (IG square)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#0B2545",
+      "#C9A227",
+      "#F7F3EA",
+      "#8FA3BF"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-statement",
+        "name": "Instagram square",
+        "preset": "ig-square",
+        "width": 1080,
+        "height": 1080,
+        "background": {
+          "type": "solid",
+          "color": "#0B2545"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-1301",
+            "name": "Top rule",
+            "x": 90,
+            "y": 96,
+            "w": 900,
+            "h": 3,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A227"
+            }
+          },
+          {
+            "id": "layer-starter-1302",
+            "name": "Top rule inner",
+            "x": 90,
+            "y": 106,
+            "w": 900,
+            "h": 1.5,
+            "rotation": 0,
+            "opacity": 0.5,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A227"
+            }
+          },
+          {
+            "id": "layer-starter-1303",
+            "name": "Seal outer",
+            "x": 480,
+            "y": 150,
+            "w": 120,
+            "h": 120,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "transparent"
+            },
+            "stroke": {
+              "color": "#C9A227",
+              "width": 3
+            }
+          },
+          {
+            "id": "layer-starter-1304",
+            "name": "Seal inner",
+            "x": 496,
+            "y": 166,
+            "w": 88,
+            "h": 88,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "transparent"
+            },
+            "stroke": {
+              "color": "#C9A227",
+              "width": 1.5
+            }
+          },
+          {
+            "id": "layer-starter-1305",
+            "name": "Seal star",
+            "x": 480,
+            "y": 186,
+            "w": 120,
+            "h": 50,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "★"
+            },
+            "style": {
+              "fontFamily": "Georgia",
+              "fontSize": 44,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#C9A227",
+              "align": "center",
+              "lineHeight": 1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1306",
+            "name": "Kicker",
+            "x": 90,
+            "y": 330,
+            "w": 900,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "OFFICIAL STATEMENT"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#C9A227",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 8
+            }
+          },
+          {
+            "id": "layer-starter-1307",
+            "name": "Title",
+            "x": 90,
+            "y": 410,
+            "w": 900,
+            "h": 220,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Joint declaration on\ncultural cooperation"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 82,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#F7F3EA",
+              "align": "center",
+              "lineHeight": 1.25,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1308",
+            "name": "Body",
+            "x": 120,
+            "y": 680,
+            "w": 840,
+            "h": 160,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Both parties reaffirm their commitment to deepening\nacademic exchange, heritage preservation, and joint\ncultural programming over the coming years."
+            },
+            "style": {
+              "fontFamily": "Lora",
+              "fontSize": 34,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#B9C6D8",
+              "align": "center",
+              "lineHeight": 1.5,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1309",
+            "name": "Bottom rule",
+            "x": 390,
+            "y": 900,
+            "w": 300,
+            "h": 2,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A227"
+            }
+          },
+          {
+            "id": "layer-starter-1310",
+            "name": "Footer",
+            "x": 90,
+            "y": 950,
+            "w": 900,
+            "h": 40,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "EMBASSY OF EXAMPLIA · PRESS OFFICE"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 26,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#8FA3BF",
+              "align": "center",
+              "lineHeight": 1.2,
+              "letterSpacing": 4
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Formal navy-and-gold official statement card with seal motif."
+    }
+  },
+  "assets": []
+}

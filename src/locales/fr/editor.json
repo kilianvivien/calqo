@@ -47,7 +47,8 @@
     "tabBlank": "Vierge",
     "tabStarters": "Modèles",
     "brandProfile": "Marque",
-    "noBrandProfile": "Aucun profil de marque"
+    "noBrandProfile": "Aucun profil de marque",
+    "browseStarters": "Parcourir les modèles"
   },
   "sample": {
     "open": "Ouvrir l'exemple"
@@ -402,7 +403,19 @@
         "missingAsset": "{{name}} : la ressource manquante est ignorée.",
         "renderFailed": "{{name}} n’a pas pu être rendu et est ignoré."
       },
-      "reasons": { "mask": "masque non pris en charge", "crop": "recadrage manuel", "frame": "cadre décoratif", "filters": "filtres d’image", "backgroundRemoval": "suppression d’arrière-plan", "sticker": "contour autocollant", "freehand": "trait à main levée", "patternFill": "remplissage à motif", "imageFill": "remplissage par image", "markerAsset": "puce illustrée", "group": "calque imbriqué de secours" }
+      "reasons": {
+        "mask": "masque non pris en charge",
+        "crop": "recadrage manuel",
+        "frame": "cadre décoratif",
+        "filters": "filtres d’image",
+        "backgroundRemoval": "suppression d’arrière-plan",
+        "sticker": "contour autocollant",
+        "freehand": "trait à main levée",
+        "patternFill": "remplissage à motif",
+        "imageFill": "remplissage par image",
+        "markerAsset": "puce illustrée",
+        "group": "calque imbriqué de secours"
+      }
     }
   },
   "recovery": {
@@ -793,7 +806,43 @@
     "saveAs": "Enregistrer comme modèle",
     "saved": "« {{name}} » ajouté à vos modèles.",
     "saveFailed": "Impossible d'enregistrer ce projet comme modèle.",
-    "empty": "Aucun modèle n'a pu être chargé. Vérifiez votre connexion, ou enregistrez un projet ouvert comme modèle depuis le gestionnaire de projets."
+    "empty": "Aucun modèle n'a pu être chargé. Vérifiez votre connexion, ou enregistrez un projet ouvert comme modèle depuis le gestionnaire de projets.",
+    "names": {
+      "ig-announcement": "Annonce — carré Instagram",
+      "story-cover": "Couverture story / reel",
+      "x-quote": "Carte citation — post X",
+      "linkedin-tips": "Liste de conseils — post LinkedIn",
+      "youtube-thumbnail": "Miniature YouTube",
+      "multilingual-card": "Carte multilingue (EN/FR/TR)",
+      "sticker-sheet": "Planche de stickers (export transparent)",
+      "campaign-kit": "Kit de campagne (3 formats)",
+      "editorial-carousel": "Ouverture de carrousel éditorial — portrait IG",
+      "pinterest-recipe": "Épingle recette — Pinterest",
+      "event-poster": "Affiche d'événement — story",
+      "product-sale": "Promo soldes — carré Instagram",
+      "blog-header": "En-tête d'article — lien Facebook",
+      "podcast-episode": "Carte d'épisode podcast — carré Instagram",
+      "webinar-invite": "Invitation webinaire — post LinkedIn",
+      "travel-story": "Story voyage",
+      "fitness-schedule": "Planning fitness — carré Instagram",
+      "music-release": "Sortie de single — carré Instagram",
+      "real-estate-listing": "Annonce immobilière — portrait IG",
+      "hiring-post": "Recrutement — post X",
+      "embassy-statement": "Déclaration officielle — carré Instagram",
+      "national-day-invitation": "Invitation à une réception — portrait IG",
+      "bilateral-visit": "Visite officielle — post X",
+      "press-release": "Communiqué de presse — post LinkedIn"
+    },
+    "categories": {
+      "all": "Tous",
+      "marketing": "Marketing",
+      "editorial": "Éditorial",
+      "event": "Événements",
+      "media": "Médias",
+      "lifestyle": "Lifestyle",
+      "playful": "Ludique",
+      "diplomacy": "Diplomatie"
+    }
   },
   "repairAssets": {
     "title": "Réparer les ressources",
@@ -809,7 +858,10 @@
     "open": "Réparer les ressources…",
     "wrongKind": "Choisissez un remplacement {{expected}} pour cette ressource.",
     "relinkFailed": "Le fichier de remplacement n’a pas pu être lu ou enregistré.",
-    "kind": { "image": "image matricielle", "svg": "SVG" }
+    "kind": {
+      "image": "image matricielle",
+      "svg": "SVG"
+    }
   },
   "optimizeAssets": {
     "title": "Optimiser les ressources",
@@ -826,5 +878,15 @@
     "failed": "Échec de l'optimisation.",
     "open": "Optimiser les ressources…",
     "importNotice": "« {{name}} » est volumineuse ({{width}}×{{height}} px) et peut ralentir l'édition et alourdir les exports."
+  },
+  "presets": {
+    "ig-square": "Carré Instagram",
+    "ig-portrait": "Portrait Instagram",
+    "story": "Story / couverture Reel",
+    "x-post": "Post X / Twitter",
+    "linkedin-post": "Post LinkedIn",
+    "facebook-link": "Lien Facebook",
+    "youtube-thumbnail": "Miniature YouTube",
+    "pinterest-pin": "Épingle Pinterest"
   }
 }

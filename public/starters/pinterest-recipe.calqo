@@ -1,0 +1,287 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-pinterest-recipe",
+    "name": "Recipe pin (Pinterest)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#FFF8EF",
+      "#C4572E",
+      "#3A2A1E",
+      "#E8B339"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-recipe",
+        "name": "Pinterest pin",
+        "preset": "pinterest-pin",
+        "width": 1000,
+        "height": 1500,
+        "background": {
+          "type": "solid",
+          "color": "#FFF8EF"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-201",
+            "name": "Header block",
+            "x": 0,
+            "y": 0,
+            "w": 1000,
+            "h": 470,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C4572E"
+            }
+          },
+          {
+            "id": "layer-starter-202",
+            "name": "Kicker",
+            "x": 80,
+            "y": 96,
+            "w": 840,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "WEEKNIGHT DINNER · 25 MIN"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 30,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#F5C9B2",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 4
+            }
+          },
+          {
+            "id": "layer-starter-203",
+            "name": "Headline",
+            "x": 80,
+            "y": 168,
+            "w": 840,
+            "h": 240,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "One-pan lemon\n& herb pasta"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 96,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFF8EF",
+              "align": "left",
+              "lineHeight": 1.15,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-204",
+            "name": "Section label",
+            "x": 80,
+            "y": 560,
+            "w": 500,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "WHAT YOU NEED"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 30,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#C4572E",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 4
+            }
+          },
+          {
+            "id": "layer-starter-205",
+            "name": "Ingredients",
+            "x": 80,
+            "y": 640,
+            "w": 840,
+            "h": 460,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "list",
+            "items": [
+              {
+                "id": "item-recipe-1",
+                "text": {
+                  "en": "Rigatoni or penne, 400 g"
+                }
+              },
+              {
+                "id": "item-recipe-2",
+                "text": {
+                  "en": "One lemon — zest and juice"
+                }
+              },
+              {
+                "id": "item-recipe-3",
+                "text": {
+                  "en": "Garlic, chili flakes, fresh basil"
+                }
+              },
+              {
+                "id": "item-recipe-4",
+                "text": {
+                  "en": "A generous handful of parmesan"
+                }
+              }
+            ],
+            "marker": {
+              "kind": "character",
+              "character": "✓",
+              "color": "#C4572E"
+            },
+            "markerGap": 20,
+            "style": {
+              "fontFamily": "Lora",
+              "fontSize": 40,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#3A2A1E",
+              "align": "left",
+              "lineHeight": 1.9,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-206",
+            "name": "Divider",
+            "x": 80,
+            "y": 1156,
+            "w": 840,
+            "h": 3,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#E4CDB4"
+            }
+          },
+          {
+            "id": "layer-starter-207",
+            "name": "Tip",
+            "x": 80,
+            "y": 1204,
+            "w": 840,
+            "h": 60,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Save this pin — full method on the blog."
+            },
+            "style": {
+              "fontFamily": "Lora",
+              "fontSize": 36,
+              "fontWeight": 400,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#8A6A50",
+              "align": "left",
+              "lineHeight": 1.3,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-208",
+            "name": "Footer bar",
+            "x": 0,
+            "y": 1380,
+            "w": 1000,
+            "h": 120,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C4572E"
+            }
+          },
+          {
+            "id": "layer-starter-209",
+            "name": "Footer",
+            "x": 0,
+            "y": 1418,
+            "w": 1000,
+            "h": 48,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "yourblog.com/recipes"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 34,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFF8EF",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 3
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Warm recipe pin with ingredient checklist and blog footer."
+    }
+  },
+  "assets": []
+}

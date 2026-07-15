@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Sparkles } from 'lucide-react';
+import { LayoutTemplate, Sparkles } from 'lucide-react';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
-import { adoptProject, createProject } from '@/editor/commands/projectCommands';
+import { createProject } from '@/editor/commands/projectCommands';
 import { CalqoStage } from '@/editor/canvas/CalqoStage';
-import { createSampleProject } from '@/lib/schema/sampleProject';
 import { GlassButton } from '@/components/glass';
 import { useUiStore } from '@/lib/state/uiStore';
 import { ArtboardDots } from './ArtboardDots';
@@ -40,10 +39,12 @@ export function Workspace() {
           </div>
           <GlassButton
             variant="primary"
-            onClick={() => void adoptProject(createSampleProject())}
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent('calqo:open-starters'))
+            }
           >
-            <Sparkles size={14} />
-            {t('sample.open')}
+            <LayoutTemplate size={14} />
+            {t('newProject.browseStarters')}
           </GlassButton>
           <div className="w-full max-w-[560px]">
             <FormatGrid onSelect={(preset) => void createProject({ preset })} />

@@ -16,6 +16,22 @@ embedded — each `.calqo` file ships with an empty `assets` array.
 | Multilingual card (EN/FR/TR) | `multilingual-card.calqo` | Original copy in three locales |
 | Sticker sheet | `sticker-sheet.calqo` | Original copy + sticker outlines |
 | Campaign kit (3 formats) | `campaign-kit.calqo` | Original copy across 3 artboards |
+| Editorial carousel opener — IG portrait | `editorial-carousel.calqo` | Original copy + shapes |
+| Recipe pin — Pinterest | `pinterest-recipe.calqo` | Original copy + list layer |
+| Event poster — story | `event-poster.calqo` | Original copy + gradient/pattern shapes |
+| Sale promo — Instagram square | `product-sale.calqo` | Original copy + gradient shapes |
+| Blog link header — Facebook | `blog-header.calqo` | Original copy + pattern shapes |
+| Podcast episode card — Instagram square | `podcast-episode.calqo` | Original copy + shapes |
+| Webinar invite — LinkedIn post | `webinar-invite.calqo` | Original copy + shapes |
+| Travel story | `travel-story.calqo` | Original copy + gradient shapes |
+| Fitness schedule — Instagram square | `fitness-schedule.calqo` | Original copy + list layer |
+| Single release — Instagram square | `music-release.calqo` | Original copy + shapes |
+| Open house listing — IG portrait | `real-estate-listing.calqo` | Original copy + list layer |
+| Hiring post — X | `hiring-post.calqo` | Original copy + pattern shapes |
+| Official statement — Instagram square | `embassy-statement.calqo` | Original copy + shapes |
+| Reception invitation — IG portrait | `national-day-invitation.calqo` | Original copy + shapes |
+| Official visit — X post | `bilateral-visit.calqo` | Original copy + shapes |
+| Press release — LinkedIn post | `press-release.calqo` | Original copy + shapes |
 
 License: same as the repository (see `LICENSE`). All starter content is
 self-made and may be redistributed with the app. A schema-validation unit test

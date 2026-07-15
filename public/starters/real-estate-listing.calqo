@@ -1,0 +1,315 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-real-estate-listing",
+    "name": "Open house listing (IG portrait)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#FBF9F4",
+      "#1F4D3A",
+      "#B98A2F",
+      "#2E2A22"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-realestate",
+        "name": "Instagram portrait",
+        "preset": "ig-portrait",
+        "width": 1080,
+        "height": 1350,
+        "background": {
+          "type": "solid",
+          "color": "#FBF9F4"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-1101",
+            "name": "Header band",
+            "x": 0,
+            "y": 0,
+            "w": 1080,
+            "h": 300,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#1F4D3A"
+            }
+          },
+          {
+            "id": "layer-starter-1102",
+            "name": "Kicker",
+            "x": 90,
+            "y": 84,
+            "w": 900,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "OPEN HOUSE · SAT 11 AM – 2 PM"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 30,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#CBB97F",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 4
+            }
+          },
+          {
+            "id": "layer-starter-1103",
+            "name": "Headline",
+            "x": 90,
+            "y": 150,
+            "w": 900,
+            "h": 110,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "A quiet corner\nof Maple Row"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 76,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FBF9F4",
+              "align": "left",
+              "lineHeight": 1.15,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1104",
+            "name": "Price",
+            "x": 90,
+            "y": 380,
+            "w": 620,
+            "h": 130,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "$ 875,000"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 110,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#1F4D3A",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1105",
+            "name": "Gold tick",
+            "x": 90,
+            "y": 540,
+            "w": 140,
+            "h": 8,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#B98A2F"
+            }
+          },
+          {
+            "id": "layer-starter-1106",
+            "name": "Features",
+            "x": 90,
+            "y": 600,
+            "w": 900,
+            "h": 420,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "list",
+            "items": [
+              {
+                "id": "item-re-1",
+                "text": {
+                  "en": "3 bedrooms · 2 bathrooms"
+                }
+              },
+              {
+                "id": "item-re-2",
+                "text": {
+                  "en": "South-facing garden and terrace"
+                }
+              },
+              {
+                "id": "item-re-3",
+                "text": {
+                  "en": "Renovated kitchen, oak floors"
+                }
+              },
+              {
+                "id": "item-re-4",
+                "text": {
+                  "en": "8 min walk to the station"
+                }
+              }
+            ],
+            "marker": {
+              "kind": "character",
+              "character": "◆",
+              "color": "#B98A2F",
+              "size": 26
+            },
+            "markerGap": 22,
+            "style": {
+              "fontFamily": "Lora",
+              "fontSize": 42,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#2E2A22",
+              "align": "left",
+              "lineHeight": 1.9,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1107",
+            "name": "Address",
+            "x": 90,
+            "y": 1060,
+            "w": 900,
+            "h": 50,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "14 Maple Row, Greenfield"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 34,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#1F4D3A",
+              "align": "left",
+              "lineHeight": 1.2,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1108",
+            "name": "Footer band",
+            "x": 0,
+            "y": 1190,
+            "w": 1080,
+            "h": 160,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#EFE9DB"
+            }
+          },
+          {
+            "id": "layer-starter-1109",
+            "name": "Agency",
+            "x": 90,
+            "y": 1244,
+            "w": 500,
+            "h": 40,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "ROW & FIELD REALTY"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 28,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#1F4D3A",
+              "align": "left",
+              "lineHeight": 1.2,
+              "letterSpacing": 3
+            }
+          },
+          {
+            "id": "layer-starter-1110",
+            "name": "Contact",
+            "x": 490,
+            "y": 1244,
+            "w": 500,
+            "h": 40,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "hello@rowfield.homes"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 28,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#6E6551",
+              "align": "right",
+              "lineHeight": 1.2,
+              "letterSpacing": 0
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Elegant open-house listing with price, feature list, and agency footer."
+    }
+  },
+  "assets": []
+}

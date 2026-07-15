@@ -1,0 +1,260 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-product-sale",
+    "name": "Sale promo (IG square)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#FF3D77",
+      "#7A2BFF",
+      "#FFD23F",
+      "#FFFFFF"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-sale",
+        "name": "Instagram square",
+        "preset": "ig-square",
+        "width": 1080,
+        "height": 1080,
+        "background": {
+          "type": "linear",
+          "angle": 45,
+          "stops": [
+            {
+              "offset": 0,
+              "color": "#FF3D77"
+            },
+            {
+              "offset": 1,
+              "color": "#7A2BFF"
+            }
+          ]
+        },
+        "layers": [
+          {
+            "id": "layer-starter-401",
+            "name": "Kicker",
+            "x": 90,
+            "y": 150,
+            "w": 900,
+            "h": 70,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "MID-SEASON"
+            },
+            "style": {
+              "fontFamily": "Montserrat",
+              "fontSize": 52,
+              "fontWeight": 800,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 12
+            }
+          },
+          {
+            "id": "layer-starter-402",
+            "name": "Headline",
+            "x": 60,
+            "y": 220,
+            "w": 960,
+            "h": 400,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "SALE"
+            },
+            "style": {
+              "fontFamily": "Anton",
+              "fontSize": 380,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "center",
+              "lineHeight": 1,
+              "letterSpacing": 8
+            }
+          },
+          {
+            "id": "layer-starter-403",
+            "name": "Badge",
+            "x": 740,
+            "y": 500,
+            "w": 280,
+            "h": 280,
+            "rotation": -12,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "#FFD23F"
+            },
+            "effects": {
+              "shadow": {
+                "color": "#000000",
+                "blur": 30,
+                "offsetX": 0,
+                "offsetY": 12,
+                "opacity": 0.25
+              }
+            }
+          },
+          {
+            "id": "layer-starter-404",
+            "name": "Badge text",
+            "x": 740,
+            "y": 594,
+            "w": 280,
+            "h": 100,
+            "rotation": -12,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "-50%"
+            },
+            "style": {
+              "fontFamily": "Montserrat",
+              "fontSize": 84,
+              "fontWeight": 800,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#3A1060",
+              "align": "center",
+              "lineHeight": 1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-405",
+            "name": "Sub",
+            "x": 90,
+            "y": 700,
+            "w": 640,
+            "h": 110,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Everything must go — online and in store."
+            },
+            "style": {
+              "fontFamily": "Montserrat",
+              "fontSize": 40,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFE3EE",
+              "align": "left",
+              "lineHeight": 1.35,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-406",
+            "name": "CTA pill",
+            "x": 90,
+            "y": 880,
+            "w": 380,
+            "h": 100,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#FFFFFF"
+            },
+            "cornerRadius": 50
+          },
+          {
+            "id": "layer-starter-407",
+            "name": "CTA",
+            "x": 90,
+            "y": 908,
+            "w": 380,
+            "h": 52,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Shop now"
+            },
+            "style": {
+              "fontFamily": "Montserrat",
+              "fontSize": 40,
+              "fontWeight": 800,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#7A2BFF",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-408",
+            "name": "Code",
+            "x": 530,
+            "y": 914,
+            "w": 460,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "USE CODE: SUNNY50"
+            },
+            "style": {
+              "fontFamily": "Montserrat",
+              "fontSize": 30,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFD23F",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 4
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "High-energy gradient sale card with rotated discount badge and CTA."
+    }
+  },
+  "assets": []
+}

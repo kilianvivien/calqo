@@ -1,0 +1,342 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-podcast-episode",
+    "name": "Podcast episode card (IG square)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#120D1E",
+      "#4FD1C5",
+      "#FFFFFF",
+      "#A99FC0"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-podcast",
+        "name": "Instagram square",
+        "preset": "ig-square",
+        "width": 1080,
+        "height": 1080,
+        "background": {
+          "type": "radial",
+          "stops": [
+            {
+              "offset": 0,
+              "color": "#2A1E3F"
+            },
+            {
+              "offset": 1,
+              "color": "#120D1E"
+            }
+          ]
+        },
+        "layers": [
+          {
+            "id": "layer-starter-608",
+            "name": "Episode chip",
+            "x": 90,
+            "y": 110,
+            "w": 220,
+            "h": 64,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "transparent"
+            },
+            "cornerRadius": 32,
+            "stroke": {
+              "color": "#4FD1C5",
+              "width": 3
+            }
+          },
+          {
+            "id": "layer-starter-609",
+            "name": "Episode",
+            "x": 90,
+            "y": 128,
+            "w": 220,
+            "h": 34,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "EP. 42"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 30,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#4FD1C5",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 4
+            }
+          },
+          {
+            "id": "layer-starter-610",
+            "name": "Show name",
+            "x": 400,
+            "y": 128,
+            "w": 590,
+            "h": 34,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "THE MAKERS TABLE"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 28,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#A99FC0",
+              "align": "right",
+              "lineHeight": 1.1,
+              "letterSpacing": 5
+            }
+          },
+          {
+            "id": "layer-starter-611",
+            "name": "Title",
+            "x": 90,
+            "y": 260,
+            "w": 900,
+            "h": 260,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "The art of\nsaying no"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 110,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.15,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-612",
+            "name": "Guest",
+            "x": 90,
+            "y": 550,
+            "w": 900,
+            "h": 50,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "with Maya Chen — founder, Loom & Field"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 36,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#A99FC0",
+              "align": "left",
+              "lineHeight": 1.3,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-601",
+            "name": "Wave bar 1",
+            "x": 347,
+            "y": 725,
+            "w": 26,
+            "h": 70,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#4FD1C5"
+            },
+            "cornerRadius": 13
+          },
+          {
+            "id": "layer-starter-602",
+            "name": "Wave bar 2",
+            "x": 407,
+            "y": 695,
+            "w": 26,
+            "h": 130,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#4FD1C5"
+            },
+            "cornerRadius": 13
+          },
+          {
+            "id": "layer-starter-603",
+            "name": "Wave bar 3",
+            "x": 467,
+            "y": 655,
+            "w": 26,
+            "h": 210,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#4FD1C5"
+            },
+            "cornerRadius": 13
+          },
+          {
+            "id": "layer-starter-604",
+            "name": "Wave bar 4",
+            "x": 527,
+            "y": 610,
+            "w": 26,
+            "h": 300,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#4FD1C5"
+            },
+            "cornerRadius": 13
+          },
+          {
+            "id": "layer-starter-605",
+            "name": "Wave bar 5",
+            "x": 587,
+            "y": 655,
+            "w": 26,
+            "h": 210,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#4FD1C5"
+            },
+            "cornerRadius": 13
+          },
+          {
+            "id": "layer-starter-606",
+            "name": "Wave bar 6",
+            "x": 647,
+            "y": 695,
+            "w": 26,
+            "h": 130,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#4FD1C5"
+            },
+            "cornerRadius": 13
+          },
+          {
+            "id": "layer-starter-607",
+            "name": "Wave bar 7",
+            "x": 707,
+            "y": 725,
+            "w": 26,
+            "h": 70,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#4FD1C5"
+            },
+            "cornerRadius": 13
+          },
+          {
+            "id": "layer-starter-613",
+            "name": "Listen",
+            "x": 90,
+            "y": 960,
+            "w": 900,
+            "h": 40,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "NEW EPISODE EVERY TUESDAY"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 28,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#4FD1C5",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 6
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Dark podcast episode card with guest line and sound-wave accent."
+    }
+  },
+  "assets": []
+}

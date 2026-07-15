@@ -1,0 +1,258 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-editorial-carousel",
+    "name": "Editorial carousel opener (IG portrait)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#F5F0E6",
+      "#1A1815",
+      "#8A7B63",
+      "#B44E2C"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-editorial",
+        "name": "Instagram portrait",
+        "preset": "ig-portrait",
+        "width": 1080,
+        "height": 1350,
+        "background": {
+          "type": "solid",
+          "color": "#F5F0E6"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-101",
+            "name": "Ghost number",
+            "x": 640,
+            "y": 60,
+            "w": 380,
+            "h": 340,
+            "rotation": 0,
+            "opacity": 0.07,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "01"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 300,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#1A1815",
+              "align": "right",
+              "lineHeight": 1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-102",
+            "name": "Top rule",
+            "x": 96,
+            "y": 132,
+            "w": 888,
+            "h": 3,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#1A1815"
+            }
+          },
+          {
+            "id": "layer-starter-103",
+            "name": "Kicker",
+            "x": 96,
+            "y": 176,
+            "w": 700,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "THE WEEKLY EDIT — NO. 12"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 28,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#8A7B63",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 5
+            }
+          },
+          {
+            "id": "layer-starter-104",
+            "name": "Headline",
+            "x": 96,
+            "y": 320,
+            "w": 888,
+            "h": 360,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Slow ideas\nfor fast times."
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 128,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#1A1815",
+              "align": "left",
+              "lineHeight": 1.12,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-105",
+            "name": "Accent tick",
+            "x": 96,
+            "y": 760,
+            "w": 120,
+            "h": 8,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#B44E2C"
+            }
+          },
+          {
+            "id": "layer-starter-106",
+            "name": "Deck",
+            "x": 96,
+            "y": 812,
+            "w": 800,
+            "h": 140,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Five short essays on craft, patience,\nand making things that last."
+            },
+            "style": {
+              "fontFamily": "Lora",
+              "fontSize": 42,
+              "fontWeight": 400,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#5C5344",
+              "align": "left",
+              "lineHeight": 1.4,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-107",
+            "name": "Bottom rule",
+            "x": 96,
+            "y": 1196,
+            "w": 888,
+            "h": 3,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#1A1815"
+            }
+          },
+          {
+            "id": "layer-starter-108",
+            "name": "Footer left",
+            "x": 96,
+            "y": 1232,
+            "w": 400,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "@yourstudio"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 28,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#8A7B63",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 2
+            }
+          },
+          {
+            "id": "layer-starter-109",
+            "name": "Footer right",
+            "x": 584,
+            "y": 1232,
+            "w": 400,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "swipe →"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 28,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#B44E2C",
+              "align": "right",
+              "lineHeight": 1.1,
+              "letterSpacing": 2
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Minimal magazine-style carousel opener with serif headline and ghost issue number."
+    }
+  },
+  "assets": []
+}

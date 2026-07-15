@@ -1,0 +1,267 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-music-release",
+    "name": "Single release (IG square)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#0A0A12",
+      "#F45D9C",
+      "#FFFFFF",
+      "#1B1B2F"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-music",
+        "name": "Instagram square",
+        "preset": "ig-square",
+        "width": 1080,
+        "height": 1080,
+        "background": {
+          "type": "radial",
+          "stops": [
+            {
+              "offset": 0,
+              "color": "#1B1B2F"
+            },
+            {
+              "offset": 1,
+              "color": "#0A0A12"
+            }
+          ]
+        },
+        "layers": [
+          {
+            "id": "layer-starter-1001",
+            "name": "Vinyl disc",
+            "x": 560,
+            "y": 120,
+            "w": 620,
+            "h": 620,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "radial",
+              "stops": [
+                {
+                  "offset": 0,
+                  "color": "#26263A"
+                },
+                {
+                  "offset": 1,
+                  "color": "#121220"
+                }
+              ]
+            },
+            "stroke": {
+              "color": "#33334A",
+              "width": 3
+            }
+          },
+          {
+            "id": "layer-starter-1002",
+            "name": "Vinyl groove",
+            "x": 640,
+            "y": 200,
+            "w": 460,
+            "h": 460,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "transparent"
+            },
+            "stroke": {
+              "color": "#3C3C55",
+              "width": 2
+            }
+          },
+          {
+            "id": "layer-starter-1003",
+            "name": "Vinyl label",
+            "x": 770,
+            "y": 330,
+            "w": 200,
+            "h": 200,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "#F45D9C"
+            }
+          },
+          {
+            "id": "layer-starter-1004",
+            "name": "Vinyl hole",
+            "x": 856,
+            "y": 416,
+            "w": 28,
+            "h": 28,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "#0A0A12"
+            }
+          },
+          {
+            "id": "layer-starter-1005",
+            "name": "Out-now chip",
+            "x": 90,
+            "y": 120,
+            "w": 230,
+            "h": 64,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#F45D9C"
+            },
+            "cornerRadius": 32
+          },
+          {
+            "id": "layer-starter-1006",
+            "name": "Out now",
+            "x": 90,
+            "y": 139,
+            "w": 230,
+            "h": 32,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "OUT NOW"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 28,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#0A0A12",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 4
+            }
+          },
+          {
+            "id": "layer-starter-1007",
+            "name": "Title",
+            "x": 90,
+            "y": 480,
+            "w": 760,
+            "h": 340,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "NEON\nRIVER"
+            },
+            "style": {
+              "fontFamily": "Anton",
+              "fontSize": 160,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.05,
+              "letterSpacing": 4
+            }
+          },
+          {
+            "id": "layer-starter-1008",
+            "name": "Artist",
+            "x": 90,
+            "y": 850,
+            "w": 760,
+            "h": 50,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "the new single by VELA"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 38,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#B9B9D0",
+              "align": "left",
+              "lineHeight": 1.2,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1009",
+            "name": "Platforms",
+            "x": 90,
+            "y": 960,
+            "w": 940,
+            "h": 40,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "STREAM EVERYWHERE — SPOTIFY · APPLE · BANDCAMP"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 26,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#F45D9C",
+              "align": "left",
+              "lineHeight": 1.2,
+              "letterSpacing": 3
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Dark single-release card with vinyl illustration built from shapes."
+    }
+  },
+  "assets": []
+}

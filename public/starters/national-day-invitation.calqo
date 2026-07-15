@@ -1,0 +1,273 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-national-day-invitation",
+    "name": "Reception invitation (IG portrait)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#F7F3EA",
+      "#0B2545",
+      "#C9A227",
+      "#5B6B80"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-invitation",
+        "name": "Instagram portrait",
+        "preset": "ig-portrait",
+        "width": 1080,
+        "height": 1350,
+        "background": {
+          "type": "solid",
+          "color": "#F7F3EA"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-1401",
+            "name": "Frame",
+            "x": 70,
+            "y": 70,
+            "w": 940,
+            "h": 1210,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "transparent"
+            },
+            "stroke": {
+              "color": "#C9A227",
+              "width": 3,
+              "look": "double",
+              "altColor": "#C9A227"
+            }
+          },
+          {
+            "id": "layer-starter-1402",
+            "name": "Crest",
+            "x": 90,
+            "y": 150,
+            "w": 900,
+            "h": 60,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "❖"
+            },
+            "style": {
+              "fontFamily": "Georgia",
+              "fontSize": 52,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#C9A227",
+              "align": "center",
+              "lineHeight": 1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1403",
+            "name": "Script title",
+            "x": 90,
+            "y": 250,
+            "w": 900,
+            "h": 160,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Invitation"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 130,
+              "fontWeight": 700,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#0B2545",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1404",
+            "name": "Body",
+            "x": 120,
+            "y": 480,
+            "w": 840,
+            "h": 300,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "The Ambassador of Examplia\nrequests the pleasure of your company\nat a reception on the occasion of\nthe National Day"
+            },
+            "style": {
+              "fontFamily": "Lora",
+              "fontSize": 42,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#33415C",
+              "align": "center",
+              "lineHeight": 1.65,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1405",
+            "name": "Divider",
+            "x": 440,
+            "y": 830,
+            "w": 200,
+            "h": 2,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A227"
+            }
+          },
+          {
+            "id": "layer-starter-1406",
+            "name": "Date",
+            "x": 90,
+            "y": 880,
+            "w": 900,
+            "h": 54,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Thursday, 24 July · 7 PM"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 38,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#0B2545",
+              "align": "center",
+              "lineHeight": 1.2,
+              "letterSpacing": 1
+            }
+          },
+          {
+            "id": "layer-starter-1407",
+            "name": "Venue",
+            "x": 90,
+            "y": 950,
+            "w": 900,
+            "h": 48,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Residence of Examplia · 12 Garden Avenue"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 32,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#5B6B80",
+              "align": "center",
+              "lineHeight": 1.3,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1408",
+            "name": "RSVP",
+            "x": 90,
+            "y": 1120,
+            "w": 900,
+            "h": 40,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "RSVP — protocol@embassy.example by 18 July"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 27,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#8B7B49",
+              "align": "center",
+              "lineHeight": 1.2,
+              "letterSpacing": 2
+            }
+          },
+          {
+            "id": "layer-starter-1409",
+            "name": "Dress code",
+            "x": 90,
+            "y": 1180,
+            "w": 900,
+            "h": 40,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Business attire · Tenue de ville"
+            },
+            "style": {
+              "fontFamily": "Lora",
+              "fontSize": 27,
+              "fontWeight": 400,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#5B6B80",
+              "align": "center",
+              "lineHeight": 1.2,
+              "letterSpacing": 0
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Elegant embassy reception invitation with double gold frame."
+    }
+  },
+  "assets": []
+}

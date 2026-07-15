@@ -47,7 +47,8 @@
     "tabBlank": "Blank",
     "tabStarters": "Starters",
     "brandProfile": "Brand",
-    "noBrandProfile": "No brand profile"
+    "noBrandProfile": "No brand profile",
+    "browseStarters": "Browse the models"
   },
   "sample": {
     "open": "Open sample project"
@@ -402,7 +403,19 @@
         "missingAsset": "{{name}}: the missing asset is skipped.",
         "renderFailed": "{{name}} could not be rendered and is skipped."
       },
-      "reasons": { "mask": "unsupported mask", "crop": "manual crop", "frame": "decorative frame", "filters": "image filters", "backgroundRemoval": "background removal", "sticker": "sticker outline", "freehand": "freehand stroke", "patternFill": "pattern fill", "imageFill": "image fill", "markerAsset": "icon list marker", "group": "nested fallback layer" }
+      "reasons": {
+        "mask": "unsupported mask",
+        "crop": "manual crop",
+        "frame": "decorative frame",
+        "filters": "image filters",
+        "backgroundRemoval": "background removal",
+        "sticker": "sticker outline",
+        "freehand": "freehand stroke",
+        "patternFill": "pattern fill",
+        "imageFill": "image fill",
+        "markerAsset": "icon list marker",
+        "group": "nested fallback layer"
+      }
     }
   },
   "recovery": {
@@ -793,7 +806,43 @@
     "saveAs": "Save as starter",
     "saved": "Saved “{{name}}” to your starters.",
     "saveFailed": "Could not save this project as a starter.",
-    "empty": "No starters could be loaded. Check your connection, or save an open project as a starter from the project manager."
+    "empty": "No starters could be loaded. Check your connection, or save an open project as a starter from the project manager.",
+    "names": {
+      "ig-announcement": "Announcement — Instagram square",
+      "story-cover": "Story / reel cover",
+      "x-quote": "Quote card — X post",
+      "linkedin-tips": "Tips list — LinkedIn post",
+      "youtube-thumbnail": "YouTube thumbnail",
+      "multilingual-card": "Multilingual card (EN/FR/TR)",
+      "sticker-sheet": "Sticker sheet (transparent export)",
+      "campaign-kit": "Campaign kit (3 formats)",
+      "editorial-carousel": "Editorial carousel opener — IG portrait",
+      "pinterest-recipe": "Recipe pin — Pinterest",
+      "event-poster": "Event poster — story",
+      "product-sale": "Sale promo — Instagram square",
+      "blog-header": "Blog link header — Facebook",
+      "podcast-episode": "Podcast episode card — Instagram square",
+      "webinar-invite": "Webinar invite — LinkedIn post",
+      "travel-story": "Travel story",
+      "fitness-schedule": "Fitness schedule — Instagram square",
+      "music-release": "Single release — Instagram square",
+      "real-estate-listing": "Open house listing — IG portrait",
+      "hiring-post": "Hiring post — X",
+      "embassy-statement": "Official statement — Instagram square",
+      "national-day-invitation": "Reception invitation — IG portrait",
+      "bilateral-visit": "Official visit — X post",
+      "press-release": "Press release — LinkedIn post"
+    },
+    "categories": {
+      "all": "All",
+      "marketing": "Marketing",
+      "editorial": "Editorial",
+      "event": "Events",
+      "media": "Media",
+      "lifestyle": "Lifestyle",
+      "playful": "Playful",
+      "diplomacy": "Diplomacy"
+    }
   },
   "repairAssets": {
     "title": "Repair assets",
@@ -809,7 +858,10 @@
     "open": "Repair assets…",
     "wrongKind": "Choose a {{expected}} replacement for this asset.",
     "relinkFailed": "The replacement could not be read or stored.",
-    "kind": { "image": "raster image", "svg": "SVG" }
+    "kind": {
+      "image": "raster image",
+      "svg": "SVG"
+    }
   },
   "optimizeAssets": {
     "title": "Optimize assets",
@@ -826,5 +878,15 @@
     "failed": "Optimization failed.",
     "open": "Optimize assets…",
     "importNotice": "“{{name}}” is large ({{width}}×{{height}}px) and may slow editing and bloat exports."
+  },
+  "presets": {
+    "ig-square": "Instagram square",
+    "ig-portrait": "Instagram portrait",
+    "story": "Story / Reel cover",
+    "x-post": "X / Twitter post",
+    "linkedin-post": "LinkedIn post",
+    "facebook-link": "Facebook link",
+    "youtube-thumbnail": "YouTube thumbnail",
+    "pinterest-pin": "Pinterest pin"
   }
 }

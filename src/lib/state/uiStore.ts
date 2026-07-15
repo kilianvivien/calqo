@@ -164,6 +164,8 @@ interface UiState {
   optimizeAssetsOpen: boolean;
   /** Non-blocking toast raised when an oversized raster asset is imported. */
   assetHealthNotice: AssetHealthNotice | null;
+  /** Generic transient confirmation toast (e.g. "saved as model"), or null. */
+  toast: string | null;
   /** Soft limits for asset-health warnings; app preference, not project data. */
   assetHealthThresholds: AssetHealthThresholds;
   /** Brand-profile font defaults the text/list tools read, or null. */
@@ -188,6 +190,7 @@ interface UiState {
   setRepairAssetsOpen: (open: boolean) => void;
   setOptimizeAssetsOpen: (open: boolean) => void;
   setAssetHealthNotice: (notice: AssetHealthNotice | null) => void;
+  setToast: (message: string | null) => void;
   setAssetHealthThresholds: (patch: Partial<AssetHealthThresholds>) => void;
   setBrandFontDefaults: (defaults: BrandFontDefaults | null) => void;
 }
@@ -218,6 +221,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   repairAssetsOpen: false,
   optimizeAssetsOpen: false,
   assetHealthNotice: null,
+  toast: null,
   assetHealthThresholds: { ...DEFAULT_ASSET_HEALTH_THRESHOLDS },
   brandFontDefaults: null,
   setTheme: (theme) => {
@@ -252,7 +256,10 @@ export const useUiStore = create<UiState>((set, get) => ({
   setRepairAssetsOpen: (repairAssetsOpen) => set({ repairAssetsOpen }),
   setOptimizeAssetsOpen: (optimizeAssetsOpen) => set({ optimizeAssetsOpen }),
   setAssetHealthNotice: (assetHealthNotice) => set({ assetHealthNotice }),
+  setToast: (toast) => set({ toast }),
   setAssetHealthThresholds: (patch) =>
-    set({ assetHealthThresholds: { ...get().assetHealthThresholds, ...patch } }),
+    set({
+      assetHealthThresholds: { ...get().assetHealthThresholds, ...patch },
+    }),
   setBrandFontDefaults: (brandFontDefaults) => set({ brandFontDefaults }),
 }));

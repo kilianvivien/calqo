@@ -25,6 +25,7 @@ const APP_COMMAND_IDS: &[&str] = &[
     "file.open",
     "file.save",
     "file.saveAs",
+    "file.saveAsStarter",
     "file.export",
     "file.share",
     "file.close",
@@ -153,6 +154,12 @@ fn build_menu<R: Runtime>(app: &AppHandle<R>, lang: &str) -> tauri::Result<Menu<
             "file.saveAs",
             tr(lang, "Save As…", "Enregistrer sous…"),
             Some("CmdOrCtrl+Shift+S"),
+        )?)
+        .item(&item(
+            app,
+            "file.saveAsStarter",
+            tr(lang, "Save as Model", "Enregistrer comme modèle"),
+            None,
         )?)
         .separator()
         .item(&item(

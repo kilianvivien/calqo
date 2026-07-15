@@ -1,0 +1,231 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-press-release",
+    "name": "Press release (LinkedIn)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#F7F3EA",
+      "#6E1423",
+      "#1C2B3A",
+      "#8A8578"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-press",
+        "name": "LinkedIn post",
+        "preset": "linkedin-post",
+        "width": 1200,
+        "height": 627,
+        "background": {
+          "type": "solid",
+          "color": "#F7F3EA"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-1601",
+            "name": "Header band",
+            "x": 0,
+            "y": 0,
+            "w": 1200,
+            "h": 110,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#6E1423"
+            }
+          },
+          {
+            "id": "layer-starter-1602",
+            "name": "Header",
+            "x": 70,
+            "y": 38,
+            "w": 900,
+            "h": 36,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "PRESS RELEASE · COMMUNIQUÉ DE PRESSE"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 27,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#F2D8AE",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 4
+            }
+          },
+          {
+            "id": "layer-starter-1603",
+            "name": "Date",
+            "x": 830,
+            "y": 38,
+            "w": 300,
+            "h": 36,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "15 JULY 2026"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 27,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#E5B8B0",
+              "align": "right",
+              "lineHeight": 1.1,
+              "letterSpacing": 3
+            }
+          },
+          {
+            "id": "layer-starter-1604",
+            "name": "Headline",
+            "x": 70,
+            "y": 170,
+            "w": 1060,
+            "h": 180,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Examplia and Türkiye sign new\nagreement on academic mobility"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 66,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#1C2B3A",
+              "align": "left",
+              "lineHeight": 1.3,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1605",
+            "name": "Quote bar",
+            "x": 70,
+            "y": 390,
+            "w": 6,
+            "h": 110,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#6E1423"
+            }
+          },
+          {
+            "id": "layer-starter-1606",
+            "name": "Quote",
+            "x": 100,
+            "y": 392,
+            "w": 950,
+            "h": 110,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "“This agreement opens the door to a new generation\nof exchanges between our universities.”"
+            },
+            "style": {
+              "fontFamily": "Lora",
+              "fontSize": 33,
+              "fontWeight": 400,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#4A4438",
+              "align": "left",
+              "lineHeight": 1.5,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1607",
+            "name": "Footer rule",
+            "x": 70,
+            "y": 540,
+            "w": 1060,
+            "h": 2,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#D8CFBB"
+            }
+          },
+          {
+            "id": "layer-starter-1608",
+            "name": "Contact",
+            "x": 70,
+            "y": 562,
+            "w": 1060,
+            "h": 36,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Press contact — press@mfa.examplia.example · +00 000 00 00"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 26,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#8A8578",
+              "align": "left",
+              "lineHeight": 1.2,
+              "letterSpacing": 0
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Ministry press-release card with header band, headline, and pull quote."
+    }
+  },
+  "assets": []
+}

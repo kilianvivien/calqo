@@ -1,0 +1,231 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-hiring-post",
+    "name": "Hiring post (X)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#101C3A",
+      "#FF6B5E",
+      "#FFFFFF",
+      "#8FA1C7"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-hiring",
+        "name": "X post",
+        "preset": "x-post",
+        "width": 1600,
+        "height": 900,
+        "background": {
+          "type": "solid",
+          "color": "#101C3A"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-1201",
+            "name": "Dot field",
+            "x": 1120,
+            "y": 0,
+            "w": 480,
+            "h": 900,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "pattern",
+              "pattern": "dots",
+              "color": "#22315C",
+              "background": "#101C3A",
+              "scale": 1.8,
+              "angle": 0
+            }
+          },
+          {
+            "id": "layer-starter-1202",
+            "name": "Accent ring",
+            "x": 1220,
+            "y": 250,
+            "w": 300,
+            "h": 300,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "transparent"
+            },
+            "stroke": {
+              "color": "#FF6B5E",
+              "width": 12
+            }
+          },
+          {
+            "id": "layer-starter-1203",
+            "name": "Accent dot",
+            "x": 1470,
+            "y": 520,
+            "w": 70,
+            "h": 70,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "#FF6B5E"
+            }
+          },
+          {
+            "id": "layer-starter-1204",
+            "name": "Kicker",
+            "x": 110,
+            "y": 130,
+            "w": 700,
+            "h": 56,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "WE'RE HIRING"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 42,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FF6B5E",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 8
+            }
+          },
+          {
+            "id": "layer-starter-1205",
+            "name": "Role",
+            "x": 110,
+            "y": 230,
+            "w": 950,
+            "h": 300,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Senior Product\nDesigner"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 116,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.15,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1206",
+            "name": "Details",
+            "x": 110,
+            "y": 590,
+            "w": 950,
+            "h": 50,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Remote-first · Full time · EU or UK timezones"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 38,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#8FA1C7",
+              "align": "left",
+              "lineHeight": 1.3,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-1207",
+            "name": "CTA pill",
+            "x": 110,
+            "y": 700,
+            "w": 480,
+            "h": 90,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#FF6B5E"
+            },
+            "cornerRadius": 45
+          },
+          {
+            "id": "layer-starter-1208",
+            "name": "CTA",
+            "x": 110,
+            "y": 728,
+            "w": 480,
+            "h": 40,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Apply — careers.acme.io"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#101C3A",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Recruiting card with bold role title, dot texture, and apply CTA."
+    }
+  },
+  "assets": []
+}

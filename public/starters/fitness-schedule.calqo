@@ -1,0 +1,215 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-fitness-schedule",
+    "name": "Fitness schedule (IG square)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#101014",
+      "#C7F464",
+      "#FFFFFF",
+      "#3A3A44"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-fitness",
+        "name": "Instagram square",
+        "preset": "ig-square",
+        "width": 1080,
+        "height": 1080,
+        "background": {
+          "type": "solid",
+          "color": "#101014"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-901",
+            "name": "Accent stripe",
+            "x": -80,
+            "y": 180,
+            "w": 1300,
+            "h": 120,
+            "rotation": -6,
+            "opacity": 0.12,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C7F464"
+            }
+          },
+          {
+            "id": "layer-starter-902",
+            "name": "Kicker",
+            "x": 90,
+            "y": 100,
+            "w": 900,
+            "h": 48,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "CLASS SCHEDULE"
+            },
+            "style": {
+              "fontFamily": "Oswald",
+              "fontSize": 36,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#C7F464",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 8
+            }
+          },
+          {
+            "id": "layer-starter-903",
+            "name": "Title",
+            "x": 90,
+            "y": 170,
+            "w": 900,
+            "h": 300,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "THIS WEEK\nAT THE GYM"
+            },
+            "style": {
+              "fontFamily": "Anton",
+              "fontSize": 130,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 2
+            }
+          },
+          {
+            "id": "layer-starter-904",
+            "name": "Schedule",
+            "x": 90,
+            "y": 530,
+            "w": 900,
+            "h": 380,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "list",
+            "items": [
+              {
+                "id": "item-fit-1",
+                "text": {
+                  "en": "MON — HIIT Express · 6:30 PM"
+                }
+              },
+              {
+                "id": "item-fit-2",
+                "text": {
+                  "en": "WED — Strength Basics · 7 PM"
+                }
+              },
+              {
+                "id": "item-fit-3",
+                "text": {
+                  "en": "FRI — Mobility & Core · 6 PM"
+                }
+              },
+              {
+                "id": "item-fit-4",
+                "text": {
+                  "en": "SAT — Open Gym · 10 AM"
+                }
+              }
+            ],
+            "marker": {
+              "kind": "character",
+              "character": "→",
+              "color": "#C7F464"
+            },
+            "markerGap": 22,
+            "style": {
+              "fontFamily": "Oswald",
+              "fontSize": 46,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 2,
+              "letterSpacing": 1
+            }
+          },
+          {
+            "id": "layer-starter-905",
+            "name": "Footer rule",
+            "x": 90,
+            "y": 950,
+            "w": 900,
+            "h": 4,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#3A3A44"
+            }
+          },
+          {
+            "id": "layer-starter-906",
+            "name": "Footer",
+            "x": 90,
+            "y": 985,
+            "w": 900,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Book your spot — ourgym.fit"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 32,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#C7F464",
+              "align": "left",
+              "lineHeight": 1.2,
+              "letterSpacing": 0
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Bold gym class schedule with lime accents and arrow list."
+    }
+  },
+  "assets": []
+}

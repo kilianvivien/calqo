@@ -1,0 +1,322 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-webinar-invite",
+    "name": "Webinar invite (LinkedIn)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#F4F7FB",
+      "#2563EB",
+      "#0F172A",
+      "#FFFFFF"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-webinar",
+        "name": "LinkedIn post",
+        "preset": "linkedin-post",
+        "width": 1200,
+        "height": 627,
+        "background": {
+          "type": "solid",
+          "color": "#F4F7FB"
+        },
+        "layers": [
+          {
+            "id": "layer-starter-701",
+            "name": "Accent edge",
+            "x": 0,
+            "y": 0,
+            "w": 16,
+            "h": 627,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "linear",
+              "angle": 90,
+              "stops": [
+                {
+                  "offset": 0,
+                  "color": "#2563EB"
+                },
+                {
+                  "offset": 1,
+                  "color": "#7C3AED"
+                }
+              ]
+            }
+          },
+          {
+            "id": "layer-starter-702",
+            "name": "Kicker",
+            "x": 80,
+            "y": 76,
+            "w": 700,
+            "h": 40,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "FREE LIVE WEBINAR"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 28,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#2563EB",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 4
+            }
+          },
+          {
+            "id": "layer-starter-703",
+            "name": "Title",
+            "x": 80,
+            "y": 140,
+            "w": 800,
+            "h": 180,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Design systems\nthat actually scale"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 68,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#0F172A",
+              "align": "left",
+              "lineHeight": 1.18,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-704",
+            "name": "Date chip",
+            "x": 80,
+            "y": 372,
+            "w": 300,
+            "h": 60,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#FFFFFF"
+            },
+            "cornerRadius": 30,
+            "stroke": {
+              "color": "#D7E0EE",
+              "width": 2
+            }
+          },
+          {
+            "id": "layer-starter-705",
+            "name": "Date",
+            "x": 80,
+            "y": 389,
+            "w": 300,
+            "h": 30,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "THU, SEPT 10"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 25,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#0F172A",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 2
+            }
+          },
+          {
+            "id": "layer-starter-706",
+            "name": "Time chip",
+            "x": 400,
+            "y": 372,
+            "w": 300,
+            "h": 60,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#FFFFFF"
+            },
+            "cornerRadius": 30,
+            "stroke": {
+              "color": "#D7E0EE",
+              "width": 2
+            }
+          },
+          {
+            "id": "layer-starter-707",
+            "name": "Time",
+            "x": 400,
+            "y": 389,
+            "w": 300,
+            "h": 30,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "5 PM CET · 1 H"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 25,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#0F172A",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 2
+            }
+          },
+          {
+            "id": "layer-starter-708",
+            "name": "Speakers",
+            "x": 80,
+            "y": 470,
+            "w": 760,
+            "h": 40,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "With Nadia Osei (Craft & Co) and Tom Verlaine (Studio North)"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 27,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#51607A",
+              "align": "left",
+              "lineHeight": 1.3,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-709",
+            "name": "CTA pill",
+            "x": 80,
+            "y": 528,
+            "w": 260,
+            "h": 62,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#2563EB"
+            },
+            "cornerRadius": 31
+          },
+          {
+            "id": "layer-starter-710",
+            "name": "CTA",
+            "x": 80,
+            "y": 546,
+            "w": 260,
+            "h": 32,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Save my seat"
+            },
+            "style": {
+              "fontFamily": "DM Sans",
+              "fontSize": 26,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "layer-starter-711",
+            "name": "Deco ring",
+            "x": 960,
+            "y": 340,
+            "w": 320,
+            "h": 320,
+            "rotation": 0,
+            "opacity": 0.35,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "transparent"
+            },
+            "stroke": {
+              "color": "#2563EB",
+              "width": 3,
+              "style": "dashed",
+              "dashLen": 14,
+              "gap": 12
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Professional webinar invitation with date/time chips and speaker line."
+    }
+  },
+  "assets": []
+}

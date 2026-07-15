@@ -1,0 +1,280 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj-starter-event-poster",
+    "name": "Event poster (story)",
+    "createdAt": "2026-07-15T00:00:00.000Z",
+    "updatedAt": "2026-07-15T00:00:00.000Z",
+    "contentLocales": [
+      "en"
+    ],
+    "activeContentLocale": "en",
+    "palette": [
+      "#0B0B12",
+      "#B388FF",
+      "#FFFFFF",
+      "#1F1033"
+    ],
+    "artboards": [
+      {
+        "id": "ab-starter-event",
+        "name": "Story",
+        "preset": "story",
+        "width": 1080,
+        "height": 1920,
+        "background": {
+          "type": "linear",
+          "angle": 90,
+          "stops": [
+            {
+              "offset": 0,
+              "color": "#0B0B12"
+            },
+            {
+              "offset": 1,
+              "color": "#1F1033"
+            }
+          ]
+        },
+        "layers": [
+          {
+            "id": "layer-starter-301",
+            "name": "Neon ring",
+            "x": 620,
+            "y": 140,
+            "w": 420,
+            "h": 420,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "ellipse",
+            "fill": {
+              "type": "solid",
+              "color": "transparent"
+            },
+            "stroke": {
+              "color": "#B388FF",
+              "width": 10,
+              "look": "neon",
+              "altColor": "#B388FF",
+              "intensity": 0.8
+            }
+          },
+          {
+            "id": "layer-starter-302",
+            "name": "Kicker",
+            "x": 96,
+            "y": 320,
+            "w": 700,
+            "h": 52,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "LIVE & UNPLUGGED"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 40,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#B388FF",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 8
+            }
+          },
+          {
+            "id": "layer-starter-303",
+            "name": "Headline",
+            "x": 96,
+            "y": 430,
+            "w": 888,
+            "h": 560,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "MIDNIGHT\nBLOOM"
+            },
+            "style": {
+              "fontFamily": "Anton",
+              "fontSize": 250,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.05,
+              "letterSpacing": 2
+            }
+          },
+          {
+            "id": "layer-starter-304",
+            "name": "Dots strip",
+            "x": 96,
+            "y": 1080,
+            "w": 888,
+            "h": 90,
+            "rotation": 0,
+            "opacity": 0.5,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "pattern",
+              "pattern": "dots",
+              "color": "#B388FF",
+              "background": "transparent",
+              "scale": 1.4,
+              "angle": 0
+            }
+          },
+          {
+            "id": "layer-starter-305",
+            "name": "Date",
+            "x": 96,
+            "y": 1260,
+            "w": 888,
+            "h": 60,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "FRI AUG 21 — DOORS 9 PM"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 46,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#FFFFFF",
+              "align": "left",
+              "lineHeight": 1.2,
+              "letterSpacing": 4
+            }
+          },
+          {
+            "id": "layer-starter-306",
+            "name": "Venue",
+            "x": 96,
+            "y": 1340,
+            "w": 888,
+            "h": 60,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "The Velvet Room · 44 Harbor St"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 40,
+              "fontWeight": 400,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#9C8FB8",
+              "align": "left",
+              "lineHeight": 1.2,
+              "letterSpacing": 2
+            }
+          },
+          {
+            "id": "layer-starter-307",
+            "name": "CTA pill",
+            "x": 96,
+            "y": 1560,
+            "w": 620,
+            "h": 110,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#B388FF"
+            },
+            "cornerRadius": 55
+          },
+          {
+            "id": "layer-starter-308",
+            "name": "CTA",
+            "x": 96,
+            "y": 1594,
+            "w": 620,
+            "h": 48,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "RSVP AT THEVELVET.CO"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 34,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#0B0B12",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 3
+            }
+          },
+          {
+            "id": "layer-starter-309",
+            "name": "Footer",
+            "x": 96,
+            "y": 1740,
+            "w": 888,
+            "h": 44,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "FREE ENTRY BEFORE 10"
+            },
+            "style": {
+              "fontFamily": "Space Grotesk",
+              "fontSize": 28,
+              "fontWeight": 500,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#6F6390",
+              "align": "left",
+              "lineHeight": 1.1,
+              "letterSpacing": 6
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": [],
+    "metadata": {
+      "description": "Neon gig poster for stories with condensed type and glowing accents."
+    }
+  },
+  "assets": []
+}

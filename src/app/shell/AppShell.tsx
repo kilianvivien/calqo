@@ -4,13 +4,20 @@ import { useAiSettingsStore } from '@/editor/ai/aiSettings';
 import { useSavedSvgStore } from '@/editor/assets/savedSvgStore';
 import { useMissingAssetsWatcher } from '@/editor/assets/useMissingAssetsWatcher';
 import { loadAssetHealthThresholds } from '@/editor/assets/assetHealthSettings';
-import { registerAppCommandHandlers, invokeAppCommandSync } from '@/app/commands/appCommands';
+import {
+  registerAppCommandHandlers,
+  invokeAppCommandSync,
+} from '@/app/commands/appCommands';
 import { isTauri } from '@/lib/platform/runtime';
-import { installNativeMenus, scheduleNativeMenuRefresh } from '@/app/commands/nativeMenu';
+import {
+  installNativeMenus,
+  scheduleNativeMenuRefresh,
+} from '@/app/commands/nativeMenu';
 import { AppSettingsModal, type SettingsTab } from './AppSettingsModal';
 import { AssetHealthToast } from './AssetHealthToast';
 import { ExportDialog } from './ExportDialog';
-import { NewProjectModal } from './NewProjectModal';
+import { NewProjectModal, type NewProjectTab } from './NewProjectModal';
+import { AppToast } from './AppToast';
 import { OptimizeAssetsModal } from './OptimizeAssetsModal';
 import { RepairAssetsModal } from './RepairAssetsModal';
 import { ProjectManagerModal } from './ProjectManagerModal';
@@ -44,6 +51,7 @@ export function AppShell() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [newProjectTab, setNewProjectTab] = useState<NewProjectTab>('blank');
   const [projectsOpen, setProjectsOpen] = useState(false);
   const loadAiSettings = useAiSettingsStore((s) => s.load);
   const loadSavedSvgs = useSavedSvgStore((s) => s.load);
@@ -59,7 +67,10 @@ export function AppShell() {
 
   useEffect(() => {
     const unregister = registerAppCommandHandlers({
-      openNewProject: () => setNewProjectOpen(true),
+      openNewProject: () => {
+        setNewProjectTab('blank');
+        setNewProjectOpen(true);
+      },
       openProjects: () => setProjectsOpen(true),
       openExport: () => setExportOpen(true),
       openSettings: () => {
@@ -110,8 +121,16 @@ export function AppShell() {
 
   useEffect(() => {
     const openShortcuts = () => setShortcutsOpen(true);
+    const openStarters = () => {
+      setNewProjectTab('starters');
+      setNewProjectOpen(true);
+    };
     window.addEventListener('calqo:open-shortcuts', openShortcuts);
-    return () => window.removeEventListener('calqo:open-shortcuts', openShortcuts);
+    window.addEventListener('calqo:open-starters', openStarters);
+    return () => {
+      window.removeEventListener('calqo:open-shortcuts', openShortcuts);
+      window.removeEventListener('calqo:open-starters', openStarters);
+    };
   }, []);
 
   return (
@@ -165,18 +184,23 @@ export function AppShell() {
       <TranslateDialog />
       <NewProjectModal
         open={newProjectOpen}
+        initialTab={newProjectTab}
         onClose={() => {
           setNewProjectOpen(false);
           scheduleNativeMenuRefresh();
         }}
       />
+      <AppToast />
       <RepairAssetsModal />
       <OptimizeAssetsModal />
       <AssetHealthToast />
       <ProjectManagerModal
         open={projectsOpen}
         onClose={() => setProjectsOpen(false)}
-        onNew={() => setNewProjectOpen(true)}
+        onNew={() => {
+          setNewProjectTab('blank');
+          setNewProjectOpen(true);
+        }}
         onImport={() => invokeAppCommandSync('file.open')}
       />
     </div>
