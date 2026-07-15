@@ -288,17 +288,20 @@ predictable.
 ### Deliverables
 
 - [x] Add a small local starter gallery.
-  - 8 license-clean `.calqo` samples under `public/starters/` (self-made
-    text/shape content, no binary assets) covering IG square, story cover, X
-    quote, LinkedIn list, YouTube thumbnail, an EN/FR/TR multilingual card, a
-    sticker sheet, and a 3-artboard campaign kit; credited in
+  - 28 license-clean `.calqo` samples under `public/starters/` (self-made
+    text/shape content, no binary assets), balanced across marketing,
+    editorial, event, media, lifestyle, diplomacy, and playful categories;
+    credited in
     `public/starters/CREDITS.md` and schema-validated in CI
     (`src/tests/unit/starters.test.ts`).
   - Every catalogue entry includes a local thumbnail plus dimension/preset
     metadata, all validated alongside the envelopes.
-  - Bundled and user starters both live in the *Starters* tab of
+  - Bundled and user starters both live in the _Starters_ tab of
     `NewProjectModal.tsx`; instantiation clones fresh asset ids via
     `starterService.ts`/`remapProjectAssetIds`.
+  - The mobile new-project sheet exposes the bundled starter catalogue with
+    the same localized names and category filters; the obsolete generated
+    alpha sample and its dedicated entry point were removed.
 - [x] Add "save as starter" or "duplicate from starter" if it stays simple.
   - "Save as starter" in the project manager (`ProjectManagerModal.tsx`)
     snapshots the current `.calqo` envelope plus a rendered thumbnail into a
@@ -407,7 +410,7 @@ is complete, disabled by default, and well tested.
   - Copy-paste host setup snippets (Claude Code, Codex CLI, Antigravity,
     OpenCode, generic) in the Agent drawing settings tab.
 - [x] Tighten the first-use and visual iteration loop from independent agent
-  field reports (Claude Code / Opus 4.8 and OpenCode / GLM 5.2).
+      field reports (Claude Code / Opus 4.8 and OpenCode / GLM 5.2).
   - Publish typed operation, layer, fill, stroke, and patch schemas through
     `tools/list`; agents no longer receive unconstrained `operations.items`.
   - Add `calqo_apply_and_preview` as the preferred one-call validate → apply →

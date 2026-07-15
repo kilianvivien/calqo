@@ -1,19 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileText, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { dialog } from '@/lib/adapters';
 import type { ProjectSummary } from '@/lib/adapters';
 import { useProjectSummaries } from '@/lib/hooks/useProjectSummaries';
-import { createSampleProject } from '@/lib/schema/sampleProject';
 import {
-  adoptProject,
   deleteProject,
   renameStoredProject,
 } from '@/editor/commands/projectCommands';
 import { FormatGrid } from '@/app/shell/NewProjectModal';
 import type { ArtboardPresetId } from '@/lib/schema/presets';
 import { BottomSheet } from '@/components/mobile';
-import { GlassButton } from '@/components/glass';
+import { GlassButton, GlassSegmentedControl } from '@/components/glass';
+import {
+  createProjectFromStarter,
+  fetchBundledStarterIndex,
+  loadBundledStarterEnvelope,
+  type StarterIndexEntry,
+} from '@/editor/starters/starterService';
 
 interface MobileProjectBrowserProps {
   onOpen: (id: string) => void;
@@ -111,11 +115,54 @@ function MobileProjectRow({
 }
 
 /** Phone landing surface: a list of locally stored projects with delete, plus
- * entry points for creating from a preset or opening the bundled sample. */
-export function MobileProjectBrowser({ onOpen, onCreate }: MobileProjectBrowserProps) {
+ * an entry point for creating from a preset. */
+export function MobileProjectBrowser({
+  onOpen,
+  onCreate,
+}: MobileProjectBrowserProps) {
   const { t, i18n } = useTranslation('editor');
   const { summaries, refresh } = useProjectSummaries();
   const [newOpen, setNewOpen] = useState(false);
+  const [newTab, setNewTab] = useState<'blank' | 'starters'>('starters');
+  const [starters, setStarters] = useState<StarterIndexEntry[] | null>(null);
+  const [category, setCategory] = useState('all');
+  const [openingStarterId, setOpeningStarterId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!newOpen || newTab !== 'starters' || starters !== null) return;
+    let active = true;
+    void fetchBundledStarterIndex().then((entries) => {
+      if (active) setStarters(entries);
+    });
+    return () => {
+      active = false;
+    };
+  }, [newOpen, newTab, starters]);
+
+  const starterCategories = useMemo(
+    () =>
+      Array.from(
+        new Set(starters?.map((starter) => starter.category).filter(Boolean)),
+      ) as string[],
+    [starters],
+  );
+  const visibleStarters =
+    category === 'all'
+      ? starters
+      : starters?.filter((starter) => starter.category === category);
+
+  const openStarter = async (entry: StarterIndexEntry) => {
+    setOpeningStarterId(entry.id);
+    try {
+      const envelope = await loadBundledStarterEnvelope(entry);
+      if (!envelope) return;
+      const id = await createProjectFromStarter(envelope);
+      setNewOpen(false);
+      onOpen(id);
+    } finally {
+      setOpeningStarterId(null);
+    }
+  };
 
   const empty = summaries !== null && summaries.length === 0;
 
@@ -145,14 +192,9 @@ export function MobileProjectBrowser({ onOpen, onCreate }: MobileProjectBrowserP
                 {t('mobile.browser.emptyHint')}
               </p>
             </div>
-            <GlassButton
-              variant="primary"
-              onClick={() =>
-                void adoptProject(createSampleProject()).then((id) => onOpen(id))
-              }
-            >
-              <Sparkles size={14} />
-              {t('sample.open')}
+            <GlassButton variant="primary" onClick={() => setNewOpen(true)}>
+              <Plus size={14} />
+              {t('workspace.createProject')}
             </GlassButton>
           </div>
         ) : (
@@ -187,15 +229,88 @@ export function MobileProjectBrowser({ onOpen, onCreate }: MobileProjectBrowserP
         open={newOpen}
         onClose={() => setNewOpen(false)}
         title={t('newProject.title')}
-        subtitle={t('newProject.subtitle')}
+        subtitle={
+          newTab === 'blank'
+            ? t('newProject.subtitle')
+            : t('newProject.tabStarters')
+        }
         bodyClassName="pb-4"
       >
-        <FormatGrid
-          onSelect={(preset) => {
-            setNewOpen(false);
-            onCreate(preset);
-          }}
-        />
+        <div className="mb-4">
+          <GlassSegmentedControl
+            value={newTab}
+            onChange={setNewTab}
+            ariaLabel={t('newProject.tabs')}
+            options={[
+              { value: 'blank', label: t('newProject.tabBlank') },
+              { value: 'starters', label: t('newProject.tabStarters') },
+            ]}
+          />
+        </div>
+
+        {newTab === 'blank' ? (
+          <FormatGrid
+            onSelect={(preset) => {
+              setNewOpen(false);
+              onCreate(preset);
+            }}
+          />
+        ) : (
+          <div className="space-y-3">
+            <div className="calqo-scroll flex gap-2 overflow-x-auto pb-1">
+              {['all', ...starterCategories].map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setCategory(id)}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-[11.5px] font-medium transition-colors ${
+                    category === id
+                      ? 'border-[var(--calqo-accent)] bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]'
+                      : 'border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] text-[var(--calqo-text-2)]'
+                  }`}
+                >
+                  {t(`starters.categories.${id}`)}
+                </button>
+              ))}
+            </div>
+
+            {starters === null ? (
+              <p className="py-8 text-center text-[12px] text-[var(--calqo-text-3)]">
+                {t('starters.loading')}
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5">
+                {visibleStarters?.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    disabled={openingStarterId !== null}
+                    onClick={() => void openStarter(entry)}
+                    className="glass min-w-0 overflow-hidden rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] p-2 text-left active:scale-[0.98] disabled:opacity-60"
+                  >
+                    <span className="grid h-28 place-items-center overflow-hidden rounded-[10px] bg-[var(--calqo-glass-thin)]">
+                      <img
+                        src={entry.thumbnail}
+                        alt=""
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </span>
+                    <span className="mt-2 block truncate text-[12px] font-semibold text-[var(--calqo-text)]">
+                      {openingStarterId === entry.id
+                        ? t('starters.loading')
+                        : t(`starters.names.${entry.id}`, {
+                            defaultValue: entry.name,
+                          })}
+                    </span>
+                    <span className="mono mt-0.5 block text-[10px] text-[var(--calqo-text-3)]">
+                      {entry.width}×{entry.height}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </BottomSheet>
     </div>
   );

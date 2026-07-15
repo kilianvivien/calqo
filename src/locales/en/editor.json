@@ -50,9 +50,6 @@
     "noBrandProfile": "No brand profile",
     "browseStarters": "Browse the models"
   },
-  "sample": {
-    "open": "Open sample project"
-  },
   "title": {
     "rename": "Rename project",
     "saveFile": "Save .calqo file",
@@ -831,7 +828,11 @@
       "embassy-statement": "Official statement — Instagram square",
       "national-day-invitation": "Reception invitation — IG portrait",
       "bilateral-visit": "Official visit — X post",
-      "press-release": "Press release — LinkedIn post"
+      "press-release": "Press release — LinkedIn post",
+      "workshop-agenda": "Creative workshop agenda — LinkedIn",
+      "save-the-date": "Save the date — Instagram square",
+      "retro-postcard": "Retro postcard — IG portrait (EN/FR)",
+      "weekly-mood": "Weekly mood check — Instagram square"
     },
     "categories": {
       "all": "All",

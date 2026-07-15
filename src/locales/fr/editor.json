@@ -50,9 +50,6 @@
     "noBrandProfile": "Aucun profil de marque",
     "browseStarters": "Parcourir les modèles"
   },
-  "sample": {
-    "open": "Ouvrir l'exemple"
-  },
   "title": {
     "rename": "Renommer le projet",
     "saveFile": "Enregistrer le fichier .calqo",
@@ -831,7 +828,11 @@
       "embassy-statement": "Déclaration officielle — carré Instagram",
       "national-day-invitation": "Invitation à une réception — portrait IG",
       "bilateral-visit": "Visite officielle — post X",
-      "press-release": "Communiqué de presse — post LinkedIn"
+      "press-release": "Communiqué de presse — post LinkedIn",
+      "workshop-agenda": "Programme d'atelier créatif — LinkedIn",
+      "save-the-date": "Réservez la date — carré Instagram",
+      "retro-postcard": "Carte postale rétro — portrait IG (EN/FR)",
+      "weekly-mood": "Humeur de la semaine — carré Instagram"
     },
     "categories": {
       "all": "Tous",

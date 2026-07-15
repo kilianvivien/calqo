@@ -10,7 +10,8 @@ import {
   DEFAULT_AI_SETTINGS,
   toPersistedAiSettings,
 } from '@/editor/ai/aiSettings';
-import { createSampleProject } from '@/lib/schema/sampleProject';
+import { createDefaultProject } from '@/lib/schema/defaults';
+import type { CalqoLayer } from '@/lib/schema';
 import { useProjectStore } from '@/lib/state/projectStore';
 import { useWorkspaceStore } from '@/lib/state/workspaceStore';
 import { useSelectionStore } from '@/lib/state/selectionStore';
@@ -22,7 +23,9 @@ describe('phase O — Tauri foundation contracts', () => {
     for (const id of Object.keys(projectState.projects)) {
       projectState.removeProject(id);
     }
-    useWorkspaceStore.getState().hydrate({ openTabIds: [], activeProjectId: null });
+    useWorkspaceStore
+      .getState()
+      .hydrate({ openTabIds: [], activeProjectId: null });
     useSelectionStore.getState().clearSelection();
   });
 
@@ -34,7 +37,8 @@ describe('phase O — Tauri foundation contracts', () => {
   });
 
   it('detects Tauri v2 through the official global flag', async () => {
-    const previous = (globalThis as typeof globalThis & { isTauri?: boolean }).isTauri;
+    const previous = (globalThis as typeof globalThis & { isTauri?: boolean })
+      .isTauri;
     vi.resetModules();
     try {
       (globalThis as typeof globalThis & { isTauri?: boolean }).isTauri = true;
@@ -46,9 +50,11 @@ describe('phase O — Tauri foundation contracts', () => {
       expect(runtime.capabilities.secureSettings).toBe(true);
     } finally {
       if (previous === undefined) {
-        delete (globalThis as typeof globalThis & { isTauri?: boolean }).isTauri;
+        delete (globalThis as typeof globalThis & { isTauri?: boolean })
+          .isTauri;
       } else {
-        (globalThis as typeof globalThis & { isTauri?: boolean }).isTauri = previous;
+        (globalThis as typeof globalThis & { isTauri?: boolean }).isTauri =
+          previous;
       }
       vi.resetModules();
     }
@@ -59,12 +65,46 @@ describe('phase O — Tauri foundation contracts', () => {
     expect(getAppCommandState('file.save').enabled).toBe(false);
     expect(getAppCommandState('object.group').enabled).toBe(false);
 
-    const project = createSampleProject('2026-06-20T00:00:00.000Z');
+    const project = createDefaultProject();
+    project.artboards[0].layers = [
+      {
+        id: 'shape-one',
+        name: 'Shape one',
+        type: 'shape',
+        shape: 'rect',
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 100,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        fill: { type: 'solid', color: '#000000' },
+      },
+      {
+        id: 'shape-two',
+        name: 'Shape two',
+        type: 'shape',
+        shape: 'ellipse',
+        x: 120,
+        y: 0,
+        w: 100,
+        h: 100,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        fill: { type: 'solid', color: '#FFFFFF' },
+      },
+    ] satisfies CalqoLayer[];
     useProjectStore.getState().upsertProject(project);
     useWorkspaceStore.getState().openTab(project.id, true);
     useSelectionStore
       .getState()
-      .setSelection(project.artboards[0].layers.slice(0, 2).map((layer) => layer.id));
+      .setSelection(
+        project.artboards[0].layers.slice(0, 2).map((layer) => layer.id),
+      );
 
     expect(getAppCommandState('file.save').enabled).toBe(true);
     expect(getAppCommandState('object.group').enabled).toBe(true);
@@ -119,7 +159,9 @@ describe('phase O — Tauri foundation contracts', () => {
       'secret-key',
     );
     expect(
-      JSON.stringify(toPersistedAiSettings({ ...settings, storeKey: false }, false)),
+      JSON.stringify(
+        toPersistedAiSettings({ ...settings, storeKey: false }, false),
+      ),
     ).not.toContain('secret-key');
   });
 

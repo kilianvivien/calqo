@@ -263,6 +263,50 @@
       "presets": ["linkedin-post"],
       "tags": ["linkedin-post", "press", "communique"],
       "category": "diplomacy"
+    },
+    {
+      "id": "workshop-agenda",
+      "name": "Creative workshop agenda — LinkedIn",
+      "file": "workshop-agenda.calqo",
+      "thumbnail": "/starters/thumbnails/workshop-agenda.svg",
+      "width": 1200,
+      "height": 627,
+      "presets": ["linkedin-post"],
+      "tags": ["linkedin-post", "workshop", "agenda"],
+      "category": "event"
+    },
+    {
+      "id": "save-the-date",
+      "name": "Save the date — Instagram square",
+      "file": "save-the-date.calqo",
+      "thumbnail": "/starters/thumbnails/save-the-date.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square"],
+      "tags": ["ig-square", "invitation", "save-the-date"],
+      "category": "event"
+    },
+    {
+      "id": "retro-postcard",
+      "name": "Retro postcard — IG portrait (EN/FR)",
+      "file": "retro-postcard.calqo",
+      "thumbnail": "/starters/thumbnails/retro-postcard.svg",
+      "width": 1080,
+      "height": 1350,
+      "presets": ["ig-portrait"],
+      "tags": ["ig-portrait", "postcard", "multilingual"],
+      "category": "playful"
+    },
+    {
+      "id": "weekly-mood",
+      "name": "Weekly mood check — Instagram square",
+      "file": "weekly-mood.calqo",
+      "thumbnail": "/starters/thumbnails/weekly-mood.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square"],
+      "tags": ["ig-square", "mood", "typography"],
+      "category": "playful"
     }
   ]
 }

@@ -76,6 +76,9 @@ describe('bundled starter gallery', () => {
       new Set(filesOnDisk),
     );
     expect(index.starters.length).toBeGreaterThanOrEqual(6);
+    expect(new Set(index.starters.map((entry) => entry.id)).size).toBe(
+      index.starters.length,
+    );
     for (const entry of index.starters) {
       expect(entry.tags.length).toBeGreaterThan(0);
       expect(entry.presets.length).toBeGreaterThan(0);
@@ -131,6 +134,25 @@ describe('bundled starter gallery', () => {
       // License-clean by construction: bundled starters embed no binary assets.
       expect(envelope.assets).toEqual([]);
       expect(result.project.assets).toEqual([]);
+      expect(result.project.artboards[0]?.width).toBe(
+        index.starters.find((entry) => entry.file === file)?.width,
+      );
+      expect(result.project.artboards[0]?.height).toBe(
+        index.starters.find((entry) => entry.file === file)?.height,
+      );
+      const layerIds = result.project.artboards.flatMap((artboard) =>
+        artboard.layers.map((layer) => layer.id),
+      );
+      expect(new Set(layerIds).size).toBe(layerIds.length);
+      for (const artboard of result.project.artboards) {
+        for (const layer of artboard.layers) {
+          if (layer.type === 'text') {
+            expect(
+              layer.text[result.project.activeContentLocale],
+            ).toBeDefined();
+          }
+        }
+      }
       // Each starter has real content to edit.
       expect(
         result.project.artboards.reduce((sum, ab) => sum + ab.layers.length, 0),
@@ -152,6 +174,14 @@ describe('bundled starter gallery', () => {
       'fr',
       'tr',
     ]);
+  });
+
+  it('keeps the previously underrepresented event and playful categories balanced', () => {
+    const count = (category: string) =>
+      index.starters.filter((entry) => entry.category === category).length;
+    expect(count('event')).toBeGreaterThanOrEqual(4);
+    expect(count('playful')).toBeGreaterThanOrEqual(4);
+    expect(count('event')).toBe(count('playful'));
   });
 });
 

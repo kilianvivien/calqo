@@ -1,36 +1,56 @@
 import { describe, expect, it } from 'vitest';
 import { buildProjectDiagnostics } from '@/editor/diagnostics/projectDiagnostics';
 import { DEFAULT_AI_SETTINGS } from '@/editor/ai/aiSettings';
-import { createSampleProject } from '@/lib/schema/sampleProject';
-import { safeImportProject } from '@/lib/schema';
+import { createDefaultProject } from '@/lib/schema/defaults';
+import type { CalqoLayer } from '@/lib/schema';
 
 const echoT = (key: string) => key;
 
-describe('phase N — sample project and diagnostics', () => {
-  it('ships a valid, clean, multi-format sample with multilingual content', () => {
-    const sample = createSampleProject('2026-06-20T00:00:00.000Z');
-    const imported = safeImportProject(sample);
-
-    expect(imported.ok).toBe(true);
-    expect(sample.contentLocales).toEqual(['en', 'fr', 'tr']);
-    // A multi-format campaign — showcases the workspace overview.
-    expect(sample.artboards.length).toBeGreaterThanOrEqual(3);
-
-    // Every copy layer carries all three locales (translation demo).
-    const headline = sample.artboards[0].layers.find((l) => l.id === 'sq_headline');
-    expect(headline?.type).toBe('text');
-    if (headline?.type === 'text') {
-      expect(Object.keys(headline.text).sort()).toEqual(['en', 'fr', 'tr']);
-    }
-
-    // The sample renders complete — no missing-asset or overflow warnings.
-    const diagnostics = buildProjectDiagnostics(sample, DEFAULT_AI_SETTINGS, echoT);
-    expect(diagnostics.warnings.unique).not.toContain('export.warnMissingAsset');
-    expect(diagnostics.warnings.unique).not.toContain('export.warnOverflow');
-  });
-
+describe('phase N — project diagnostics', () => {
   it('summarizes schema, layer mix, warnings, and provider state without secrets', () => {
-    const sample = createSampleProject('2026-06-20T00:00:00.000Z');
+    const project = createDefaultProject({ name: 'Diagnostics fixture' });
+    project.artboards[0].layers = [
+      {
+        id: 'shape-fixture',
+        name: 'Shape',
+        type: 'shape',
+        shape: 'rect',
+        x: 20,
+        y: 20,
+        w: 200,
+        h: 120,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        fill: { type: 'solid', color: '#0A2540' },
+      },
+      {
+        id: 'text-fixture',
+        name: 'Text',
+        type: 'text',
+        x: 40,
+        y: 50,
+        w: 160,
+        h: 50,
+        rotation: 0,
+        opacity: 1,
+        visible: true,
+        locked: false,
+        text: { en: 'Calqo' },
+        style: {
+          fontFamily: 'Inter',
+          fontSize: 32,
+          fontWeight: 700,
+          fontStyle: 'normal',
+          textDecoration: 'none',
+          color: '#FFFFFF',
+          align: 'left',
+          lineHeight: 1.1,
+          letterSpacing: 0,
+        },
+      },
+    ] satisfies CalqoLayer[];
     const settings = {
       ...DEFAULT_AI_SETTINGS,
       providerId: 'gemini' as const,
@@ -44,10 +64,10 @@ describe('phase N — sample project and diagnostics', () => {
       },
     };
 
-    const diagnostics = buildProjectDiagnostics(sample, settings, echoT);
+    const diagnostics = buildProjectDiagnostics(project, settings, echoT);
     const serialized = JSON.stringify(diagnostics);
 
-    expect(diagnostics.project.schemaVersion).toBe(sample.schemaVersion);
+    expect(diagnostics.project.schemaVersion).toBe(project.schemaVersion);
     expect(diagnostics.project.assets).toBe(0);
     expect(diagnostics.artboards[0].layers.byType.text).toBeGreaterThan(0);
     expect(diagnostics.artboards[0].layers.byType.shape).toBeGreaterThan(0);
