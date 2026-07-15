@@ -150,7 +150,12 @@ export function AppShell() {
         initialTab={settingsTab}
       />
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
-      <PromptTemplateDialog />
+      <PromptTemplateDialog
+        onOpenAgentSettings={() => {
+          setSettingsTab('agent');
+          setSettingsOpen(true);
+        }}
+      />
       <SvgLibraryDialog />
       <EmojiPickerDialog />
       <ShortcutHelpModal

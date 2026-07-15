@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Copy, ImagePlus, Sparkles, X } from 'lucide-react';
+import { Bot, Copy, ImagePlus, Sparkles, X } from 'lucide-react';
 import { GlassButton, GlassIconButton, ModalOverlay } from '@/components/glass';
 import { clipboard } from '@/lib/adapters';
 import { extractPalette } from '@/lib/utils/palette';
@@ -19,11 +19,16 @@ import { useActiveProject } from '@/lib/state/selectors';
 import { useUiStore } from '@/lib/state/uiStore';
 import type { LocaleCode } from '@/lib/schema';
 import type { AIProviderDiagnostics } from '@/editor/ai/AIProvider';
+import { isTauri } from '@/lib/platform/runtime';
 
-export function PromptTemplateDialog() {
+export function PromptTemplateDialog({
+  onOpenAgentSettings,
+}: {
+  onOpenAgentSettings: () => void;
+}) {
   const aiDialog = useUiStore((s) => s.aiDialog);
   if (aiDialog !== 'template') return null;
-  return <PromptTemplateDialogInner />;
+  return <PromptTemplateDialogInner onOpenAgentSettings={onOpenAgentSettings} />;
 }
 
 interface FailState {
@@ -33,7 +38,11 @@ interface FailState {
   diagnostics?: AIProviderDiagnostics;
 }
 
-function PromptTemplateDialogInner() {
+function PromptTemplateDialogInner({
+  onOpenAgentSettings,
+}: {
+  onOpenAgentSettings: () => void;
+}) {
   const { t } = useTranslation('editor');
   const project = useActiveProject();
   const setAiDialog = useUiStore((s) => s.setAiDialog);
@@ -344,17 +353,31 @@ function PromptTemplateDialogInner() {
           )}
         </div>
 
-        <footer className="mt-5 flex items-center justify-end gap-2">
-          <GlassButton onClick={close}>{t('export.close')}</GlassButton>
-          <GlassButton
-            variant="primary"
-            onClick={generate}
-            disabled={busy || !prompt.trim()}
-            loading={busy}
-          >
-            {!busy && <Sparkles size={14} />}
-            {busy ? t('promptTemplate.generating') : t('promptTemplate.generate')}
-          </GlassButton>
+        <footer className="mt-5 flex items-center gap-2">
+          {isTauri && (
+            <GlassButton
+              variant="ghost"
+              onClick={() => {
+                close();
+                onOpenAgentSettings();
+              }}
+            >
+              <Bot size={14} />
+              {t('promptTemplate.agentDrawingSettings')}
+            </GlassButton>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            <GlassButton onClick={close}>{t('export.close')}</GlassButton>
+            <GlassButton
+              variant="primary"
+              onClick={generate}
+              disabled={busy || !prompt.trim()}
+              loading={busy}
+            >
+              {!busy && <Sparkles size={14} />}
+              {busy ? t('promptTemplate.generating') : t('promptTemplate.generate')}
+            </GlassButton>
+          </div>
         </footer>
     </ModalOverlay>
   );

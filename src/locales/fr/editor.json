@@ -491,6 +491,7 @@
     "usePalette": "Utiliser la palette du projet",
     "generate": "Générer",
     "generating": "Génération…",
+    "agentDrawingSettings": "Avancé : configurer le dessin par agent",
     "invalid": "Le projet généré était invalide",
     "failed": "Échec de la génération. Vérifiez les réglages du fournisseur IA.",
     "copyRaw": "Copier la sortie brute",

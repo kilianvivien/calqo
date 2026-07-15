@@ -491,6 +491,7 @@
     "usePalette": "Use project palette",
     "generate": "Generate",
     "generating": "Generating…",
+    "agentDrawingSettings": "Advanced: Configure agent drawing",
     "invalid": "The generated project was invalid",
     "failed": "Generation failed. Check your AI provider settings.",
     "copyRaw": "Copy raw output",
