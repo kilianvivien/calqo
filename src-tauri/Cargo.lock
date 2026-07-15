@@ -564,7 +564,7 @@ dependencies = [
 
 [[package]]
 name = "calqo"
-version = "0.3.6"
+version = "0.4.0"
 dependencies = [
  "axum",
  "dirs 6.0.0",
