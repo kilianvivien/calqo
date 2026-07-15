@@ -307,6 +307,160 @@
       "presets": ["ig-square"],
       "tags": ["ig-square", "mood", "typography"],
       "category": "playful"
+    },
+    {
+      "id": "app-launch",
+      "name": "App launch — IG portrait",
+      "file": "app-launch.calqo",
+      "thumbnail": "/starters/thumbnails/app-launch.svg",
+      "width": 1080,
+      "height": 1350,
+      "presets": ["ig-portrait"],
+      "tags": ["ig-portrait", "product", "launch", "app"],
+      "category": "marketing"
+    },
+    {
+      "id": "data-brief",
+      "name": "Data brief — X post",
+      "file": "data-brief.calqo",
+      "thumbnail": "/starters/thumbnails/data-brief.svg",
+      "width": 1600,
+      "height": 900,
+      "presets": ["x-post"],
+      "tags": ["x-post", "data", "research", "insight"],
+      "category": "editorial"
+    },
+    {
+      "id": "newsletter-header",
+      "name": "Newsletter header — Facebook link",
+      "file": "newsletter-header.calqo",
+      "thumbnail": "/starters/thumbnails/newsletter-header.svg",
+      "width": 1200,
+      "height": 630,
+      "presets": ["facebook-link"],
+      "tags": ["facebook-link", "newsletter", "article"],
+      "category": "editorial"
+    },
+    {
+      "id": "design-conference",
+      "name": "Design conference program — IG portrait",
+      "file": "design-conference.calqo",
+      "thumbnail": "/starters/thumbnails/design-conference.svg",
+      "width": 1080,
+      "height": 1350,
+      "presets": ["ig-portrait"],
+      "tags": ["ig-portrait", "conference", "schedule"],
+      "category": "event"
+    },
+    {
+      "id": "community-countdown",
+      "name": "Community event countdown — X post",
+      "file": "community-countdown.calqo",
+      "thumbnail": "/starters/thumbnails/community-countdown.svg",
+      "width": 1600,
+      "height": 900,
+      "presets": ["x-post"],
+      "tags": ["x-post", "countdown", "community", "event"],
+      "category": "event"
+    },
+    {
+      "id": "book-release",
+      "name": "Book release — IG portrait",
+      "file": "book-release.calqo",
+      "thumbnail": "/starters/thumbnails/book-release.svg",
+      "width": 1080,
+      "height": 1350,
+      "presets": ["ig-portrait"],
+      "tags": ["ig-portrait", "book", "release", "literary"],
+      "category": "media"
+    },
+    {
+      "id": "livestream-thumbnail",
+      "name": "Livestream — YouTube thumbnail",
+      "file": "livestream-thumbnail.calqo",
+      "thumbnail": "/starters/thumbnails/livestream-thumbnail.svg",
+      "width": 1280,
+      "height": 720,
+      "presets": ["youtube-thumbnail"],
+      "tags": ["youtube-thumbnail", "livestream", "video"],
+      "category": "media"
+    },
+    {
+      "id": "cafe-menu",
+      "name": "Café menu — story",
+      "file": "cafe-menu.calqo",
+      "thumbnail": "/starters/thumbnails/cafe-menu.svg",
+      "width": 1080,
+      "height": 1920,
+      "presets": ["story"],
+      "tags": ["story", "cafe", "menu", "food"],
+      "category": "lifestyle"
+    },
+    {
+      "id": "skincare-routine",
+      "name": "Skincare routine — Pinterest",
+      "file": "skincare-routine.calqo",
+      "thumbnail": "/starters/thumbnails/skincare-routine.svg",
+      "width": 1000,
+      "height": 1500,
+      "presets": ["pinterest-pin"],
+      "tags": ["pinterest-pin", "skincare", "routine", "wellbeing"],
+      "category": "lifestyle"
+    },
+    {
+      "id": "reading-list",
+      "name": "Monthly reading list — Instagram square",
+      "file": "reading-list.calqo",
+      "thumbnail": "/starters/thumbnails/reading-list.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square"],
+      "tags": ["ig-square", "books", "reading", "list"],
+      "category": "lifestyle"
+    },
+    {
+      "id": "cultural-exchange",
+      "name": "Cultural exchange week — story (EN/FR)",
+      "file": "cultural-exchange.calqo",
+      "thumbnail": "/starters/thumbnails/cultural-exchange.svg",
+      "width": 1080,
+      "height": 1920,
+      "presets": ["story"],
+      "tags": ["story", "culture", "program", "multilingual"],
+      "category": "diplomacy"
+    },
+    {
+      "id": "consular-notice",
+      "name": "Consular service notice — IG portrait (EN/FR)",
+      "file": "consular-notice.calqo",
+      "thumbnail": "/starters/thumbnails/consular-notice.svg",
+      "width": 1080,
+      "height": 1350,
+      "presets": ["ig-portrait"],
+      "tags": ["ig-portrait", "consular", "notice", "multilingual"],
+      "category": "diplomacy"
+    },
+    {
+      "id": "birthday-invite",
+      "name": "Birthday invitation — story",
+      "file": "birthday-invite.calqo",
+      "thumbnail": "/starters/thumbnails/birthday-invite.svg",
+      "width": 1080,
+      "height": 1920,
+      "presets": ["story"],
+      "tags": ["story", "birthday", "invitation", "party"],
+      "category": "playful"
+    },
+    {
+      "id": "reaction-card",
+      "name": "Reaction card — X post",
+      "file": "reaction-card.calqo",
+      "thumbnail": "/starters/thumbnails/reaction-card.svg",
+      "width": 1600,
+      "height": 900,
+      "presets": ["x-post"],
+      "tags": ["x-post", "reaction", "meme", "humor"],
+      "category": "playful"
     }
   ]
 }

@@ -26,7 +26,7 @@ export function buildCanvasFontString(node: FontContext): string {
   return `${style} ${weight} ${size}px ${family}`;
 }
 
-let patched = false;
+let patchPromise: Promise<void> | null = null;
 
 /** Konva 9's Text config exposes `fontStyle` (CSS `font-style`) and
  * `textDecoration` (CSS `text-decoration`) but no `fontWeight`. We patch
@@ -34,14 +34,13 @@ let patched = false;
  * proper CSS `font` shorthand. Imported once at app start; idempotent.
  * The Konva value import is lazy so the pure `buildCanvasFontString` is
  * unit-testable in jsdom without pulling Konva's node entry. */
-export function patchKonvaTextFont(): void {
-  if (patched) return;
-  patched = true;
+export function patchKonvaTextFont(): Promise<void> {
+  if (patchPromise) return patchPromise;
 
   // Dynamic import keeps `import Konva from 'konva'` out of the module's
   // top-level graph — Konva's node entry requires the `canvas` package,
   // which isn't available in our jsdom test env.
-  void import('konva').then((mod) => {
+  patchPromise = import('konva').then((mod) => {
     const KonvaValue = (mod as { default: { Text: unknown } }).default;
     const TextCtor = KonvaValue.Text as unknown as {
       prototype: Konva.Text & { _getContextFont(): string };
@@ -52,4 +51,5 @@ export function patchKonvaTextFont(): void {
       return buildCanvasFontString(this);
     };
   });
+  return patchPromise;
 }

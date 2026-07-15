@@ -3,6 +3,7 @@ import { Layer, Stage } from 'react-konva';
 import type { CalqoArtboard, CalqoProject } from '@/lib/schema';
 import { ArtboardBackground } from './ArtboardBackground';
 import { LayerRenderer, type NodeRegistry } from './LayerRenderer';
+import { useCanvasFontsReady } from './canvasFonts';
 
 interface ArtboardThumbnailProps {
   project: CalqoProject;
@@ -25,6 +26,7 @@ export function ArtboardThumbnail({
   maxWidth,
   maxHeight,
 }: ArtboardThumbnailProps) {
+  const fontsReady = useCanvasFontsReady(artboard);
   // Local registry so LayerRenderer's node-ref callbacks have somewhere to go;
   // nothing reads it back for a static preview.
   const nodeRefs = useRef<NodeRegistry>(new Map());
@@ -35,6 +37,10 @@ export function ArtboardThumbnail({
   );
   const width = Math.max(1, Math.round(artboard.width * scale));
   const height = Math.max(1, Math.round(artboard.height * scale));
+
+  if (!fontsReady) {
+    return <span aria-hidden style={{ width, height, display: 'block' }} />;
+  }
 
   return (
     <Stage

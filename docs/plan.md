@@ -288,9 +288,10 @@ predictable.
 ### Deliverables
 
 - [x] Add a small local starter gallery.
-  - 28 license-clean `.calqo` samples under `public/starters/` (self-made
-    text/shape content, no binary assets), balanced across marketing,
-    editorial, event, media, lifestyle, diplomacy, and playful categories;
+  - 42 license-clean `.calqo` samples under `public/starters/` (self-made
+    text/shape content, no binary assets), with exactly 6 varied starting
+    points in each of marketing, editorial, event, media, lifestyle,
+    diplomacy, and playful;
     credited in
     `public/starters/CREDITS.md` and schema-validated in CI
     (`src/tests/unit/starters.test.ts`).
@@ -302,11 +303,21 @@ predictable.
   - The mobile new-project sheet exposes the bundled starter catalogue with
     the same localized names and category filters; the obsolete generated
     alpha sample and its dedicated entry point were removed.
+  - Canvas and overview rendering wait for the exact artboard font faces to
+    settle, and the Konva font-weight patch completes before React mounts, so
+    the first selection cannot change fallback fonts or text measurements.
+  - The native AI menu exposes a localized checked toggle for Agent Drawing;
+    it starts/stops the same persisted MCP setting as the Settings pane and
+    stays synchronized when either surface changes it.
 - [x] Add "save as starter" or "duplicate from starter" if it stays simple.
   - "Save as starter" in the project manager (`ProjectManagerModal.tsx`)
     snapshots the current `.calqo` envelope plus a rendered thumbnail into a
     local `starters` Dexie table (`starterLibrary` adapter); starters remain
     normal Calqo projects, no new schema or marketplace.
+- [x] Keep the local project library usable as it grows.
+  - The desktop project manager supports localized search plus ascending and
+    descending name/date sorting, with a viewport-capped modal and an
+    independently scrolling results pane.
 - [x] Add lightweight brand defaults.
   - Named Brand Lite profiles (palette, heading/body font, optional logo,
     glossary defaults) live in a `brandProfiles` Dexie table as app data, never

@@ -79,6 +79,9 @@ describe('bundled starter gallery', () => {
     expect(new Set(index.starters.map((entry) => entry.id)).size).toBe(
       index.starters.length,
     );
+    expect(new Set(index.starters.map((entry) => entry.name)).size).toBe(
+      index.starters.length,
+    );
     for (const entry of index.starters) {
       expect(entry.tags.length).toBeGreaterThan(0);
       expect(entry.presets.length).toBeGreaterThan(0);
@@ -156,7 +159,8 @@ describe('bundled starter gallery', () => {
       // Each starter has real content to edit.
       expect(
         result.project.artboards.reduce((sum, ab) => sum + ab.layers.length, 0),
-      ).toBeGreaterThan(2);
+      ).toBeGreaterThanOrEqual(4);
+      expect(result.project.metadata?.description).toBeTruthy();
     },
   );
 
@@ -176,12 +180,24 @@ describe('bundled starter gallery', () => {
     ]);
   });
 
-  it('keeps the previously underrepresented event and playful categories balanced', () => {
+  it('keeps every gallery category balanced at six starters', () => {
     const count = (category: string) =>
       index.starters.filter((entry) => entry.category === category).length;
-    expect(count('event')).toBeGreaterThanOrEqual(4);
-    expect(count('playful')).toBeGreaterThanOrEqual(4);
-    expect(count('event')).toBe(count('playful'));
+    for (const category of STARTER_CATEGORIES) {
+      expect(count(category), category).toBe(6);
+    }
+    expect(index.starters).toHaveLength(STARTER_CATEGORIES.length * 6);
+  });
+
+  it('offers at least three output formats in every category', () => {
+    for (const category of STARTER_CATEGORIES) {
+      const presets = new Set(
+        index.starters
+          .filter((entry) => entry.category === category)
+          .flatMap((entry) => entry.presets),
+      );
+      expect(presets.size, category).toBeGreaterThanOrEqual(3);
+    }
   });
 });
 

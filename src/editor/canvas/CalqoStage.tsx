@@ -40,6 +40,7 @@ import { ArtboardBackground } from './ArtboardBackground';
 import { CanvasContextMenu } from './CanvasContextMenu';
 import { registerStageSampler } from './stageSampler';
 import { useAssetImage } from './useAssetImage';
+import { useCanvasFontsReady } from './canvasFonts';
 import { computeSnap, SNAP_DISTANCE } from './snapping';
 import {
   appendPressure,
@@ -176,6 +177,7 @@ function clampPoint(point: { x: number; y: number }, artboard: CalqoArtboard) {
 }
 
 export function CalqoStage({ project, artboard }: CalqoStageProps) {
+  const fontsReady = useCanvasFontsReady(artboard);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -1019,6 +1021,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   return (
     <div
       ref={containerRef}
+      aria-busy={!fontsReady}
       className="relative h-full w-full"
       style={{
         // The canvas owns every touch gesture (pinch-zoom, tool drags); without
@@ -1054,7 +1057,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
           event.currentTarget.value = '';
         }}
       />
-      <Stage
+      {fontsReady && <Stage
         ref={stageRef}
         width={size.width}
         height={size.height}
@@ -1450,7 +1453,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             borderDash={[6 / zoom, 4 / zoom]}
           />
         </Layer>
-      </Stage>
+      </Stage>}
       {editingLayer && (
         <TextEditOverlay
           initialValue={

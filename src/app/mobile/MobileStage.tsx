@@ -26,6 +26,7 @@ import {
   type Point,
 } from '@/editor/canvas/lineGeometry';
 import { findLayerInArtboard, flattenLayers } from '@/editor/utils/layers';
+import { useCanvasFontsReady } from '@/editor/canvas/canvasFonts';
 
 interface MobileStageProps {
   project: CalqoProject;
@@ -136,6 +137,7 @@ export function MobileStage({
   onCropImage,
   brush = false,
 }: MobileStageProps) {
+  const fontsReady = useCanvasFontsReady(artboard);
   const { t } = useTranslation('editor');
   const containerRef = useRef<HTMLDivElement>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -504,10 +506,11 @@ export function MobileStage({
   return (
     <div
       ref={containerRef}
+      aria-busy={!fontsReady}
       className="relative h-full w-full overflow-hidden"
       style={{ touchAction: 'none' }}
     >
-      {scale > 0 && (
+      {scale > 0 && fontsReady && (
         <Stage
           width={size.width}
           height={size.height}

@@ -33,6 +33,7 @@ import { saveProjectAsStarter } from '@/editor/starters/starterService';
 import { exportArtboardRaster } from '@/editor/export/rasterExport';
 import { shareArtboardPng } from '@/editor/export/share';
 import { saveImageBlobAsset } from '@/lib/utils/imageAsset';
+import { mcpStore } from '@/lib/state/mcpStore';
 
 export type AppCommandId =
   | 'app.about'
@@ -75,6 +76,7 @@ export type AppCommandId =
   | 'view.transparencySolid'
   | 'ai.promptTemplate'
   | 'ai.translate'
+  | 'ai.toggleAgentDrawing'
   | 'window.shortcuts'
   | 'help.github'
   | 'help.diagnostics';
@@ -243,6 +245,10 @@ export const appCommandDefinitions: CommandDefinition[] = [
   { id: 'ai.promptTemplate', labelKey: 'editor:ai.promptTemplate' },
   { id: 'ai.translate', labelKey: 'editor:ai.translate' },
   {
+    id: 'ai.toggleAgentDrawing',
+    labelKey: 'common:settings.agentDrawing.enable',
+  },
+  {
     id: 'window.shortcuts',
     labelKey: 'common:shortcuts.open',
     accelerator: '?',
@@ -409,6 +415,7 @@ export function getAppCommandState(id: AppCommandId): { enabled: boolean } {
   ) {
     return { enabled: true };
   }
+  if (id === 'ai.toggleAgentDrawing') return { enabled: true };
   if (
     id.startsWith('file.') ||
     id.startsWith('edit.') ||
@@ -654,6 +661,13 @@ export async function invokeAppCommand(id: AppCommandId): Promise<void> {
     case 'ai.translate':
       ui.setAiDialog('translate');
       return;
+    case 'ai.toggleAgentDrawing': {
+      const store = mcpStore.getState();
+      store.setEnabled(!store.settings.enabled);
+      const { syncMcpServer } = await import('@/editor/mcp/bridge');
+      await syncMcpServer();
+      return;
+    }
     case 'window.shortcuts':
       context?.openShortcuts();
       return;

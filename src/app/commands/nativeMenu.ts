@@ -6,6 +6,7 @@ import {
   invokeAppCommandSync,
   type AppCommandId,
 } from './appCommands';
+import { mcpStore } from '@/lib/state/mcpStore';
 
 // The native menu bar is built in Rust (src-tauri/src/lib.rs) so it has the
 // standard macOS App/Edit/Window submenus, predefined items, and a native About.
@@ -28,7 +29,14 @@ async function pushMenuEnabled(): Promise<void> {
   for (const definition of appCommandDefinitions) {
     states[definition.id] = getAppCommandState(definition.id).enabled;
   }
-  await tauriInvoke('set_menu_enabled', { states });
+  await Promise.all([
+    tauriInvoke('set_menu_enabled', { states }),
+    tauriInvoke('set_menu_checked', {
+      states: {
+        'ai.toggleAgentDrawing': mcpStore.getState().settings.enabled,
+      },
+    }),
+  ]);
 }
 
 async function pushMenuLocale(): Promise<void> {
@@ -73,11 +81,17 @@ export function installNativeMenus(): () => void {
     console.error('[Calqo] failed to localize native menu', error);
   });
   i18n.on('languageChanged', onLanguageChanged);
+  const unsubscribeMcp = mcpStore.subscribe((state, previous) => {
+    if (state.settings.enabled !== previous.settings.enabled) {
+      scheduleNativeMenuRefresh();
+    }
+  });
 
   return () => {
     disposed = true;
     unlisten?.();
     i18n.off('languageChanged', onLanguageChanged);
+    unsubscribeMcp();
     if (enabledTimer) window.clearTimeout(enabledTimer);
   };
 }

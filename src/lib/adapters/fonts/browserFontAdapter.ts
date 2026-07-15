@@ -5,7 +5,10 @@ import type { FontAdapter, FontDef, FontVariant } from './FontAdapter';
 const BUNDLED_FONTS: FontDef[] = [
   { family: 'Inter', stack: '"Inter", system-ui, sans-serif' },
   { family: 'System', stack: 'system-ui, -apple-system, sans-serif' },
-  { family: 'Helvetica', stack: '"Helvetica Neue", Helvetica, Arial, sans-serif' },
+  {
+    family: 'Helvetica',
+    stack: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  },
   { family: 'Roboto', stack: '"Roboto", system-ui, sans-serif' },
   { family: 'DM Sans', stack: '"DM Sans", system-ui, sans-serif' },
   { family: 'Source Sans 3', stack: '"Source Sans 3", system-ui, sans-serif' },
@@ -20,6 +23,7 @@ const BUNDLED_FONTS: FontDef[] = [
   { family: 'Oswald', stack: '"Oswald", "Arial Narrow", sans-serif' },
   { family: 'Bebas Neue', stack: '"Bebas Neue", "Arial Narrow", sans-serif' },
   { family: 'Anton', stack: '"Anton", Impact, sans-serif' },
+  { family: 'Fraunces', stack: '"Fraunces", Georgia, serif' },
   { family: 'Georgia', stack: 'Georgia, "Times New Roman", serif' },
   { family: 'Playfair Display', stack: '"Playfair Display", Georgia, serif' },
   { family: 'Merriweather', stack: '"Merriweather", Georgia, serif' },

@@ -8,8 +8,8 @@ mod mcp;
 use std::collections::HashMap;
 use tauri::{
     menu::{
-        AboutMetadata, Menu, MenuBuilder, MenuItem, MenuItemKind, PredefinedMenuItem,
-        SubmenuBuilder,
+        AboutMetadata, CheckMenuItem, Menu, MenuBuilder, MenuItem, MenuItemKind,
+        PredefinedMenuItem, SubmenuBuilder,
     },
     AppHandle, Emitter, Runtime,
 };
@@ -54,6 +54,7 @@ const APP_COMMAND_IDS: &[&str] = &[
     "view.theme",
     "ai.promptTemplate",
     "ai.translate",
+    "ai.toggleAgentDrawing",
     "window.shortcuts",
     "help.github",
     "help.diagnostics",
@@ -103,6 +104,15 @@ fn item<R: Runtime>(
     accelerator: Option<&str>,
 ) -> tauri::Result<MenuItem<R>> {
     MenuItem::with_id(app, id, label, true, accelerator)
+}
+
+fn check_item<R: Runtime>(
+    app: &AppHandle<R>,
+    id: &str,
+    label: &str,
+    checked: bool,
+) -> tauri::Result<CheckMenuItem<R>> {
+    CheckMenuItem::with_id(app, id, label, true, checked, None::<&str>)
 }
 
 fn build_menu<R: Runtime>(app: &AppHandle<R>, lang: &str) -> tauri::Result<Menu<R>> {
@@ -348,6 +358,13 @@ fn build_menu<R: Runtime>(app: &AppHandle<R>, lang: &str) -> tauri::Result<Menu<
             tr(lang, "Translate…", "Traduire…"),
             None,
         )?)
+        .separator()
+        .item(&check_item(
+            app,
+            "ai.toggleAgentDrawing",
+            tr(lang, "Enable Agent Drawing", "Activer le dessin par agent"),
+            false,
+        )?)
         .build()?;
 
     let window_menu = SubmenuBuilder::new(app, tr(lang, "Window", "Fenêtre"))
@@ -419,9 +436,35 @@ fn set_menu_enabled(app: AppHandle, states: HashMap<String, bool>) -> tauri::Res
     for kind in menu.items()? {
         if let MenuItemKind::Submenu(submenu) = kind {
             for child in submenu.items()? {
-                if let MenuItemKind::MenuItem(menu_item) = child {
-                    if let Some(&enabled) = states.get(menu_item.id().as_ref()) {
-                        menu_item.set_enabled(enabled)?;
+                let id = child.id().as_ref();
+                let Some(&enabled) = states.get(id) else {
+                    continue;
+                };
+                match child {
+                    MenuItemKind::MenuItem(menu_item) => menu_item.set_enabled(enabled)?,
+                    MenuItemKind::Check(check_item) => check_item.set_enabled(enabled)?,
+                    _ => {}
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Synchronize native checkmarks with web-owned persisted preferences. Menu
+/// rebuilds (for localization) create unchecked items, then the web immediately
+/// reapplies this state alongside enabled/disabled command state.
+#[tauri::command]
+fn set_menu_checked(app: AppHandle, states: HashMap<String, bool>) -> tauri::Result<()> {
+    let Some(menu) = app.menu() else {
+        return Ok(());
+    };
+    for kind in menu.items()? {
+        if let MenuItemKind::Submenu(submenu) = kind {
+            for child in submenu.items()? {
+                if let MenuItemKind::Check(check_item) = child {
+                    if let Some(&checked) = states.get(check_item.id().as_ref()) {
+                        check_item.set_checked(checked)?;
                     }
                 }
             }
@@ -502,6 +545,7 @@ pub fn run() {
             list_font_variants,
             set_menu_locale,
             set_menu_enabled,
+            set_menu_checked,
             mcp::mcp_start_server,
             mcp::mcp_stop_server,
             mcp::mcp_server_status,

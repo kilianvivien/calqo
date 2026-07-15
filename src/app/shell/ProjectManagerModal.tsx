@@ -1,6 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Copy, Download, FolderOpen, Pencil, Plus, Star, Trash2, X } from 'lucide-react';
+import {
+  ArrowUpDown,
+  Copy,
+  Download,
+  FolderOpen,
+  Pencil,
+  Plus,
+  Search,
+  Star,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { dialog } from '@/lib/adapters';
 import type { ProjectSummary } from '@/lib/adapters';
 import { useProjectSummaries } from '@/lib/hooks/useProjectSummaries';
@@ -14,6 +25,10 @@ import {
 import { exportProjectFile } from '@/editor/export/calqoFile';
 import { saveProjectAsStarter } from '@/editor/starters/starterService';
 import { GlassButton, GlassIconButton, ModalOverlay } from '@/components/glass';
+import {
+  filterAndSortProjectSummaries,
+  type ProjectSort,
+} from './projectSummarySort';
 
 interface ProjectManagerModalProps {
   open: boolean;
@@ -163,6 +178,19 @@ export function ProjectManagerModal({
   const { t, i18n } = useTranslation('editor');
   const { summaries, refresh } = useProjectSummaries(open);
   const [starterStatus, setStarterStatus] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<ProjectSort>('updated-desc');
+
+  const visibleSummaries = useMemo(
+    () =>
+      filterAndSortProjectSummaries(
+        summaries ?? [],
+        query,
+        sort,
+        i18n.language,
+      ),
+    [i18n.language, query, sort, summaries],
+  );
 
   const openAndClose = (id: string) => {
     void openProject(id).then(onClose);
@@ -195,13 +223,15 @@ export function ProjectManagerModal({
   };
 
   const empty = summaries !== null && summaries.length === 0;
+  const noResults =
+    !empty && summaries !== null && visibleSummaries.length === 0;
 
   return (
     <ModalOverlay
       open={open}
       onClose={onClose}
       labelledBy="projects-title"
-      className="glass glass-strong flex max-h-[80vh] w-[min(620px,100%)] flex-col rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
+      className="glass glass-strong flex max-h-[calc(100dvh-48px)] w-[min(680px,100%)] flex-col rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
     >
       <header className="mb-4 flex items-start justify-between gap-4">
         <div>
@@ -226,7 +256,41 @@ export function ProjectManagerModal({
         </GlassIconButton>
       </header>
 
-      <div className="calqo-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+      <div className="mb-3 grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <label className="flex h-9 min-w-0 items-center gap-2 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] px-3 focus-within:border-[var(--calqo-accent)] focus-within:ring-2 focus-within:ring-[var(--calqo-accent-ring)]">
+          <Search size={14} className="shrink-0 text-[var(--calqo-text-3)]" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t('projects.searchPlaceholder')}
+            aria-label={t('projects.search')}
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--calqo-text)] outline-none placeholder:text-[var(--calqo-text-3)]"
+          />
+        </label>
+        <label className="flex h-9 items-center gap-2 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] px-3 focus-within:border-[var(--calqo-accent)] focus-within:ring-2 focus-within:ring-[var(--calqo-accent-ring)]">
+          <ArrowUpDown
+            size={14}
+            className="shrink-0 text-[var(--calqo-text-3)]"
+          />
+          <span className="sr-only">{t('projects.sort')}</span>
+          <select
+            value={sort}
+            onChange={(event) => setSort(event.target.value as ProjectSort)}
+            aria-label={t('projects.sort')}
+            className="cursor-pointer bg-transparent text-[13px] text-[var(--calqo-text)] outline-none"
+          >
+            <option value="updated-desc">
+              {t('projects.sortUpdatedDesc')}
+            </option>
+            <option value="updated-asc">{t('projects.sortUpdatedAsc')}</option>
+            <option value="name-asc">{t('projects.sortNameAsc')}</option>
+            <option value="name-desc">{t('projects.sortNameDesc')}</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="calqo-scroll min-h-0 max-h-[min(500px,55dvh)] flex-1 overflow-y-auto overscroll-contain pr-1">
         {summaries === null ? (
           <p className="px-1 py-10 text-center text-[13px] text-[var(--calqo-text-3)]">
             {t('projects.loading')}
@@ -235,9 +299,13 @@ export function ProjectManagerModal({
           <p className="px-1 py-10 text-center text-[13px] text-[var(--calqo-text-3)]">
             {t('projects.empty')}
           </p>
+        ) : noResults ? (
+          <p className="px-1 py-10 text-center text-[13px] text-[var(--calqo-text-3)]">
+            {t('projects.noResults')}
+          </p>
         ) : (
           <ul className="flex flex-col gap-1.5">
-            {summaries?.map((summary) => (
+            {visibleSummaries.map((summary) => (
               <ProjectManagerRow
                 key={summary.id}
                 summary={summary}
@@ -259,25 +327,25 @@ export function ProjectManagerModal({
           {starterStatus}
         </span>
         <div className="flex items-center gap-2">
-        <GlassButton
-          onClick={() => {
-            onClose();
-            onImport();
-          }}
-        >
-          <FolderOpen size={14} />
-          {t('projects.import')}
-        </GlassButton>
-        <GlassButton
-          variant="primary"
-          onClick={() => {
-            onClose();
-            onNew();
-          }}
-        >
-          <Plus size={14} />
-          {t('projects.new')}
-        </GlassButton>
+          <GlassButton
+            onClick={() => {
+              onClose();
+              onImport();
+            }}
+          >
+            <FolderOpen size={14} />
+            {t('projects.import')}
+          </GlassButton>
+          <GlassButton
+            variant="primary"
+            onClick={() => {
+              onClose();
+              onNew();
+            }}
+          >
+            <Plus size={14} />
+            {t('projects.new')}
+          </GlassButton>
         </div>
       </footer>
     </ModalOverlay>

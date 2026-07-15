@@ -15,6 +15,7 @@ import type { CalqoLayer } from '@/lib/schema';
 import { useProjectStore } from '@/lib/state/projectStore';
 import { useWorkspaceStore } from '@/lib/state/workspaceStore';
 import { useSelectionStore } from '@/lib/state/selectionStore';
+import { DEFAULT_MCP_SETTINGS, mcpStore } from '@/lib/state/mcpStore';
 
 describe('phase O — Tauri foundation contracts', () => {
   beforeEach(() => {
@@ -27,6 +28,17 @@ describe('phase O — Tauri foundation contracts', () => {
       .getState()
       .hydrate({ openTabIds: [], activeProjectId: null });
     useSelectionStore.getState().clearSelection();
+    mcpStore.setState({
+      settings: { ...DEFAULT_MCP_SETTINGS },
+      loaded: true,
+      status: 'stopped',
+      port: null,
+      lastError: null,
+      sessionWriteGranted: false,
+      connectedClient: null,
+      applying: false,
+      activityLog: [],
+    });
   });
 
   it('defaults to browser capabilities outside Tauri', () => {
@@ -64,6 +76,7 @@ describe('phase O — Tauri foundation contracts', () => {
     expect(getAppCommandState('file.new').enabled).toBe(true);
     expect(getAppCommandState('file.save').enabled).toBe(false);
     expect(getAppCommandState('object.group').enabled).toBe(false);
+    expect(getAppCommandState('ai.toggleAgentDrawing').enabled).toBe(true);
 
     const project = createDefaultProject();
     project.artboards[0].layers = [
@@ -109,6 +122,16 @@ describe('phase O — Tauri foundation contracts', () => {
     expect(getAppCommandState('file.save').enabled).toBe(true);
     expect(getAppCommandState('object.group').enabled).toBe(true);
     expect(getAppCommandState('edit.delete').enabled).toBe(true);
+  });
+
+  it('toggles agent drawing without opening settings', async () => {
+    expect(mcpStore.getState().settings.enabled).toBe(false);
+
+    await invokeAppCommand('ai.toggleAgentDrawing');
+    expect(mcpStore.getState().settings.enabled).toBe(true);
+
+    await invokeAppCommand('ai.toggleAgentDrawing');
+    expect(mcpStore.getState().settings.enabled).toBe(false);
   });
 
   it('routes native edit commands to modal text controls', async () => {
