@@ -35,10 +35,11 @@ surface.
 ## Download
 
 The latest packaged alpha release is
-[Calqo v0.4.0](https://github.com/kilianvivien/calqo/releases/tag/v0.4.0)
-for macOS on Apple Silicon. It adds tablet and Apple Pencil support,
-pressure-sensitive drawing, richer local agent drawing through MCP, and more
-portable editable HTML/SVG typography.
+[Calqo v0.4.1](https://github.com/kilianvivien/calqo/releases/tag/v0.4.1)
+for macOS on Apple Silicon. This maintenance release makes the desktop agent
+drawing workflow easier to discover by linking Prompt-to-template directly to
+its setup, while retaining the tablet, Apple Pencil, richer MCP drawing, and
+portable editable HTML/SVG typography improvements from v0.4.0.
 
 The desktop build is ad-hoc signed, not Developer ID signed or notarized. On
 first launch, macOS Gatekeeper may require approving the app manually.
@@ -98,6 +99,8 @@ library, emoji insertion, app backup/restore, and multi-locale ZIP exports.
 - [x] One-click Agent Drawing setup for Codex, Claude Code, Antigravity, and OpenCode
 - [x] Embedded used Google Font faces in editable HTML and SVG exports
 - [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.4.0`
+- [x] Prompt-to-template shortcut to desktop Agent Drawing settings (`v0.4.1`)
+- [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.4.1`
 
 ## What you can make
 
