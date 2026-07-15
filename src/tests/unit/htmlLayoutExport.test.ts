@@ -26,6 +26,7 @@ import {
   rasterReasonForLayer,
 } from '@/editor/export/htmlLayoutExport';
 import { fillToCss, textStyleToCss } from '@/editor/export/styleConversions';
+import { embeddedFontCss } from '@/editor/export/portableFonts';
 
 const baseLayer = {
   rotation: 0,
@@ -94,6 +95,10 @@ describe('exportArtboardHtmlLayout', () => {
     expect(html).toContain('transform:rotate(10deg)');
     expect(html).toContain('font-size:64px');
     expect(html).toContain('text-align:center');
+    const parsed = new DOMParser().parseFromString(html, 'text/html');
+    const node = parsed.querySelector<HTMLElement>('[data-layer="Headline"]');
+    expect(node?.style.fontFamily).toContain('Inter');
+    expect(node?.style.fontSize).toBe('64px');
     // The document background converts to a CSS gradient.
     expect(html).toContain('linear-gradient(90deg, #111111 0%, #222222 100%)');
   });
@@ -293,9 +298,46 @@ describe('styleConversions', () => {
       lineHeight: 1.2,
       letterSpacing: 0.5,
     });
-    expect(css).toContain('font-family:"Inter"');
+    expect(css).toContain("font-family:'Inter'");
     expect(css).toContain('font-style:italic');
     expect(css).toContain('text-decoration:underline');
     expect(css).toContain('letter-spacing:0.5px');
+  });
+});
+
+describe('portable export fonts', () => {
+  it('inlines used web-font bytes and omits unrelated font faces', async () => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Inter&family=Playfair+Display';
+    document.head.append(link);
+    const fontUrl = 'https://fonts.gstatic.com/s/playfair/test.woff2';
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const value = String(url);
+      if (value.includes('fonts.googleapis.com')) {
+        return {
+          ok: true,
+          text: async () =>
+            `@font-face { font-family: 'Inter'; src: url(https://fonts.gstatic.com/s/inter/test.woff2) format('woff2'); }\n` +
+            `@font-face { font-family: 'Playfair Display'; src: url(${fontUrl}) format('woff2'); }`,
+        } as Response;
+      }
+      return {
+        ok: value === fontUrl,
+        blob: async () => new Blob(['portable-font'], { type: 'font/woff2' }),
+      } as Response;
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const layer = textLayer();
+    if (layer.type === 'text') layer.style.fontFamily = 'Playfair Display';
+
+    const css = await embeddedFontCss(artboard([layer]));
+
+    expect(css).toContain("font-family: 'Playfair Display'");
+    expect(css).toContain('data:font/woff2;base64,');
+    expect(css).not.toContain(fontUrl);
+    expect(css).not.toContain("font-family: 'Inter'");
+    link.remove();
+    vi.unstubAllGlobals();
   });
 });

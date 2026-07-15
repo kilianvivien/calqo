@@ -214,6 +214,10 @@ predictable.
     fallback for unsupported layers.
   - Make PNG the recommended pixel-faithful path for frames, effects, masks,
     blend modes, and creative strokes.
+  - Fixed portable typography fidelity: editable HTML now preserves its full
+    inline text style, SVG uses semantic text anchors instead of exporter-side
+    font-width offsets, and both formats embed used Google Font faces when
+    available (`portableFonts.ts`).
 - [ ] Improve SVG/export warning specificity.
   - Group warnings by artboard and affected layer where practical.
   - Keep the inspector's export notes and export dialog warnings in sync.

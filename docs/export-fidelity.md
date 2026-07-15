@@ -22,7 +22,7 @@ Use this table when an export looks different from the canvas.
 | Sticker outline | Exact | Approximated | Exact | Rasterized per layer (warned) |
 | Freehand brush strokes | Exact | Approximated | Exact | Rasterized per layer (warned) |
 | Pressure-sensitive strokes (per-point widths) | Exact | Exact (filled ribbon polygon) | Exact | Rasterized per layer (warned) |
-| Fonts | Exact (baked in) | Referenced by family | Exact (baked in) | Referenced by family — falls back if not installed on the viewer (warned) |
+| Fonts | Exact (baked in) | Used Google Font faces embedded when available; system fonts fall back (warned) | Exact (baked in) | Used Google Font faces embedded when available; system fonts fall back (warned) |
 | Editable after export | No (flat pixels) | Yes (vector shapes/text) | No (embedded PNG) | Yes (real text nodes; rasterized-fallback layers stay images) |
 
 ## Editable HTML fidelity tiers
@@ -54,6 +54,13 @@ and affected layer. The dialog localizes and shows predictable warnings before
 export; runtime fallback failures are added after rendering. Chromium acceptance
 tests compare a faithful fixture against its 1× PNG and require a normalized
 pixel difference below 0.18.
+
+When the editor's Google Fonts stylesheet is reachable during export, Calqo
+inlines only the font faces used by the artboard as data URLs in SVG and
+editable HTML. Those files therefore keep their typography when moved to a
+machine without the fonts installed. Export remains local-first and still
+works offline; in that case system fonts and unavailable web fonts use the
+documented fallback warning.
 
 ## Why SVG drops some effects
 

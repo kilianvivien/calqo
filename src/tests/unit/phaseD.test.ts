@@ -51,6 +51,20 @@ describe('phase D — export helpers', () => {
     expect(warnings).toEqual([]);
   });
 
+  it('lets the SVG viewer anchor centred text with its actual font metrics', async () => {
+    const project = createDefaultProject();
+    const artboard = createArtboard('ig-square');
+    const text = createTextLayer(project, 20, 200);
+    text.w = 600;
+    text.style.align = 'center';
+    artboard.layers.push(text);
+
+    const { svg } = await exportArtboardSvg(artboard, 'en');
+
+    expect(svg).toContain('text-anchor="middle"');
+    expect(svg).toMatch(/<tspan x="300" y="[^"]+">/);
+  });
+
   it('exports freehand and arrow shapes as curves/heads, not rectangles', async () => {
     const artboard = createArtboard('ig-square');
 

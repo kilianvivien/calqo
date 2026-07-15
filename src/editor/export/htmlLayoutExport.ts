@@ -23,6 +23,7 @@ import {
   type HtmlExportWarning,
   type HtmlRasterReason,
 } from './exportWarnings';
+import { embeddedFontCss } from './portableFonts';
 
 /**
  * Editable HTML/CSS export ("HTML (editable)"): serializes the project
@@ -365,7 +366,10 @@ export async function exportArtboardHtmlLayout(
   options: HtmlLayoutOptions = {},
 ): Promise<HtmlLayoutResult> {
   const warnings: HtmlExportWarning[] = [{ tier: 'caveat', code: 'fontFallback' }];
-  const assets = await loadAllAssets(artboard);
+  const [assets, fontCss] = await Promise.all([
+    loadAllAssets(artboard),
+    embeddedFontCss(artboard),
+  ]);
   const rasterizeLayer = options.rasterizeLayer ?? defaultRasterizeLayer;
 
   const nodes: string[] = [];
@@ -388,6 +392,9 @@ export async function exportArtboardHtmlLayout(
   const unique = [...new Map(warnings.map((warning) => [warningIdentity(warning), warning])).values()];
   const title = escapeMarkup(options.title ?? artboard.name);
   const notes = unique.map((warning) => `  - ${warning.tier}:${warning.code}${warning.reason ? `:${warning.reason}` : ''}${warning.layerName ? ` (${warning.layerName})` : ''}`).join('\n');
+  const fontNote = fontCss
+    ? 'Web font files used by this artboard are embedded in this document.'
+    : 'Fonts are referenced by family name and must be available on the viewing system.';
 
   const html = `<!doctype html>
 <html lang="${escapeMarkup(locale || 'en')}">
@@ -397,11 +404,12 @@ export async function exportArtboardHtmlLayout(
     <title>${title}</title>
     <!--
 Exported from Calqo as editable HTML.
-Fonts are referenced by family name and must be available on the viewing system.
+${fontNote}
 Export notes:
 ${notes}
     -->
     <style>
+      ${fontCss}
       body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0b0b0c; }
       .calqo-artboard * { margin: 0; box-sizing: border-box; }
     </style>

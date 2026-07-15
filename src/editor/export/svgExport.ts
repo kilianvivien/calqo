@@ -9,6 +9,7 @@ import { strokeLookNeedsRasterWarning } from '@/editor/canvas/strokeStyle';
 import { pressureOutlinePoints } from '@/editor/canvas/freehandGeometry';
 import { frameRender, type FrameNodeSpec } from '@/editor/canvas/frameNodes';
 import { EXPORT_WARNINGS } from './exportWarnings';
+import { embeddedFontCss } from './portableFonts';
 import type { ArrowStyle, CalqoArtboard, CalqoLayer, ListLayer, ShapeLayer, StrokeStyle, TextLayer } from '@/lib/schema';
 
 import { escapeMarkup, round } from './styleConversions';
@@ -28,7 +29,11 @@ function layoutText(layer: TextLayer, value: string): { lines: TextLine[]; lineH
       text: value,
       fontFamily: style.fontFamily,
       fontSize: style.fontSize,
-      fontStyle: String(style.fontWeight),
+      fontStyle: style.fontStyle,
+      // Calqo's startup patch reads this custom attribute when constructing
+      // the canvas font shorthand. Keeping weight out of fontStyle also makes
+      // italic wrapping use the same metrics as the live CalqoText node.
+      fontWeight: style.fontWeight,
       lineHeight: style.lineHeight,
       letterSpacing: style.letterSpacing,
       align: style.align,
@@ -36,7 +41,7 @@ function layoutText(layer: TextLayer, value: string): { lines: TextLine[]; lineH
       height: layer.h,
       padding: 0,
       wrap: 'word',
-    });
+    } as ConstructorParameters<typeof Text>[0] & { fontWeight: number });
     const arr = (node as unknown as { textArr?: TextLine[] }).textArr;
     node.destroy();
     if (arr && arr.length > 0) {
@@ -310,16 +315,14 @@ export function serializeLayer(
         : vAlign === 'bottom'
           ? layer.h - lines.length * lineHeightPx
           : 0;
+    const anchor =
+      style.align === 'right' ? 'end' : style.align === 'center' ? 'middle' : 'start';
+    const lineX =
+      style.align === 'right' ? layer.w : style.align === 'center' ? layer.w / 2 : 0;
     const tspans = lines
       .map((line, n) => {
-        const x =
-          style.align === 'right'
-            ? layer.w - line.width
-            : style.align === 'center'
-              ? (layer.w - line.width) / 2
-              : 0;
         const y = alignY + lineHeightPx / 2 + n * lineHeightPx;
-        return `<tspan x="${round(x)}" y="${round(y)}">${esc(line.text)}</tspan>`;
+        return `<tspan x="${round(lineX)}" y="${round(y)}">${esc(line.text)}</tspan>`;
       })
       .join('');
     const stroke = style.stroke
@@ -332,7 +335,7 @@ export function serializeLayer(
       style.fontStyle === 'italic' ? ' font-style="italic"' : '';
     const decorationAttr =
       style.textDecoration === 'underline' ? ' text-decoration="underline"' : '';
-    return `${open}<text font-family="${esc(style.fontFamily)}" font-size="${style.fontSize}" font-weight="${style.fontWeight}"${fontStyleAttr}${decorationAttr} fill="${style.color}" dominant-baseline="central" text-anchor="start"${letterSpacing}${stroke}>${tspans}</text>${close}`;
+    return `${open}<text font-family="${esc(style.fontFamily)}" font-size="${style.fontSize}" font-weight="${style.fontWeight}"${fontStyleAttr}${decorationAttr} fill="${style.color}" dominant-baseline="central" text-anchor="${anchor}"${letterSpacing}${stroke}>${tspans}</text>${close}`;
   }
 
   if (layer.type === 'image' || layer.type === 'svg') {
@@ -426,16 +429,19 @@ function serializeList(
 
     const synthetic = { style, w: rowTextWidth, h: rowHeight } as unknown as TextLayer;
     const { lines } = layoutText(synthetic, value);
+    const anchor =
+      style.align === 'right' ? 'end' : style.align === 'center' ? 'middle' : 'start';
+    const textStart = markerWidth + layer.markerGap;
+    const lineX =
+      style.align === 'right'
+        ? textStart + rowTextWidth
+        : style.align === 'center'
+          ? textStart + rowTextWidth / 2
+          : textStart;
     const tspans = lines
       .map((line, n) => {
-        const x =
-          style.align === 'right'
-            ? markerWidth + layer.markerGap + (rowTextWidth - line.width)
-            : style.align === 'center'
-              ? markerWidth + layer.markerGap + (rowTextWidth - line.width) / 2
-              : markerWidth + layer.markerGap;
         const y = rowY + lineHeightPx / 2 + n * lineHeightPx;
-        return `<tspan x="${round(x)}" y="${round(y)}">${esc(line.text)}</tspan>`;
+        return `<tspan x="${round(lineX)}" y="${round(y)}">${esc(line.text)}</tspan>`;
       })
       .join('');
     const stroke = style.stroke
@@ -447,7 +453,7 @@ function serializeList(
     const decorationAttr =
       style.textDecoration === 'underline' ? ' text-decoration="underline"' : '';
     parts.push(
-      `<text font-family="${esc(style.fontFamily)}" font-size="${style.fontSize}" font-weight="${style.fontWeight}"${fontStyleAttr}${decorationAttr} fill="${style.color}" dominant-baseline="central" text-anchor="start"${letterSpacing}${stroke}>${tspans}</text>`,
+      `<text font-family="${esc(style.fontFamily)}" font-size="${style.fontSize}" font-weight="${style.fontWeight}"${fontStyleAttr}${decorationAttr} fill="${style.color}" dominant-baseline="central" text-anchor="${anchor}"${letterSpacing}${stroke}>${tspans}</text>`,
     );
   });
   return `${open}${parts.join('')}${close}`;
@@ -482,13 +488,18 @@ export async function exportArtboardSvg(
   locale: string,
 ): Promise<SvgExportResult> {
   const warnings: string[] = [];
-  const assets = await loadAssetDataUrls(artboard);
+  const [assets, fontCss] = await Promise.all([
+    loadAssetDataUrls(artboard),
+    embeddedFontCss(artboard),
+  ]);
   const background =
     artboard.background.type === 'solid' ? artboard.background.color : '#FFFFFF';
   const body = artboard.layers
     .map((layer) => serializeLayer(layer, assets, locale, warnings))
     .join('');
+  const fontDefs = fontCss ? `<defs><style>${fontCss}</style></defs>\n` : '';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${artboard.width}" height="${artboard.height}" viewBox="0 0 ${artboard.width} ${artboard.height}">
+${fontDefs}
 <rect width="${artboard.width}" height="${artboard.height}" fill="${background}" />
 ${body}
 </svg>`;

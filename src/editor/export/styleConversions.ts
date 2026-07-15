@@ -60,8 +60,12 @@ export function shadowToCssTextShadow(shadow: ShadowStyle): string {
 /** Inline CSS declarations for a Calqo text style (family, size, weight, style,
  * decoration, colour, alignment, line height, letter spacing, shadow). */
 export function textStyleToCss(style: TextStyle): string {
+  // Inline HTML style attributes are double-quoted. Use a CSS single-quoted
+  // family so a name such as "Playfair Display" cannot terminate the HTML
+  // attribute and discard every declaration that follows it.
+  const family = style.fontFamily.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const parts = [
-    `font-family:${JSON.stringify(style.fontFamily)}, system-ui, sans-serif`,
+    `font-family:'${family}', system-ui, sans-serif`,
     `font-size:${round(style.fontSize)}px`,
     `font-weight:${style.fontWeight}`,
     `color:${style.color}`,

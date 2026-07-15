@@ -1,0 +1,501 @@
+{
+  "kind": "calqo.project",
+  "formatVersion": 1,
+  "project": {
+    "schemaVersion": 1,
+    "id": "proj_y38-Yw55wtp7",
+    "name": "Menu test",
+    "createdAt": "2026-07-15T09:30:40.801Z",
+    "updatedAt": "2026-07-15T09:34:06.494Z",
+    "contentLocales": [
+      "en",
+      "fr"
+    ],
+    "activeContentLocale": "fr",
+    "palette": [
+      "#0A2540",
+      "#FFFFFF",
+      "#E8B339"
+    ],
+    "artboards": [
+      {
+        "id": "ab_A4OxKOQMlnBX",
+        "name": "Story / Reel cover",
+        "preset": "story",
+        "width": 1080,
+        "height": 1920,
+        "background": {
+          "type": "solid",
+          "color": "#FFFFFF"
+        },
+        "layers": [
+          {
+            "id": "bg",
+            "name": "Background",
+            "x": 0,
+            "y": 0,
+            "w": 1080,
+            "h": 1920,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#FAF3E9"
+            }
+          },
+          {
+            "id": "line_top",
+            "name": "Top rule",
+            "x": 340,
+            "y": 260,
+            "w": 400,
+            "h": 3,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A66B"
+            }
+          },
+          {
+            "id": "title",
+            "name": "Title",
+            "x": 90,
+            "y": 300,
+            "w": 900,
+            "h": 175,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "MENU",
+              "fr": "MENU"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 128,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#2B2320",
+              "align": "center",
+              "lineHeight": 1.2,
+              "letterSpacing": 8
+            }
+          },
+          {
+            "id": "subtitle",
+            "name": "Subtitle",
+            "x": 90,
+            "y": 460,
+            "w": 900,
+            "h": 60,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "French Cuisine",
+              "fr": "Cuisine Française"
+            },
+            "style": {
+              "fontFamily": "Georgia",
+              "fontSize": 34,
+              "fontWeight": 400,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#8C1D3B",
+              "align": "center",
+              "lineHeight": 1.2,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "line_div0",
+            "name": "Divider",
+            "x": 290,
+            "y": 530,
+            "w": 500,
+            "h": 3,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A66B"
+            }
+          },
+          {
+            "id": "c1_label",
+            "name": "Course 1 label",
+            "x": 90,
+            "y": 590,
+            "w": 900,
+            "h": 45,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "STARTER",
+              "fr": "ENTRÉE"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#8C1D3B",
+              "align": "center",
+              "lineHeight": 1.2,
+              "letterSpacing": 6
+            }
+          },
+          {
+            "id": "c1_name",
+            "name": "Course 1 name",
+            "x": 90,
+            "y": 645,
+            "w": 900,
+            "h": 95,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "French Onion Soup",
+              "fr": "Soupe à l'oignon gratinée"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 54,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#2B2320",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "c1_desc",
+            "name": "Course 1 desc",
+            "x": 160,
+            "y": 745,
+            "w": 760,
+            "h": 90,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Slow beef broth, caramelized onions, toasted crouton and melted gruyère",
+              "fr": "Bouillon de bœuf mijoté, oignons caramélisés, croûton et gruyère fondant"
+            },
+            "style": {
+              "fontFamily": "Georgia",
+              "fontSize": 26,
+              "fontWeight": 400,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#6B5D52",
+              "align": "center",
+              "lineHeight": 1.3,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "line_div1",
+            "name": "Divider",
+            "x": 290,
+            "y": 850,
+            "w": 500,
+            "h": 3,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A66B"
+            }
+          },
+          {
+            "id": "c2_label",
+            "name": "Course 2 label",
+            "x": 90,
+            "y": 890,
+            "w": 900,
+            "h": 45,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "MAIN",
+              "fr": "PLAT"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#8C1D3B",
+              "align": "center",
+              "lineHeight": 1.2,
+              "letterSpacing": 6
+            }
+          },
+          {
+            "id": "c2_name",
+            "name": "Course 2 name",
+            "x": 90,
+            "y": 945,
+            "w": 900,
+            "h": 95,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Beef Bourguignon",
+              "fr": "Bœuf Bourguignon"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 54,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#2B2320",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "c2_desc",
+            "name": "Course 2 desc",
+            "x": 160,
+            "y": 1045,
+            "w": 760,
+            "h": 90,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Braised in red wine with bacon, mushrooms and tender carrots",
+              "fr": "Mijoté au vin rouge, lardons, champignons et carottes fondantes"
+            },
+            "style": {
+              "fontFamily": "Georgia",
+              "fontSize": 26,
+              "fontWeight": 400,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#6B5D52",
+              "align": "center",
+              "lineHeight": 1.3,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "line_div2",
+            "name": "Divider",
+            "x": 290,
+            "y": 1150,
+            "w": 500,
+            "h": 3,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A66B"
+            }
+          },
+          {
+            "id": "c3_label",
+            "name": "Course 3 label",
+            "x": 90,
+            "y": 1190,
+            "w": 900,
+            "h": 45,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "DESSERT",
+              "fr": "DESSERT"
+            },
+            "style": {
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": 600,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#8C1D3B",
+              "align": "center",
+              "lineHeight": 1.2,
+              "letterSpacing": 6
+            }
+          },
+          {
+            "id": "c3_name",
+            "name": "Course 3 name",
+            "x": 90,
+            "y": 1245,
+            "w": 900,
+            "h": 95,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Tarte Tatin",
+              "fr": "Tarte Tatin"
+            },
+            "style": {
+              "fontFamily": "Playfair Display",
+              "fontSize": 54,
+              "fontWeight": 700,
+              "fontStyle": "normal",
+              "textDecoration": "none",
+              "color": "#2B2320",
+              "align": "center",
+              "lineHeight": 1.1,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "c3_desc",
+            "name": "Course 3 desc",
+            "x": 160,
+            "y": 1345,
+            "w": 760,
+            "h": 90,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Caramelized apples, buttery puff pastry and crème fraîche",
+              "fr": "Pommes caramélisées, pâte feuilletée et crème fraîche"
+            },
+            "style": {
+              "fontFamily": "Georgia",
+              "fontSize": 26,
+              "fontWeight": 400,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#6B5D52",
+              "align": "center",
+              "lineHeight": 1.3,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "line_div3",
+            "name": "Divider",
+            "x": 290,
+            "y": 1450,
+            "w": 500,
+            "h": 3,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A66B"
+            }
+          },
+          {
+            "id": "bon_appetit",
+            "name": "Bon appetit",
+            "x": 90,
+            "y": 1550,
+            "w": 900,
+            "h": 60,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "text",
+            "text": {
+              "en": "Bon appétit",
+              "fr": "Bon appétit"
+            },
+            "style": {
+              "fontFamily": "Georgia",
+              "fontSize": 36,
+              "fontWeight": 400,
+              "fontStyle": "italic",
+              "textDecoration": "none",
+              "color": "#8C1D3B",
+              "align": "center",
+              "lineHeight": 1.2,
+              "letterSpacing": 0
+            }
+          },
+          {
+            "id": "line_bottom",
+            "name": "Bottom rule",
+            "x": 390,
+            "y": 1630,
+            "w": 300,
+            "h": 3,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "type": "shape",
+            "shape": "rect",
+            "fill": {
+              "type": "solid",
+              "color": "#C9A66B"
+            }
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "glossary": []
+  },
+  "assets": []
+}
