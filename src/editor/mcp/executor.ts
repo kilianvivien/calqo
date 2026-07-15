@@ -16,7 +16,11 @@ import {
   updateLayer,
   type LayerPatch,
 } from '@/editor/utils/layers';
-import { editProject } from '@/editor/commands/projectCommands';
+import {
+  applyAddContentLocale,
+  applySetActiveContentLocale,
+  editProject,
+} from '@/editor/commands/projectCommands';
 import {
   detectListOverflow,
   detectTextOverflow,
@@ -425,6 +429,23 @@ export function applyBatchToProject(
           );
         }
         outcome.focusArtboardId = operation.artboardId;
+        break;
+      }
+      case 'addContentLocale': {
+        applyAddContentLocale(project, operation.locale, {
+          copyFrom: operation.copyFrom,
+        });
+        break;
+      }
+      case 'setActiveContentLocale': {
+        if (!project.contentLocales.includes(operation.locale)) {
+          opFail(
+            'VALIDATION_FAILED',
+            `Content locale "${operation.locale}" is not registered. Add it with addContentLocale first.`,
+            { contentLocales: project.contentLocales },
+          );
+        }
+        applySetActiveContentLocale(project, operation.locale);
         break;
       }
     }

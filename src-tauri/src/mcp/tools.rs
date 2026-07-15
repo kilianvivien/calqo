@@ -63,9 +63,8 @@ pub struct ApplyOperationsParams {
     /// agent never overwrites the user's concurrent edits.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub base_revision: Option<String>,
-    /// Command operations (addLayer, updateLayer, deleteLayers, reorderLayer,
-    /// groupLayers, ungroupLayer, addArtboard, setActiveArtboard). Call
-    /// calqo_get_guide only for advanced fields and design advice.
+    /// Command operations (layers, groups, artboards, and content locales).
+    /// Call calqo_get_guide only for advanced fields and design advice.
     #[schemars(with = "Vec<McpOperationParam>")]
     pub operations: Vec<Value>,
 }

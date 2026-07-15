@@ -372,7 +372,8 @@ is complete, disabled by default, and well tested.
 - [x] Add shared MCP operation contracts.
   - `src/editor/mcp/operationSchemas.ts`
   - command-level operations, not arbitrary project patches.
-  - Zod validation for add/update/delete/reorder/group/artboard operations.
+  - Zod validation for add/update/delete/reorder/group/artboard/content-locale
+    operations.
   - `baseRevision` support to avoid stale writes.
 - [x] Add an in-app operation executor.
   - Resolve project/artboard.

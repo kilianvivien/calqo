@@ -1676,10 +1676,45 @@ export function setActiveContentLocale(
   locale: LocaleCode,
 ): void {
   editProject(projectId, (draft) => {
-    if (draft.contentLocales.includes(locale)) {
-      draft.activeContentLocale = locale;
-    }
+    applySetActiveContentLocale(draft, locale);
   });
+}
+
+/** Command-layer recipe shared with atomic MCP batches. */
+export function applySetActiveContentLocale(
+  project: CalqoProject | Draft<CalqoProject>,
+  locale: LocaleCode,
+): void {
+  if (project.contentLocales.includes(locale)) {
+    project.activeContentLocale = locale;
+  }
+}
+
+/** Command-layer recipe shared with atomic MCP batches. */
+export function applyAddContentLocale(
+  project: CalqoProject | Draft<CalqoProject>,
+  locale: LocaleCode,
+  options: { copyFrom?: LocaleCode } = {},
+): void {
+  if (!project.contentLocales.includes(locale)) {
+    project.contentLocales.push(locale);
+  }
+  if (options.copyFrom) {
+    const source = options.copyFrom;
+    forEachTextLayer(project, (layer) => {
+      if (layer.text[source] !== undefined && layer.text[locale] === undefined) {
+        layer.text[locale] = layer.text[source];
+      }
+    });
+    forEachListLayer(project, (layer) => {
+      for (const row of layer.items) {
+        if (row.text[source] !== undefined && row.text[locale] === undefined) {
+          row.text[locale] = row.text[source];
+        }
+      }
+    });
+  }
+  project.activeContentLocale = locale;
 }
 
 /** Add a content locale, optionally seeding every text layer from a source
@@ -1692,25 +1727,7 @@ export function addContentLocale(
   editProject(
     projectId,
     (draft) => {
-      if (!draft.contentLocales.includes(locale)) {
-        draft.contentLocales.push(locale);
-      }
-      if (options.copyFrom) {
-        const source = options.copyFrom;
-        forEachTextLayer(draft, (layer) => {
-          if (layer.text[source] !== undefined && layer.text[locale] === undefined) {
-            layer.text[locale] = layer.text[source];
-          }
-        });
-        forEachListLayer(draft, (layer) => {
-          for (const row of layer.items) {
-            if (row.text[source] !== undefined && row.text[locale] === undefined) {
-              row.text[locale] = row.text[source];
-            }
-          }
-        });
-      }
-      draft.activeContentLocale = locale;
+      applyAddContentLocale(draft, locale, options);
     },
     { undoable: true },
   );

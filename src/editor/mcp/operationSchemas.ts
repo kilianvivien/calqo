@@ -134,6 +134,22 @@ export const setActiveArtboardOperationSchema = z
   })
   .strict();
 
+export const addContentLocaleOperationSchema = z
+  .object({
+    type: z.literal('addContentLocale'),
+    locale: localeCodeSchema,
+    /** Optionally seed missing text/list values from this locale. */
+    copyFrom: localeCodeSchema.optional(),
+  })
+  .strict();
+
+export const setActiveContentLocaleOperationSchema = z
+  .object({
+    type: z.literal('setActiveContentLocale'),
+    locale: localeCodeSchema,
+  })
+  .strict();
+
 export const mcpOperationSchema = z.discriminatedUnion('type', [
   addLayerOperationSchema,
   updateLayerOperationSchema,
@@ -143,6 +159,8 @@ export const mcpOperationSchema = z.discriminatedUnion('type', [
   ungroupLayerOperationSchema,
   addArtboardOperationSchema,
   setActiveArtboardOperationSchema,
+  addContentLocaleOperationSchema,
+  setActiveContentLocaleOperationSchema,
 ]);
 
 export const applyOperationsInputSchema = z

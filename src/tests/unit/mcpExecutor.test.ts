@@ -156,6 +156,16 @@ describe('mcp operation schemas', () => {
       ).toEqual({ type: 'solid', color: 'transparent' });
     }
   });
+
+  it('accepts content locale operations', () => {
+    const parsed = applyOperationsInputSchema.safeParse({
+      operations: [
+        { type: 'addContentLocale', locale: 'fr', copyFrom: 'en' },
+        { type: 'setActiveContentLocale', locale: 'fr' },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+  });
 });
 
 describe('mcp executor', () => {
@@ -297,6 +307,48 @@ describe('mcp executor', () => {
       operations: [{ type: 'setActiveArtboard', artboardId: added.id }],
     });
     expect(selectionStore.getState().activeArtboardId).toBe(added.id);
+  });
+
+  it('registers, seeds, and switches content locales atomically', () => {
+    const project = openProject();
+    executeApplyOperations({
+      operations: [
+        { type: 'addLayer', layer: textLayer('layer_translated') },
+        { type: 'addContentLocale', locale: 'fr', copyFrom: 'en' },
+      ],
+    });
+
+    let current = currentProject(project.id);
+    expect(current.contentLocales).toEqual(['en', 'fr']);
+    expect(current.activeContentLocale).toBe('fr');
+    const layer = current.artboards[0].layers[0];
+    expect(layer.type === 'text' && layer.text.fr).toBe('Hello');
+
+    executeApplyOperations({
+      operations: [{ type: 'setActiveContentLocale', locale: 'en' }],
+    });
+    expect(currentProject(project.id).activeContentLocale).toBe('en');
+
+    undoProject(project.id);
+    undoProject(project.id);
+    current = currentProject(project.id);
+    expect(current.contentLocales).toEqual(['en']);
+    expect(current.artboards[0].layers).toHaveLength(0);
+  });
+
+  it('rejects switching to an unregistered content locale', () => {
+    const project = openProject();
+    expectMcpError(
+      () =>
+        executeApplyOperations({
+          operations: [
+            { type: 'addLayer', layer: textLayer('layer_atomic') },
+            { type: 'setActiveContentLocale', locale: 'fr' },
+          ],
+        }),
+      'VALIDATION_FAILED',
+    );
+    expect(currentProject(project.id).artboards[0].layers).toHaveLength(0);
   });
 
   it('enforces the per-artboard layer cap', () => {

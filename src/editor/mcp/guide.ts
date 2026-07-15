@@ -41,7 +41,9 @@ PERMISSION_DENIED, tell the user to approve agent drawing (or call
     { "type": "groupLayers", "layerIds": ["…", "…"], "name": "Header" },
     { "type": "ungroupLayer", "layerId": "…" },
     { "type": "addArtboard", "preset": "story", "name": "Story variant" },
-    { "type": "setActiveArtboard", "artboardId": "…" }
+    { "type": "setActiveArtboard", "artboardId": "…" },
+    { "type": "addContentLocale", "locale": "fr", "copyFrom": "en" },
+    { "type": "setActiveContentLocale", "locale": "fr" }
   ]
 }
 \`\`\`
@@ -118,8 +120,11 @@ List layer (bullet lists / agendas):
   for panels/accents/badges. Never rasterize text.
 - Keep layers inside the artboard bounds; results warn about fully outside
   layers and text/list content that overflows its box.
-- Text keys are per-locale records (\`"text": { "en": "…", "fr": "…" }\`); write
-  the project's \`activeContentLocale\` at minimum.
+- Text keys are per-locale records (\`"text": { "en": "…", "fr": "…" }\`).
+  Register every locale you write with \`addContentLocale\` so it appears in
+  Calqo's Content languages panel. The operation activates that locale and can
+  seed missing values with \`copyFrom\`; use \`setActiveContentLocale\` to switch
+  among already registered locales.
 - Respect the user's existing layers — edit or add, don't wipe, unless asked.
 - Keep compositions modest: strong hierarchy, few fonts, colors from the
   project palette when one exists.

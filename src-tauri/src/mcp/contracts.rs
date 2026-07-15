@@ -424,4 +424,13 @@ pub enum McpOperationParam {
     },
     #[serde(rename = "setActiveArtboard")]
     SetActiveArtboard { artboard_id: String },
+    #[serde(rename = "addContentLocale")]
+    AddContentLocale {
+        locale: String,
+        /// Optionally seed missing text/list values from this locale.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        copy_from: Option<String>,
+    },
+    #[serde(rename = "setActiveContentLocale")]
+    SetActiveContentLocale { locale: String },
 }
