@@ -25,6 +25,7 @@ import {
   createProject,
 } from '@/editor/commands/projectCommands';
 import { safeImportProject, type CalqoProject } from '@/lib/schema';
+import { useUiStore } from '@/lib/state/uiStore';
 
 /** Proportional preset cards for choosing a social-media format. Shared by the
  * New-project modal and the empty-canvas state. */
@@ -132,6 +133,14 @@ export function NewProjectModal({
   }, [open]);
 
   useEffect(() => {
+    if (open) return;
+    setBundled(null);
+    setUserStarters(null);
+    setTab('blank');
+    setRenamingId(null);
+  }, [open]);
+
+  useEffect(() => {
     if (!open || tab !== 'starters' || bundled !== null) return undefined;
     let alive = true;
     void (async () => {
@@ -159,6 +168,7 @@ export function NewProjectModal({
   const applyProfileIfSelected = (projectId: string) => {
     const profile = profiles.find((candidate) => candidate.id === profileId);
     if (profile) applyBrandProfile(projectId, profile);
+    else useUiStore.getState().setBrandFontDefaults(null);
   };
 
   const createBlank = async (preset: ArtboardPresetId) => {
@@ -271,9 +281,12 @@ export function NewProjectModal({
                   onClick={() => envelope && void instantiate(envelope)}
                   className="min-w-0 rounded-[12px] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-2.5 text-left transition-[border-color,background,box-shadow,transform] duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-out)] hover:-translate-y-0.5 hover:border-[var(--calqo-accent)] hover:bg-[var(--calqo-accent-soft)]"
                 >
-                  <StarterPreview project={project} />
+                  <StarterPreview project={project} thumbnail={entry.thumbnail} />
                   <span className="block truncate text-[12px] font-semibold text-[var(--calqo-text)]">
                     {entry.name}
+                  </span>
+                  <span className="mono mt-0.5 block text-[9.5px] text-[var(--calqo-text-3)]">
+                    {entry.width}×{entry.height} · {entry.presets.join(', ')}
                   </span>
                   <span className="mt-0.5 flex items-center gap-1">
                     <span className="rounded-full bg-[var(--calqo-accent-soft)] px-1.5 py-0.5 text-[9.5px] font-medium text-[var(--calqo-accent)]">
@@ -310,6 +323,9 @@ export function NewProjectModal({
                         className="block w-full text-left"
                       >
                         <StarterPreview project={null} thumbnail={starter.thumbnail} />
+                        <span className="mono mb-0.5 block text-[9.5px] text-[var(--calqo-text-3)]">
+                          {starter.envelope.project.artboards[0]?.width ?? 0}×{starter.envelope.project.artboards[0]?.height ?? 0} · {starter.envelope.project.artboards.map((artboard) => artboard.preset).join(', ')}
+                        </span>
                         {renamingId === starter.id ? null : (
                           <span className="block truncate text-[12px] font-semibold text-[var(--calqo-text)]">
                             {starter.name}

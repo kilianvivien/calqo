@@ -44,12 +44,14 @@ export function RepairAssetsModal() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<MissingAsset | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!open || !project) return null;
 
   const close = () => setOpen(false);
 
   const pickReplacement = (item: MissingAsset) => {
+    setError(null);
     setPending(item);
     fileInputRef.current?.click();
   };
@@ -61,6 +63,12 @@ export function RepairAssetsModal() {
 
   const handleFile = async (file: File) => {
     if (!pending) return;
+    const replacementKind = file.type === 'image/svg+xml' ? 'svg' : 'image';
+    if (replacementKind !== pending.kind) {
+      setError(t('repairAssets.wrongKind', { expected: t(`repairAssets.kind.${pending.kind}`) }));
+      setPending(null);
+      return;
+    }
     setBusy(true);
     try {
       const kind = file.type === 'image/svg+xml' ? 'svg' : 'raster';
@@ -73,6 +81,9 @@ export function RepairAssetsModal() {
         height: measured.height,
       });
       await refresh();
+      setError(null);
+    } catch {
+      setError(t('repairAssets.relinkFailed'));
     } finally {
       setPending(null);
       setBusy(false);
@@ -122,6 +133,11 @@ export function RepairAssetsModal() {
       />
 
       <div className="calqo-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+        {error && (
+          <p role="alert" className="mb-2 rounded-[var(--calqo-radius-sm)] bg-[#FF5F57]/10 px-3 py-2 text-[11.5px] text-[#B42318]">
+            {error}
+          </p>
+        )}
         {missing.length === 0 ? (
           <p className="px-1 py-8 text-center text-[13px] text-[var(--calqo-text-3)]">
             {t('repairAssets.allResolved')}

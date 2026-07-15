@@ -21,11 +21,11 @@ const adapterMocks = vi.hoisted(() => ({
 vi.mock('@/lib/adapters', () => adapterMocks);
 
 import {
+  analyzeHtmlFidelity,
   exportArtboardHtmlLayout,
   rasterReasonForLayer,
 } from '@/editor/export/htmlLayoutExport';
 import { fillToCss, textStyleToCss } from '@/editor/export/styleConversions';
-import { HTML_RASTER_REASONS } from '@/editor/export/exportWarnings';
 
 const baseLayer = {
   rotation: 0,
@@ -199,16 +199,16 @@ describe('exportArtboardHtmlLayout', () => {
     // The export locale reaches the fallback rasterizer, so rasterized layers
     // containing text render the right language in multi-locale batches.
     expect(rasterizeLayer).toHaveBeenCalledWith(masked, expect.anything(), 'en');
-    expect(html).toContain('data-rasterized="unsupported mask shape"');
+    expect(html).toContain('data-rasterized="mask"');
     expect(html).toContain('data:image/png;base64,RASTER');
     expect(
-      warnings.some((warning) => warning.includes('Star photo')),
+      warnings.some((warning) => warning.layerName === 'Star photo' && warning.reason === 'mask'),
     ).toBe(true);
   });
 
   it('always names the font caveat and never loses fidelity silently', async () => {
     const { warnings } = await exportArtboardHtmlLayout(artboard([textLayer()]), 'en');
-    expect(warnings.some((warning) => warning.includes('family name'))).toBe(true);
+    expect(warnings.some((warning) => warning.code === 'fontFallback')).toBe(true);
   });
 });
 
@@ -226,7 +226,7 @@ describe('rasterReasonForLayer', () => {
       h: 10,
       fill: { type: 'solid', color: 'transparent' },
     } as CalqoLayer;
-    expect(rasterReasonForLayer(freehand)).toBe(HTML_RASTER_REASONS.freehand);
+    expect(rasterReasonForLayer(freehand)).toBe('freehand');
 
     const group = {
       ...baseLayer,
@@ -239,9 +239,24 @@ describe('rasterReasonForLayer', () => {
       h: 10,
       children: [freehand],
     } as CalqoLayer;
-    expect(rasterReasonForLayer(group)).toBe(HTML_RASTER_REASONS.group);
+    expect(rasterReasonForLayer(group)).toBe('group');
 
     expect(rasterReasonForLayer(textLayer())).toBeNull();
+  });
+
+  it('classifies background removal and exposes predictable preflight warnings', () => {
+    const image = {
+      ...baseLayer,
+      id: 'removed', name: 'Cutout', type: 'image', x: 0, y: 0, w: 20, h: 20,
+      assetId: 'asset-1', fit: 'cover',
+      backgroundRemoval: {
+        source: { assetId: 'source' }, result: { assetId: 'asset-1' }, passes: [],
+      },
+    } as CalqoLayer;
+    expect(rasterReasonForLayer(image)).toBe('backgroundRemoval');
+    expect(analyzeHtmlFidelity([artboard([image])])).toContainEqual({
+      tier: 'rasterized', code: 'rasterized', layerName: 'Cutout', reason: 'backgroundRemoval',
+    });
   });
 });
 

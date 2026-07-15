@@ -54,9 +54,11 @@ export function BrandSettingsPane() {
   const fontOptions = useFontOptions();
   const activeProjectId = useWorkspaceStore((s) => s.activeProjectId);
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
+  const profilesRef = useRef<BrandProfileRecord[]>([]);
 
   const refresh = async (keep?: string) => {
     const list = await listBrandProfiles();
+    profilesRef.current = list;
     setProfiles(list);
     setSelectedId((prev) => keep ?? prev ?? list[0]?.id ?? null);
   };
@@ -68,10 +70,14 @@ export function BrandSettingsPane() {
   const selected = profiles.find((profile) => profile.id === selectedId) ?? null;
 
   const update = async (patch: Partial<BrandProfileRecord>) => {
-    if (!selected) return;
-    const next = { ...selected, ...patch };
+    const current = profilesRef.current.find((profile) => profile.id === selectedId);
+    if (!current) return;
+    const next = { ...current, ...patch };
+    profilesRef.current = profilesRef.current.map((profile) =>
+      profile.id === next.id ? next : profile,
+    );
+    setProfiles(profilesRef.current);
     await saveBrandProfile(next);
-    await refresh(next.id);
   };
 
   const addProfile = async () => {

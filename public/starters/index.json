@@ -4,6 +4,10 @@
       "id": "ig-announcement",
       "name": "Announcement — Instagram square",
       "file": "ig-announcement.calqo",
+      "thumbnail": "/starters/thumbnails/ig-announcement.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square"],
       "tags": [
         "ig-square",
         "announcement"
@@ -13,6 +17,10 @@
       "id": "story-cover",
       "name": "Story / reel cover",
       "file": "story-cover.calqo",
+      "thumbnail": "/starters/thumbnails/story-cover.svg",
+      "width": 1080,
+      "height": 1920,
+      "presets": ["story"],
       "tags": [
         "story",
         "cover"
@@ -22,6 +30,10 @@
       "id": "x-quote",
       "name": "Quote card — X post",
       "file": "x-quote.calqo",
+      "thumbnail": "/starters/thumbnails/x-quote.svg",
+      "width": 1600,
+      "height": 900,
+      "presets": ["x-post"],
       "tags": [
         "x-post",
         "quote"
@@ -31,6 +43,10 @@
       "id": "linkedin-tips",
       "name": "Tips list — LinkedIn post",
       "file": "linkedin-tips.calqo",
+      "thumbnail": "/starters/thumbnails/linkedin-tips.svg",
+      "width": 1200,
+      "height": 627,
+      "presets": ["linkedin-post"],
       "tags": [
         "linkedin-post",
         "list"
@@ -40,6 +56,10 @@
       "id": "youtube-thumbnail",
       "name": "YouTube thumbnail",
       "file": "youtube-thumbnail.calqo",
+      "thumbnail": "/starters/thumbnails/youtube-thumbnail.svg",
+      "width": 1280,
+      "height": 720,
+      "presets": ["youtube-thumbnail"],
       "tags": [
         "youtube-thumbnail",
         "video"
@@ -49,6 +69,10 @@
       "id": "multilingual-card",
       "name": "Multilingual card (EN/FR/TR)",
       "file": "multilingual-card.calqo",
+      "thumbnail": "/starters/thumbnails/multilingual-card.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square"],
       "tags": [
         "ig-square",
         "multilingual"
@@ -58,6 +82,10 @@
       "id": "sticker-sheet",
       "name": "Sticker sheet (transparent export)",
       "file": "sticker-sheet.calqo",
+      "thumbnail": "/starters/thumbnails/sticker-sheet.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square"],
       "tags": [
         "ig-square",
         "stickers"
@@ -67,6 +95,10 @@
       "id": "campaign-kit",
       "name": "Campaign kit (3 formats)",
       "file": "campaign-kit.calqo",
+      "thumbnail": "/starters/thumbnails/campaign-kit.svg",
+      "width": 1080,
+      "height": 1080,
+      "presets": ["ig-square", "story", "x-post"],
       "tags": [
         "ig-square",
         "story",

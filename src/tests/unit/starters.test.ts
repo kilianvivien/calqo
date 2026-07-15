@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CalqoAssetRef } from '@/lib/schema';
@@ -40,7 +40,7 @@ import { workspaceStore } from '@/lib/state/workspaceStore';
 const STARTERS_DIR = join(__dirname, '../../../public/starters');
 
 interface StarterIndex {
-  starters: { id: string; name: string; file: string; tags: string[] }[];
+  starters: { id: string; name: string; file: string; tags: string[]; thumbnail: string; width: number; height: number; presets: string[] }[];
 }
 
 describe('bundled starter gallery', () => {
@@ -56,6 +56,13 @@ describe('bundled starter gallery', () => {
       new Set(filesOnDisk),
     );
     expect(index.starters.length).toBeGreaterThanOrEqual(6);
+    for (const entry of index.starters) {
+      expect(entry.tags.length).toBeGreaterThan(0);
+      expect(entry.presets.length).toBeGreaterThan(0);
+      expect(entry.width).toBeGreaterThan(0);
+      expect(entry.height).toBeGreaterThan(0);
+      expect(existsSync(join(STARTERS_DIR, entry.thumbnail.replace('/starters/', '')))).toBe(true);
+    }
   });
 
   it.each(

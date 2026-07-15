@@ -23,8 +23,20 @@ async function openFreshApp(page: import('@playwright/test').Page) {
   await page.reload();
 }
 
+async function enableMockAi(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Open settings' }).click();
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  await settings.getByRole('tab', { name: 'AI provider' }).click();
+  await settings.getByLabel('Provider').selectOption('custom');
+  await settings.getByLabel('Base URL').fill('');
+  await settings.getByLabel('Model').fill('');
+  await settings.getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByRole('button', { name: 'Prompt a template' })).toBeVisible();
+}
+
 test('create-edit-translate-prompt-export-reload smoke path', async ({ page }) => {
   await openFreshApp(page);
+  await enableMockAi(page);
 
   await page.getByRole('button', { name: /Instagram square/i }).click();
   await expect(page.getByRole('button', { name: 'Untitled project' })).toBeVisible();
@@ -96,32 +108,33 @@ test('create-edit-translate-prompt-export-reload smoke path', async ({ page }) =
 
 test('visual smoke checkpoints', async ({ page }) => {
   await openFreshApp(page);
+  await enableMockAi(page);
   await expect(page.getByText('Choose a format')).toBeVisible();
-  await page.screenshot({ path: 'e2e/screenshots/empty-workspace.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/empty-workspace.png', fullPage: true });
 
   await page.getByRole('button', { name: 'Open sample project' }).click();
   await page.getByRole('tab', { name: 'Layers' }).click();
   await page.getByRole('button', { name: 'Headline' }).click();
-  await page.screenshot({ path: 'e2e/screenshots/sample-selected-light.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/sample-selected-light.png', fullPage: true });
 
   await page.getByRole('button', { name: 'Toggle theme' }).click();
-  await page.screenshot({ path: 'e2e/screenshots/sample-selected-dark.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/sample-selected-dark.png', fullPage: true });
 
   await page.evaluate(() => {
     localStorage.setItem('calqo-transparency', 'solid');
     document.documentElement.setAttribute('data-transparency', 'solid');
   });
   await page.screenshot({
-    path: 'e2e/screenshots/sample-selected-solid-transparency.png',
+    path: 'test-results/sample-selected-solid-transparency.png',
     fullPage: true,
   });
 
   await page.getByRole('button', { name: 'Translate' }).click();
-  await page.screenshot({ path: 'e2e/screenshots/translate-dialog-en.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/translate-dialog-en.png', fullPage: true });
   await page.keyboard.press('Escape');
 
   await page.evaluate(() => localStorage.setItem('calqo-language', 'fr'));
   await page.reload();
   await page.getByRole('button', { name: 'Traduire' }).click();
-  await page.screenshot({ path: 'e2e/screenshots/translate-dialog-fr.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/translate-dialog-fr.png', fullPage: true });
 });

@@ -15,7 +15,8 @@ import {
 } from '@/editor/export/rasterExport';
 import { exportArtboardSvg } from '@/editor/export/svgExport';
 import { htmlSnippet, htmlStandalone } from '@/editor/export/htmlExport';
-import { exportArtboardHtmlLayout } from '@/editor/export/htmlLayoutExport';
+import { analyzeHtmlFidelity, exportArtboardHtmlLayout } from '@/editor/export/htmlLayoutExport';
+import { warningIdentity, type HtmlExportWarning } from '@/editor/export/exportWarnings';
 import { blobToBytes, createZip } from '@/editor/export/zip';
 import {
   collectExportWarnings,
@@ -72,7 +73,7 @@ export function ExportDialog({
   // progress rather than an indefinite spinner.
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   // Fidelity notes returned by the last editable-HTML export.
-  const [fidelityNotes, setFidelityNotes] = useState<string[]>([]);
+  const [runtimeFidelityNotes, setRuntimeFidelityNotes] = useState<HtmlExportWarning[]>([]);
   // Estimated `.calqo` envelope size (project JSON + base64 assets), plus the
   // asset names contributing most to it so the warning is actionable.
   const [envelopeEstimate, setEnvelopeEstimate] = useState<number | null>(null);
@@ -99,6 +100,11 @@ export function ExportDialog({
       collectExportWarnings({ project, targets, exportingAll: scope === 'all' }, t),
     [project, targets, scope, t],
   );
+  const fidelityNotes = useMemo(() => {
+    if (format !== 'html' || htmlKind !== 'editable') return [];
+    const combined = [...analyzeHtmlFidelity(targets), ...runtimeFidelityNotes];
+    return [...new Map(combined.map((warning) => [warningIdentity(warning), warning])).values()];
+  }, [format, htmlKind, targets, runtimeFidelityNotes]);
 
   // Estimate the portable `.calqo` payload while the dialog is open so heavy
   // projects are flagged before they ship (asset-health soft limit).
@@ -173,7 +179,7 @@ export function ExportDialog({
     target: CalqoArtboard,
     stem: string,
     locale: LocaleCode,
-    notes: string[],
+    notes: HtmlExportWarning[],
   ): Promise<{ name: string; blob: Blob }> => {
     const projectSlug = slug(project.name);
     const dir = localeTargets.length > 1 ? `${locale}/` : '';
@@ -227,8 +233,8 @@ export function ExportDialog({
     setProgress({ done: 0, total });
     // Fidelity notes accumulate across the whole batch (deduplicated), so a
     // multi-artboard export never shows only the last artboard's notes.
-    const notes: string[] = [];
-    setFidelityNotes([]);
+    const notes: HtmlExportWarning[] = [];
+    setRuntimeFidelityNotes([]);
     try {
       const outputs = [];
       for (const locale of localeTargets) {
@@ -237,7 +243,7 @@ export function ExportDialog({
           setProgress({ done: outputs.length, total });
         }
       }
-      setFidelityNotes([...new Set(notes)]);
+      setRuntimeFidelityNotes(notes);
       if (outputs.length === 1) {
         await files.downloadBlob(outputs[0].blob, outputs[0].name);
       } else {
@@ -509,8 +515,8 @@ export function ExportDialog({
               </p>
               <ul className="max-h-28 space-y-0.5 overflow-y-auto calqo-scroll">
                 {fidelityNotes.map((note) => (
-                  <li key={note} className="text-[11px] text-[var(--calqo-text-3)]">
-                    {note}
+                  <li key={warningIdentity(note)} className="text-[11px] text-[var(--calqo-text-3)]">
+                    {formatHtmlWarning(note, t)}
                   </li>
                 ))}
               </ul>
@@ -572,4 +578,17 @@ function slug(value: string): string {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'calqo'
   );
+}
+
+function formatHtmlWarning(
+  warning: HtmlExportWarning,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const reason = warning.reason
+    ? t(`export.htmlWarnings.reasons.${warning.reason}`)
+    : undefined;
+  return t(`export.htmlWarnings.codes.${warning.code}`, {
+    name: warning.layerName ?? '',
+    reason,
+  });
 }

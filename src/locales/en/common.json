@@ -101,6 +101,14 @@
     "languageMode": "App language",
     "autoLanguage": "Auto",
     "autoLanguageHint": "Uses your browser language when supported.",
+    "assetHealth": {
+      "title": "Asset health limits",
+      "hint": "Soft warning limits only. Imports and exports are never blocked.",
+      "decodedMb": "Decoded image (MB)",
+      "longEdge": "Long edge (px)",
+      "envelopeMb": "Project file (MB)",
+      "reset": "Reset defaults"
+    },
     "ai": {
       "title": "AI provider",
       "provider": "Provider",

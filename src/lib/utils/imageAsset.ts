@@ -27,7 +27,7 @@ export function isOversizedImport(
 /** Raise the non-blocking oversized-import notice when a raster exceeds the
  * app's soft limits (long edge or decoded RGBA size). Import always succeeds —
  * the notice just points at the optimize-assets flow. */
-function noticeIfOversized(
+export function noticeIfOversized(
   name: string,
   kind: 'raster' | 'svg',
   width?: number,

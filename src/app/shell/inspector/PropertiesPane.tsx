@@ -2845,13 +2845,12 @@ function MarkerAssetPicker({
 
   const onUpload = (file: File) => {
     void measureImage(file).then(async (measured) => {
-      const asset = await assetStorage.saveAsset(projectId, file, {
-        kind: file.type === 'image/svg+xml' ? 'svg' : 'raster',
-        name: file.name,
-        mimeType: file.type,
-        width: measured.width,
-        height: measured.height,
-      });
+      const asset = file.type === 'image/svg+xml'
+        ? await assetStorage.saveAsset(projectId, file, {
+            kind: 'svg', name: file.name, mimeType: file.type,
+            width: measured.width, height: measured.height,
+          })
+        : await saveImageAsset(projectId, file);
       onPick(asset);
     });
   };
@@ -3245,13 +3244,12 @@ function ReplaceAssetButton({
           const file = event.target.files?.[0];
           if (!file) return;
           void measureImage(file).then(async (measured) => {
-            const asset = await assetStorage.saveAsset(projectId, file, {
-              kind: file.type === 'image/svg+xml' ? 'svg' : 'raster',
-              name: file.name,
-              mimeType: file.type,
-              width: measured.width,
-              height: measured.height,
-            });
+            const asset = file.type === 'image/svg+xml'
+              ? await assetStorage.saveAsset(projectId, file, {
+                  kind: 'svg', name: file.name, mimeType: file.type,
+                  width: measured.width, height: measured.height,
+                })
+              : await saveImageAsset(projectId, file);
             replaceLayerAsset(projectId, layer.id, asset);
           });
           event.currentTarget.value = '';

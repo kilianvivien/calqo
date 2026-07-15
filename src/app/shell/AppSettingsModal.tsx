@@ -42,6 +42,10 @@ import { platformRuntime } from '@/lib/platform/runtime';
 import { DiagnosticsPane } from './inspector/DiagnosticsPane';
 import { AgentDrawingPane } from './AgentDrawingPane';
 import { BrandSettingsPane } from './BrandSettingsPane';
+import {
+  resetAssetHealthThresholds,
+  saveAssetHealthThresholds,
+} from '@/editor/assets/assetHealthSettings';
 
 type LanguageMode = 'auto' | AppLanguage;
 export type SettingsTab =
@@ -102,6 +106,7 @@ export function AppSettingsModal({
   const setTheme = useUiStore((s) => s.setTheme);
   const transparency = useUiStore((s) => s.transparency);
   const setTransparency = useUiStore((s) => s.setTransparency);
+  const assetHealthThresholds = useUiStore((s) => s.assetHealthThresholds);
   const aiSettings = useAiSettingsStore((s) => s.settings);
   const setProvider = useAiSettingsStore((s) => s.setProvider);
   const setStoreKey = useAiSettingsStore((s) => s.setStoreKey);
@@ -277,6 +282,23 @@ export function AppSettingsModal({
                     ))}
                   </select>
                 </SettingsRow>
+                <div className="border-t border-[var(--calqo-divider)] pt-5">
+                  <h4 className="mb-1 text-[13px] font-semibold text-[var(--calqo-text)]">
+                    {t('settings.assetHealth.title')}
+                  </h4>
+                  <p className="mb-4 text-[11.5px] text-[var(--calqo-text-3)]">
+                    {t('settings.assetHealth.hint')}
+                  </p>
+                  <div className="space-y-3">
+                    <NumberSetting label={t('settings.assetHealth.decodedMb')} value={Math.round(assetHealthThresholds.maxAssetDecodedBytes / (1024 * 1024))} onCommit={(value) => void saveAssetHealthThresholds({ maxAssetDecodedBytes: value * 1024 * 1024 })} />
+                    <NumberSetting label={t('settings.assetHealth.longEdge')} value={assetHealthThresholds.maxAssetEdge} onCommit={(value) => void saveAssetHealthThresholds({ maxAssetEdge: value })} />
+                    <NumberSetting label={t('settings.assetHealth.envelopeMb')} value={Math.round(assetHealthThresholds.maxEnvelopeBytes / (1024 * 1024))} onCommit={(value) => void saveAssetHealthThresholds({ maxEnvelopeBytes: value * 1024 * 1024 })} />
+                    <div className="grid grid-cols-[132px_minmax(0,1fr)] gap-3">
+                      <span />
+                      <GlassButton onClick={() => void resetAssetHealthThresholds()}>{t('settings.assetHealth.reset')}</GlassButton>
+                    </div>
+                  </div>
+                </div>
               </section>
             )}
 
@@ -549,6 +571,26 @@ function TextSetting({
         onChange={(event) => onChange(event.target.value)}
         className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[13px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-2 focus:ring-[var(--calqo-accent-ring)]"
       />
+    </label>
+  );
+}
+
+function NumberSetting({ label, value, onCommit }: {
+  label: string;
+  value: number;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
+  const commit = () => {
+    const parsed = Math.max(1, Math.round(Number(draft) || value));
+    setDraft(String(parsed));
+    onCommit(parsed);
+  };
+  return (
+    <label className="grid grid-cols-[132px_minmax(0,1fr)] items-center gap-3">
+      <span className="text-[12px] font-medium text-[var(--calqo-text-2)]">{label}</span>
+      <input type="number" min={1} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={commit} onKeyDown={(event) => event.key === 'Enter' && event.currentTarget.blur()} className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[13px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]" />
     </label>
   );
 }

@@ -1,7 +1,8 @@
 # Calqo — Five Key Features Implementation Plan
 
 **Planning date:** 2026-07-06
-**Status:** Implemented (2026-07-07) — all five features landed; see PR for detail.
+**Status:** Implemented and acceptance-audited (2026-07-15) — all five features
+and their browser acceptance paths are complete.
 **Planning inputs:** `docs/PRD-calqo-v0.5.md`, `docs/plan.md` (Beta/1.0 roadmap),
 current source tree (`src/editor/`, `src/lib/`, `src/app/`).
 
@@ -9,6 +10,19 @@ This plan selects five features that are not yet implemented, that address
 gaps explicitly called out in the roadmap and PRD, and that most improve the
 product's core promise: *create, edit, translate, export, save, move,
 recover*. Each feature is scoped to land independently, in the order listed.
+
+## Completion audit — 2026-07-15
+
+- Missing-asset repair validates replacement kinds and is covered through
+  relink, undo/redo, and warning-free export readiness.
+- Asset-health thresholds persist as app settings; imports share one warning
+  path and optimization previews actual encoded output before approval.
+- Bundled starters ship validated thumbnails and display metadata; user starter
+  saves refresh and round-trip without reopening the app.
+- Brand Lite applies deterministic defaults and the offline provider emits the
+  selected palette plus distinct heading/body fonts; logos export self-contained.
+- Editable HTML uses structured localized fidelity warnings, preflight analysis,
+  background-removal fallback, and a Chromium PNG-comparison harness.
 
 | # | Feature | Gap it closes | Roadmap home |
 |---|---------|---------------|--------------|

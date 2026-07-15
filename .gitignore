@@ -13,6 +13,7 @@ src-tauri/gen
 coverage
 playwright-report
 test-results
+e2e/screenshots/
 
 # Editor / OS
 .DS_Store

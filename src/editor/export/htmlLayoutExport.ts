@@ -18,7 +18,11 @@ import {
   shadowToCssDropShadow,
   textStyleToCss,
 } from './styleConversions';
-import { HTML_EXPORT_WARNINGS, HTML_RASTER_REASONS } from './exportWarnings';
+import {
+  warningIdentity,
+  type HtmlExportWarning,
+  type HtmlRasterReason,
+} from './exportWarnings';
 
 /**
  * Editable HTML/CSS export ("HTML (editable)"): serializes the project
@@ -31,7 +35,7 @@ import { HTML_EXPORT_WARNINGS, HTML_RASTER_REASONS } from './exportWarnings';
 
 export interface HtmlLayoutResult {
   html: string;
-  warnings: string[];
+  warnings: HtmlExportWarning[];
 }
 
 export interface HtmlLayoutOptions {
@@ -79,35 +83,36 @@ async function defaultRasterizeLayer(
 }
 
 /** Why a layer needs the rasterized fallback, or null when it exports natively. */
-export function rasterReasonForLayer(layer: CalqoLayer): string | null {
+export function rasterReasonForLayer(layer: CalqoLayer): HtmlRasterReason | null {
   if (isGroupLayer(layer)) {
     return layer.children.some((child) => rasterReasonForLayer(child) !== null)
-      ? HTML_RASTER_REASONS.group
+      ? 'group'
       : null;
   }
-  if (layer.sticker) return HTML_RASTER_REASONS.sticker;
+  if (layer.sticker) return 'sticker';
   if (layer.type === 'image') {
-    if (layer.crop) return HTML_RASTER_REASONS.crop;
-    if (layer.frame) return HTML_RASTER_REASONS.frame;
-    if (layer.filters) return HTML_RASTER_REASONS.filters;
+    if (layer.crop) return 'crop';
+    if (layer.frame) return 'frame';
+    if (layer.filters) return 'filters';
+    if (layer.backgroundRemoval) return 'backgroundRemoval';
     if (
       layer.mask &&
       layer.mask.shape !== 'rounded' &&
       layer.mask.shape !== 'circle' &&
       layer.mask.shape !== 'ellipse'
     ) {
-      return HTML_RASTER_REASONS.mask;
+      return 'mask';
     }
     return null;
   }
   if (layer.type === 'shape') {
-    if (layer.shape === 'freehand') return HTML_RASTER_REASONS.freehand;
-    if (layer.fill.type === 'pattern') return HTML_RASTER_REASONS.patternFill;
-    if (layer.fill.type === 'image') return HTML_RASTER_REASONS.imageFill;
+    if (layer.shape === 'freehand') return 'freehand';
+    if (layer.fill.type === 'pattern') return 'patternFill';
+    if (layer.fill.type === 'image') return 'imageFill';
     return null;
   }
   if (layer.type === 'list' && layer.marker.kind === 'asset') {
-    return HTML_RASTER_REASONS.markerAsset;
+    return 'markerAsset';
   }
   return null;
 }
@@ -116,7 +121,7 @@ function boxCss(layer: CalqoLayer): string {
   return `position:absolute;left:${round(layer.x)}px;top:${round(layer.y)}px;width:${round(layer.w)}px;height:${round(layer.h)}px;`;
 }
 
-function commonEffectsCss(layer: CalqoLayer, warnings: string[]): string {
+function commonEffectsCss(layer: CalqoLayer, warnings: HtmlExportWarning[]): string {
   let css = rotationToCss(layer);
   if (layer.opacity !== 1) css += `opacity:${round(layer.opacity)};`;
   if (layer.blendMode && layer.blendMode !== 'normal') {
@@ -126,17 +131,17 @@ function commonEffectsCss(layer: CalqoLayer, warnings: string[]): string {
   const filters: string[] = [];
   if (layer.effects?.shadow) {
     filters.push(shadowToCssDropShadow(layer.effects.shadow));
-    warnings.push(HTML_EXPORT_WARNINGS.shadow);
+    warnings.push({ tier: 'approximated', code: 'shadow', layerName: layer.name });
   }
   if (layer.effects?.blur) {
     filters.push(`blur(${round(layer.effects.blur)}px)`);
-    warnings.push(HTML_EXPORT_WARNINGS.blur);
+    warnings.push({ tier: 'approximated', code: 'blur', layerName: layer.name });
   }
   if (filters.length > 0) css += `filter:${filters.join(' ')};`;
   return css;
 }
 
-function textLayerHtml(layer: TextLayer, locale: string, warnings: string[]): string {
+function textLayerHtml(layer: TextLayer, locale: string, warnings: HtmlExportWarning[]): string {
   const value = layer.text[locale] ?? Object.values(layer.text)[0] ?? '';
   const vAlign = layer.style.verticalAlign ?? 'top';
   const align =
@@ -149,7 +154,7 @@ function textLayerHtml(layer: TextLayer, locale: string, warnings: string[]): st
   return `<p data-layer="${escapeMarkup(layer.name)}" style="${css}">${escapeMarkup(value)}</p>`;
 }
 
-function listLayerHtml(layer: ListLayer, locale: string, warnings: string[]): string {
+function listLayerHtml(layer: ListLayer, locale: string, warnings: HtmlExportWarning[]): string {
   const vAlign = layer.style.verticalAlign ?? 'top';
   const align =
     vAlign === 'middle' ? 'center' : vAlign === 'bottom' ? 'flex-end' : 'flex-start';
@@ -175,11 +180,11 @@ function listLayerHtml(layer: ListLayer, locale: string, warnings: string[]): st
 function imageLayerHtml(
   layer: ImageLayer,
   assets: Map<string, string>,
-  warnings: string[],
+  warnings: HtmlExportWarning[],
 ): string {
   const dataUrl = assets.get(layer.assetId);
   if (!dataUrl) {
-    warnings.push(`Missing asset for layer "${layer.name}" was skipped.`);
+    warnings.push({ tier: 'error', code: 'missingAsset', layerName: layer.name });
     return '';
   }
   const fit =
@@ -210,9 +215,13 @@ function inlineSvgLayerHtml(
   containerH: number,
   assets: Map<string, string>,
   locale: string,
-  warnings: string[],
+  warnings: HtmlExportWarning[],
 ): string {
-  const markup = serializeLayer(layer, assets, locale, warnings);
+  const svgWarnings: string[] = [];
+  const markup = serializeLayer(layer, assets, locale, svgWarnings);
+  if (svgWarnings.length > 0) {
+    warnings.push({ tier: 'approximated', code: 'vectorApproximation', layerName: layer.name });
+  }
   if (!markup) return '';
   return `<svg data-layer="${escapeMarkup(layer.name)}" xmlns="http://www.w3.org/2000/svg" width="${round(containerW)}" height="${round(containerH)}" viewBox="0 0 ${round(containerW)} ${round(containerH)}" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none">${markup}</svg>`;
 }
@@ -228,7 +237,7 @@ function shapeIsCssNative(layer: CalqoLayer): boolean {
 
 function shapeDivHtml(
   layer: Extract<CalqoLayer, { type: 'shape' }>,
-  warnings: string[],
+  warnings: HtmlExportWarning[],
 ): string {
   const background = fillToCss(layer.fill) ?? 'transparent';
   let css =
@@ -244,7 +253,7 @@ async function layerHtml(
     artboard: CalqoArtboard;
     assets: Map<string, string>;
     locale: string;
-    warnings: string[];
+    warnings: HtmlExportWarning[];
     rasterizeLayer: NonNullable<HtmlLayoutOptions['rasterizeLayer']>;
     containerW: number;
     containerH: number;
@@ -261,10 +270,10 @@ async function layerHtml(
     if (!context.topLevel) return '';
     const dataUrl = await context.rasterizeLayer(layer, artboard, locale);
     if (!dataUrl) {
-      warnings.push(`Layer "${layer.name}" could not be rendered and was skipped.`);
+      warnings.push({ tier: 'error', code: 'renderFailed', layerName: layer.name, reason });
       return '';
     }
-    warnings.push(HTML_EXPORT_WARNINGS.rasterized(layer.name, reason));
+    warnings.push({ tier: 'rasterized', code: 'rasterized', layerName: layer.name, reason });
     return `<img data-layer="${escapeMarkup(layer.name)}" data-rasterized="${escapeMarkup(reason)}" alt="${escapeMarkup(layer.name)}" src="${dataUrl}" style="position:absolute;left:0;top:0;width:${round(artboard.width)}px;height:${round(artboard.height)}px;display:block" />`;
   }
 
@@ -333,12 +342,29 @@ async function loadAllAssets(artboard: CalqoArtboard): Promise<Map<string, strin
   return assets;
 }
 
+export function analyzeHtmlFidelity(artboards: CalqoArtboard[]): HtmlExportWarning[] {
+  const warnings: HtmlExportWarning[] = [{ tier: 'caveat', code: 'fontFallback' }];
+  const visit = (layer: CalqoLayer) => {
+    if (!layer.visible) return;
+    const reason = rasterReasonForLayer(layer);
+    if (reason) {
+      warnings.push({ tier: 'rasterized', code: 'rasterized', layerName: layer.name, reason });
+      return;
+    }
+    if (layer.effects?.shadow) warnings.push({ tier: 'approximated', code: 'shadow', layerName: layer.name });
+    if (layer.effects?.blur) warnings.push({ tier: 'approximated', code: 'blur', layerName: layer.name });
+    if (isGroupLayer(layer)) layer.children.forEach(visit);
+  };
+  artboards.forEach((artboard) => artboard.layers.forEach(visit));
+  return [...new Map(warnings.map((warning) => [warningIdentity(warning), warning])).values()];
+}
+
 export async function exportArtboardHtmlLayout(
   artboard: CalqoArtboard,
   locale: string,
   options: HtmlLayoutOptions = {},
 ): Promise<HtmlLayoutResult> {
-  const warnings: string[] = [HTML_EXPORT_WARNINGS.fontFallback];
+  const warnings: HtmlExportWarning[] = [{ tier: 'caveat', code: 'fontFallback' }];
   const assets = await loadAllAssets(artboard);
   const rasterizeLayer = options.rasterizeLayer ?? defaultRasterizeLayer;
 
@@ -359,9 +385,9 @@ export async function exportArtboardHtmlLayout(
   }
 
   const background = backgroundHtml(artboard.background, assets);
-  const unique = [...new Set(warnings)];
+  const unique = [...new Map(warnings.map((warning) => [warningIdentity(warning), warning])).values()];
   const title = escapeMarkup(options.title ?? artboard.name);
-  const notes = unique.map((warning) => `  - ${warning}`).join('\n');
+  const notes = unique.map((warning) => `  - ${warning.tier}:${warning.code}${warning.reason ? `:${warning.reason}` : ''}${warning.layerName ? ` (${warning.layerName})` : ''}`).join('\n');
 
   const html = `<!doctype html>
 <html lang="${escapeMarkup(locale || 'en')}">

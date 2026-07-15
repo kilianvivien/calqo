@@ -12,7 +12,7 @@ Use this table when an export looks different from the canvas.
 | --- | --- | --- | --- | --- |
 | Layout, fills, strokes, text | Exact | Exact (flat fills) | Exact (it embeds a PNG) | Exact (real text/CSS nodes) |
 | Gradient / pattern / image fills | Exact | Flattened to a solid colour | Exact | Gradients exact (CSS); patterns rasterized per layer |
-| Image filters (brightness, contrast, saturation, blur) | Baked in | Not applied | Baked in | Rasterized per layer (warned) |
+| Image filters / background removal | Baked in | Not applied | Baked in | Rasterized per layer (warned) |
 | Image masks (rounded, circle, ellipse, triangle, star, hexagon) | Exact | Not applied (full image shown) | Exact | Rounded/circle/ellipse exact (CSS); others rasterized (warned) |
 | Layer blur | Exact | Omitted | Exact | Approximated via CSS `filter: blur()` (warned) |
 | Drop shadow | Exact | Omitted | Exact | Approximated via CSS `filter: drop-shadow()` (warned) |
@@ -41,13 +41,19 @@ three tiers, and the export dialog always names which tier a layer landed in:
   visually close but not pixel-identical to the canvas renderer.
 - **Rasterized fallback (warn)** — masks the CSS clip-path can't express
   (star, hexagon, triangle), manual crops, decorative frames, image filters,
-  sticker outlines, freehand strokes, pattern/image fills, and icon list
+  background-removal results, sticker outlines, freehand strokes, pattern/image fills, and icon list
   markers render as an embedded PNG of just that layer. The rest of the
   document — and every faithful-tier layer — stays real, editable markup.
 
 The old "HTML" export mode is renamed **"HTML (image wrapper)"** so it can no
 longer be mistaken for editable output; PNG remains the recommended
 pixel-faithful path.
+
+Editable-HTML warnings are structured internally by tier, stable reason code,
+and affected layer. The dialog localizes and shows predictable warnings before
+export; runtime fallback failures are added after rendering. Chromium acceptance
+tests compare a faithful fixture against its 1× PNG and require a normalized
+pixel difference below 0.18.
 
 ## Why SVG drops some effects
 

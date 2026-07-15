@@ -3,6 +3,7 @@ import { GlassPanel } from '@/components/glass';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
 import { useSavedSvgStore } from '@/editor/assets/savedSvgStore';
 import { useMissingAssetsWatcher } from '@/editor/assets/useMissingAssetsWatcher';
+import { loadAssetHealthThresholds } from '@/editor/assets/assetHealthSettings';
 import { registerAppCommandHandlers, invokeAppCommandSync } from '@/app/commands/appCommands';
 import { isTauri } from '@/lib/platform/runtime';
 import { installNativeMenus, scheduleNativeMenuRefresh } from '@/app/commands/nativeMenu';
@@ -53,6 +54,7 @@ export function AppShell() {
   useEffect(() => {
     void loadAiSettings();
     void loadSavedSvgs();
+    void loadAssetHealthThresholds();
   }, [loadAiSettings, loadSavedSvgs]);
 
   useEffect(() => {

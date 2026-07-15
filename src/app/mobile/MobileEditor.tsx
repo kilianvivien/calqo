@@ -19,6 +19,7 @@ import {
   Undo2,
 } from 'lucide-react';
 import { assetStorage } from '@/lib/adapters';
+import { saveImageAsset } from '@/lib/utils/imageAsset';
 import {
   addImportedAssetLayer,
   addLayerToActiveArtboard,
@@ -180,14 +181,18 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
     const file = fileList?.[0];
     if (input) input.value = '';
     if (!file) return;
-    const measured = await measureImage(file);
-    const asset = await assetStorage.saveAsset(project.id, file, {
-      kind,
-      name: file.name,
-      mimeType: file.type,
-      width: measured.width,
-      height: measured.height,
-    });
+    const asset = kind === 'raster'
+      ? await saveImageAsset(project.id, file)
+      : await (async () => {
+          const measured = await measureImage(file);
+          return assetStorage.saveAsset(project.id, file, {
+            kind,
+            name: file.name,
+            mimeType: file.type,
+            width: measured.width,
+            height: measured.height,
+          });
+        })();
     const w = asset.width ?? 360;
     const h = asset.height ?? 240;
     addImportedAssetLayer(
@@ -204,14 +209,7 @@ export function MobileEditor({ project, onBack }: MobileEditorProps) {
     replaceTargetRef.current = null;
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (!file || !layerId || !file.type.startsWith('image/')) return;
-    const measured = await measureImage(file);
-    const asset = await assetStorage.saveAsset(project.id, file, {
-      kind: 'raster',
-      name: file.name,
-      mimeType: file.type,
-      width: measured.width,
-      height: measured.height,
-    });
+    const asset = await saveImageAsset(project.id, file);
     replaceLayerAsset(project.id, layerId, asset);
   };
 

@@ -101,6 +101,14 @@
     "languageMode": "Langue de l'app",
     "autoLanguage": "Auto",
     "autoLanguageHint": "Utilise la langue de votre navigateur si elle est prise en charge.",
+    "assetHealth": {
+      "title": "Limites de santé des ressources",
+      "hint": "Seuils d’avertissement uniquement. Les imports et exports ne sont jamais bloqués.",
+      "decodedMb": "Image décodée (Mo)",
+      "longEdge": "Côté long (px)",
+      "envelopeMb": "Fichier projet (Mo)",
+      "reset": "Rétablir les valeurs"
+    },
     "ai": {
       "title": "Fournisseur IA",
       "provider": "Fournisseur",

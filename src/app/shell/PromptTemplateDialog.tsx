@@ -172,6 +172,7 @@ function PromptTemplateDialogInner() {
 
           <Field label={t('promptTemplate.format')}>
             <select
+              aria-label={t('promptTemplate.format')}
               value={preset}
               onChange={(event) => setPreset(event.target.value as ArtboardPresetId)}
               className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 text-[12.5px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
@@ -186,6 +187,7 @@ function PromptTemplateDialogInner() {
 
           <Field label={t('promptTemplate.locale')}>
             <select
+              aria-label={t('promptTemplate.locale')}
               value={locale}
               onChange={(event) => setLocale(event.target.value)}
               className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 text-[12.5px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
@@ -201,6 +203,7 @@ function PromptTemplateDialogInner() {
           {profiles.length > 0 && (
             <Field label={t('promptTemplate.brandProfile')}>
               <select
+                aria-label={t('promptTemplate.brandProfile')}
                 value={profileId}
                 onChange={(event) => setProfileId(event.target.value)}
                 className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 text-[12.5px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"

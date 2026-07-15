@@ -1966,12 +1966,10 @@ export function applyBrandProfile(
     },
     { undoable: true },
   );
-  if (profile.headingFont || profile.bodyFont) {
-    useUiStore.getState().setBrandFontDefaults({
-      heading: profile.headingFont,
-      body: profile.bodyFont,
-    });
-  }
+  useUiStore.getState().setBrandFontDefaults({
+    heading: profile.headingFont,
+    body: profile.bodyFont,
+  });
 }
 
 /**

@@ -36,6 +36,7 @@ export function OptimizeAssetsModal() {
   const project = useActiveProject();
   const [entries, setEntries] = useState<AssetHealthEntry[] | null>(null);
   const [approved, setApproved] = useState<Record<string, boolean>>({});
+  const [previews, setPreviews] = useState<Record<string, { blob: Blob; width: number; height: number }>>({});
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -67,6 +68,21 @@ export function OptimizeAssetsModal() {
       setApproved(
         Object.fromEntries(report.map((entry) => [entry.ref.id, entry.oversized])),
       );
+      const prepared: Record<string, { blob: Blob; width: number; height: number }> = {};
+      for (const entry of report) {
+        const source = await assetStorage.getAssetBlob(entry.ref.id).catch(() => null);
+        if (!source) continue;
+        try {
+          prepared[entry.ref.id] = await downscaleImageBlob(
+            source,
+            entry.recommendedMaxEdge,
+            entry.ref.mimeType,
+          );
+        } catch {
+          // A row without a preview remains visible but cannot be approved.
+        }
+      }
+      if (alive) setPreviews(prepared);
     })();
     return () => {
       alive = false;
@@ -84,24 +100,29 @@ export function OptimizeAssetsModal() {
     if (!projectId || selected.length === 0) return;
     setBusy(true);
     setStatus(null);
+    let succeeded = 0;
+    let failed = 0;
     try {
       for (const entry of selected) {
-        const blob = await assetStorage.getAssetBlob(entry.ref.id);
-        if (!blob) continue;
-        const result = await downscaleImageBlob(
-          blob,
-          entry.recommendedMaxEdge,
-          entry.ref.mimeType,
-        );
-        await relinkAsset(projectId, entry.ref.id, result.blob, {
-          kind: 'raster',
-          name: entry.ref.name,
-          mimeType: result.blob.type || entry.ref.mimeType,
-          width: result.width,
-          height: result.height,
-        });
+        const result = previews[entry.ref.id];
+        if (!result) { failed += 1; continue; }
+        try {
+          const ref = await relinkAsset(projectId, entry.ref.id, result.blob, {
+            kind: 'raster', name: entry.ref.name,
+            mimeType: result.blob.type || entry.ref.mimeType,
+            width: result.width, height: result.height,
+          });
+          if (ref) succeeded += 1;
+          else failed += 1;
+        } catch {
+          failed += 1;
+        }
       }
-      setStatus(t('optimizeAssets.done', { count: selected.length }));
+      setStatus(
+        failed > 0
+          ? t('optimizeAssets.partial', { succeeded, failed })
+          : t('optimizeAssets.done', { count: succeeded }),
+      );
     } catch (error) {
       console.error('[Calqo] asset optimization failed', error);
       setStatus(t('optimizeAssets.failed'));
@@ -147,11 +168,13 @@ export function OptimizeAssetsModal() {
         ) : (
           <ul className="flex flex-col gap-1.5">
             {entries.map((entry) => {
-              const target = downscaleTargetSize(
+              const estimatedTarget = downscaleTargetSize(
                 entry.ref.width ?? 0,
                 entry.ref.height ?? 0,
                 entry.recommendedMaxEdge,
               );
+              const preview = previews[entry.ref.id];
+              const target = preview ?? estimatedTarget;
               return (
                 <li
                   key={entry.ref.id}
@@ -161,6 +184,7 @@ export function OptimizeAssetsModal() {
                     type="checkbox"
                     aria-label={t('optimizeAssets.approve', { name: entry.ref.name })}
                     checked={approved[entry.ref.id] ?? false}
+                    disabled={!preview}
                     onChange={(event) =>
                       setApproved((prev) => ({
                         ...prev,
@@ -176,7 +200,7 @@ export function OptimizeAssetsModal() {
                     <p className="mono truncate text-[11px] text-[var(--calqo-text-3)]">
                       {entry.ref.width}×{entry.ref.height}px · {formatBytes(entry.bytes)}
                       {' → '}
-                      {target.width}×{target.height}px
+                      {target.width}×{target.height}px · {preview ? formatBytes(preview.blob.size) : t('optimizeAssets.previewFailed')}
                     </p>
                   </div>
                   {entry.oversized && (

@@ -391,7 +391,19 @@
     "htmlEditableHint": "Editable HTML keeps text selectable and shapes as CSS/SVG. PNG stays the pixel-faithful path; unsupported layers embed as images with a note.",
     "warnEnvelopeSize": "The portable .calqo file is estimated at {{size}} MB — consider optimizing assets before moving it.",
     "warnEnvelopeContributors": "Largest assets: {{names}}.",
-    "fidelityNotes": "Editable HTML notes"
+    "fidelityNotes": "Editable HTML notes",
+    "htmlWarnings": {
+      "codes": {
+        "fontFallback": "Fonts are referenced by family name and may fall back on another computer.",
+        "blur": "{{name}}: blur is approximated with a CSS filter.",
+        "shadow": "{{name}}: shadow is approximated with a CSS filter.",
+        "vectorApproximation": "{{name}}: some vector styling is approximated.",
+        "rasterized": "{{name}} is embedded as an image ({{reason}}).",
+        "missingAsset": "{{name}}: the missing asset is skipped.",
+        "renderFailed": "{{name}} could not be rendered and is skipped."
+      },
+      "reasons": { "mask": "unsupported mask", "crop": "manual crop", "frame": "decorative frame", "filters": "image filters", "backgroundRemoval": "background removal", "sticker": "sticker outline", "freehand": "freehand stroke", "patternFill": "pattern fill", "imageFill": "image fill", "markerAsset": "icon list marker", "group": "nested fallback layer" }
+    }
   },
   "recovery": {
     "title": "Import recovery",
@@ -793,7 +805,10 @@
     "removeLayers": "Remove layer(s)",
     "keepHint": "Keeping placeholders never blocks editing — you can repair later from the status bar.",
     "keepPlaceholders": "Keep placeholders",
-    "open": "Repair assets…"
+    "open": "Repair assets…",
+    "wrongKind": "Choose a {{expected}} replacement for this asset.",
+    "relinkFailed": "The replacement could not be read or stored.",
+    "kind": { "image": "raster image", "svg": "SVG" }
   },
   "optimizeAssets": {
     "title": "Optimize assets",
@@ -805,6 +820,8 @@
     "apply": "Apply ({{count}})",
     "working": "Optimizing…",
     "done": "Optimized {{count}} asset(s).",
+    "partial": "Optimized {{succeeded}}; {{failed}} failed.",
+    "previewFailed": "preview unavailable",
     "failed": "Optimization failed.",
     "open": "Optimize assets…",
     "importNotice": "“{{name}}” is large ({{width}}×{{height}}px) and may slow editing and bloat exports."

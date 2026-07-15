@@ -48,8 +48,9 @@ vi.mock('@/lib/adapters', async (importOriginal) => {
 });
 
 import { buildTemplatePrompt } from '@/editor/ai/prompts';
-import { buildTemplateInput } from '@/editor/ai/promptTemplateService';
-import { applyBrandProfile, undoProject } from '@/editor/commands/projectCommands';
+import { buildTemplateInput, generateTemplate } from '@/editor/ai/promptTemplateService';
+import { mockProvider } from '@/editor/ai/mockProvider';
+import { applyBrandProfile, insertBrandLogo, undoProject } from '@/editor/commands/projectCommands';
 import {
   createBrandProfile,
   deleteBrandProfile,
@@ -58,6 +59,7 @@ import {
   setBrandLogo,
 } from '@/editor/brand/brandService';
 import { buildAppBackup, restoreAppBackup } from '@/editor/backup/appBackup';
+import { buildCalqoFile } from '@/editor/export/calqoFile';
 import { createDefaultProject } from '@/lib/schema';
 import { historyStore } from '@/lib/state/historyStore';
 import { projectStore } from '@/lib/state/projectStore';
@@ -155,6 +157,20 @@ describe('prompt seeding', () => {
     expect(system).toContain('"Inter" for body and list text');
     expect(`${system}\n${user}`).not.toMatch(/api[-_ ]?key|secret|token/i);
   });
+
+  it('produces mock layouts with the selected palette and distinct brand fonts', async () => {
+    const result = await generateTemplate(mockProvider, {
+      prompt: 'A launch card', preset: 'ig-square', locale: 'en',
+      palette: ['#112233', '#F8FAFC', '#FF5500'],
+      brandFonts: { heading: 'Space Grotesk', body: 'Inter' },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.project.palette).toEqual(['#112233', '#F8FAFC', '#FF5500']);
+    const textLayers = result.project.artboards[0].layers.filter((layer) => layer.type === 'text');
+    expect(textLayers[0]?.type === 'text' && textLayers[0].style.fontFamily).toBe('Space Grotesk');
+    expect(textLayers[1]?.type === 'text' && textLayers[1].style.fontFamily).toBe('Inter');
+  });
 });
 
 describe('brand profile backup round-trip', () => {
@@ -188,5 +204,27 @@ describe('brand profile backup round-trip', () => {
     expect(restored?.glossary).toEqual([{ source: 'Acme', mode: 'do-not-translate' }]);
     expect(restored?.logoAssetId).toBeTruthy();
     expect(restored?.logoAssetId).not.toBe(withLogo.logoAssetId);
+  });
+});
+
+describe('brand logo insertion', () => {
+  it('copies the logo under a project-scoped id and exports a self-contained envelope', async () => {
+    const profile = await setBrandLogo(
+      await createBrandProfile('Acme'),
+      new Blob(['logo'], { type: 'image/png' }),
+      { name: 'logo.png', mimeType: 'image/png', width: 10, height: 10 },
+    );
+    const project = createDefaultProject();
+    projectStore.getState().upsertProject(project);
+    selectionStore.getState().setActiveArtboard(project.artboards[0].id);
+    expect(await insertBrandLogo(project.id, profile)).toBe(true);
+    const current = projectStore.getState().projects[project.id];
+    const inserted = current.assets.find((asset) => asset.id !== profile.logoAssetId);
+    expect(inserted?.id).toBeTruthy();
+    expect(inserted?.id).not.toBe(profile.logoAssetId);
+    expect(historyStore.getState().histories[project.id].past).toHaveLength(1);
+    const envelope = await buildCalqoFile(current);
+    expect(envelope.assets.map((asset) => asset.id)).toContain(inserted!.id);
+    expect(envelope.assets.map((asset) => asset.id)).not.toContain(profile.logoAssetId);
   });
 });

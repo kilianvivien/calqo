@@ -74,7 +74,8 @@ function buildTemplate(input: TemplatePromptInput): string {
     ? input.palette
     : ['#0A2540', '#FFFFFF', '#E8B339'];
   const [bg, fg, accent] = [palette[0], palette[1] ?? '#FFFFFF', palette[2] ?? '#E8B339'];
-  const font = input.fonts[0] ?? 'Inter';
+  const headingFont = input.brandFonts?.heading ?? input.fonts[0] ?? 'Inter';
+  const bodyFont = input.brandFonts?.body ?? input.fonts[0] ?? 'Inter';
   const margin = Math.round(input.width * 0.08);
   const contentWidth = input.width - margin * 2;
 
@@ -128,7 +129,7 @@ function buildTemplate(input: TemplatePromptInput): string {
             locked: false,
             text: { [input.locale]: input.prompt.slice(0, 48) || 'Headline' },
             style: {
-              fontFamily: font,
+              fontFamily: headingFont,
               fontSize: Math.round(input.width * 0.075),
               fontWeight: 700,
               color: fg,
@@ -151,7 +152,7 @@ function buildTemplate(input: TemplatePromptInput): string {
             locked: false,
             text: { [input.locale]: 'Add your supporting copy here.' },
             style: {
-              fontFamily: font,
+              fontFamily: bodyFont,
               fontSize: Math.round(input.width * 0.03),
               fontWeight: 400,
               color: fg,

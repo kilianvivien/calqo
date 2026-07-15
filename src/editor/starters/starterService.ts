@@ -19,6 +19,13 @@ export interface StarterIndexEntry {
   file: string;
   /** Preset tags for the gallery card (e.g. "ig-square", "multilingual"). */
   tags: string[];
+  /** Pre-rendered local gallery thumbnail. */
+  thumbnail: string;
+  /** Primary artboard dimensions displayed on the card. */
+  width: number;
+  height: number;
+  /** Presets represented by the starter (multi-artboard starters may list many). */
+  presets: string[];
 }
 
 const STARTERS_BASE = '/starters';

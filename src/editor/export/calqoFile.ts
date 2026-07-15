@@ -1,6 +1,7 @@
 import { assetStorage, files, storage } from '@/lib/adapters';
 import type { CalqoFile } from '@/lib/adapters';
 import { safeImportProject, type CalqoProject } from '@/lib/schema';
+import { noticeIfOversized } from '@/lib/utils/imageAsset';
 import { createId } from '@/lib/utils/ids';
 import { projectStore } from '@/lib/state/projectStore';
 import { desktopFileStore } from '@/lib/state/desktopFileStore';
@@ -106,6 +107,7 @@ export async function importProjectText(
       envelope.assets.map(async (asset) => {
         const ref = project.assets.find((candidate) => candidate.id === asset.id);
         if (!ref) return;
+        noticeIfOversized(ref.name, ref.kind, ref.width, ref.height);
         const blob = await dataUrlToBlob(asset.dataUrl);
         await assetStorage.restoreAsset(project.id, ref, blob);
       }),

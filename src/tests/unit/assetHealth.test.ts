@@ -11,6 +11,9 @@ import {
   recommendedMaxEdge,
 } from '@/editor/assets/assetHealth';
 import { createDefaultProject, type CalqoAssetRef } from '@/lib/schema';
+import { appSettings } from '@/lib/adapters';
+import { ASSET_HEALTH_SETTINGS_KEY, loadAssetHealthThresholds, resetAssetHealthThresholds, saveAssetHealthThresholds } from '@/editor/assets/assetHealthSettings';
+import { useUiStore } from '@/lib/state/uiStore';
 
 function ref(id: string, width: number, height: number, kind: 'raster' | 'svg' = 'raster'): CalqoAssetRef {
   return {
@@ -118,5 +121,19 @@ describe('downscaleTargetSize', () => {
   it('never upscales or produces zero-size targets', () => {
     expect(downscaleTargetSize(800, 600, 3000)).toEqual({ width: 800, height: 600 });
     expect(downscaleTargetSize(10_000, 2, 4)).toEqual({ width: 4, height: 1 });
+  });
+});
+
+describe('asset health settings', () => {
+  it('persists, reloads, and resets app-level thresholds', async () => {
+    await appSettings.remove(ASSET_HEALTH_SETTINGS_KEY);
+    await saveAssetHealthThresholds({ maxAssetEdge: 6000, maxEnvelopeBytes: 75 * 1024 * 1024 });
+    useUiStore.setState({ assetHealthThresholds: { ...DEFAULT_ASSET_HEALTH_THRESHOLDS } });
+    const loaded = await loadAssetHealthThresholds();
+    expect(loaded.maxAssetEdge).toBe(6000);
+    expect(loaded.maxEnvelopeBytes).toBe(75 * 1024 * 1024);
+    await resetAssetHealthThresholds();
+    expect(useUiStore.getState().assetHealthThresholds).toEqual(DEFAULT_ASSET_HEALTH_THRESHOLDS);
+    expect(await appSettings.get(ASSET_HEALTH_SETTINGS_KEY)).toBeNull();
   });
 });

@@ -192,6 +192,7 @@ predictable.
     (`src/editor/assets/missingAssets.ts`, watched via
     `useMissingAssetsWatcher`).
   - Let users relink, remove, or keep placeholders (`RepairAssetsModal.tsx`).
+  - Reject raster/SVG replacement mismatches with localized recovery copy.
   - Preserve layer geometry, frame, mask, filters, crop, and focal point when
     relinking (`relinkAsset` in `projectCommands.ts`, one undo step).
   - Surface unresolved missing assets before export (export dialog warning +
@@ -204,6 +205,8 @@ predictable.
   - Offer user-approved downscale via `OptimizeAssetsModal.tsx` /
     `downscaleImageBlob`, applied through the same `relinkAsset` machinery
     (undoable, no hidden quality loss below rendered size × export ratio).
+  - Persist editable warning thresholds as app settings and show actual encoded
+    before/after sizes before approval.
 - [x] Polish export mode language.
   - Renamed the raster HTML mode to "HTML (image wrapper)"; added a new
     "HTML (editable)" mode producing real text/CSS/SVG
@@ -287,6 +290,8 @@ predictable.
     sticker sheet, and a 3-artboard campaign kit; credited in
     `public/starters/CREDITS.md` and schema-validated in CI
     (`src/tests/unit/starters.test.ts`).
+  - Every catalogue entry includes a local thumbnail plus dimension/preset
+    metadata, all validated alongside the envelopes.
   - Bundled and user starters both live in the *Starters* tab of
     `NewProjectModal.tsx`; instantiation clones fresh asset ids via
     `starterService.ts`/`remapProjectAssetIds`.
@@ -303,6 +308,8 @@ predictable.
     (`applyBrandProfile` sets palette/glossary in one undo step; fonts flow
     through workspace defaults; logo insertion copies the blob into the
     project's own asset store).
+  - Offline mock output deterministically applies the selected palette and
+    distinct heading/body fonts.
   - No governance/enforcement — profiles only seed defaults, always
     overridable, and are excluded from `.calqo` exports (app-backup round-trip
     only, no keys).
