@@ -35,11 +35,11 @@ surface.
 ## Download
 
 The latest packaged alpha release is
-[Calqo v0.4.1](https://github.com/kilianvivien/calqo/releases/tag/v0.4.1)
-for macOS on Apple Silicon. This maintenance release makes the desktop agent
-drawing workflow easier to discover by linking Prompt-to-template directly to
-its setup, while retaining the tablet, Apple Pencil, richer MCP drawing, and
-portable editable HTML/SVG typography improvements from v0.4.0.
+[Calqo v0.4.2](https://github.com/kilianvivien/calqo/releases/tag/v0.4.2)
+for macOS on Apple Silicon. This release expands the bundled gallery to 42
+categorized models, adds model filtering and one-click “Save as Model,” makes
+project search and sorting faster, streamlines mobile project creation, and
+improves canvas font loading so text renders reliably on first paint.
 
 The desktop build is ad-hoc signed, not Developer ID signed or notarized. On
 first launch, macOS Gatekeeper may require approving the app manually.
@@ -101,6 +101,9 @@ library, emoji insertion, app backup/restore, and multi-locale ZIP exports.
 - [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.4.0`
 - [x] Prompt-to-template shortcut to desktop Agent Drawing settings (`v0.4.1`)
 - [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.4.1`
+- [x] 42 categorized starter models with gallery filters and localized names (`v0.4.2`)
+- [x] Project search/sorting, streamlined mobile creation, and reliable canvas font loading
+- [x] Packaged GitHub release notes and Apple Silicon DMG for `v0.4.2`
 
 ## What you can make
 
@@ -145,9 +148,11 @@ animation timeline, no realtime multiplayer, and no hosted template marketplace.
 - **Asset health:** missing-asset detection with an auto-opened repair modal
   (relink, remove, or keep placeholders) and oversized-import detection with
   one-step downscale/relink, both surfaced in the diagnostics pane.
-- **Starters & brand profiles:** 8 bundled starter templates plus user-saved
-  starters, and Brand profiles (lite) for palettes, fonts, logos, and glossary
-  terms that apply in one undo step and seed AI template generation.
+- **Starters & brand profiles:** 42 bundled starter models across marketing,
+  media, editorial, playful, lifestyle, event, and diplomacy categories, plus
+  user-saved models with gallery filtering. Brand profiles (lite) provide
+  palettes, fonts, logos, and glossary terms that apply in one undo step and
+  seed AI template generation.
 - **Multilingual content:** text layers can store variants per content locale,
   so switching from French to English or Turkish changes the design content, not
   the app chrome. Export can target the active locale or every project locale in
