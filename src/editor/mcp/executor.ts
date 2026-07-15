@@ -17,6 +17,10 @@ import {
   type LayerPatch,
 } from '@/editor/utils/layers';
 import { editProject } from '@/editor/commands/projectCommands';
+import {
+  detectListOverflow,
+  detectTextOverflow,
+} from '@/editor/i18n-content/translationPipeline';
 import { createId } from '@/lib/utils/ids';
 import { projectStore } from '@/lib/state/projectStore';
 import { selectionStore } from '@/lib/state/selectionStore';
@@ -52,9 +56,13 @@ export function projectRevision(project: CalqoProject): string {
 }
 
 function resolveProject(projectId?: string): CalqoProject {
-  const id = projectId ?? workspaceStore.getState().activeProjectId ?? undefined;
+  const id =
+    projectId ?? workspaceStore.getState().activeProjectId ?? undefined;
   if (!id) {
-    fail('PROJECT_NOT_FOUND', 'No project is open. Call calqo_create_project first.');
+    fail(
+      'PROJECT_NOT_FOUND',
+      'No project is open. Call calqo_create_project first.',
+    );
   }
   const project = projectStore.getState().projects[id];
   if (!project) {
@@ -65,7 +73,10 @@ function resolveProject(projectId?: string): CalqoProject {
   return project;
 }
 
-function resolveArtboard(project: CalqoProject, artboardId?: string): CalqoArtboard {
+function resolveArtboard(
+  project: CalqoProject,
+  artboardId?: string,
+): CalqoArtboard {
   const id =
     artboardId ??
     (workspaceStore.getState().activeProjectId === project.id
@@ -74,9 +85,14 @@ function resolveArtboard(project: CalqoProject, artboardId?: string): CalqoArtbo
     project.artboards[0]?.id;
   const artboard = project.artboards.find((candidate) => candidate.id === id);
   if (!artboard) {
-    fail('ARTBOARD_NOT_FOUND', `Artboard "${id}" does not exist in this project.`, true, {
-      artboardIds: project.artboards.map((candidate) => candidate.id),
-    });
+    fail(
+      'ARTBOARD_NOT_FOUND',
+      `Artboard "${id}" does not exist in this project.`,
+      true,
+      {
+        artboardIds: project.artboards.map((candidate) => candidate.id),
+      },
+    );
   }
   return artboard;
 }
@@ -88,7 +104,8 @@ function collectUsedIds(project: CalqoProject): Set<string> {
     used.add(artboard.id);
     for (const layer of flattenLayers(artboard.layers)) {
       used.add(layer.id);
-      if (layer.type === 'list') layer.items.forEach((item) => used.add(item.id));
+      if (layer.type === 'list')
+        layer.items.forEach((item) => used.add(item.id));
     }
   }
   return used;
@@ -132,7 +149,10 @@ interface NormalizedBatch {
 
 /** Resolve final ids for everything the batch creates, before any apply, so
  * the simulate and commit passes produce identical documents. */
-function normalizeBatch(project: CalqoProject, operations: McpOperation[]): NormalizedBatch {
+function normalizeBatch(
+  project: CalqoProject,
+  operations: McpOperation[],
+): NormalizedBatch {
   const used = collectUsedIds(project);
   const idMap: Record<string, string> = {};
   const artboardIds: string[] = [];
@@ -188,6 +208,24 @@ function warnIfOutOfBounds(
   }
 }
 
+function warnIfTextOverflows(
+  layer: CalqoLayer,
+  activeLocale: string,
+  warnings: string[],
+): void {
+  const overflow =
+    layer.type === 'text'
+      ? detectTextOverflow(layer, activeLocale)
+      : layer.type === 'list'
+        ? detectListOverflow(layer, activeLocale)
+        : undefined;
+  if (!overflow?.hasOverflow) return;
+  warnings.push(
+    `Text in layer "${layer.name}" (${layer.id}) overflows its ${layer.w}x${layer.h} box ` +
+      `for locale "${activeLocale}"; ${overflow.suggestedAction === 'reduce-font' ? 'reduce the font size or enlarge the box' : 'enlarge the box or shorten the copy'}.`,
+  );
+}
+
 /** Apply a normalized batch to a project document (clone during simulation,
  * immer draft during commit). Throws `McpOperationError` on the first invalid
  * operation — callers rely on the simulate pass to keep commits atomic. */
@@ -202,7 +240,9 @@ export function applyBatchToProject(
     warnings: [],
     focusArtboardId: null,
   };
-  const artboard = project.artboards.find((candidate) => candidate.id === artboardId);
+  const artboard = project.artboards.find(
+    (candidate) => candidate.id === artboardId,
+  );
   if (!artboard) {
     fail('ARTBOARD_NOT_FOUND', `Artboard "${artboardId}" does not exist.`);
   }
@@ -211,24 +251,41 @@ export function applyBatchToProject(
 
   for (const [index, operation] of batch.operations.entries()) {
     // Explicit annotation so TS narrows on the never-returning call.
-    const opFail: (code: McpErrorCode, message: string, details?: unknown) => never = (
-      code,
-      message,
-      details,
-    ) => fail(code, `operations[${index}] (${operation.type}): ${message}`, true, details);
+    const opFail: (
+      code: McpErrorCode,
+      message: string,
+      details?: unknown,
+    ) => never = (code, message, details) =>
+      fail(
+        code,
+        `operations[${index}] (${operation.type}): ${message}`,
+        true,
+        details,
+      );
 
     switch (operation.type) {
       case 'addLayer': {
-        if (countLayers(layers()) + countLayers([operation.layer]) > MAX_LAYERS_PER_ARTBOARD) {
+        if (
+          countLayers(layers()) + countLayers([operation.layer]) >
+          MAX_LAYERS_PER_ARTBOARD
+        ) {
           opFail(
             'VALIDATION_FAILED',
             `Adding this layer would exceed the ${MAX_LAYERS_PER_ARTBOARD}-layer cap per artboard. Delete or group layers first.`,
           );
         }
         const layer = structuredClone(operation.layer);
-        const insertAt = Math.min(operation.index ?? layers().length, layers().length);
+        const insertAt = Math.min(
+          operation.index ?? layers().length,
+          layers().length,
+        );
         layers().splice(insertAt, 0, layer);
         warnIfOutOfBounds(layer, artboard, outcome.warnings);
+        warnIfTextOverflows(
+          layer,
+          project.activeContentLocale,
+          outcome.warnings,
+        );
         outcome.changedLayerIds.push(layer.id);
         outcome.addedTopLevelIds.push(layer.id);
         break;
@@ -238,8 +295,17 @@ export function applyBatchToProject(
         const updated = updateLayer(layers(), layerId, (layer) => {
           applyLayerPatch(layer, operation.patch as LayerPatch);
           warnIfOutOfBounds(layer, artboard, outcome.warnings);
+          warnIfTextOverflows(
+            layer,
+            project.activeContentLocale,
+            outcome.warnings,
+          );
         });
-        if (!updated) opFail('LAYER_NOT_FOUND', `Layer "${layerId}" not found on this artboard.`);
+        if (!updated)
+          opFail(
+            'LAYER_NOT_FOUND',
+            `Layer "${layerId}" not found on this artboard.`,
+          );
         outcome.changedLayerIds.push(layerId);
         break;
       }
@@ -247,7 +313,11 @@ export function applyBatchToProject(
         for (const rawId of operation.layerIds) {
           const layerId = mappedId(rawId, batch.idMap);
           const removed = removeLayer(layers(), layerId);
-          if (!removed) opFail('LAYER_NOT_FOUND', `Layer "${layerId}" not found on this artboard.`);
+          if (!removed)
+            opFail(
+              'LAYER_NOT_FOUND',
+              `Layer "${layerId}" not found on this artboard.`,
+            );
           outcome.changedLayerIds.push(layerId);
         }
         break;
@@ -256,7 +326,10 @@ export function applyBatchToProject(
         const layerId = mappedId(operation.layerId, batch.idMap);
         const from = layers().findIndex((layer) => layer.id === layerId);
         if (from < 0) {
-          opFail('LAYER_NOT_FOUND', `Layer "${layerId}" is not a top-level layer of this artboard.`);
+          opFail(
+            'LAYER_NOT_FOUND',
+            `Layer "${layerId}" is not a top-level layer of this artboard.`,
+          );
         }
         const to = Math.min(operation.toIndex, layers().length - 1);
         artboard.layers = moveInArray(layers(), from, to);
@@ -268,13 +341,19 @@ export function applyBatchToProject(
         const ordered = layers().filter((layer) => ids.includes(layer.id));
         if (ordered.length !== ids.length) {
           const found = new Set(ordered.map((layer) => layer.id));
-          opFail('LAYER_NOT_FOUND', `Layers must be top-level on this artboard.`, {
-            missing: ids.filter((id) => !found.has(id)),
-          });
+          opFail(
+            'LAYER_NOT_FOUND',
+            `Layers must be top-level on this artboard.`,
+            {
+              missing: ids.filter((id) => !found.has(id)),
+            },
+          );
         }
         const box = boundingBox(ordered);
         const topIndex = Math.max(
-          ...ordered.map((layer) => layers().findIndex((candidate) => candidate.id === layer.id)),
+          ...ordered.map((layer) =>
+            layers().findIndex((candidate) => candidate.id === layer.id),
+          ),
         );
         const children = ordered
           .map((layer) => {
@@ -301,7 +380,10 @@ export function applyBatchToProject(
           expanded: true,
           children,
         };
-        const insertAt = Math.min(topIndex - children.length + 1, layers().length);
+        const insertAt = Math.min(
+          topIndex - children.length + 1,
+          layers().length,
+        );
         layers().splice(Math.max(0, insertAt), 0, group);
         outcome.changedLayerIds.push(group.id);
         outcome.addedTopLevelIds.push(group.id);
@@ -312,7 +394,10 @@ export function applyBatchToProject(
         const index = layers().findIndex((layer) => layer.id === layerId);
         const group = index >= 0 ? layers()[index] : null;
         if (!group || !isGroupLayer(group)) {
-          opFail('LAYER_NOT_FOUND', `Layer "${layerId}" is not a top-level group.`);
+          opFail(
+            'LAYER_NOT_FOUND',
+            `Layer "${layerId}" is not a top-level group.`,
+          );
         }
         const children = group.children.map((child) => {
           child.x += group.x;
@@ -334,7 +419,10 @@ export function applyBatchToProject(
           (candidate) => candidate.id === operation.artboardId,
         );
         if (!exists) {
-          opFail('ARTBOARD_NOT_FOUND', `Artboard "${operation.artboardId}" does not exist.`);
+          opFail(
+            'ARTBOARD_NOT_FOUND',
+            `Artboard "${operation.artboardId}" does not exist.`,
+          );
         }
         outcome.focusArtboardId = operation.artboardId;
         break;
@@ -342,6 +430,64 @@ export function applyBatchToProject(
     }
   }
   return outcome;
+}
+
+interface ValidationIssueDetail {
+  path: string;
+  message: string;
+  code: string;
+}
+
+function issuePath(path: PropertyKey[]): string {
+  if (path.length === 0) return '(root)';
+  return path
+    .map((part, index) =>
+      typeof part === 'number'
+        ? `[${part}]`
+        : `${index === 0 ? '' : '.'}${String(part)}`,
+    )
+    .join('');
+}
+
+/** Zod's union error normally collapses to `layer: Invalid input`. Select the
+ * closest union branch and expose its leaf paths so an agent sees e.g.
+ * `operations[2].layer.stroke.width` without probe/bisect calls. */
+function detailedValidationIssues(
+  issues: Array<Record<string, unknown>>,
+): ValidationIssueDetail[] {
+  const flattened = issues.flatMap((issue) => {
+    if (issue.code === 'invalid_union' && Array.isArray(issue.unionErrors)) {
+      const candidates = issue.unionErrors
+        .map((error) => {
+          const nested =
+            error &&
+            typeof error === 'object' &&
+            Array.isArray((error as { issues?: unknown }).issues)
+              ? (error as { issues: Array<Record<string, unknown>> }).issues
+              : [];
+          return detailedValidationIssues(nested);
+        })
+        .filter((candidate) => candidate.length > 0)
+        .sort((a, b) => a.length - b.length);
+      if (candidates[0]) return candidates[0];
+    }
+    const path = Array.isArray(issue.path) ? (issue.path as PropertyKey[]) : [];
+    return [
+      {
+        path: issuePath(path),
+        message:
+          typeof issue.message === 'string' ? issue.message : 'Invalid input',
+        code: typeof issue.code === 'string' ? issue.code : 'custom',
+      },
+    ];
+  });
+  return flattened.filter(
+    (issue, index) =>
+      flattened.findIndex(
+        (candidate) =>
+          candidate.path === issue.path && candidate.message === issue.message,
+      ) === index,
+  );
 }
 
 function parseInput(raw: unknown): ApplyOperationsInput {
@@ -359,11 +505,18 @@ function parseInput(raw: unknown): ApplyOperationsInput {
   }
   const parsed = applyOperationsInputSchema.safeParse(raw);
   if (!parsed.success) {
-    fail('VALIDATION_FAILED', 'Operation batch failed validation.', true, {
-      issues: parsed.error.issues.map(
-        (issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`,
-      ),
-    });
+    const issues = detailedValidationIssues(
+      parsed.error.issues as unknown as Array<Record<string, unknown>>,
+    );
+    const first = issues[0];
+    fail(
+      'VALIDATION_FAILED',
+      first
+        ? `Operation batch failed validation at ${first.path}: ${first.message}`
+        : 'Operation batch failed validation.',
+      true,
+      { issues },
+    );
   }
   return parsed.data;
 }
@@ -382,13 +535,22 @@ export function prepareApplyOperations(raw: unknown): PreparedBatch {
   const project = resolveProject(input.projectId);
   const artboard = resolveArtboard(project, input.artboardId);
   if (input.baseRevision && input.baseRevision !== projectRevision(project)) {
-    fail('REVISION_MISMATCH', 'The project changed since the agent last read it.', true, {
-      expected: input.baseRevision,
-      actual: projectRevision(project),
-    });
+    fail(
+      'REVISION_MISMATCH',
+      'The project changed since the agent last read it.',
+      true,
+      {
+        expected: input.baseRevision,
+        actual: projectRevision(project),
+      },
+    );
   }
   const batch = normalizeBatch(project, input.operations);
-  const simulated = applyBatchToProject(structuredClone(project), artboard.id, batch);
+  const simulated = applyBatchToProject(
+    structuredClone(project),
+    artboard.id,
+    batch,
+  );
   return { project, artboard, batch, simulated };
 }
 
@@ -404,7 +566,10 @@ export function executeApplyOperations(raw: unknown): ApplyOperationsResult {
     { undoable: true },
   );
 
-  if (simulated.focusArtboardId && workspaceStore.getState().activeProjectId === project.id) {
+  if (
+    simulated.focusArtboardId &&
+    workspaceStore.getState().activeProjectId === project.id
+  ) {
     selectionStore.getState().setActiveArtboard(simulated.focusArtboardId);
     selectionStore.getState().clearSelection();
   } else if (
@@ -440,10 +605,21 @@ export function executeValidateOperations(raw: unknown): {
 } {
   try {
     const { batch, simulated } = prepareApplyOperations(raw);
-    return { ok: true, valid: true, warnings: simulated.warnings, idMap: batch.idMap };
+    return {
+      ok: true,
+      valid: true,
+      warnings: simulated.warnings,
+      idMap: batch.idMap,
+    };
   } catch (error) {
     if (error instanceof McpOperationError) {
-      return { ok: true, valid: false, warnings: [], idMap: {}, error: error.payload };
+      return {
+        ok: true,
+        valid: false,
+        warnings: [],
+        idMap: {},
+        error: error.payload,
+      };
     }
     throw error;
   }

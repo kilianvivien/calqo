@@ -498,7 +498,8 @@ pub fn run() {
             mcp::mcp_start_server,
             mcp::mcp_stop_server,
             mcp::mcp_server_status,
-            mcp::mcp_bridge_respond
+            mcp::mcp_bridge_respond,
+            mcp::setup::mcp_setup_client
         ])
         .setup(|app| {
             // Default to English; the web shell pushes the resolved locale via

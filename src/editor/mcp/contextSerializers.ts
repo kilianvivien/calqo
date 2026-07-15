@@ -51,9 +51,12 @@ function summarizeLayer(layer: CalqoLayer, activeLocale: string): LayerSummary {
     summary.text = layer.items.map((item) => item.text[activeLocale] ?? '');
   }
   if (layer.type === 'shape') summary.shape = layer.shape;
-  if (layer.type === 'image' || layer.type === 'svg') summary.assetId = layer.assetId;
+  if (layer.type === 'image' || layer.type === 'svg')
+    summary.assetId = layer.assetId;
   if (isGroupLayer(layer)) {
-    summary.children = layer.children.map((child) => summarizeLayer(child, activeLocale));
+    summary.children = layer.children.map((child) =>
+      summarizeLayer(child, activeLocale),
+    );
   }
   return summary;
 }
@@ -97,7 +100,9 @@ export function serializeProjectSummary(project: CalqoProject) {
 
 export function serializeAppStatus() {
   const activeProjectId = workspaceStore.getState().activeProjectId;
-  const project = activeProjectId ? projectStore.getState().projects[activeProjectId] : null;
+  const project = activeProjectId
+    ? projectStore.getState().projects[activeProjectId]
+    : null;
   const mcp = mcpStore.getState();
   return {
     app: 'Calqo',
@@ -117,7 +122,9 @@ export function serializeAppStatus() {
           revision: projectRevision(project),
           activeContentLocale: project.activeContentLocale,
           activeArtboardId:
-            selectionStore.getState().activeArtboardId ?? project.artboards[0]?.id ?? null,
+            selectionStore.getState().activeArtboardId ??
+            project.artboards[0]?.id ??
+            null,
           selectedLayerIds: selectionStore.getState().selectedLayerIds,
           artboards: project.artboards.map((artboard) => ({
             id: artboard.id,
@@ -129,7 +136,12 @@ export function serializeAppStatus() {
           })),
         }
       : null,
-    hint: 'Call calqo_get_guide before drawing. Use calqo_apply_operations for edits.',
+    next: {
+      tool: 'calqo_apply_and_preview',
+      why: 'Preferred fast path: validates, applies one undo step, and returns a PNG plus the new revision.',
+      baseRevision: project ? projectRevision(project) : null,
+    },
+    hint: 'Tool schemas describe operations and layers. Call calqo_get_guide only for advanced fields or design advice.',
   };
 }
 

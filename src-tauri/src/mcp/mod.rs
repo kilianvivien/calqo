@@ -2,7 +2,9 @@
 //! the webview uses to control it and to answer forwarded requests.
 
 pub mod bridge;
+pub mod contracts;
 pub mod server;
+pub mod setup;
 pub mod tools;
 
 use std::sync::Arc;

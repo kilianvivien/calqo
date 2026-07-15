@@ -15,11 +15,14 @@ editable for the user: real text, shape, SVG, and list layers on artboards.
 
 1. \`calqo_get_status\` — see the active project, artboard, and current \`revision\`.
 2. \`calqo_create_project\` — only when no project is open or the user wants a new one.
-3. \`calqo_apply_operations\` — the main tool: a batch of operations, applied
-   atomically as ONE undo step. Pass \`baseRevision\` from your last read so you
-   never overwrite the user's concurrent edits.
-4. \`calqo_get_preview\` — render the artboard as a PNG, look at it, refine.
-5. \`calqo_validate_operations\` — optional dry run when unsure about a payload.
+3. \`calqo_apply_and_preview\` — preferred fast path: validate and apply a batch
+   atomically as ONE undo step, then receive the updated \`revision\`, warnings,
+   and PNG in the same call. Look at it and refine with small \`updateLayer\`
+   batches.
+4. \`calqo_apply_operations\` / \`calqo_get_preview\` — use separately only when
+   you do not need an image on every edit.
+5. \`calqo_validate_operations\` — optional dry run when diagnosing a payload;
+   the two apply tools already run the same validation before committing.
 
 The first write asks the user for approval in Calqo; if a write fails with
 PERMISSION_DENIED, tell the user to approve agent drawing (or call
@@ -85,7 +88,10 @@ Shape layer (\`shape\`: \`rect\` | \`ellipse\` | \`line\` | \`polygon\` | \`arro
 Fills may also be gradients:
 \`{ "type": "linear", "angle": 45, "stops": [{ "offset": 0, "color": "#0A2540" }, { "offset": 1, "color": "#123A6B" }] }\`.
 Strokes: \`"stroke": { "color": "#111827", "width": 3 }\`.
-Lines/arrows use \`points\` relative to the layer box: \`[0, 0, 400, 0]\`.
+For \`line\`, \`arrow\`, and \`freehand\`, \`fill\` may be omitted; Calqo adds a
+transparent fill. Their \`points\` are relative to the layer box: every x must
+be within 0..w and every y within 0..h. Example: a diagonal in a 400×200 box is
+\`[0, 0, 400, 200]\`. Enlarge/reposition the box instead of using negative points.
 
 List layer (bullet lists / agendas):
 
@@ -110,8 +116,8 @@ List layer (bullet lists / agendas):
 
 - Editable first: text layers for copy, list layers for bullets, shape layers
   for panels/accents/badges. Never rasterize text.
-- Keep layers inside the artboard bounds; the result reports warnings when a
-  layer lands fully outside.
+- Keep layers inside the artboard bounds; results warn about fully outside
+  layers and text/list content that overflows its box.
 - Text keys are per-locale records (\`"text": { "en": "…", "fr": "…" }\`); write
   the project's \`activeContentLocale\` at minimum.
 - Respect the user's existing layers — edit or add, don't wipe, unless asked.

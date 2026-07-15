@@ -111,7 +111,11 @@ describe('mcp operation schemas', () => {
   it('rejects unknown patch fields (strict)', () => {
     const parsed = applyOperationsInputSchema.safeParse({
       operations: [
-        { type: 'updateLayer', layerId: 'a', patch: { x: 1, definitelyNotAField: true } },
+        {
+          type: 'updateLayer',
+          layerId: 'a',
+          patch: { x: 1, definitelyNotAField: true },
+        },
       ],
     });
     expect(parsed.success).toBe(false);
@@ -119,9 +123,38 @@ describe('mcp operation schemas', () => {
 
   it('rejects malformed layers in addLayer', () => {
     const parsed = applyOperationsInputSchema.safeParse({
-      operations: [{ type: 'addLayer', layer: { type: 'text', name: 'no geometry' } }],
+      operations: [
+        { type: 'addLayer', layer: { type: 'text', name: 'no geometry' } },
+      ],
     });
     expect(parsed.success).toBe(false);
+  });
+
+  it('accepts stroke-only line layers and normalizes a transparent fill', () => {
+    const parsed = applyOperationsInputSchema.safeParse({
+      operations: [
+        {
+          type: 'addLayer',
+          layer: {
+            ...shapeLayer('layer_line', {
+              shape: 'line',
+              points: [0, 0, 200, 100],
+              stroke: { color: '#FFFFFF', width: 4 },
+            }),
+            fill: undefined,
+          },
+        },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      const operation = parsed.data.operations[0];
+      expect(
+        operation.type === 'addLayer' &&
+          operation.layer.type === 'shape' &&
+          operation.layer.fill,
+      ).toEqual({ type: 'solid', color: 'transparent' });
+    }
   });
 });
 
@@ -178,7 +211,11 @@ describe('mcp executor', () => {
     executeApplyOperations({
       operations: [
         { type: 'addLayer', layer: textLayer('layer_a') },
-        { type: 'updateLayer', layerId: 'layer_a', patch: { text: { en: 'Updated' } } },
+        {
+          type: 'updateLayer',
+          layerId: 'layer_a',
+          patch: { text: { en: 'Updated' } },
+        },
       ],
     });
     const layer = currentProject(project.id).artboards[0].layers[0];
@@ -225,7 +262,11 @@ describe('mcp executor', () => {
       operations: [
         { type: 'addLayer', layer: textLayer('layer_a') },
         { type: 'addLayer', layer: shapeLayer('layer_b') },
-        { type: 'groupLayers', layerIds: ['layer_a', 'layer_b'], name: 'Header' },
+        {
+          type: 'groupLayers',
+          layerIds: ['layer_a', 'layer_b'],
+          name: 'Header',
+        },
       ],
     });
     let layers = currentProject(project.id).artboards[0].layers;
@@ -243,7 +284,9 @@ describe('mcp executor', () => {
   it('adds artboards and focuses them via setActiveArtboard', () => {
     const project = openProject();
     executeApplyOperations({
-      operations: [{ type: 'addArtboard', preset: 'story', name: 'Story variant' }],
+      operations: [
+        { type: 'addArtboard', preset: 'story', name: 'Story variant' },
+      ],
     });
     const current = currentProject(project.id);
     expect(current.artboards).toHaveLength(2);
@@ -280,7 +323,9 @@ describe('mcp executor', () => {
     expectMcpError(
       () =>
         executeApplyOperations({
-          operations: [{ type: 'addLayer', layer: textLayer('layer_overflowing') }],
+          operations: [
+            { type: 'addLayer', layer: textLayer('layer_overflowing') },
+          ],
         }),
       'VALIDATION_FAILED',
     );
@@ -294,7 +339,9 @@ describe('mcp executor', () => {
           operations: [
             {
               type: 'addLayer',
-              layer: textLayer('layer_huge', { text: { en: 'x'.repeat(600_000) } }),
+              layer: textLayer('layer_huge', {
+                text: { en: 'x'.repeat(600_000) },
+              }),
             },
           ],
         }),
@@ -305,10 +352,38 @@ describe('mcp executor', () => {
   it('warns when a layer lands fully outside the artboard', () => {
     openProject();
     const result = executeApplyOperations({
-      operations: [{ type: 'addLayer', layer: textLayer('layer_lost', { x: 5000, y: 5000 }) }],
+      operations: [
+        {
+          type: 'addLayer',
+          layer: textLayer('layer_lost', { x: 5000, y: 5000 }),
+        },
+      ],
     });
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toContain('layer_lost');
+  });
+
+  it('warns when text clips inside its layer box', () => {
+    openProject();
+    const result = executeApplyOperations({
+      operations: [
+        {
+          type: 'addLayer',
+          layer: textLayer('layer_clipped', {
+            w: 120,
+            h: 24,
+            text: { en: 'THIS HEADLINE CANNOT FIT' },
+            style: { fontSize: 96, lineHeight: 1 },
+          }),
+        },
+      ],
+    });
+    expect(
+      result.warnings.some((warning) => warning.includes('layer_clipped')),
+    ).toBe(true);
+    expect(
+      result.warnings.some((warning) => warning.includes('overflows')),
+    ).toBe(true);
   });
 
   it('fails with PROJECT_NOT_FOUND when nothing is open', () => {
@@ -345,7 +420,9 @@ describe('mcp executor', () => {
     expectMcpError(
       () =>
         executeApplyOperations({
-          operations: [{ type: 'reorderLayer', layerId: 'layer_a', toIndex: 0 }],
+          operations: [
+            { type: 'reorderLayer', layerId: 'layer_a', toIndex: 0 },
+          ],
         }),
       'LAYER_NOT_FOUND',
     );
@@ -354,9 +431,42 @@ describe('mcp executor', () => {
 
   it('rejects garbage envelopes cleanly', () => {
     openProject();
-    for (const junk of [null, 42, 'operations', { operations: [] }, { operations: 'all' }]) {
+    for (const junk of [
+      null,
+      42,
+      'operations',
+      { operations: [] },
+      { operations: 'all' },
+    ]) {
       expectMcpError(() => executeApplyOperations(junk), 'VALIDATION_FAILED');
     }
+  });
+
+  it('returns leaf JSON paths for malformed layer fields', () => {
+    openProject();
+    const error = expectMcpError(
+      () =>
+        executeApplyOperations({
+          operations: [
+            {
+              type: 'addLayer',
+              layer: shapeLayer('layer_bad_stroke', {
+                stroke: { color: '#FFFFFF', width: 'wide' },
+              }),
+            },
+          ],
+        }),
+      'VALIDATION_FAILED',
+    );
+    expect(error.payload.message).toContain('operations[0].layer.stroke.width');
+    expect(error.payload.details).toMatchObject({
+      issues: [
+        expect.objectContaining({
+          path: 'operations[0].layer.stroke.width',
+          code: 'invalid_type',
+        }),
+      ],
+    });
   });
 
   it('ignores type-incompatible patch fields instead of corrupting layers', () => {
@@ -403,7 +513,9 @@ describe('mcp permissions', () => {
     mcpStore.setState({
       settings: { ...DEFAULT_MCP_SETTINGS, permissionMode: 'read' },
     });
-    await expect(ensureWritePermission({ name: 'Test agent' })).rejects.toMatchObject({
+    await expect(
+      ensureWritePermission({ name: 'Test agent' }),
+    ).rejects.toMatchObject({
       payload: { code: 'PERMISSION_DENIED' },
     });
   });
@@ -421,7 +533,9 @@ describe('mcp permissions', () => {
     await expect(first).resolves.toBeUndefined();
     expect(mcpStore.getState().sessionWriteGranted).toBe(true);
     // Second write sails through without a prompt.
-    await expect(ensureWritePermission({ name: 'Claude Code' })).resolves.toBeUndefined();
+    await expect(
+      ensureWritePermission({ name: 'Claude Code' }),
+    ).resolves.toBeUndefined();
     expect(confirmStore.getState().request).toBeNull();
   });
 

@@ -100,9 +100,20 @@ export const fillSchema = z.discriminatedUnion('type', [
 
 export const backgroundFillSchema = z.union([
   z.object({ type: z.literal('solid'), color: hexish }),
-  z.object({ type: z.literal('linear'), angle: z.number().default(0), stops: z.array(gradientStopSchema).min(2) }),
-  z.object({ type: z.literal('radial'), stops: z.array(gradientStopSchema).min(2) }),
-  z.object({ type: z.literal('image'), assetId: z.string(), fit: z.enum(['cover', 'contain', 'stretch']).default('cover') }),
+  z.object({
+    type: z.literal('linear'),
+    angle: z.number().default(0),
+    stops: z.array(gradientStopSchema).min(2),
+  }),
+  z.object({
+    type: z.literal('radial'),
+    stops: z.array(gradientStopSchema).min(2),
+  }),
+  z.object({
+    type: z.literal('image'),
+    assetId: z.string(),
+    fit: z.enum(['cover', 'contain', 'stretch']).default('cover'),
+  }),
 ]);
 
 export const layerEffectsSchema = z.object({
@@ -179,7 +190,10 @@ export const shapeLayerSchema = z.object({
   ...baseLayerShape,
   type: z.literal('shape'),
   shape: z.enum(['rect', 'ellipse', 'line', 'polygon', 'arrow', 'freehand']),
-  fill: fillSchema,
+  // Open paths (line / arrow / freehand) are stroke-first. Supplying a dummy
+  // fill is needless MCP friction, so normalize an omitted fill to transparent
+  // while keeping the stored ShapeLayer contract uniform for render/export.
+  fill: fillSchema.default({ type: 'solid', color: 'transparent' }),
   stroke: strokeSchema.optional(),
   cornerRadius: z.number().nonnegative().optional(),
   points: z.array(z.number()).optional(),
@@ -197,7 +211,14 @@ export const shapeLayerSchema = z.object({
 /** Non-destructive image mask: the renderer clips the image to this shape.
  * `radius` only applies to the rounded-rectangle mask. */
 export const imageMaskSchema = z.object({
-  shape: z.enum(['rounded', 'circle', 'ellipse', 'triangle', 'star', 'hexagon']),
+  shape: z.enum([
+    'rounded',
+    'circle',
+    'ellipse',
+    'triangle',
+    'star',
+    'hexagon',
+  ]),
   radius: z.number().nonnegative().optional(),
 });
 
@@ -254,9 +275,13 @@ export const imageLayerSchema = z.object({
   type: z.literal('image'),
   assetId: z.string(),
   fit: z.enum(['cover', 'contain', 'stretch']).default('cover'),
-  crop: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }).optional(),
+  crop: z
+    .object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() })
+    .optional(),
   /** Where a `cover` crop is anchored, 0–1 on each axis (0.5 = centre). */
-  focalPoint: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) }).optional(),
+  focalPoint: z
+    .object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) })
+    .optional(),
   mask: imageMaskSchema.optional(),
   filters: z
     .object({
@@ -264,7 +289,7 @@ export const imageLayerSchema = z.object({
       brightness: z.number().optional(),
       contrast: z.number().optional(),
       saturation: z.number().optional(),
-  })
+    })
     .optional(),
   /** Non-destructive decorative frame (Phase R). */
   frame: imageFrameSchema.optional(),
@@ -286,7 +311,9 @@ export const svgLayerSchema = z.object({
  * checkmark, custom symbol); `asset` references an imported raster/SVG so the
  * marker can be a real icon from the library. */
 export const listMarkerSchema = z.object({
-  kind: z.enum(['bullet', 'dash', 'arrow', 'none', 'character', 'asset']).default('bullet'),
+  kind: z
+    .enum(['bullet', 'dash', 'arrow', 'none', 'character', 'asset'])
+    .default('bullet'),
   /** Used only when `kind === 'character'` (any single character or short glyph). */
   character: z.string().optional(),
   /** Used only when `kind === 'asset'`; must match a `CalqoAssetRef.id`. */
@@ -415,7 +442,9 @@ export const projectMetadataSchema = z
 export const glossaryEntrySchema = z.object({
   source: z.string().min(1),
   target: z.string().optional(),
-  mode: z.enum(['do-not-translate', 'preferred-translation']).default('do-not-translate'),
+  mode: z
+    .enum(['do-not-translate', 'preferred-translation'])
+    .default('do-not-translate'),
   notes: z.string().optional(),
 });
 
@@ -443,7 +472,9 @@ export type ShapeLayer = z.infer<typeof shapeLayerSchema>;
 export type ImageLayer = z.infer<typeof imageLayerSchema>;
 export type ImageMask = z.infer<typeof imageMaskSchema>;
 export type ImageFrame = z.infer<typeof imageFrameSchema>;
-export type ImageBackgroundRemoval = z.infer<typeof imageBackgroundRemovalSchema>;
+export type ImageBackgroundRemoval = z.infer<
+  typeof imageBackgroundRemovalSchema
+>;
 export type ImageBackgroundRemovalPass = z.infer<
   typeof imageBackgroundRemovalPassSchema
 >;

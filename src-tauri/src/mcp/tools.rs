@@ -10,15 +10,15 @@ use std::time::Duration;
 
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{
-    CallToolResult, ContentBlock, InitializeResult, ListResourcesResult,
-    PaginatedRequestParams, ReadResourceRequestParams, ReadResourceResult, Resource,
-    ResourceContents, ServerCapabilities,
+    CallToolResult, ContentBlock, InitializeResult, ListResourcesResult, PaginatedRequestParams,
+    ReadResourceRequestParams, ReadResourceResult, Resource, ResourceContents, ServerCapabilities,
 };
 use rmcp::service::{RequestContext, RoleServer};
-use rmcp::{ErrorData, ServerHandler, tool, tool_handler, tool_router};
-use serde_json::{Value, json};
+use rmcp::{tool, tool_handler, tool_router, ErrorData, ServerHandler};
+use serde_json::{json, Value};
 
 use super::bridge::{BridgeCallError, ClientInfo, McpBridge};
+use super::contracts::McpOperationParam;
 
 /// Plain reads answered from live app state.
 const READ_TIMEOUT: Duration = Duration::from_secs(30);
@@ -65,7 +65,8 @@ pub struct ApplyOperationsParams {
     pub base_revision: Option<String>,
     /// Command operations (addLayer, updateLayer, deleteLayers, reorderLayer,
     /// groupLayers, ungroupLayer, addArtboard, setActiveArtboard). Call
-    /// calqo_get_guide for the exact shapes.
+    /// calqo_get_guide only for advanced fields and design advice.
+    #[schemars(with = "Vec<McpOperationParam>")]
     pub operations: Vec<Value>,
 }
 
@@ -184,7 +185,12 @@ impl CalqoMcpServer {
     ) -> Result<CallToolResult, ErrorData> {
         to_tool_result(
             self.bridge
-                .call("request_control", Value::Null, client_of(&ctx), WRITE_TIMEOUT)
+                .call(
+                    "request_control",
+                    Value::Null,
+                    client_of(&ctx),
+                    WRITE_TIMEOUT,
+                )
                 .await,
         )
     }
@@ -224,6 +230,52 @@ impl CalqoMcpServer {
     }
 
     #[tool(
+        name = "calqo_apply_and_preview",
+        description = "Preferred drawing loop: validate and apply one atomic operation batch, then return the updated revision, warnings, and a PNG preview in the SAME call. Inspect the image and call again with small updateLayer refinements."
+    )]
+    pub async fn apply_and_preview(
+        &self,
+        Parameters(params): Parameters<ApplyOperationsParams>,
+        ctx: RequestContext<RoleServer>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let args = to_args(&params)?;
+        let outcome = self
+            .bridge
+            .call("apply_and_preview", args, client_of(&ctx), WRITE_TIMEOUT)
+            .await;
+        match outcome {
+            Ok(value) => {
+                let apply = value.get("apply").cloned().unwrap_or(Value::Null);
+                let preview = value.get("preview").cloned().unwrap_or(Value::Null);
+                let data = preview
+                    .get("data")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
+                let mime = preview
+                    .get("mimeType")
+                    .and_then(Value::as_str)
+                    .unwrap_or("image/png");
+                let result = json!({
+                    "apply": apply,
+                    "preview": {
+                        "artboardId": preview.get("artboardId"),
+                        "width": preview.get("width"),
+                        "height": preview.get("height"),
+                    },
+                    "previewError": value.get("previewError"),
+                });
+                let mut content = Vec::new();
+                if !data.is_empty() {
+                    content.push(ContentBlock::image(data, mime));
+                }
+                content.push(ContentBlock::text(result.to_string()));
+                Ok(CallToolResult::success(content))
+            }
+            other => to_tool_result(other),
+        }
+    }
+
+    #[tool(
         name = "calqo_validate_operations",
         description = "Dry-run a calqo_apply_operations batch: validates and simulates without changing anything. Returns validity, warnings, and structured errors."
     )]
@@ -256,7 +308,10 @@ impl CalqoMcpServer {
             .await;
         match outcome {
             Ok(value) => {
-                let data = value.get("data").and_then(Value::as_str).unwrap_or_default();
+                let data = value
+                    .get("data")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
                 let mime = value
                     .get("mimeType")
                     .and_then(Value::as_str)
@@ -289,10 +344,12 @@ impl ServerHandler for CalqoMcpServer {
         info.server_info.title = Some("Calqo".into());
         info.server_info.version = env!("CARGO_PKG_VERSION").into();
         info.instructions = Some(
-            "Calqo agent drawing: create and edit fully editable social graphics in the running \
-             Calqo desktop app. Start with calqo_get_status, read calqo_get_guide before drawing, \
-             then use calqo_apply_operations (atomic batches, one undo step each) and \
-             calqo_get_preview to iterate. Writes need one in-app user approval per session."
+            "Draw editable social graphics in the live Calqo app. First call calqo_get_status. \
+             Prefer calqo_apply_and_preview: it validates, applies one atomic undo step, and \
+             returns the PNG plus the new revision in one call. Inspect the image, then refine \
+             with small updateLayer batches using that revision. Tool input schemas describe \
+             operations and layers; call calqo_get_guide only for advanced fields/design advice. \
+             Never erase existing work unless asked. Writes require one in-app approval per session."
                 .into(),
         );
         info
@@ -369,5 +426,22 @@ impl ServerHandler for CalqoMcpServer {
                 None,
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ApplyOperationsParams;
+
+    #[test]
+    fn operation_tool_schema_is_typed() {
+        let schema = schemars::schema_for!(ApplyOperationsParams);
+        let json = serde_json::to_string(&schema).expect("schema serializes");
+        assert!(json.contains("addLayer"));
+        assert!(json.contains("updateLayer"));
+        assert!(json.contains("layerId"));
+        assert!(json.contains("fontSize"));
+        assert!(json.contains("assetId"));
+        assert!(!json.contains("\"items\":true"));
     }
 }

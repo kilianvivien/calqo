@@ -567,6 +567,7 @@ name = "calqo"
 version = "0.3.6"
 dependencies = [
  "axum",
+ "dirs 6.0.0",
  "font-kit",
  "rand 0.9.4",
  "rmcp",
@@ -583,6 +584,7 @@ dependencies = [
  "tauri-plugin-stronghold",
  "tokio",
  "tokio-util",
+ "toml_edit 0.25.12+spec-1.1.0",
 ]
 
 [[package]]
@@ -5358,6 +5360,7 @@ dependencies = [
  "indexmap 2.14.0",
  "toml_datetime 1.1.1+spec-1.1.0",
  "toml_parser",
+ "toml_writer",
  "winnow 1.0.3",
 ]
 

@@ -84,7 +84,9 @@ function handleProjectSummary(args: unknown): unknown {
     args && typeof args === 'object' && 'projectId' in args
       ? String((args as { projectId: unknown }).projectId)
       : (workspaceStore.getState().activeProjectId ?? undefined);
-  const project = projectId ? projectStore.getState().projects[projectId] : null;
+  const project = projectId
+    ? projectStore.getState().projects[projectId]
+    : null;
   if (!project) {
     throw new McpOperationError({
       code: 'PROJECT_NOT_FOUND',
@@ -109,14 +111,29 @@ function enqueueWrite<T>(work: () => Promise<T>): Promise<T> {
 }
 
 function describeResult(method: string, result: unknown): string {
-  if (method === 'apply_operations' && result && typeof result === 'object') {
-    const changed = (result as { changedLayerIds?: string[] }).changedLayerIds;
+  if (
+    (method === 'apply_operations' || method === 'apply_and_preview') &&
+    result &&
+    typeof result === 'object'
+  ) {
+    const apply =
+      method === 'apply_and_preview'
+        ? (result as { apply?: unknown }).apply
+        : result;
+    const changed =
+      apply && typeof apply === 'object'
+        ? (apply as { changedLayerIds?: string[] }).changedLayerIds
+        : undefined;
     return changed ? `${changed.length} layer(s) changed` : 'applied';
   }
   if (method === 'create_project' && result && typeof result === 'object') {
     return `project ${(result as { projectId?: string }).projectId ?? ''}`.trim();
   }
-  if (method === 'validate_operations' && result && typeof result === 'object') {
+  if (
+    method === 'validate_operations' &&
+    result &&
+    typeof result === 'object'
+  ) {
     return (result as { valid?: boolean }).valid ? 'valid' : 'invalid';
   }
   if (method === 'get_preview') return 'preview rendered';
@@ -152,6 +169,31 @@ async function dispatch(request: McpBridgeRequest): Promise<unknown> {
           mcpStore.getState().setApplying(false);
         }
       });
+    case 'apply_and_preview':
+      return enqueueWrite(async () => {
+        await ensureWritePermission(client);
+        mcpStore.getState().setApplying(true);
+        try {
+          const apply = executeApplyOperations(request.args);
+          try {
+            const preview = await renderMcpPreview({
+              projectId: apply.projectId,
+              artboardId: apply.artboardId,
+            });
+            return { apply, preview };
+          } catch (error) {
+            // The edit is already committed. Report preview failure alongside
+            // the new revision so agents do not retry and duplicate the batch.
+            return {
+              apply,
+              preview: null,
+              previewError: toErrorPayload(error),
+            };
+          }
+        } finally {
+          mcpStore.getState().setApplying(false);
+        }
+      });
     case 'validate_operations':
       return executeValidateOperations(request.args);
     case 'get_preview':
@@ -169,7 +211,9 @@ async function handleBridgeRequest(request: McpBridgeRequest): Promise<void> {
   const store = mcpStore.getState();
   if (request.client?.name) store.setConnectedClient(request.client);
 
-  let response: { ok: true; result: unknown } | { ok: false; error: McpErrorPayload };
+  let response:
+    | { ok: true; result: unknown }
+    | { ok: false; error: McpErrorPayload };
   try {
     const result = await dispatch(request);
     response = { ok: true, result };
@@ -244,7 +288,10 @@ export async function syncMcpServer(): Promise<void> {
   const { settings, status } = mcpStore.getState();
   if (settings.enabled && status !== 'running' && status !== 'starting') {
     await startMcpServer();
-  } else if (!settings.enabled && (status === 'running' || status === 'starting')) {
+  } else if (
+    !settings.enabled &&
+    (status === 'running' || status === 'starting')
+  ) {
     await stopMcpServer();
   }
 }
@@ -261,14 +308,24 @@ export function initAgentDrawing(): () => void {
   void (async () => {
     await mcpStore.getState().load();
     const { listen } = await import('@tauri-apps/api/event');
-    const unlistenRequest = await listen<McpBridgeRequest>('calqo-mcp-request', (event) => {
-      void handleBridgeRequest(event.payload);
-    });
-    const unlistenStatus = await listen<McpServerStatusEvent>('calqo-mcp-status', (event) => {
-      const { running, port, error } = event.payload;
-      if (running) mcpStore.getState().setServerStatus('running', port ?? null);
-      else mcpStore.getState().setServerStatus(error ? 'error' : 'stopped', null, error ?? null);
-    });
+    const unlistenRequest = await listen<McpBridgeRequest>(
+      'calqo-mcp-request',
+      (event) => {
+        void handleBridgeRequest(event.payload);
+      },
+    );
+    const unlistenStatus = await listen<McpServerStatusEvent>(
+      'calqo-mcp-status',
+      (event) => {
+        const { running, port, error } = event.payload;
+        if (running)
+          mcpStore.getState().setServerStatus('running', port ?? null);
+        else
+          mcpStore
+            .getState()
+            .setServerStatus(error ? 'error' : 'stopped', null, error ?? null);
+      },
+    );
     if (disposed) {
       unlistenRequest();
       unlistenStatus();

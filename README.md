@@ -164,8 +164,10 @@ animation timeline, no realtime multiplayer, and no hosted template marketplace.
   such as Claude Code draw editable layers live in the running app — off by
   default, loopback-only with a pairing token, one in-app approval per session,
   every agent batch is a single undo step, and an activity log shows each call.
-  Enable it in Settings ▸ Agent drawing, which includes copy-paste setup for
-  common agents.
+  Agents receive typed drawing schemas and a one-call apply-and-preview loop.
+  Enable it in Settings ▸ Agent drawing, which includes one-click setup plus
+  guided copy-paste fallbacks for Claude Code, Codex, OpenCode, and other
+  Streamable HTTP clients.
 
 ## Tech stack
 

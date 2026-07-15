@@ -397,9 +397,23 @@ is complete, disabled by default, and well tested.
   - Auto-start with the app when the settings toggle is enabled.
   - Tools: `calqo_get_status`, `calqo_get_guide`, `calqo_request_control`,
     `calqo_create_project`, `calqo_apply_operations`,
-    `calqo_validate_operations`, `calqo_get_preview`.
+    `calqo_apply_and_preview`, `calqo_validate_operations`, `calqo_get_preview`.
   - Copy-paste host setup snippets (Claude Code, Codex CLI, generic) in the
     Agent drawing settings tab.
+- [x] Tighten the first-use and visual iteration loop from independent agent
+  field reports (Claude Code / Opus 4.8 and OpenCode / GLM 5.2).
+  - Publish typed operation, layer, fill, stroke, and patch schemas through
+    `tools/list`; agents no longer receive unconstrained `operations.items`.
+  - Add `calqo_apply_and_preview` as the preferred one-call validate → apply →
+    render loop while keeping the individual tools for advanced clients.
+  - Return leaf JSON paths for invalid fields, accept stroke-only line layers,
+    document line point bounds, and warn when text/list copy overflows its box.
+  - Make MCP server instructions self-contained so compatible hosts learn the
+    workflow automatically; keep downloadable skills as a file-based fallback,
+    not a prerequisite for live drawing.
+  - Add user-triggered one-click setup that safely merges only Calqo's entry
+    into Codex/OpenCode user config (or uses Claude Code's own CLI); retain
+    native copy/paste fallbacks, explicit restart guidance, and a starter request.
 - [x] Keep the browser app out of scope for live drawing.
   - Browser users get the static agent-skill `.calqo` fallback instead.
   - No companion process, WebSocket bridge, or sidecar.
@@ -432,7 +446,6 @@ is complete, disabled by default, and well tested.
 - Remote MCP mode.
 - Multi-agent lock management.
 - Agent asset library browsing.
-- Tauri embedded server.
 - Rich visual diff UI.
 - Automatic provider calls unless the user invokes an AI tool.
 

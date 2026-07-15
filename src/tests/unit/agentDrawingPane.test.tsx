@@ -6,6 +6,11 @@ import { useMcpStore, DEFAULT_MCP_SETTINGS } from '@/lib/state/mcpStore';
 const clipboardMock = vi.hoisted(() => ({
   writeText: vi.fn<() => Promise<boolean>>(),
 }));
+const tauriMock = vi.hoisted(() => ({
+  invoke: vi.fn<() => Promise<unknown>>(),
+}));
+
+vi.mock('@tauri-apps/api/core', () => tauriMock);
 
 vi.mock('@/lib/adapters', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/lib/adapters')>();
@@ -25,11 +30,15 @@ vi.mock('@/lib/adapters', async (importOriginal) => {
 
 // Render the desktop variant: the pane branches on the Tauri runtime.
 vi.mock('@/lib/platform/runtime', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@/lib/platform/runtime')>();
+  const original =
+    await importOriginal<typeof import('@/lib/platform/runtime')>();
   return {
     ...original,
     isTauri: true,
-    platformRuntime: { kind: 'tauri', capabilities: original.platformRuntime.capabilities },
+    platformRuntime: {
+      kind: 'tauri',
+      capabilities: original.platformRuntime.capabilities,
+    },
   };
 });
 
@@ -43,6 +52,8 @@ describe('AgentDrawingPane (desktop)', () => {
   beforeEach(() => {
     clipboardMock.writeText.mockReset();
     clipboardMock.writeText.mockResolvedValue(true);
+    tauriMock.invoke.mockReset();
+    tauriMock.invoke.mockResolvedValue({ restartRequired: true });
     useMcpStore.setState({
       settings: { ...DEFAULT_MCP_SETTINGS },
       loaded: true,
@@ -70,12 +81,18 @@ describe('AgentDrawingPane (desktop)', () => {
     // The Claude Code snippet is the default and embeds the pairing token.
     const snippet = screen.getByText(/claude mcp add/);
     expect(snippet.textContent).toContain('http://127.0.0.1:22576/mcp');
-    expect(snippet.textContent).toContain(useMcpStore.getState().settings.token);
+    expect(snippet.textContent).toContain(
+      useMcpStore.getState().settings.token,
+    );
   });
 
   it('offers revoke only while a session grant is active', () => {
     useMcpStore.setState({
-      settings: { ...DEFAULT_MCP_SETTINGS, enabled: true, token: 'x'.repeat(32) },
+      settings: {
+        ...DEFAULT_MCP_SETTINGS,
+        enabled: true,
+        token: 'x'.repeat(32),
+      },
       sessionWriteGranted: true,
     });
     render(<AgentDrawingPane />);
@@ -86,7 +103,11 @@ describe('AgentDrawingPane (desktop)', () => {
 
   it('renders activity log entries', () => {
     useMcpStore.setState({
-      settings: { ...DEFAULT_MCP_SETTINGS, enabled: true, token: 'x'.repeat(32) },
+      settings: {
+        ...DEFAULT_MCP_SETTINGS,
+        enabled: true,
+        token: 'x'.repeat(32),
+      },
     });
     useMcpStore.getState().logActivity({
       client: 'Claude Code',
@@ -100,12 +121,20 @@ describe('AgentDrawingPane (desktop)', () => {
 
   it('copies setup snippets through the clipboard adapter', async () => {
     useMcpStore.setState({
-      settings: { ...DEFAULT_MCP_SETTINGS, enabled: true, token: 'x'.repeat(32) },
+      settings: {
+        ...DEFAULT_MCP_SETTINGS,
+        enabled: true,
+        token: 'x'.repeat(32),
+      },
       port: 22576,
     });
     render(<AgentDrawingPane />);
 
-    fireEvent.click(screen.getByRole('button', { name: /copy setup|copier la config/i }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /copy connection|copier la connexion/i,
+      }),
+    );
 
     await waitFor(() => {
       expect(clipboardMock.writeText).toHaveBeenCalledWith(
@@ -114,6 +143,68 @@ describe('AgentDrawingPane (desktop)', () => {
       expect(clipboardMock.writeText).toHaveBeenCalledWith(
         expect.stringContaining('Authorization: Bearer'),
       );
+    });
+  });
+
+  it('uses native Streamable HTTP setup for Codex without a Node proxy', () => {
+    useMcpStore.setState({
+      settings: {
+        ...DEFAULT_MCP_SETTINGS,
+        enabled: true,
+        token: 'x'.repeat(32),
+      },
+      port: 22576,
+    });
+    render(<AgentDrawingPane />);
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Codex' }));
+    const snippet = screen.getByText(/\[mcp_servers\.calqo\]/);
+    expect(snippet.textContent).toContain('url = "http://127.0.0.1:22576/mcp"');
+    expect(snippet.textContent).toContain('http_headers');
+    expect(snippet.textContent).not.toContain('npx');
+  });
+
+  it('provides a ready OpenCode remote configuration', () => {
+    useMcpStore.setState({
+      settings: {
+        ...DEFAULT_MCP_SETTINGS,
+        enabled: true,
+        token: 'x'.repeat(32),
+      },
+    });
+    render(<AgentDrawingPane />);
+
+    fireEvent.click(screen.getByRole('radio', { name: 'OpenCode' }));
+    expect(screen.getByText(/opencode\.json/).textContent).toContain(
+      '"type": "remote"',
+    );
+  });
+
+  it('can install the selected client connection automatically', async () => {
+    useMcpStore.setState({
+      settings: {
+        ...DEFAULT_MCP_SETTINGS,
+        enabled: true,
+        token: 'x'.repeat(32),
+      },
+      port: 22576,
+    });
+    render(<AgentDrawingPane />);
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Codex' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /set up automatically|configurer automatiquement/i,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(tauriMock.invoke).toHaveBeenCalledWith('mcp_setup_client', {
+        client: 'codex',
+        url: 'http://127.0.0.1:22576/mcp',
+        token: 'x'.repeat(32),
+      });
+      expect(screen.getByRole('status')).toBeTruthy();
     });
   });
 });

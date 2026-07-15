@@ -1,12 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Bot,
-  Check,
-  Copy,
-  Download,
-  RefreshCw,
-  ShieldOff,
-} from 'lucide-react';
+import { Bot, Check, Copy, Download, RefreshCw, ShieldOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassButton, GlassSegmentedControl } from '@/components/glass';
 import { clipboard } from '@/lib/adapters';
@@ -16,10 +9,7 @@ import {
   useMcpStore,
   type McpPermissionMode,
 } from '@/lib/state/mcpStore';
-import {
-  restartMcpServer,
-  syncMcpServer,
-} from '@/editor/mcp/bridge';
+import { restartMcpServer, syncMcpServer } from '@/editor/mcp/bridge';
 import {
   downloadCalqoAgentSkill,
   downloadClaudeAgentSkill,
@@ -30,23 +20,41 @@ import {
  * browser the live server is unavailable, so the pane explains that and offers
  * the file-based agent skill instead. */
 
-type SnippetHost = 'claude' | 'codex' | 'generic';
+type SnippetHost = 'claude' | 'codex' | 'opencode' | 'generic';
 
 function buildSnippet(host: SnippetHost, port: number, token: string): string {
   const url = `http://127.0.0.1:${port}/mcp`;
   if (host === 'claude') {
     return [
-      `claude mcp add --transport http calqo ${url} \\`,
-      `  --header "Authorization: Bearer ${token}"`,
+      'claude mcp add --transport http --scope user \\',
+      `  --header "Authorization: Bearer ${token}" \\`,
+      `  calqo ${url}`,
     ].join('\n');
   }
   if (host === 'codex') {
     return [
       '# ~/.codex/config.toml',
       '[mcp_servers.calqo]',
-      'command = "npx"',
-      `args = ["-y", "mcp-remote", "${url}",`,
-      `  "--header", "Authorization: Bearer ${token}"]`,
+      `url = "${url}"`,
+      `http_headers = { Authorization = "Bearer ${token}" }`,
+      'tool_timeout_sec = 180',
+    ].join('\n');
+  }
+  if (host === 'opencode') {
+    return [
+      '// opencode.json',
+      '{',
+      '  "$schema": "https://opencode.ai/config.json",',
+      '  "mcp": {',
+      '    "calqo": {',
+      '      "type": "remote",',
+      `      "url": "${url}",`,
+      '      "enabled": true,',
+      '      "oauth": false,',
+      `      "headers": { "Authorization": "Bearer ${token}" }`,
+      '    }',
+      '  }',
+      '}',
     ].join('\n');
   }
   return [`URL: ${url}`, `Header: Authorization: Bearer ${token}`].join('\n');
@@ -101,6 +109,10 @@ export function AgentDrawingPane() {
   const connectedClient = useMcpStore((s) => s.connectedClient);
   const activityLog = useMcpStore((s) => s.activityLog);
   const [snippetHost, setSnippetHost] = useState<SnippetHost>('claude');
+  const [setupState, setSetupState] = useState<{
+    kind: 'idle' | 'installing' | 'success' | 'error';
+    message?: string;
+  }>({ kind: 'idle' });
 
   useEffect(() => {
     void useMcpStore.getState().load();
@@ -111,6 +123,31 @@ export function AgentDrawingPane() {
     () => buildSnippet(snippetHost, effectivePort, settings.token || '<token>'),
     [snippetHost, effectivePort, settings.token],
   );
+  const connectionUrl = `http://127.0.0.1:${effectivePort}/mcp`;
+
+  const setupAutomatically = async () => {
+    if (snippetHost === 'generic') return;
+    setSetupState({ kind: 'installing' });
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('mcp_setup_client', {
+        client: snippetHost,
+        url: connectionUrl,
+        token: settings.token,
+      });
+      setSetupState({
+        kind: 'success',
+        message: t('settings.agentDrawing.autoSetupSuccess'),
+      });
+    } catch (error) {
+      setSetupState({
+        kind: 'error',
+        message: t('settings.agentDrawing.autoSetupError', {
+          error: String(error),
+        }),
+      });
+    }
+  };
 
   if (!isTauri) {
     return (
@@ -132,7 +169,11 @@ export function AgentDrawingPane() {
   }
 
   const statusColor =
-    status === 'running' ? '#28c840' : status === 'error' ? '#ff5f57' : '#8e8e93';
+    status === 'running'
+      ? '#28c840'
+      : status === 'error'
+        ? '#ff5f57'
+        : '#8e8e93';
   const statusLabel =
     status === 'running'
       ? t('settings.agentDrawing.statusRunning', { port: effectivePort })
@@ -163,12 +204,18 @@ export function AgentDrawingPane() {
           <p className="flex items-center gap-1.5 pt-1 text-[11.5px] text-[var(--calqo-text-2)]">
             <span
               className="h-1.5 w-1.5 rounded-full"
-              style={{ background: statusColor, boxShadow: `0 0 6px ${statusColor}` }}
+              style={{
+                background: statusColor,
+                boxShadow: `0 0 6px ${statusColor}`,
+              }}
             />
             {statusLabel}
             {connectedClient && status === 'running' && (
               <span className="text-[var(--calqo-accent)]">
-                · {t('settings.agentDrawing.clientConnected', { client: connectedClient.name })}
+                ·{' '}
+                {t('settings.agentDrawing.clientConnected', {
+                  client: connectedClient.name,
+                })}
               </span>
             )}
           </p>
@@ -196,38 +243,103 @@ export function AgentDrawingPane() {
             <p className="text-[12px] leading-relaxed text-[var(--calqo-text-3)]">
               {t('settings.agentDrawing.setupHint')}
             </p>
+            <ol className="grid gap-1.5 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-3 text-[11.5px] leading-relaxed text-[var(--calqo-text-2)]">
+              <li>
+                <strong>1.</strong> {t('settings.agentDrawing.setupStepCopy')}
+              </li>
+              <li>
+                <strong>2.</strong> {t('settings.agentDrawing.setupStepAdd')}
+              </li>
+              <li>
+                <strong>3.</strong>{' '}
+                {t('settings.agentDrawing.setupStepRestart')}
+              </li>
+            </ol>
             <GlassSegmentedControl<SnippetHost>
               ariaLabel={t('settings.agentDrawing.setupTitle')}
               options={[
                 { value: 'claude', label: 'Claude Code' },
-                { value: 'codex', label: 'Codex CLI' },
-                { value: 'generic', label: t('settings.agentDrawing.genericHost') },
+                { value: 'codex', label: 'Codex' },
+                { value: 'opencode', label: 'OpenCode' },
+                {
+                  value: 'generic',
+                  label: t('settings.agentDrawing.genericHost'),
+                },
               ]}
               value={snippetHost}
-              onChange={setSnippetHost}
+              onChange={(host) => {
+                setSnippetHost(host);
+                setSetupState({ kind: 'idle' });
+              }}
             />
             <pre className="calqo-scroll overflow-x-auto rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] p-3 font-mono text-[11px] leading-relaxed text-[var(--calqo-text-2)]">
               {snippet}
             </pre>
             <div className="flex flex-wrap gap-2">
-              <CopyButton value={snippet} label={t('settings.agentDrawing.copySnippet')} />
+              {snippetHost !== 'generic' && (
+                <GlassButton
+                  onClick={() => void setupAutomatically()}
+                  disabled={setupState.kind === 'installing'}
+                >
+                  {setupState.kind === 'success' ? (
+                    <Check size={14} />
+                  ) : (
+                    <Bot size={14} />
+                  )}
+                  {setupState.kind === 'installing'
+                    ? t('settings.agentDrawing.autoSetupInstalling')
+                    : t('settings.agentDrawing.autoSetup')}
+                </GlassButton>
+              )}
               <CopyButton
-                value={settings.token}
-                label={t('settings.agentDrawing.copyToken')}
+                value={snippet}
+                label={t('settings.agentDrawing.copySnippet')}
               />
-              <GlassButton
-                onClick={() => {
-                  useMcpStore.getState().regenerateToken();
-                  void restartMcpServer();
+              <CopyButton
+                value={t('settings.agentDrawing.starterPrompt')}
+                label={t('settings.agentDrawing.copyStarterPrompt')}
+              />
+            </div>
+            {setupState.message && (
+              <p
+                role={setupState.kind === 'error' ? 'alert' : 'status'}
+                className="text-[11.5px] leading-snug"
+                style={{
+                  color:
+                    setupState.kind === 'error'
+                      ? '#ff5f57'
+                      : 'var(--calqo-accent)',
                 }}
               >
-                <RefreshCw size={14} />
-                {t('settings.agentDrawing.regenerateToken')}
-              </GlassButton>
-            </div>
+                {setupState.message}
+              </p>
+            )}
             <p className="text-[11.5px] leading-snug text-[var(--calqo-text-3)]">
-              {t('settings.agentDrawing.tokenHint')}
+              {t('settings.agentDrawing.restartHint')}
             </p>
+            <details className="rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] px-3 py-2">
+              <summary className="cursor-pointer text-[11.5px] font-medium text-[var(--calqo-text-2)]">
+                {t('settings.agentDrawing.advancedSecurity')}
+              </summary>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <CopyButton
+                  value={settings.token}
+                  label={t('settings.agentDrawing.copyToken')}
+                />
+                <GlassButton
+                  onClick={() => {
+                    useMcpStore.getState().regenerateToken();
+                    void restartMcpServer();
+                  }}
+                >
+                  <RefreshCw size={14} />
+                  {t('settings.agentDrawing.regenerateToken')}
+                </GlassButton>
+              </div>
+              <p className="mt-2 text-[11px] leading-snug text-[var(--calqo-text-3)]">
+                {t('settings.agentDrawing.tokenHint')}
+              </p>
+            </details>
           </div>
 
           {/* Step 3 — permissions */}
@@ -239,7 +351,9 @@ export function AgentDrawingPane() {
               ariaLabel={t('settings.agentDrawing.permissions')}
               options={permissionOptions}
               value={settings.permissionMode}
-              onChange={(mode) => useMcpStore.getState().setPermissionMode(mode)}
+              onChange={(mode) =>
+                useMcpStore.getState().setPermissionMode(mode)
+              }
             />
             <p className="text-[11.5px] leading-snug text-[var(--calqo-text-3)]">
               {settings.permissionMode === 'session'
