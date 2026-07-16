@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultProject, safeImportProject } from '@/lib/schema';
 import type { ShapeLayer } from '@/lib/schema';
 import {
+  brushProfileWidths,
   pressureOutlinePoints,
   pressuresToWidths,
 } from '@/editor/canvas/freehandGeometry';
-import { createFreehandLayer } from '@/editor/commands/projectCommands';
+import { brushStyleLayerPatch, createFreehandLayer } from '@/editor/commands/projectCommands';
 import { serializeLayer } from '@/editor/export/svgExport';
 
 const BRUSH_DEFAULTS = {
@@ -72,6 +73,75 @@ describe('pressure-sensitive brush strokes', () => {
       const imported = result.project.artboards[0].layers.at(-1) as ShapeLayer;
       expect(imported.pointWidths).toEqual(layer.pointWidths);
     }
+  });
+
+  it('tapers felt-tip strokes to fine points at both ends', () => {
+    // A long horizontal stroke: mid-stroke keeps the base width, ends thin out.
+    const points = Array.from({ length: 20 }).flatMap((_, i) => [i * 10, 0]);
+    const widths = brushProfileWidths('taper', points, new Array(20).fill(10));
+    expect(widths[0]).toBeLessThan(widths[10] * 0.4);
+    expect(widths[19]).toBeLessThan(widths[10] * 0.4);
+    expect(widths[10]).toBeCloseTo(10);
+  });
+
+  it('draws chisel strokes broad on one diagonal and thin on the other', () => {
+    const diag = (sign: number) =>
+      Array.from({ length: 8 }).flatMap((_, i) => [i * 10, sign * i * 10]);
+    // Along the 45° nib the stroke is thin; across it, broad.
+    const along = brushProfileWidths('chisel', diag(1), new Array(8).fill(10));
+    const across = brushProfileWidths('chisel', diag(-1), new Array(8).fill(10));
+    expect(Math.max(...along)).toBeLessThan(Math.min(...across) * 0.5);
+  });
+
+  it('applies deterministic grain so repaints and exports agree', () => {
+    const points = Array.from({ length: 12 }).flatMap((_, i) => [i * 7, (i % 3) * 4]);
+    const a = brushProfileWidths('grain', points, new Array(12).fill(8));
+    const b = brushProfileWidths('grain', points, new Array(12).fill(8));
+    expect(a).toEqual(b);
+    // The jitter actually varies the body (it is not a constant ribbon)…
+    expect(new Set(a.map((w) => w.toFixed(3))).size).toBeGreaterThan(1);
+    // …and the soft variant stays closer to the base width.
+    const soft = brushProfileWidths('grain-soft', points, new Array(12).fill(8));
+    const spread = (w: number[]) => Math.max(...w) - Math.min(...w);
+    expect(spread(soft)).toBeLessThan(spread(a));
+  });
+
+  it('profiles style the stroke at creation and on restyle', () => {
+    const marker = createFreehandLayer(
+      [0, 0, 30, 0, 60, 0, 90, 0],
+      { ...BRUSH_DEFAULTS, brushStyle: 'marker' },
+    ) as ShapeLayer;
+    // No stylus pressure, yet the chisel profile still gives a ribbon body.
+    expect(marker.pointWidths).toHaveLength(4);
+
+    // Restyling to a profiled brush recomputes the ribbon; to a plain brush
+    // clears it back to a constant-width stroke.
+    const feltPatch = brushStyleLayerPatch('felt-tip', marker.stroke, {
+      points: marker.points,
+    });
+    expect(feltPatch.pointWidths).toHaveLength(4);
+    const smoothPatch = brushStyleLayerPatch('smooth', marker.stroke, {
+      points: marker.points,
+    });
+    expect(smoothPatch.pointWidths).toBeNull();
+  });
+
+  it('keeps dashed strokes constant-width so the dash survives', () => {
+    const dashed = createFreehandLayer(
+      [0, 0, 30, 10, 60, 0],
+      { ...BRUSH_DEFAULTS, brushStyle: 'dashed' },
+      [0.2, 0.9, 0.4],
+    ) as ShapeLayer;
+    expect(dashed.pointWidths).toBeUndefined();
+    expect(dashed.stroke?.style).toBe('dashed');
+  });
+
+  it('scales broad tools up from the nominal brush size', () => {
+    const highlighter = createFreehandLayer(
+      [0, 0, 30, 10, 60, 0],
+      { ...BRUSH_DEFAULTS, brushStyle: 'highlighter' },
+    ) as ShapeLayer;
+    expect(highlighter.stroke?.width).toBeCloseTo(BRUSH_DEFAULTS.brushSize * 1.6);
   });
 
   it('exports pressure strokes to SVG as a filled ribbon polygon', () => {

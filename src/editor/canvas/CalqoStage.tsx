@@ -14,6 +14,7 @@ import {
   createShapeLayer,
   createTextLayer,
   deleteSelectedLayers,
+  BRUSH_STYLES,
   duplicateSelectedLayers,
   groupLayersInArtboard,
   groupSelectedLayers,
@@ -45,6 +46,7 @@ import { useCanvasFontsReady } from './canvasFonts';
 import { computeSnap, SNAP_DISTANCE } from './snapping';
 import {
   appendPressure,
+  brushProfileWidths,
   pressureOutlinePoints,
   pressuresToWidths,
   type PressureTrace,
@@ -545,12 +547,14 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       setDrawPoints(null);
       finalizeBrushSession();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTool]);
 
   // A session left open when the editor unmounts (tab close, project switch)
   // still merges — the ref carries its own project/artboard ids.
   useEffect(() => {
     return () => finalizeBrushSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Brush: Enter or Escape ends the drawing session and returns to select.
@@ -966,11 +970,16 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   };
 
   /** Merge the session's strokes into one "Drawing" group and forget it. Safe
-   * to call at any time — a session of zero or one stroke needs no group. */
+   * to call at any time — a session of zero or one stroke needs no group. The
+   * result is selected, taking over from the strokes deselected mid-session. */
   const finalizeBrushSession = () => {
     const session = brushSession.current;
     brushSession.current = null;
-    if (!session || session.layerIds.length < 2) return;
+    if (!session || session.layerIds.length === 0) return;
+    if (session.layerIds.length === 1) {
+      selectOne(session.layerIds[0]);
+      return;
+    }
     groupLayersInArtboard(
       session.projectId,
       session.artboardId,
@@ -1002,6 +1011,10 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       finalizeBrushSession();
     }
     addLayerToActiveArtboard(project.id, layer);
+    // Deselect mid-session: with a stroke selected the inspector would show
+    // that stroke's controls instead of the brush defaults for the next one.
+    // The session's result is selected when it ends (finalizeBrushSession).
+    clearSelection();
     const open = brushSession.current;
     if (open) open.layerIds.push(layer.id);
     else {
@@ -1315,28 +1328,52 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
           )}
           {drawPoints &&
             drawPoints.length >= 4 &&
-            (drawPressures.current?.real ? (
-              <Line
-                points={pressureOutlinePoints(
+            (() => {
+              // Live stroke preview mirrors what commitFreehand will store:
+              // same width scale, pressure widths, and brush profile.
+              const brush = BRUSH_STYLES[shapeDefaults.brushStyle];
+              const baseWidth = shapeDefaults.brushSize * (brush.widthScale ?? 1);
+              let widths = drawPressures.current?.real
+                ? pressuresToWidths(drawPressures.current.values, baseWidth)
+                : null;
+              if (brush.profile) {
+                widths = brushProfileWidths(
+                  brush.profile,
                   drawPoints,
-                  pressuresToWidths(drawPressures.current.values, shapeDefaults.brushSize),
-                )}
-                closed
-                fill={shapeDefaults.stroke}
-                lineJoin="round"
-                listening={false}
-              />
-            ) : (
-              <Line
-                points={drawPoints}
-                stroke={shapeDefaults.stroke}
-                strokeWidth={shapeDefaults.brushSize}
-                tension={0.4}
-                lineCap="round"
-                lineJoin="round"
-                listening={false}
-              />
-            ))}
+                  widths ?? new Array<number>(drawPoints.length / 2).fill(baseWidth),
+                );
+              }
+              const ribbon =
+                widths && brush.style !== 'dashed'
+                  ? pressureOutlinePoints(drawPoints, widths)
+                  : null;
+              return ribbon && ribbon.length >= 6 ? (
+                <Line
+                  points={ribbon}
+                  closed
+                  fill={shapeDefaults.stroke}
+                  lineJoin="round"
+                  opacity={brush.opacity}
+                  listening={false}
+                />
+              ) : (
+                <Line
+                  points={drawPoints}
+                  stroke={shapeDefaults.stroke}
+                  strokeWidth={baseWidth}
+                  tension={brush.tension}
+                  lineCap={brush.cap}
+                  lineJoin="round"
+                  opacity={brush.opacity}
+                  dash={
+                    brush.style === 'dashed'
+                      ? [baseWidth * 3, baseWidth * 2]
+                      : undefined
+                  }
+                  listening={false}
+                />
+              );
+            })()}
           {penPoints.length > 0 && (
             <>
               <Line

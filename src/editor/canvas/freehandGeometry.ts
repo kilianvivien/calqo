@@ -49,6 +49,85 @@ export function pressuresToWidths(pressures: number[], baseWidth: number): numbe
   });
 }
 
+/** Named width treatments that give each brush style a distinct body. A
+ * profile maps per-point base widths (the flat brush size, or pressure-derived
+ * widths when a stylus reported force) to the widths stored on the layer —
+ * and since the canvas renderer and both exporters all consume `pointWidths`,
+ * every output agrees for free.
+ * - `taper`: ink-pen entry/exit — the stroke eases in from and out to a point.
+ * - `chisel`: 45° calligraphy nib — one diagonal draws broad, the other thin.
+ * - `grain` / `grain-soft`: dry media — jittered widths roughen the ribbon
+ *   edge (chalk crumbles harder than wax). */
+export type BrushProfile = 'taper' | 'chisel' | 'grain' | 'grain-soft';
+
+/** Cumulative arc-length parameter (0–1) per point pair. */
+function arcParams(points: number[]): number[] {
+  const n = Math.floor(points.length / 2);
+  const t = new Array<number>(n).fill(0);
+  let total = 0;
+  for (let i = 1; i < n; i += 1) {
+    total += Math.hypot(points[i * 2] - points[i * 2 - 2], points[i * 2 + 1] - points[i * 2 - 1]);
+    t[i] = total;
+  }
+  if (total > 0) for (let i = 0; i < n; i += 1) t[i] /= total;
+  return t;
+}
+
+function smoothstep(edge: number, x: number): number {
+  const c = Math.min(1, Math.max(0, x / edge));
+  return c * c * (3 - 2 * c);
+}
+
+/** Deterministic per-stroke PRNG (mulberry32) seeded from the geometry, so a
+ * grain profile paints the same edge on every repaint and in every export. */
+function strokeRandom(points: number[]): () => number {
+  let seed = 2166136261;
+  const step = Math.max(2, Math.floor(points.length / 32) * 2);
+  for (let i = 0; i < points.length; i += step) {
+    seed ^= Math.round(points[i] * 10) & 0xffff;
+    seed = Math.imul(seed, 16777619);
+  }
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let x = Math.imul(a ^ (a >>> 15), 1 | a);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Apply a brush profile to per-point base widths (one per x/y pair). */
+export function brushProfileWidths(
+  profile: BrushProfile,
+  points: number[],
+  baseWidths: number[],
+): number[] {
+  const n = Math.min(Math.floor(points.length / 2), baseWidths.length);
+  const widths = baseWidths.slice(0, n);
+  if (n < 2) return widths;
+  if (profile === 'taper') {
+    const t = arcParams(points);
+    return widths.map((w, i) => {
+      const ramp = Math.min(smoothstep(0.22, t[i]), smoothstep(0.22, 1 - t[i]));
+      return Math.max(MIN_POINT_WIDTH, w * (0.18 + 0.82 * ramp));
+    });
+  }
+  if (profile === 'chisel') {
+    const nib = Math.PI / 4;
+    return widths.map((w, i) => {
+      const from = Math.max(0, i - 1) * 2;
+      const to = Math.min(n - 1, i + 1) * 2;
+      const angle = Math.atan2(points[to + 1] - points[from + 1], points[to] - points[from]);
+      return Math.max(MIN_POINT_WIDTH, w * (0.35 + 0.85 * Math.abs(Math.sin(angle - nib))));
+    });
+  }
+  const amp = profile === 'grain' ? 0.42 : 0.22;
+  const rand = strokeRandom(points);
+  return widths.map((w) =>
+    Math.max(MIN_POINT_WIDTH, w * (1 - amp + rand() * amp * 2)),
+  );
+}
+
 interface StrokeSample {
   x: number;
   y: number;

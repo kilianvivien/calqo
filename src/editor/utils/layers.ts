@@ -25,6 +25,9 @@ export type LayerPatch = Partial<
   stroke?: ShapeLayer['stroke'];
   cornerRadius?: number;
   points?: ShapeLayer['points'] | null;
+  /** Per-point freehand ribbon widths. `null` clears back to a constant-width
+   * stroke. */
+  pointWidths?: ShapeLayer['pointWidths'] | null;
   tension?: number;
   arrow?: ArrowStyle;
   fit?: ImageLayer['fit'];
@@ -142,6 +145,10 @@ export function applyLayerPatch(layer: CalqoLayer, patch: LayerPatch): void {
     if (patch.points !== undefined) {
       if (patch.points === null) delete layer.points;
       else layer.points = patch.points;
+    }
+    if (patch.pointWidths !== undefined) {
+      if (patch.pointWidths === null) delete layer.pointWidths;
+      else layer.pointWidths = patch.pointWidths;
     }
     if (patch.tension !== undefined) layer.tension = patch.tension;
     if (patch.arrow !== undefined) layer.arrow = patch.arrow;
