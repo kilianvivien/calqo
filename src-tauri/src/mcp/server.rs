@@ -6,6 +6,7 @@
 //! DNS-rebinding attempts at the protocol door.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::extract::{Request, State};
 use axum::http::{StatusCode, header};
@@ -23,6 +24,10 @@ use super::tools::CalqoMcpServer;
 
 /// How many ports above the preferred one to try before giving up.
 const PORT_SCAN_RANGE: u16 = 10;
+/// Image generation and troubleshooting can legitimately leave a client idle
+/// for more than rmcp's five-minute default. Keep local sessions for the app's
+/// working day while still eventually collecting abandoned clients.
+const SESSION_KEEP_ALIVE: Duration = Duration::from_secs(24 * 60 * 60);
 
 pub struct ServerHandle {
     pub port: u16,
@@ -89,9 +94,11 @@ pub async fn start_server(
 
     let cancel = CancellationToken::new();
     let config = StreamableHttpServerConfig::default().with_cancellation_token(cancel.clone());
+    let mut session_manager = LocalSessionManager::default();
+    session_manager.session_config.keep_alive = Some(SESSION_KEEP_ALIVE);
     let service = StreamableHttpService::new(
         move || Ok(CalqoMcpServer::new(bridge.clone())),
-        Arc::new(LocalSessionManager::default()),
+        Arc::new(session_manager),
         config,
     );
     let router = axum::Router::new()

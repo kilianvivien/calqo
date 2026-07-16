@@ -436,14 +436,21 @@ is complete, disabled by default, and well tested.
     own CLI); retain native copy/paste fallbacks, explicit restart guidance,
     and a starter request.
 - [x] Let capable agents add generated or web-sourced raster assets.
-  - `calqo_insert_image` accepts bounded PNG/JPEG/WebP data URLs produced or
-    fetched by the connected agent, persists the blob through the asset adapter,
-    and places an editable image layer as one undoable change.
+  - `calqo_insert_image` prefers an absolute same-machine `filePath`, so
+    generated binaries never pass through model context. The Rust gateway
+    reads only bounded PNG/JPEG/WebP files, converts them inside Calqo, then
+    persists the blob through the asset adapter and places an editable image
+    layer as one undoable change.
+  - Bounded data URLs remain a compatibility fallback and tolerate base64
+    line wrapping; callers must provide exactly one source.
   - Return the updated preview and asset/layer ids for immediate visual
     iteration; reject stale revisions, invalid MIME signatures, undecodable
     images, oversized blobs, and layer-cap violations.
   - Calqo does not fetch agent-supplied URLs, keeping remote credentials and
     local-network targets outside the MCP trust boundary.
+  - Local MCP sessions stay alive for 24 hours instead of rmcp's five-minute
+    idle default, covering image-generation and troubleshooting pauses while
+    still collecting abandoned sessions.
 - [x] Keep the browser app out of scope for live drawing.
   - Browser users get the static agent-skill `.calqo` fallback instead.
   - No companion process, WebSocket bridge, or sidecar.

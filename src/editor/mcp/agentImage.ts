@@ -76,9 +76,13 @@ export function decodeAgentImageDataUrl(dataUrl: string): {
   blob: Blob;
   mimeType: AgentImageMimeType;
 } {
+  // MIME-style base64 is commonly wrapped with ASCII whitespace. Agents often
+  // encounter that when reading generated files through text tools; normalize
+  // it before both length validation and decoding.
+  const normalized = dataUrl.replace(/[\t\n\f\r ]/g, '');
   const match =
     /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(
-      dataUrl,
+      normalized,
     );
   if (!match) {
     fail(
@@ -110,7 +114,21 @@ export function decodeAgentImageDataUrl(dataUrl: string): {
 }
 
 function parseInput(raw: unknown): InsertImageInput {
-  const parsed = insertImageInputSchema.safeParse(raw);
+  const normalized =
+    raw &&
+    typeof raw === 'object' &&
+    !Array.isArray(raw) &&
+    'dataUrl' in raw &&
+    typeof (raw as { dataUrl?: unknown }).dataUrl === 'string'
+      ? {
+          ...raw,
+          dataUrl: (raw as { dataUrl: string }).dataUrl.replace(
+            /[\t\n\f\r ]/g,
+            '',
+          ),
+        }
+      : raw;
+  const parsed = insertImageInputSchema.safeParse(normalized);
   if (!parsed.success) {
     fail('VALIDATION_FAILED', 'Invalid insert_image input.', true, {
       issues: parsed.error.issues.map((issue) => ({

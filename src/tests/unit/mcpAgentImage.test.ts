@@ -95,6 +95,9 @@ afterEach(() => {
 describe('MCP agent image import', () => {
   it('accepts supported data URLs and rejects URLs or spoofed MIME types', () => {
     expect(decodeAgentImageDataUrl(PNG_DATA_URL).mimeType).toBe('image/png');
+    expect(
+      decodeAgentImageDataUrl('data:image/png;base64,iVBO\nRw0K Ggo=').mimeType,
+    ).toBe('image/png');
 
     expect(() =>
       decodeAgentImageDataUrl('https://example.com/photo.png'),
@@ -153,6 +156,19 @@ describe('MCP agent image import', () => {
     const undone = projectStore.getState().projects[project.id];
     expect(undone.assets).toHaveLength(0);
     expect(undone.artboards[0].layers).toHaveLength(0);
+  });
+
+  it('normalizes wrapped base64 before validation and persistence', async () => {
+    const project = openProject();
+    await executeInsertAgentImage({
+      dataUrl: 'data:image/png;base64,iVBO\r\nRw0K\tGgo=',
+    });
+
+    expect(adapterMocks.assetStorage.saveAsset).toHaveBeenCalledWith(
+      project.id,
+      expect.any(Blob),
+      expect.objectContaining({ mimeType: 'image/png' }),
+    );
   });
 
   it('removes a newly stored blob if the base revision becomes stale', async () => {
