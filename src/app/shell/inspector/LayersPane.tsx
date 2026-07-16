@@ -240,7 +240,7 @@ function LayerRow({
           <button
             type="button"
             aria-label={t('layersPanel.reorder')}
-            className="cursor-grab text-[var(--calqo-text-3)] opacity-0 group-hover:opacity-70"
+            className="cursor-grab touch-none text-[var(--calqo-text-3)] opacity-0 group-hover:opacity-70 any-pointer-coarse:opacity-70"
             {...dragHandle}
           >
             <GripVertical size={13} />
@@ -294,7 +294,7 @@ function LayerRow({
         )}
         <button
           type="button"
-          className="text-[var(--calqo-text-3)] opacity-0 hover:text-[var(--calqo-text)] group-hover:opacity-70"
+          className="touch-hitarea text-[var(--calqo-text-3)] opacity-0 hover:text-[var(--calqo-text)] group-hover:opacity-70 any-pointer-coarse:opacity-70"
           title={t('layersPanel.duplicate')}
           onClick={() => duplicateLayerById(projectId, layer.id)}
         >
@@ -302,7 +302,7 @@ function LayerRow({
         </button>
         <button
           type="button"
-          className="text-[var(--calqo-text-3)] opacity-70 hover:text-[var(--calqo-text)]"
+          className="touch-hitarea text-[var(--calqo-text-3)] opacity-70 hover:text-[var(--calqo-text)]"
           title={layer.visible ? t('layersPanel.hide') : t('layersPanel.show')}
           onClick={() =>
             updateLayerInActiveArtboard(projectId, layer.id, { visible: !layer.visible })
@@ -312,7 +312,7 @@ function LayerRow({
         </button>
         <button
           type="button"
-          className="text-[var(--calqo-text-3)] opacity-70 hover:text-[var(--calqo-text)]"
+          className="touch-hitarea text-[var(--calqo-text-3)] opacity-70 hover:text-[var(--calqo-text)]"
           title={layer.locked ? t('layersPanel.unlock') : t('layersPanel.lock')}
           onClick={() =>
             updateLayerInActiveArtboard(projectId, layer.id, { locked: !layer.locked })

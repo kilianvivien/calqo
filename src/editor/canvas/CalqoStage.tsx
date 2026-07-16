@@ -15,6 +15,7 @@ import {
   createTextLayer,
   deleteSelectedLayers,
   duplicateSelectedLayers,
+  groupLayersInArtboard,
   groupSelectedLayers,
   polygonPoints,
   type PolygonPreset,
@@ -198,6 +199,14 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const [drawPoints, setDrawPoints] = useState<number[] | null>(null);
   // Pressure samples for the stroke above (Apple Pencil / stylus force).
   const drawPressures = useRef<PressureTrace | null>(null);
+  // Brush session: the strokes drawn since the brush tool was picked up. The
+  // tool stays active across pen lifts (so a stylus can write word by word) and
+  // the session's strokes merge into one "Drawing" group when it ends.
+  const brushSession = useRef<{
+    projectId: string;
+    artboardId: string;
+    layerIds: string[];
+  } | null>(null);
   // Colour-sampling mode (eyedropper fallback): a click reads a stage pixel.
   const [sampling, setSampling] = useState(false);
   const samplerCbRef = useRef<((hex: string | null) => void) | null>(null);
@@ -430,11 +439,19 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     setPan({ x: 0, y: 0 });
   }, [fitRequest, artboard.width, artboard.height, setPan, setZoom, stageHeight, stageWidth]);
 
+  // While a drawing tool is active, existing layers stop capturing the pointer
+  // (their hit areas would otherwise swallow strokes/drafts started on top of
+  // them — crossing a "t" with the brush must not drag the previous stroke)
+  // and the transformer shows no handles over freshly committed strokes.
+  const drawingToolActive =
+    activeTool === 'brush' || activeTool === 'pen' || SHAPE_TOOLS.has(activeTool);
+
   useEffect(() => {
     const transformer = transformerRef.current;
     if (!transformer) return;
-    // No transform handles while cropping — the crop editor owns interaction.
-    const nodes = croppingLayerId
+    // No transform handles while cropping or drawing — the crop editor / the
+    // active drawing tool owns interaction.
+    const nodes = croppingLayerId || drawingToolActive
       ? []
       : selectedLayers
           .filter((layer) => !layer.locked && layer.visible)
@@ -442,7 +459,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
           .filter((node): node is Konva.Node => Boolean(node));
     transformer.nodes(nodes);
     transformer.getLayer()?.batchDraw();
-  }, [selectedLayers, croppingLayerId]);
+  }, [selectedLayers, croppingLayerId, drawingToolActive]);
 
   // Seed the crop frame and view when entering crop mode (or when the bitmap
   // loads): the frame starts as the layer's current rect.
@@ -516,13 +533,42 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selectedLayers]);
 
-  // Pen/brush drafts are tool-scoped; drop them when switching tools.
+  // Pen/brush drafts are tool-scoped; drop them when switching tools. Leaving
+  // the brush also ends its stroke session, merging the strokes into one
+  // drawing.
   useEffect(() => {
     if (activeTool !== 'pen') {
       setPenPoints([]);
       setPenCursor(null);
     }
-    if (activeTool !== 'brush') setDrawPoints(null);
+    if (activeTool !== 'brush') {
+      setDrawPoints(null);
+      finalizeBrushSession();
+    }
+  }, [activeTool]);
+
+  // A session left open when the editor unmounts (tab close, project switch)
+  // still merges — the ref carries its own project/artboard ids.
+  useEffect(() => {
+    return () => finalizeBrushSession();
+  }, []);
+
+  // Brush: Enter or Escape ends the drawing session and returns to select.
+  useEffect(() => {
+    if (activeTool !== 'brush') return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) {
+        return;
+      }
+      if (event.key === 'Enter' || event.key === 'Escape') {
+        event.preventDefault();
+        setActiveTool('select');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTool]);
 
   useEffect(() => {
@@ -919,6 +965,20 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
     );
   };
 
+  /** Merge the session's strokes into one "Drawing" group and forget it. Safe
+   * to call at any time — a session of zero or one stroke needs no group. */
+  const finalizeBrushSession = () => {
+    const session = brushSession.current;
+    brushSession.current = null;
+    if (!session || session.layerIds.length < 2) return;
+    groupLayersInArtboard(
+      session.projectId,
+      session.artboardId,
+      session.layerIds,
+      'Drawing',
+    );
+  };
+
   const commitFreehand = () => {
     if (!drawPoints) return;
     const trace = drawPressures.current;
@@ -929,9 +989,27 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
       trace?.real ? trace.values : undefined,
     );
     setDrawPoints(null);
-    if (layer) {
-      addLayerToActiveArtboard(project.id, layer);
-      setActiveTool('select');
+    if (!layer) return;
+    // The brush stays active across pen lifts: strokes accumulate into the
+    // running session (one drawing) instead of each lift minting a separate
+    // shape and dropping back to the select tool. Escape/Enter or picking
+    // another tool ends the session.
+    const session = brushSession.current;
+    if (
+      session &&
+      (session.projectId !== project.id || session.artboardId !== artboard.id)
+    ) {
+      finalizeBrushSession();
+    }
+    addLayerToActiveArtboard(project.id, layer);
+    const open = brushSession.current;
+    if (open) open.layerIds.push(layer.id);
+    else {
+      brushSession.current = {
+        projectId: project.id,
+        artboardId: artboard.id,
+        layerIds: [layer.id],
+      };
     }
   };
 
@@ -1110,9 +1188,10 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             }}
           />
         </Layer>
-        {/* While pinching, the content stops listening so the gesture never
-            doubles as a layer drag or transform. */}
-        <Layer x={artboardX} y={artboardY} scaleX={zoom} scaleY={zoom} clipX={0} clipY={0} clipWidth={artboard.width} clipHeight={artboard.height} listening={!pinching}>
+        {/* While pinching or drawing, the content stops listening so the
+            gesture never doubles as a layer drag or transform, and strokes and
+            drafts can start on top of existing layers. */}
+        <Layer x={artboardX} y={artboardY} scaleX={zoom} scaleY={zoom} clipX={0} clipY={0} clipWidth={artboard.width} clipHeight={artboard.height} listening={!pinching && !drawingToolActive}>
           {artboard.layers.map((layer) => (
             <LayerRenderer
               key={layer.id}

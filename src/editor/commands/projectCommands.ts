@@ -1269,10 +1269,24 @@ export function groupSelectedLayers(projectId: string): void {
   if (ids.length < 2) return;
   const project = projectStore.getState().projects[projectId];
   const artboardId = project ? activeArtboardId(project) : null;
+  if (!artboardId) return;
+  groupLayersInArtboard(projectId, artboardId, ids);
+}
+
+/** Group specific top-level layers of an artboard into one group layer. Beyond
+ * the selection-driven panel action above, the brush tool uses this to merge
+ * the strokes of one drawing session into a single "Drawing". */
+export function groupLayersInArtboard(
+  projectId: string,
+  artboardId: string,
+  layerIds: string[],
+  name = 'Group',
+): void {
+  const project = projectStore.getState().projects[projectId];
   const artboard = project?.artboards.find((candidate) => candidate.id === artboardId);
   if (!artboard) return;
   // Only group layers that are direct children of the artboard, in z-order.
-  const ordered = artboard.layers.filter((layer) => ids.includes(layer.id));
+  const ordered = artboard.layers.filter((layer) => layerIds.includes(layer.id));
   if (ordered.length < 2) return;
   const box = boundingBox(ordered);
   const groupId = createId('layer');
@@ -1295,7 +1309,7 @@ export function groupSelectedLayers(projectId: string): void {
       }).filter((layer): layer is CalqoLayer => Boolean(layer));
       const group: GroupLayer = {
         id: groupId,
-        name: 'Group',
+        name,
         type: 'group',
         x: box.x,
         y: box.y,

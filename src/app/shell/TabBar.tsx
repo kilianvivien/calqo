@@ -77,7 +77,7 @@ export function TabBar() {
                 e.stopPropagation();
                 requestClose(id, project.name);
               }}
-              className="flex h-4 w-4 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--calqo-hover)]"
+              className="touch-hitarea flex h-4 w-4 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 any-pointer-coarse:opacity-100 hover:bg-[var(--calqo-hover)]"
             >
               <X size={12} />
             </button>

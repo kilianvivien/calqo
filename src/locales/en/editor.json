@@ -127,6 +127,7 @@
     "arrowHeads": "Arrow heads",
     "arrowStart": "Start",
     "arrowEnd": "End",
+    "arrowHeadSize": "Head size",
     "arrowStyle": "Arrow style",
     "arrowStyle_triangle": "Triangle",
     "arrowStyle_chevron": "Chevron",

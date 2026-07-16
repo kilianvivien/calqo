@@ -124,8 +124,9 @@ function ProjectManagerRow({
         </button>
       )}
       {/* Row actions rest hidden and reveal on hover or keyboard focus, keeping
-          the list calm while staying reachable. */}
-      <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+          the list calm while staying reachable. Touch devices have no hover, so
+          they stay visible there. */}
+      <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 any-pointer-coarse:opacity-100">
         <GlassIconButton
           label={t('projects.duplicate')}
           showTitle={false}

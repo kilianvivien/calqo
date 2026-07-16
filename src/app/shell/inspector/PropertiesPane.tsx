@@ -1060,6 +1060,18 @@ function ArrowHeadField({
           </label>
         </div>
       </div>
+      {/* Head size is independent of the line's stroke width: a thin line can
+          carry a large head and vice versa. Length and width move together to
+          keep the head's proportions. */}
+      <SliderField
+        label={t('properties.arrowHeadSize')}
+        value={arrow.pointerLength}
+        min={4}
+        max={64}
+        onChange={(size) =>
+          onChange({ ...arrow, pointerLength: size, pointerWidth: size })
+        }
+      />
     </>
   );
 }

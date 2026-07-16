@@ -203,7 +203,7 @@ function SvgLibraryDialogInner() {
         type="button"
         title={t('svgLibrary.removeSaved')}
         onClick={() => void confirmRemoveSaved(item)}
-        className="absolute right-1 top-1 hidden rounded-full bg-white/90 p-1 text-[var(--calqo-text-3)] shadow-sm hover:text-[#B42318] group-hover:block"
+        className="touch-hitarea absolute right-1 top-1 hidden rounded-full bg-white/90 p-1 text-[var(--calqo-text-3)] shadow-sm hover:text-[#B42318] group-hover:block any-pointer-coarse:block"
       >
         <Trash2 size={12} />
       </button>

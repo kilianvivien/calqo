@@ -196,7 +196,7 @@ export function BrandSettingsPane() {
                         palette: selected.palette.filter((_, i) => i !== index),
                       })
                     }
-                    className="absolute -right-1 -top-1 hidden h-4 w-4 place-items-center rounded-full bg-[var(--calqo-glass-strong,#333)] text-white group-hover:grid"
+                    className="touch-hitarea absolute -right-1 -top-1 hidden h-4 w-4 place-items-center rounded-full bg-[var(--calqo-glass-strong,#333)] text-white group-hover:grid any-pointer-coarse:grid"
                   >
                     <X size={9} />
                   </button>
