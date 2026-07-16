@@ -199,7 +199,7 @@ function ArtboardRow({
         <button
           type="button"
           aria-label={t('layersPanel.reorder')}
-          className="cursor-grab text-[var(--calqo-text-3)] opacity-0 group-hover:opacity-70"
+          className="cursor-grab touch-none text-[var(--calqo-text-3)] opacity-0 group-hover:opacity-70 any-pointer-coarse:opacity-70"
           {...attributes}
           {...listeners}
         >
@@ -236,7 +236,7 @@ function ArtboardRow({
         <button
           type="button"
           title={t('artboards.duplicateToPreset')}
-          className="text-[var(--calqo-text-3)] opacity-0 hover:text-[var(--calqo-text)] group-hover:opacity-70"
+          className="touch-hitarea text-[var(--calqo-text-3)] opacity-0 hover:text-[var(--calqo-text)] group-hover:opacity-70 any-pointer-coarse:opacity-70"
           onClick={() => setPresetOpen((open) => !open)}
         >
           <Copy size={13} />
@@ -245,7 +245,7 @@ function ArtboardRow({
           <button
             type="button"
             title={t('artboards.delete')}
-            className="text-[var(--calqo-text-3)] opacity-0 hover:text-[#FF3B30] group-hover:opacity-70"
+            className="touch-hitarea text-[var(--calqo-text-3)] opacity-0 hover:text-[#FF3B30] group-hover:opacity-70 any-pointer-coarse:opacity-70"
             onClick={() => deleteArtboard(projectId, artboard.id)}
           >
             <Trash2 size={13} />

@@ -448,7 +448,7 @@ export function NewProjectModal({
                           className="mt-1 h-7 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-accent)] bg-[var(--calqo-glass)] px-1.5 text-[12px] text-[var(--calqo-text)] outline-none ring-2 ring-[var(--calqo-accent-ring)]"
                         />
                       )}
-                      <span className="absolute right-1.5 top-1.5 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                      <span className="absolute right-1.5 top-1.5 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 any-pointer-coarse:opacity-100">
                         <GlassIconButton
                           label={t('starters.rename')}
                           showTitle={false}

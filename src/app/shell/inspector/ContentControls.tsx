@@ -67,7 +67,7 @@ export function ContentLocalesSection() {
                   type="button"
                   aria-label={t('content.removeLocale', { locale })}
                   onClick={() => removeContentLocale(project.id, locale)}
-                  className="ml-0.5 rounded-full p-0.5 text-[var(--calqo-text-3)] opacity-0 transition-opacity hover:text-[var(--calqo-text)] group-hover:opacity-100"
+                  className="touch-hitarea ml-0.5 rounded-full p-0.5 text-[var(--calqo-text-3)] opacity-0 transition-opacity hover:text-[var(--calqo-text)] group-hover:opacity-100 any-pointer-coarse:opacity-100"
                 >
                   <X size={11} />
                 </button>

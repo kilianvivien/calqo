@@ -253,11 +253,15 @@ function isFilledShape(layer: ShapeLayerT): boolean {
 
 function brushStyleFromLayer(layer: ShapeLayerT): BrushStyle {
   if (layer.stroke?.look === 'glow') return 'glow-pen';
+  if (layer.stroke?.look === 'sketch') return 'crayon';
   if (layer.stroke?.style === 'dashed') return 'dashed';
   if (layer.blendMode === 'multiply' && layer.opacity >= 0.75) {
     return 'marker-underline';
   }
-  if (layer.blendMode === 'multiply') return 'highlighter';
+  // Both translucent multiply media; chalk is the round-capped one.
+  if (layer.blendMode === 'multiply') {
+    return layer.stroke?.cap === 'round' ? 'chalk' : 'highlighter';
+  }
   if ((layer.tension ?? 0.4) === 0.25) return 'felt-tip';
   if ((layer.tension ?? 0.4) === 0.18) return 'marker';
   return 'smooth';
@@ -1060,6 +1064,18 @@ function ArrowHeadField({
           </label>
         </div>
       </div>
+      {/* Head size is independent of the line's stroke width: a thin line can
+          carry a large head and vice versa. Length and width move together to
+          keep the head's proportions. */}
+      <SliderField
+        label={t('properties.arrowHeadSize')}
+        value={arrow.pointerLength}
+        min={4}
+        max={64}
+        onChange={(size) =>
+          onChange({ ...arrow, pointerLength: size, pointerWidth: size })
+        }
+      />
     </>
   );
 }
@@ -1636,7 +1652,9 @@ function LayerControls({
             <BrushPresetField
               value={brushStyleFromLayer(layer)}
               onChange={(brushStyle) =>
-                update(brushStyleLayerPatch(brushStyle, layer.stroke))
+                // Passing the geometry re-profiles the ribbon (or clears it)
+                // so switching presets visibly changes the stroke's body.
+                update(brushStyleLayerPatch(brushStyle, layer.stroke, { points: layer.points }))
               }
             />
           )}

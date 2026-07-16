@@ -96,6 +96,12 @@ textarea,
 label {
   touch-action: manipulation;
 }
+/* Tailwind's `touch-none` lives in a cascade layer, which always loses to the
+ * unlayered rule above — restate it unlayered so drag handles (dnd-kit needs
+ * `touch-action: none` on touch, or the browser scrolls instead) win again. */
+.touch-none {
+  touch-action: none;
+}
 
 /* Expand small icon buttons' tap targets on coarse-pointer devices without
  * shifting layout: an invisible halo around the button catches nearby touches.

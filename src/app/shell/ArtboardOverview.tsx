@@ -36,6 +36,12 @@ import { cn } from '@/lib/utils/cn';
 /** Height of each tile's preview area; the thumbnail fits within tile-width × this. */
 const PREVIEW_HEIGHT = 168;
 
+/** Long-press (ms) on a tile opens the context menu — touch has no right-click.
+ * Movement beyond the tolerance means a drag (reorder), not a hold. Mirrors the
+ * canvas stage's long-press. */
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_MOVE_TOLERANCE = 12;
+
 /** Open context menu: which artboard, anchored at these container-relative px. */
 interface MenuState {
   artboardId: string;
@@ -200,6 +206,17 @@ export function ArtboardOverview() {
   );
 }
 
+/** Container-relative anchor for the tile menu, from viewport coordinates.
+ * Anchored to the scroll container so the menu clamps correctly. */
+function menuAnchor(el: HTMLElement, clientX: number, clientY: number) {
+  const host = el.closest('.overflow-y-auto');
+  const rect = host?.getBoundingClientRect();
+  return {
+    x: clientX - (rect?.left ?? 0) + (host?.scrollLeft ?? 0),
+    y: clientY - (rect?.top ?? 0) + (host?.scrollTop ?? 0),
+  };
+}
+
 function ArtboardTile({
   project,
   artboard,
@@ -227,6 +244,20 @@ function ArtboardTile({
   const [boxWidth, setBoxWidth] = useState(0);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: artboard.id });
+  // Armed long-press (touch): opens the tile menu if the finger stays put.
+  const longPress = useRef<{ timer: number; x: number; y: number } | null>(null);
+
+  const cancelLongPress = () => {
+    if (longPress.current) {
+      window.clearTimeout(longPress.current.timer);
+      longPress.current = null;
+    }
+  };
+
+  // A hold that turned into a reorder drag is not a context-menu press.
+  useEffect(() => {
+    if (isDragging) cancelLongPress();
+  }, [isDragging]);
 
   useLayoutEffect(() => {
     const el = previewRef.current;
@@ -251,16 +282,40 @@ function ArtboardTile({
         onDoubleClick={onFocus}
         onContextMenu={(event) => {
           event.preventDefault();
-          // Anchor to the scroll container so the menu clamps correctly.
-          const host = event.currentTarget.closest('.overflow-y-auto');
-          const rect = host?.getBoundingClientRect();
-          onContextMenu(
-            event.clientX - (rect?.left ?? 0) + (host?.scrollLeft ?? 0),
-            event.clientY - (rect?.top ?? 0) + (host?.scrollTop ?? 0),
-          );
+          const { x, y } = menuAnchor(event.currentTarget, event.clientX, event.clientY);
+          onContextMenu(x, y);
         }}
         {...attributes}
         {...listeners}
+        // Touch: arm a long-press to open the menu (no right-click on iPad).
+        // Declared after the dnd-kit spread so this handler wins the prop slot;
+        // it forwards the event to dnd-kit's own pointerdown first.
+        onPointerDown={(event) => {
+          listeners?.onPointerDown?.(event);
+          if (event.pointerType === 'mouse') return;
+          cancelLongPress();
+          const el = event.currentTarget;
+          const { clientX, clientY } = event;
+          const timer = window.setTimeout(() => {
+            longPress.current = null;
+            const { x, y } = menuAnchor(el, clientX, clientY);
+            onContextMenu(x, y);
+          }, LONG_PRESS_MS);
+          longPress.current = { timer, x: clientX, y: clientY };
+        }}
+        onPointerMove={(event) => {
+          // Real movement means a reorder drag, not a hold.
+          const lp = longPress.current;
+          if (
+            lp &&
+            Math.hypot(event.clientX - lp.x, event.clientY - lp.y) >
+              LONG_PRESS_MOVE_TOLERANCE
+          ) {
+            cancelLongPress();
+          }
+        }}
+        onPointerUp={cancelLongPress}
+        onPointerCancel={cancelLongPress}
         className={cn(
           'relative flex cursor-pointer touch-none items-center justify-center overflow-hidden rounded-[var(--calqo-radius-md)] border bg-[var(--calqo-glass-thin)] transition-all duration-[var(--calqo-t-fast)]',
           active

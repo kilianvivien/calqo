@@ -35,7 +35,11 @@ import {
   ARTBOARD_PRESETS,
   type ArtboardPresetId,
 } from '@/lib/schema/presets';
-import { pressuresToWidths } from '@/editor/canvas/freehandGeometry';
+import {
+  brushProfileWidths,
+  pressuresToWidths,
+  type BrushProfile,
+} from '@/editor/canvas/freehandGeometry';
 import { createId } from '@/lib/utils/ids';
 import { historyStore } from '@/lib/state/historyStore';
 import { projectStore } from '@/lib/state/projectStore';
@@ -580,30 +584,49 @@ export function createFreehandLayer(
   const relative = absolutePoints.map((value, i) => (i % 2 === 0 ? value - minX : value - minY));
   const layer = createShapeLayer('freehand', minX, minY, Math.max(1, maxX - minX), Math.max(1, maxY - minY), defaults);
   if (layer.type === 'shape') {
+    const style = defaults?.brushStyle ?? 'smooth';
+    const brush = BRUSH_STYLES[style];
+    // Broad tools (highlighter) scale up from the nominal brush size at
+    // creation only — restyling an existing stroke never compounds the scale.
+    const baseWidth = (defaults?.brushSize ?? 6) * (brush.widthScale ?? 1);
     layer.points = relative;
     layer.fill = { type: 'solid', color: 'transparent' };
     Object.assign(
       layer,
-      brushStyleLayerPatch(defaults?.brushStyle ?? 'smooth', {
+      brushStyleLayerPatch(style, {
         color: defaults?.stroke ?? '#111827',
-        width: defaults?.brushSize ?? 6,
+        width: baseWidth,
       }),
     );
     if (layer.blendMode === 'normal') delete layer.blendMode;
+    const pairs = relative.length / 2;
+    let widths: number[] | null = null;
     if (pressures && pressures.length > 0) {
       // Align the trace to the point pairs: capture can be a sample ahead or
       // behind the pointer positions, so truncate or pad with the last value.
-      const pairs = relative.length / 2;
       const trace = pressures.slice(0, pairs);
       while (trace.length < pairs) trace.push(trace[trace.length - 1]);
-      layer.pointWidths = pressuresToWidths(trace, defaults?.brushSize ?? 6);
+      widths = pressuresToWidths(trace, baseWidth);
     }
+    if (brush.profile) {
+      widths = brushProfileWidths(
+        brush.profile,
+        relative,
+        widths ?? new Array<number>(pairs).fill(baseWidth),
+      );
+    }
+    // A dashed stroke must stay a stroked line — a filled ribbon cannot dash —
+    // so it keeps its constant width even under stylus pressure.
+    if (widths && brush.style !== 'dashed') layer.pointWidths = widths;
   }
   return layer;
 }
 
 /** Freehand feel per brush style: smoothing, line cap, opacity, blend, dashing,
- * and an optional expressive stroke look (Phase R). */
+ * an optional expressive stroke look (Phase R), plus the traits that give each
+ * brush its own body on the canvas — a width `profile` (rendered as a
+ * variable-width ribbon via `pointWidths`) and a `widthScale` for tools that
+ * are physically broader than a pen at the same nominal size. */
 export const BRUSH_STYLES: Record<
   BrushStyle,
   {
@@ -613,42 +636,65 @@ export const BRUSH_STYLES: Record<
     blendMode?: 'multiply';
     style?: 'dashed';
     look?: StrokeLook;
+    profile?: BrushProfile;
+    widthScale?: number;
   }
 > = {
+  // Clean, even ink — the neutral baseline the others depart from.
   smooth: { tension: 0.4, cap: 'round', opacity: 1 },
-  marker: { tension: 0.18, cap: 'round', opacity: 1 },
-  'felt-tip': { tension: 0.25, cap: 'round', opacity: 1 },
-  highlighter: { tension: 0, cap: 'square', opacity: 0.4, blendMode: 'multiply' },
-  'marker-underline': { tension: 0, cap: 'square', opacity: 0.85, blendMode: 'multiply' },
-  'glow-pen': { tension: 0.4, cap: 'round', opacity: 1, look: 'glow' },
-  // Dusty chalk: soft, semi-opaque, multiplies into the background.
-  chalk: { tension: 0.3, cap: 'round', opacity: 0.55, blendMode: 'multiply' },
-  // Waxy crayon: broken, textured line via the sketch look.
-  crayon: { tension: 0.3, cap: 'round', opacity: 0.85, look: 'sketch' },
+  // Chisel-nib marker: broad on one diagonal, thin on the other (calligraphy).
+  marker: { tension: 0.18, cap: 'square', opacity: 1, profile: 'chisel' },
+  // Ink pen: strokes ease in from and out to a fine point.
+  'felt-tip': { tension: 0.25, cap: 'round', opacity: 1, profile: 'taper' },
+  // Broad translucent band that darkens what it crosses.
+  highlighter: { tension: 0, cap: 'square', opacity: 0.4, blendMode: 'multiply', widthScale: 1.6 },
+  'marker-underline': { tension: 0, cap: 'square', opacity: 0.85, blendMode: 'multiply', widthScale: 1.25 },
+  // Tapered luminous stroke with a soft halo.
+  'glow-pen': { tension: 0.4, cap: 'round', opacity: 1, look: 'glow', profile: 'taper' },
+  // Dusty chalk: soft, semi-opaque, crumbly-edged, multiplies into the page.
+  chalk: { tension: 0.3, cap: 'round', opacity: 0.55, blendMode: 'multiply', profile: 'grain' },
+  // Waxy crayon: gently irregular body doubled by the sketch look's ghost.
+  crayon: { tension: 0.3, cap: 'round', opacity: 0.85, look: 'sketch', profile: 'grain-soft' },
   dashed: { tension: 0.4, cap: 'round', opacity: 1, style: 'dashed' },
 };
 
 export function brushStyleLayerPatch(
   brushStyle: BrushStyle,
   base?: StrokeStyle,
+  /** Pass the layer's stroke geometry to also recompute `pointWidths` for the
+   * new style's width profile (or clear it when the style has none). Original
+   * pressure data is not kept on the layer, so the profile rides a constant
+   * base width. */
+  geometry?: { points?: number[] },
 ): Pick<ShapeLayer, 'tension' | 'opacity'> & {
   stroke: StrokeStyle;
   blendMode: NonNullable<ShapeLayer['blendMode']>;
+  pointWidths?: number[] | null;
 } {
   const brush = BRUSH_STYLES[brushStyle];
   const color = base?.color ?? '#111827';
-  return {
+  const width = base?.width ?? 6;
+  const patch: ReturnType<typeof brushStyleLayerPatch> = {
     tension: brush.tension,
     opacity: brush.opacity,
     blendMode: brush.blendMode ?? 'normal',
     stroke: {
       color,
-      width: base?.width ?? 6,
+      width,
       cap: brush.cap,
       ...(brush.style ? { style: brush.style } : {}),
       ...(brush.look ? { look: brush.look, altColor: color, intensity: 0.7 } : {}),
     },
   };
+  if (geometry) {
+    const points = geometry.points ?? [];
+    const pairs = Math.floor(points.length / 2);
+    patch.pointWidths =
+      brush.profile && pairs >= 2
+        ? brushProfileWidths(brush.profile, points, new Array<number>(pairs).fill(width))
+        : null;
+  }
+  return patch;
 }
 
 /** Build a closed custom polygon from absolute artboard points (pen tool). */
@@ -1269,10 +1315,24 @@ export function groupSelectedLayers(projectId: string): void {
   if (ids.length < 2) return;
   const project = projectStore.getState().projects[projectId];
   const artboardId = project ? activeArtboardId(project) : null;
+  if (!artboardId) return;
+  groupLayersInArtboard(projectId, artboardId, ids);
+}
+
+/** Group specific top-level layers of an artboard into one group layer. Beyond
+ * the selection-driven panel action above, the brush tool uses this to merge
+ * the strokes of one drawing session into a single "Drawing". */
+export function groupLayersInArtboard(
+  projectId: string,
+  artboardId: string,
+  layerIds: string[],
+  name = 'Group',
+): void {
+  const project = projectStore.getState().projects[projectId];
   const artboard = project?.artboards.find((candidate) => candidate.id === artboardId);
   if (!artboard) return;
   // Only group layers that are direct children of the artboard, in z-order.
-  const ordered = artboard.layers.filter((layer) => ids.includes(layer.id));
+  const ordered = artboard.layers.filter((layer) => layerIds.includes(layer.id));
   if (ordered.length < 2) return;
   const box = boundingBox(ordered);
   const groupId = createId('layer');
@@ -1295,7 +1355,7 @@ export function groupSelectedLayers(projectId: string): void {
       }).filter((layer): layer is CalqoLayer => Boolean(layer));
       const group: GroupLayer = {
         id: groupId,
-        name: 'Group',
+        name,
         type: 'group',
         x: box.x,
         y: box.y,
