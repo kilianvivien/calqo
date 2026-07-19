@@ -242,8 +242,8 @@ gate the whole feature on the hardest 10%.
   live `LayerRenderer`, not the same code** — the two can drift, and the
   frame pipeline inherits that risk. Shape image-fill assets are now included
   by `collectAssetIds`; preserve that fix with a regression test during the
-  refactor. AN-0.5 (§13) is a feasibility spike precisely because "extract and
-  reuse" needs proving, not asserting.
+  refactor. AN-2 must prove that the extracted reusable renderer preserves
+  fidelity before animated export ships.
 - The frame loop must **reuse one stage and loaded image set across all
   frames** (build once, apply evaluator overrides to wrapper nodes, draw,
   capture), not reconstruct the stage per frame as the current single-shot
@@ -379,8 +379,8 @@ compiled clip ──► evaluator ──► one reusable offscreen stage
 
 1080×1920 @ 30 fps × 60 s = 1800 frames. Working target: ≤ 40 ms/frame for
 offscreen render + encode ⇒ ≤ ~75 s worst case, seconds for typical 5–15 s
-clips. These are **hypotheses until the AN-0.5 spike measures them** on real
-designs in browser + WKWebView; the current exporter ends in a one-shot
+clips. These remain **targets until AN-2 measures them** on real designs in
+browser + WKWebView; the current exporter ends in a one-shot
 `stage.toBlob()` and has never been driven 1800 times. Requirements
 regardless of the numbers: progress UI with cancel; chunked rendering that
 yields to the main thread; per-locale progress for batch export. An
@@ -415,7 +415,7 @@ possible and use the M-series hardware encoder.
    bundled with the installed macOS, so capabilities move with the OS.
    Treat it as **capability-tested, never guaranteed**: probe
    `isConfigSupported()` + `mediaCapabilities.encodingInfo().powerEfficient`
-   at runtime, and benchmark in AN-0.5/AN-2 (acceptance: 1080×1920 @ 30 fps
+   at runtime, and benchmark in AN-2 (acceptance: 1080×1920 @ 30 fps
    encodes faster than ~2× realtime on an M1, both codecs).
 2. **Adapter boundary now, native path only if needed:** export runs behind a
    **`VideoExportAdapter`** in `src/lib/adapters/` — deliberately higher-level
@@ -496,19 +496,21 @@ the reliability and 1.0 work in `docs/plan.md`.
 
 ### 12.1 Milestone order
 
-| Milestone | Outcome                                            | Depends on                    | Gate                                |
-| --------- | -------------------------------------------------- | ----------------------------- | ----------------------------------- |
-| AN-0 ✅   | Schema v2, preset compiler, evaluator              | Stable schema/import contract | Unit and migration gate — **passed 2026-07-19** |
-| AN-0.5 🚧 | Proven reusable renderer and viable local encoders | AN-0                          | Explicit go/adjust/stop decision — **fixtures+harness scaffolded 2026-07-19; not yet run** |
-| AN-1      | Usable desktop Animate mode and live playback      | AN-0.5 go/adjust              | Editor interaction gate             |
-| AN-2      | Local MP4 and GIF export                           | AN-1                          | Export correctness/performance gate |
-| AN-3      | Animated HTML and agent handoff package            | AN-2 IR stability             | Cross-renderer conformance gate     |
-| AN-4      | Scenes, transitions, prompt/MCP animation          | AN-3                          | Separate v2 product decision        |
+| Milestone | Outcome                                                  | Depends on                    | Gate                                                                |
+| --------- | -------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------- |
+| AN-0 ✅   | Schema v2, preset compiler, evaluator                    | Stable schema/import contract | Unit and migration gate — **passed 2026-07-19**                     |
+| AN-0.5 ✅ | Renderer/encoder architecture accepted with bounded risk | AN-0                          | **Go (risk accepted) 2026-07-19; measurements transferred to AN-2** |
+| AN-1      | Usable desktop Animate mode and live playback            | AN-0                          | Editor interaction gate                                             |
+| AN-2      | Local MP4 and GIF export                                 | AN-1                          | Export correctness/performance gate                                 |
+| AN-3      | Animated HTML and agent handoff package                  | AN-2 IR stability             | Cross-renderer conformance gate                                     |
+| AN-4      | Scenes, transitions, prompt/MCP animation                | AN-3                          | Separate v2 product decision                                        |
 
-AN-0 may be implemented without exposing UI. AN-0.5 is a hard gate: do not
-build the full Animate surface until frame rendering, memory use, and codec
-support have measured results. AN-3 and AN-4 are separately shippable and do
-not delay the first useful MP4 release.
+AN-0 may be implemented without exposing UI. AN-0.5 is closed by the dated
+risk-acceptance decision in `docs/animation/AN-0.5-decision.md`; AN-1 may
+proceed without export benchmarks. Renderer, memory, codec, and decode evidence
+is an AN-2 shipping gate and may narrow an export format without blocking the
+editor/playback surface. AN-3 and AN-4 are separately shippable and do not
+delay the first useful MP4 release.
 
 ### 12.2 Status markers
 
@@ -545,8 +547,9 @@ do not make the beta roadmap appear blocked by this document.
 - Run `pnpm typecheck` and `pnpm test` for every implementation step. Run
   `pnpm lint` and `pnpm build` at each milestone gate. Add focused Playwright
   coverage when UI or download flows become available.
-- Do not add H.265, GIF, worker, or muxer dependencies before AN-0.5 measures
-  them and records the decision.
+- Do not add H.265-specific dependencies in v1. Add Mediabunny and `gifenc`
+  only in AN-2 when their adapters are implemented; keep worker code scoped to
+  the capped GIF path unless AN-2 measurements require a render worker.
 
 ## 13. Detailed implementation sequence
 
@@ -774,27 +777,28 @@ Tests:
       a unit test without mounting React or Konva
       (`animationCompiler.test.ts`, `animationEvaluator.test.ts`).
 
-### AN-0.5 — Rendering and encoding feasibility spike
+### AN-0.5 — Rendering and encoding feasibility decision
 
-> **[~] Scaffolded — 2026-07-19 (app v0.4.6, branch `feature/animation-an0`).**
-> Fixtures + measurement harness + capability probe are in place and green
-> (`pnpm typecheck`/`test`/`lint`/`build`, 425 tests); the spike is not yet
-> *run*, so no gate decision exists. Delivered: the durable renderer contract
+> **[x] Complete by risk acceptance — 2026-07-19 (app v0.4.6).**
+> Gate outcome: **Go**; AN-1 may proceed. Fixtures + measurement harness +
+> capability probe are in place and green
+> (`pnpm typecheck`/`test`/`lint`/`build`, 425 tests). The renderer and encoder
+> stubs were not implemented or measured; that work is transferred to the AN-2
+> export shipping gate. Delivered: the durable renderer contract
 > `src/editor/rendering/offscreenScene.ts` (interface + not-implemented stub);
 > five representative fixtures parameterized by size/duration in
 > `src/tests/fixtures/animation/spikeFixtures.ts`; the measurement protocol +
 > collector, dependency-free WebCodecs capability probe, encoder/GIF seams, and
 > orchestrator under `src/spike/animation/` (`runSpike` already produces real
 > evaluator-throughput numbers; render/encode report `skipped` until the stubs
-> land); the decision template `docs/animation/AN-0.5-decision.md`; and
-> `animationSpike.test.ts`. **No new production dependencies** (Mediabunny/gifenc
-> deferred to the gate, §12.3). Still to do before the gate: implement the
-> offscreen scene (0.5.2), fidelity sampling (0.5.3), real encode/mux (0.5.4),
-> GIF bake-off (0.5.5), then run per-runtime and record the decision (0.5.6).
+> land); `animationSpike.test.ts`; and the dated decision
+> `docs/animation/AN-0.5-decision.md`. **No new production dependencies.**
+> Offscreen implementation, fidelity sampling, real encode/mux, GIF quality
+> review, and per-runtime measurement now land as part of AN-2.
 
-**Goal:** prove the risky renderer/encoder path before committing to the full
-UI. Spike code may be temporary, but measurements and the reusable renderer
-contract are durable deliverables.
+**Goal:** bound the renderer/encoder risk before committing to the full UI.
+The maintainer accepted the remaining risk so editor work can proceed; export
+does not ship until AN-2 produces the missing evidence.
 
 #### AN-0.5.1 Create representative fixtures and measurement protocol
 
@@ -803,15 +807,18 @@ contract are durable deliverables.
       webfont. (`spikeFixtures.ts`; validated + compiled in `animationSpike.test.ts`.)
 - [x] Include 1080×1080 and 1080×1920 outputs at 5 s, 15 s, and synthetic 60 s.
       (Fixtures are parameterized; `defaultSpikeConfigs` sweeps the full matrix.)
-- [~] Record test machine, OS, browser/WebView version, codec config, frame
-      size, fps, bitrate, render time, encode time, peak memory when observable,
-      output size, and decode result. (Protocol + collector implemented in
-      `measurement.ts`; awaiting a real run to populate `AN-0.5-decision.md`.)
+- [x] Record the intended environment and explicitly document that no valid
+      benchmark was performed. Full machine/browser/WebView, codec, timing,
+      memory, output, and decode measurements are transferred to AN-2.
+      (`measurement.ts` remains the collector; see the decision record.)
 - [x] Put the reusable fixture projects in test fixtures; do not depend on a
       maintainer's private documents. (Photo fixture uses a tiny embedded PNG;
       swap in a licensed photo locally for banding review.)
 
 #### AN-0.5.2 Extract a reusable offscreen scene
+
+> **Transferred to AN-2.** These are implementation/export acceptance tasks,
+> not prerequisites for AN-1.
 
 Primary files:
 
@@ -843,6 +850,9 @@ Steps:
 
 #### AN-0.5.3 Prove sampled frame fidelity
 
+> **Transferred to AN-2.** Retain this checklist as the renderer acceptance
+> matrix.
+
 - [ ] Render reference frames at `0`, `25%`, `50%`, `75%`, and end time for
       each fixture.
 - [ ] Compare offscreen output with live-stage playback at matching timestamps.
@@ -855,6 +865,8 @@ Steps:
       `VideoFrame(canvas)` provides the safest capture handoff on each target.
 
 #### AN-0.5.4 Probe WebCodecs and MP4 muxing
+
+> **Transferred to AN-2.** H.264 + Mediabunny is the v1 plan; H.265 is deferred.
 
 - [ ] Add a spike-only capability probe for H.264 configurations at target
       resolutions/fps/bitrates. Probe H.265 separately and treat it as optional.
@@ -876,27 +888,38 @@ Steps:
 
 #### AN-0.5.5 Select a GIF encoder
 
-- [ ] Compare at least two viable maintained encoders, including `gifenc` if
-      still suitable at implementation time.
+> **Decision:** use `gifenc` provisionally with the existing caps and
+> per-frame palettes; accept no-dithering/photo banding as a disclosed v1
+> limitation. Quality and responsiveness checks move to AN-2.
+
+- [ ] During AN-2, compare `gifenc` fixture output with one viable browser
+      alternative if its no-dithering limitation is unacceptable.
 - [ ] Use the fixture set to compare global/per-frame palettes, dithering,
       banding, transparency behavior, peak memory, worker compatibility, bundle
       size, and encode time.
 - [ ] Verify the planned caps (15 s, 720 px long edge, 15 fps) keep memory and
       UI responsiveness acceptable.
-- [ ] Record the chosen encoder and rejected alternatives in this document.
+- [x] Record the provisional choice and rejected server-oriented alternative
+      in the decision record.
 
 #### AN-0.5.6 Make the gate decision
 
+> **[x] Go (risk accepted) — 2026-07-19.** See
+> `docs/animation/AN-0.5-decision.md`. The missing measurement evidence is an
+> AN-2 export shipping gate, not an AN-1 prerequisite.
+
 Produce a dated decision block containing:
 
-- [ ] Measured render and encode results by runtime/codec.
-- [ ] Chosen capture handoff, muxer, GIF encoder, and output strategy.
-- [ ] Whether H.264 meets the required experience.
-- [ ] Whether H.265 is enabled, deferred, or Tauri-only.
-- [ ] Whether a native VideoToolbox contingency is needed.
-- [ ] Whether the main-thread renderer is acceptable or an OffscreenCanvas
-      architecture spike is required.
-- [ ] Updated performance expectations replacing §6.4 hypotheses.
+- [x] Explicitly record that measurements were waived and transferred to AN-2.
+- [x] Choose the initial capture handoff, muxer, GIF encoder, even-dimension,
+      and output strategies, each with a fallback.
+- [x] H.264 is assumed viable behind a runtime probe; AN-2 must measure it.
+- [x] H.265 is deferred.
+- [x] No native VideoToolbox contingency is scheduled; reconsider only after a
+      failed Tauri AN-2 acceptance run.
+- [x] Main-thread rendering with bounded yielding is the initial architecture;
+      AN-2 may require an OffscreenCanvas architecture spike.
+- [x] §6.4 retains explicit targets, with measurement ownership moved to AN-2.
 
 **Gate outcomes:**
 
@@ -1069,12 +1092,12 @@ Steps:
 
 #### AN-2.2 Implement the WebCodecs/Mediabunny adapter
 
-- [ ] Add the dependency versions selected in AN-0.5 and record their licenses.
+- [ ] Add current Mediabunny and `gifenc` versions and record their licenses.
 - [ ] Probe codec configurations lazily when the export dialog opens; cache
       results only for the current runtime session.
 - [ ] Implement H.264 presets for square, portrait, and arbitrary sizes with a
       documented bitrate policy and approximately two-second GOP.
-- [ ] Implement H.265 only when the AN-0.5 gate allows it. Label it
+- [ ] Keep H.265 deferred for v1. If reconsidered later, label it
       runtime-supported and potentially power-efficient, never guaranteed
       hardware-accelerated.
 - [ ] Apply encoder queue backpressure before rendering the next frame.
@@ -1364,7 +1387,7 @@ the milestone decision block.
 
 | Risk                                 | Early signal                     | Mitigation / decision owner                                                |
 | ------------------------------------ | -------------------------------- | -------------------------------------------------------------------------- |
-| Live/offscreen renderer drift        | Sampled frames differ            | Shared helpers, fixture diffs, AN-0.5 gate                                 |
+| Live/offscreen renderer drift        | Sampled frames differ            | Shared helpers, fixture diffs, AN-2 export gate                            |
 | WebCodecs missing or software-only   | Probe/benchmark failure          | Honest capability UI; GIF/HTML fallback; native contingency review         |
 | 60 s export exhausts memory          | Increasing heap/DOM/URLs         | Reusable stage, backpressure, streamed sinks, sequential locales           |
 | React and imperative Konva fight     | Jumps or geometry commits        | Wrapper/base separation and edit-start reset tests                         |
@@ -1449,8 +1472,8 @@ work; they do not all need to be answered now.
 
 ### Before AN-2 export merge
 
-8. Approve AN-0.5's muxer, GIF encoder, bitrate presets, even-dimension policy,
-   and measured runtime support matrix.
+8. Confirm AN-0.5's accepted defaults (Mediabunny, `gifenc`, H.264-only, edge
+   padding) and approve AN-2's bitrate presets and measured runtime matrix.
 9. Decide the browser fallback when streamed file output is unavailable and a
    predicted output exceeds the safe in-memory threshold.
 10. Decide whether H.265 is hidden, disabled with explanation, or enabled when
@@ -1466,6 +1489,14 @@ work; they do not all need to be answered now.
 
 ## 19. Review log
 
+**2026-07-19 — AN-0.5 gate closed by maintainer risk acceptance (Codex).**
+Recorded a `Go` decision without fabricated measurements so AN-1 can proceed.
+Selected H.264/WebCodecs + Mediabunny, provisionally selected capped worker
+`gifenc`, deferred H.265 and native VideoToolbox, and chose main-thread batched
+rendering with a worker fallback. Renderer fidelity, runtime throughput, memory,
+decode, and GIF quality evidence moved to the AN-2 export shipping gate; a
+failed result may narrow an export format but does not block editor playback.
+
 **2026-07-19 — detailed implementation pass (Codex).** Expanded the original
 architecture proposal into gated, step-by-step milestones with concrete file
 ownership, migration/compatibility work, renderer and codec spike protocol,
@@ -1480,7 +1511,7 @@ points: compiled tracks removed from the persisted schema; explicit composition
 semantics with transient wrapper nodes; text-reveal presets deferred; migration
 and one-way compatibility made concrete; mode state assigned per tab in
 `workspaceStore`; a session-based `VideoExportAdapter`; Mediabunny preferred
-over deprecated `mp4-muxer`, subject to the spike; HEVC capability wording;
+over deprecated `mp4-muxer`; HEVC capability wording;
 static-export semantics; animated-HTML transform composition and group warnings;
 GIF quality/memory evaluation; streaming/cancellation; structured localized
 warnings; accessibility; and display-only timing bars. Not adopted: removing

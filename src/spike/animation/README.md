@@ -1,24 +1,24 @@
 # AN-0.5 rendering/encoding feasibility spike
 
-Temporary spike scaffolding for the animation track. Spike **code** may be
-thrown away; the **measurements** and the reusable renderer **contract**
-(`src/editor/rendering/offscreenScene.ts`) are the durable deliverables
-(plan §12.1 / AN-0.5).
+Historical spike scaffolding retained as AN-2 export-verification infrastructure.
+AN-0.5 closed by documented risk acceptance on 2026-07-19; it did not produce
+renderer/encoder measurements. The reusable renderer **contract**
+(`src/editor/rendering/offscreenScene.ts`) remains a durable deliverable.
 
 ## What's here
 
-| File | Role | Status |
-| --- | --- | --- |
-| `../../tests/fixtures/animation/spikeFixtures.ts` | 5 representative animated fixtures, parameterized by size/duration | ✅ ready |
-| `measurement.ts` | Measurement record types + collector (markdown/CSV) + env detection | ✅ ready |
-| `webcodecsProbe.ts` | Dependency-free `isConfigSupported` + `mediaCapabilities.encodingInfo` probe | ✅ ready |
-| `encoderProbe.ts` | MP4/GIF encoder **seams** (interfaces) + not-implemented stubs | 🔲 stub (AN-0.5.4/0.5.5) |
-| `runSpike.ts` | Orchestrator: real evaluator throughput now; render/encode when probes land | ⏳ partial |
-| `src/editor/rendering/offscreenScene.ts` | Reusable offscreen render contract + not-implemented factory | 🔲 stub (AN-0.5.2) |
+| File                                              | Role                                                                         | Status         |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- | -------------- |
+| `../../tests/fixtures/animation/spikeFixtures.ts` | 5 representative animated fixtures, parameterized by size/duration           | ✅ ready       |
+| `measurement.ts`                                  | Measurement record types + collector (markdown/CSV) + env detection          | ✅ ready       |
+| `webcodecsProbe.ts`                               | Dependency-free `isConfigSupported` + `mediaCapabilities.encodingInfo` probe | ✅ ready       |
+| `encoderProbe.ts`                                 | MP4/GIF encoder **seams** (interfaces) + not-implemented stubs               | 🔲 stub (AN-2) |
+| `runSpike.ts`                                     | Orchestrator: real evaluator throughput now; render/encode when probes land  | ⏳ partial     |
+| `src/editor/rendering/offscreenScene.ts`          | Reusable offscreen render contract + not-implemented factory                 | 🔲 stub (AN-2) |
 
-No production dependencies are added by this scaffold. Per plan §12.3, the muxer
-(Mediabunny) and GIF encoder (gifenc) are added **only after** the spike measures
-them and records the decision.
+No production dependencies are added by this scaffold. The decision selects
+Mediabunny and `gifenc` provisionally; add them only when AN-2 implements the
+corresponding export adapters.
 
 ## Running it
 
@@ -41,19 +41,23 @@ drive it:
 2. **Capability probe (real WebCodecs answers, browser only):**
 
    ```ts
-   import { probeVideoCodecs, buildEncoderConfig } from '@/spike/animation/webcodecsProbe';
+   import {
+     probeVideoCodecs,
+     buildEncoderConfig,
+   } from '@/spike/animation/webcodecsProbe';
    const results = await probeVideoCodecs([
      { family: 'h264', config: buildEncoderConfig('h264', 1080, 1920, 30) },
      { family: 'h265', config: buildEncoderConfig('h265', 1080, 1920, 30) },
    ]);
    ```
 
-3. **Full render/encode numbers:** land AN-0.5.2 (`createOffscreenScene`) and
-   AN-0.5.4/0.5.5 (encoder probes), pass them via `runSpike({ probes })`, then the
-   `renderMs` / `encodeMs` / `outputBytes` / `decode` columns fill in.
+3. **Full render/encode numbers:** as part of AN-2, implement
+   `createOffscreenScene` and the encoder probes, pass them via
+   `runSpike({ probes })`, then the `renderMs` / `encodeMs` / `outputBytes` /
+   `decode` columns fill in.
 
 ## Recording results
 
-Paste `collector.toMarkdownTable()` and `probeVideoCodecs()` output into
-`docs/animation/AN-0.5-decision.md`, note the exact runtime + command, and fill
-in the go/adjust/stop decision (AN-0.5.6).
+Record `collector.toMarkdownTable()` and `probeVideoCodecs()` output in the AN-2
+export acceptance notes. Do not overwrite the AN-0.5 decision's explicit
+statement that the gate closed without measurements.
