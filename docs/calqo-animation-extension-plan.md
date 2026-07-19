@@ -498,8 +498,8 @@ the reliability and 1.0 work in `docs/plan.md`.
 
 | Milestone | Outcome                                            | Depends on                    | Gate                                |
 | --------- | -------------------------------------------------- | ----------------------------- | ----------------------------------- |
-| AN-0      | Schema v2, preset compiler, evaluator              | Stable schema/import contract | Unit and migration gate             |
-| AN-0.5    | Proven reusable renderer and viable local encoders | AN-0                          | Explicit go/adjust/stop decision    |
+| AN-0 ✅   | Schema v2, preset compiler, evaluator              | Stable schema/import contract | Unit and migration gate — **passed 2026-07-19** |
+| AN-0.5 🚧 | Proven reusable renderer and viable local encoders | AN-0                          | Explicit go/adjust/stop decision — **fixtures+harness scaffolded 2026-07-19; not yet run** |
 | AN-1      | Usable desktop Animate mode and live playback      | AN-0.5 go/adjust              | Editor interaction gate             |
 | AN-2      | Local MP4 and GIF export                           | AN-1                          | Export correctness/performance gate |
 | AN-3      | Animated HTML and agent handoff package            | AN-2 IR stability             | Cross-renderer conformance gate     |
@@ -552,15 +552,34 @@ do not make the beta roadmap appear blocked by this document.
 
 ### AN-0 — Schema v2, compiler, and evaluator
 
+> **[x] Complete — 2026-07-19 (app v0.4.6, branch `feature/animation-an0`).**
+> Acceptance met: `pnpm typecheck`, `pnpm test` (408 tests), `pnpm lint`, and
+> `pnpm build` all pass. Schema bumped to v2 with a real v1→v2 migration; all
+> static fixtures/tests stay green. Preset compiler + evaluator run in unit tests
+> without React or Konva. No animation dependency has entered the UI, export
+> adapter, or file writer. New code: `src/lib/schema/schema.ts` (animation
+> primitives), `migrations.ts` (migrate + downgrade helpers), `calqoFile.ts`
+> (v1-compatible serializer), `src/editor/animation/{types,presets,compiler,easing,evaluator}.ts`,
+> and tests `animationSchema/animationCompiler/animationEvaluator/animationMigration.test.ts`.
+> Permanent fixture set (§14.2) lives in `src/tests/fixtures/animation/` (frozen
+> v1 doc, static v2, all-presets v2, custom-boundary v2, nested-group v2) with
+> migration/round-trip/compile coverage in `animationFixtures.test.ts`.
+> Duplication, backup-restore, and starter/template adoption preserve animation
+> by construction — all route through the shared `safeImportProject` +
+> `remapProjectAssetIds` pair, and the §4.3 no-id-rewrite invariant is enforced
+> in `animationMigration.test.ts`. Deferred to AN-1 as designed: the `.calqo`
+> compatibility-export UI (serializer + tests landed here) and any
+> playback/inspector surface.
+
 **Goal:** establish a strict, deterministic animation contract with no user
 interface and no export dependency.
 
 #### AN-0.1 Freeze timing and composition semantics
 
-- [ ] Write executable examples for one enter, emphasis, and exit animation
+- [x] Write executable examples for one enter, emphasis, and exit animation
       before changing the schema. Include expected values immediately before,
       within, and after each window.
-- [ ] Resolve the timing rules that currently remain open:
+- [x] Resolve the timing rules that currently remain open:
   - A scene has a minimum of 250 ms and a maximum of 60,000 ms.
   - A preset window that would end after the scene is rejected by the command
     layer; it is not silently truncated.
@@ -570,11 +589,11 @@ interface and no export dependency.
     identity at its end.
   - After exit, the layer holds the preset's hidden end state.
   - Missing slots always evaluate to identity in their region.
-- [ ] Define numeric precision: evaluator output keeps full JavaScript number
+- [x] Define numeric precision: evaluator output keeps full JavaScript number
       precision; serializers round only at their output boundary.
-- [ ] Define direction in artboard coordinates, independent of layer rotation:
+- [x] Define direction in artboard coordinates, independent of layer rotation:
       `up` means negative artboard Y and `left` means negative artboard X.
-- [ ] Record the settled rules in §4.2 and in table-driven tests so later UI
+- [x] Record the settled rules in §4.2 and in table-driven tests so later UI
       code cannot invent different behavior.
 
 **Exit:** timing fixtures can be reviewed without reading the evaluator.
@@ -592,40 +611,40 @@ Primary files:
 
 Steps:
 
-- [ ] Add strict Zod schemas for `AnimProp`, `Easing`, `Keyframe`,
+- [x] Add strict Zod schemas for `AnimProp`, `Easing`, `Keyframe`,
       `Track`, `TrackWindow`, `PresetKind`, `PresetInstance`, `LayerAnimation`,
       `SceneTiming`, and `ClipSettings`.
-- [ ] Use `.finite()` for every numeric value. Apply property-specific ranges:
+- [x] Use `.finite()` for every numeric value. Apply property-specific ranges:
       opacity `0–1`, scale greater than `0` and capped, blur non-negative and
       capped, rotation/distance bounded, normalized `t` in `0–1`, duration/delay
       within scene limits, and stagger non-negative.
-- [ ] Require at least two keyframes per track, strictly increasing unique
+- [x] Require at least two keyframes per track, strictly increasing unique
       `t` values, and no duplicate property inside one window.
-- [ ] Add `superRefine` checks for window bounds, per-property overlap, preset
+- [x] Add `superRefine` checks for window bounds, per-property overlap, preset
       slot compatibility, direction-only preset kinds, and text-only preset kinds
       once those kinds are enabled.
-- [ ] Add optional `animation` to the shared base layer shape and explicitly to
+- [x] Add optional `animation` to the shared base layer shape and explicitly to
       the hand-declared `GroupLayer` TypeScript interface/type path. Confirm every
       layer variant retains it after parse.
-- [ ] Add optional `timing` to artboards and optional `clipSettings` to the
+- [x] Add optional `timing` to artboards and optional `clipSettings` to the
       project. Defaults must preserve static behavior without injecting animation
       blocks into old documents unnecessarily.
-- [ ] Export inferred types from `src/lib/schema/index.ts`; runtime animation
+- [x] Export inferred types from `src/lib/schema/index.ts`; runtime animation
       modules import those types instead of redeclaring them.
-- [ ] Bump `CURRENT_SCHEMA_VERSION` from `1` to `2` only when the migration and
+- [x] Bump `CURRENT_SCHEMA_VERSION` from `1` to `2` only when the migration and
       all fixture updates are present in the same change.
 
 Tests:
 
-- [ ] Accept a static v2 project with no animation fields.
-- [ ] Accept one valid instance of every v1 preset and every animatable
+- [x] Accept a static v2 project with no animation fields.
+- [x] Accept one valid instance of every v1 preset and every animatable
       property.
-- [ ] Reject `NaN`, infinities, out-of-range values, unordered/equal keyframe
+- [x] Reject `NaN`, infinities, out-of-range values, unordered/equal keyframe
       times, empty tracks, duplicate props, overlapping custom windows, unsupported
       slot/preset combinations, and windows outside scene duration.
-- [ ] Verify unknown animation fields are not treated as an extension escape
+- [x] Verify unknown animation fields are not treated as an extension escape
       hatch.
-- [ ] Parse all existing project fixtures after migration.
+- [x] Parse all existing project fixtures after migration.
 
 **Exit:** the schema represents every v1 preset, rejects ambiguous timing, and
 keeps an unanimated project small.
@@ -641,26 +660,26 @@ Primary files:
 
 Steps:
 
-- [ ] Add `migrateV1ToV2`: clone the raw document, set `schemaVersion: 2`, and
+- [x] Add `migrateV1ToV2`: clone the raw document, set `schemaVersion: 2`, and
       leave all otherwise-valid project content unchanged.
-- [ ] Make `migrateToCurrent` fail clearly when a migration step is missing;
+- [x] Make `migrateToCurrent` fail clearly when a migration step is missing;
       it must not fall through to an opaque literal-version validation error.
-- [ ] Add a frozen v1 `.calqo` fixture with nested groups, assets, all core
+- [x] Add a frozen v1 `.calqo` fixture with nested groups, assets, all core
       layer kinds, and multiple locales. Assert the migrated project is v2 and
       semantically identical.
-- [ ] Add a v2 animated `.calqo` fixture and assert full export/import
+- [x] Add a v2 animated `.calqo` fixture and assert full export/import
       round-trip.
-- [ ] Add a helper that determines whether a v2 project can be downgraded to
+- [x] Add a helper that determines whether a v2 project can be downgraded to
       v1. The only allowed case is no animation, no scene timing, and no other v2
       fields.
-- [ ] Implement explicit v1-compatible project serialization without mutating
+- [x] Implement explicit v1-compatible project serialization without mutating
       the live project. Keep the envelope format version separate from project
       schema version.
-- [ ] Add the compatibility choice to the `.calqo` export design backlog; the
+- [x] Add the compatibility choice to the `.calqo` export design backlog; the
       UI itself may land in AN-1, but the serializer and tests land here.
-- [ ] Verify Dexie read migration and import migration use the same
+- [x] Verify Dexie read migration and import migration use the same
       `safeImportProject` path or produce identical results.
-- [ ] Verify duplication, backup restore, starter/template adoption, and asset
+- [x] Verify duplication, backup restore, starter/template adoption, and asset
       remapping preserve animation. No animation id rewrite should be necessary;
       add an invariant test so this remains true.
 
@@ -678,36 +697,36 @@ Create:
 
 Steps:
 
-- [ ] Define preset metadata independently of localized labels: supported
+- [x] Define preset metadata independently of localized labels: supported
       slots, allowed layer kinds, default duration/delay/direction/distance/easing,
       safe parameter ranges, and whether a preset repeats.
-- [ ] Implement enter and exit compilation for fade, slide, pop, rise, wipe,
+- [x] Implement enter and exit compilation for fade, slide, pop, rise, wipe,
       and blur-in. Exit variants reverse the semantic motion without reversing
       easing incorrectly.
-- [ ] Implement pulse, wiggle, and float emphasis as finite tracks. Compiler
+- [x] Implement pulse, wiggle, and float emphasis as finite tracks. Compiler
       output must end at identity even when the available window is not an exact
       multiple of the loop period.
-- [ ] Make compiler output immutable and deterministic: the same document,
+- [x] Make compiler output immutable and deterministic: the same document,
       locale, font-layout signature, and preset catalog version produce byte-for-
       byte equivalent track data.
-- [ ] Reject unsupported layer/preset combinations before compilation and
+- [x] Reject unsupported layer/preset combinations before compilation and
       return structured issues with layer id, slot, and reason.
-- [ ] Define a `CompiledClip` containing scene duration, fps, layer ids, and
+- [x] Define a `CompiledClip` containing scene duration, fps, layer ids, and
       normalized runtime tracks. Do not persist it or attach it to Zustand project
       state.
-- [ ] Define a cache key from only compilation inputs. Include project id,
+- [x] Define a cache key from only compilation inputs. Include project id,
       artboard id, active locale, timing, animation values, relevant layer
       geometry/style/content, loaded-font revision, and compiler version.
-- [ ] Implement a small bounded cache with explicit invalidation APIs; do not
+- [x] Implement a small bounded cache with explicit invalidation APIs; do not
       depend on object identity because Immer replaces object branches.
 
 Tests:
 
-- [ ] Snapshot/golden test every preset at defaults.
-- [ ] Test min/max allowed parameters and all directions.
-- [ ] Assert enter/emphasis/exit property windows do not overlap.
-- [ ] Assert output is identity at all slot boundaries that should settle.
-- [ ] Assert cache hits for irrelevant project changes and misses for every
+- [x] Snapshot/golden test every preset at defaults.
+- [x] Test min/max allowed parameters and all directions.
+- [x] Assert enter/emphasis/exit property windows do not overlap.
+- [x] Assert output is identity at all slot boundaries that should settle.
+- [x] Assert cache hits for irrelevant project changes and misses for every
       layout-affecting input named in §8.
 
 **Exit:** all v1 presets compile into one deterministic runtime IR.
@@ -722,39 +741,56 @@ Create:
 
 Steps:
 
-- [ ] Implement each easing as a pure function mapping clamped `0–1` input to
+- [x] Implement each easing as a pure function mapping clamped `0–1` input to
       a finite output. Document whether overshoot/bounce may exceed `0–1` before
       property clamping.
-- [ ] Evaluate keyframes with binary search or an equally bounded lookup; do
+- [x] Evaluate keyframes with binary search or an equally bounded lookup; do
       not allocate per layer per frame in the hot path.
-- [ ] Return wrapper overrides only for properties that differ from identity.
+- [x] Return wrapper overrides only for properties that differ from identity.
       Use one documented identity object for reset behavior.
-- [ ] Apply composition rules once: dx/dy/rotation additive, scales and
+- [x] Apply composition rules once: dx/dy/rotation additive, scales and
       opacity multiplicative, reveal/blur dedicated.
-- [ ] Define exact behavior for negative time, time after scene duration, zero
+- [x] Define exact behavior for negative time, time after scene duration, zero
       active tracks, hidden layers, and missing/deleted layer ids.
-- [ ] Add a bulk evaluator API that writes into reusable output objects for
+- [x] Add a bulk evaluator API that writes into reusable output objects for
       export, while retaining a simple allocation-friendly API for tests.
 
 Tests:
 
-- [ ] Golden values at 0%, 25%, 50%, 75%, and 100% for each easing.
-- [ ] Boundary values one millisecond before/at/after every slot.
-- [ ] Base opacity/rotation/scale composition cases.
-- [ ] Determinism over repeated runs and no mutation of project/compiled data.
-- [ ] A 1,800-frame synthetic evaluation benchmark recorded as a non-flaky
+- [x] Golden values at 0%, 25%, 50%, 75%, and 100% for each easing.
+- [x] Boundary values one millisecond before/at/after every slot.
+- [x] Base opacity/rotation/scale composition cases.
+- [x] Determinism over repeated runs and no mutation of project/compiled data.
+- [x] A 1,800-frame synthetic evaluation benchmark recorded as a non-flaky
       diagnostic, not a timing assertion in CI.
 
 **AN-0 milestone acceptance:**
 
-- [ ] `pnpm typecheck`, `pnpm test`, `pnpm lint`, and `pnpm build` pass.
-- [ ] Static v1 fixtures migrate and existing static tests remain green.
-- [ ] No animation dependency has entered the UI, export adapter, or file
+- [x] `pnpm typecheck`, `pnpm test`, `pnpm lint`, and `pnpm build` pass.
+- [x] Static v1 fixtures migrate and existing static tests remain green.
+- [x] No animation dependency has entered the UI, export adapter, or file
       writer yet.
-- [ ] A developer can compile and evaluate a preset-only animated artboard in
-      a unit test without mounting React or Konva.
+- [x] A developer can compile and evaluate a preset-only animated artboard in
+      a unit test without mounting React or Konva
+      (`animationCompiler.test.ts`, `animationEvaluator.test.ts`).
 
 ### AN-0.5 — Rendering and encoding feasibility spike
+
+> **[~] Scaffolded — 2026-07-19 (app v0.4.6, branch `feature/animation-an0`).**
+> Fixtures + measurement harness + capability probe are in place and green
+> (`pnpm typecheck`/`test`/`lint`/`build`, 425 tests); the spike is not yet
+> *run*, so no gate decision exists. Delivered: the durable renderer contract
+> `src/editor/rendering/offscreenScene.ts` (interface + not-implemented stub);
+> five representative fixtures parameterized by size/duration in
+> `src/tests/fixtures/animation/spikeFixtures.ts`; the measurement protocol +
+> collector, dependency-free WebCodecs capability probe, encoder/GIF seams, and
+> orchestrator under `src/spike/animation/` (`runSpike` already produces real
+> evaluator-throughput numbers; render/encode report `skipped` until the stubs
+> land); the decision template `docs/animation/AN-0.5-decision.md`; and
+> `animationSpike.test.ts`. **No new production dependencies** (Mediabunny/gifenc
+> deferred to the gate, §12.3). Still to do before the gate: implement the
+> offscreen scene (0.5.2), fidelity sampling (0.5.3), real encode/mux (0.5.4),
+> GIF bake-off (0.5.5), then run per-runtime and record the decision (0.5.6).
 
 **Goal:** prove the risky renderer/encoder path before committing to the full
 UI. Spike code may be temporary, but measurements and the reusable renderer
@@ -762,15 +798,18 @@ contract are durable deliverables.
 
 #### AN-0.5.1 Create representative fixtures and measurement protocol
 
-- [ ] Build at least five fixtures: flat vector brand card, photo-heavy story,
+- [x] Build at least five fixtures: flat vector brand card, photo-heavy story,
       nested groups, creative effects/masks/frames, and multilingual text with a
-      webfont.
-- [ ] Include 1080×1080 and 1080×1920 outputs at 5 s, 15 s, and synthetic 60 s.
-- [ ] Record test machine, OS, browser/WebView version, codec config, frame
+      webfont. (`spikeFixtures.ts`; validated + compiled in `animationSpike.test.ts`.)
+- [x] Include 1080×1080 and 1080×1920 outputs at 5 s, 15 s, and synthetic 60 s.
+      (Fixtures are parameterized; `defaultSpikeConfigs` sweeps the full matrix.)
+- [~] Record test machine, OS, browser/WebView version, codec config, frame
       size, fps, bitrate, render time, encode time, peak memory when observable,
-      output size, and decode result.
-- [ ] Put the reusable fixture projects in test fixtures; do not depend on a
-      maintainer's private documents.
+      output size, and decode result. (Protocol + collector implemented in
+      `measurement.ts`; awaiting a real run to populate `AN-0.5-decision.md`.)
+- [x] Put the reusable fixture projects in test fixtures; do not depend on a
+      maintainer's private documents. (Photo fixture uses a tiny embedded PNG;
+      swap in a licensed photo locally for banding review.)
 
 #### AN-0.5.2 Extract a reusable offscreen scene
 

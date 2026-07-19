@@ -7,7 +7,12 @@ import {
   setActiveContentLocale,
   updateTextForLocale,
 } from '@/editor/commands/projectCommands';
-import { createDefaultProject, glossaryEntrySchema, type TextLayer } from '@/lib/schema';
+import {
+  createDefaultProject,
+  glossaryEntrySchema,
+  CURRENT_SCHEMA_VERSION,
+  type TextLayer,
+} from '@/lib/schema';
 import { historyStore } from '@/lib/state/historyStore';
 import { projectStore } from '@/lib/state/projectStore';
 import { selectionStore } from '@/lib/state/selectionStore';
@@ -63,7 +68,7 @@ describe('phase E — schema + validation helpers', () => {
       },
       input,
     ) as Record<string, unknown>;
-    expect(normalized.schemaVersion).toBe(1);
+    expect(normalized.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(normalized.activeContentLocale).toBe('fr');
     const ab = (normalized.artboards as Record<string, unknown>[])[0];
     expect(typeof ab.id).toBe('string');
