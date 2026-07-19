@@ -33,24 +33,24 @@ Two tiers:
 
 These were settled with the maintainer on 2026-07-19:
 
-| Decision | Choice | Rationale |
-| --- | --- | --- |
-| Authoring model | **Presets compiled to a keyframe IR** | Canva-style enter/emphasis/exit presets cover the target user; a small keyframe IR underneath future-proofs a real timeline, agent-authored motion, and HTML export without a schema break. |
-| Surface | **Mode in the existing shell**, not a separate window | In the browser a second window is a second app instance (Zustand stores don't cross windows; syncing over BroadcastChannel/Dexie is real complexity for no user value). The Tauri shell can later host Animate mode in a true OS window nearly for free. |
-| Platforms | **Desktop only at first** | Animate mode ships on the desktop shell surface. Concretely: the phone mobile surface (`src/app/mobile/`) gets no Animate UI; the desktop shell (browser + Tauri) gets the full mode. Whether tablets driving the desktop shell (iPad PWA / Sidecar) see the mode or a playback-only preview is an open question (§12). |
-| v1 export targets | **MP4 (H.264 default, H.265 option), GIF, animated HTML** | MP4/H.264 is the social deliverable every platform accepts; H.265/HEVC is offered where runtime support and benchmarks justify it (§6.3, §7). GIF is the chat/forum fallback; animated HTML doubles as the Hyperframes package. WebM is deferred (near-free later, accepted by few social platforms). |
-| macOS encoding | **Hardware-accelerated on M-series** | WKWebView's WebCodecs sits on VideoToolbox, so the in-webview path is *expected* to be hardware-accelerated — but this is capability-tested per install, never assumed (§7). The encoder sits behind an export adapter so a native Rust/VideoToolbox path can replace it if benchmarks disappoint. |
-| Audio | **Out of scope for v1** | Instagram/TikTok users add trending audio in-platform; muxing + licensing UX is its own project. The MP4 container path must not preclude adding an audio track later. |
+| Decision          | Choice                                                    | Rationale                                                                                                                                                                                                                                                                                                               |
+| ----------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authoring model   | **Presets compiled to a keyframe IR**                     | Canva-style enter/emphasis/exit presets cover the target user; a small keyframe IR underneath future-proofs a real timeline, agent-authored motion, and HTML export without a schema break.                                                                                                                             |
+| Surface           | **Mode in the existing shell**, not a separate window     | In the browser a second window is a second app instance (Zustand stores don't cross windows; syncing over BroadcastChannel/Dexie is real complexity for no user value). The Tauri shell can later host Animate mode in a true OS window nearly for free.                                                                |
+| Platforms         | **Desktop only at first**                                 | Animate mode ships on the desktop shell surface. Concretely: the phone mobile surface (`src/app/mobile/`) gets no Animate UI; the desktop shell (browser + Tauri) gets the full mode. Whether tablets driving the desktop shell (iPad PWA / Sidecar) see the mode or a playback-only preview is an open question (§12). |
+| v1 export targets | **MP4 (H.264 default, H.265 option), GIF, animated HTML** | MP4/H.264 is the social deliverable every platform accepts; H.265/HEVC is offered where runtime support and benchmarks justify it (§6.3, §7). GIF is the chat/forum fallback; animated HTML doubles as the Hyperframes package. WebM is deferred (near-free later, accepted by few social platforms).                   |
+| macOS encoding    | **Hardware-accelerated on M-series**                      | WKWebView's WebCodecs sits on VideoToolbox, so the in-webview path is _expected_ to be hardware-accelerated — but this is capability-tested per install, never assumed (§7). The encoder sits behind an export adapter so a native Rust/VideoToolbox path can replace it if benchmarks disappoint.                      |
+| Audio             | **Out of scope for v1**                                   | Instagram/TikTok users add trending audio in-platform; muxing + licensing UX is its own project. The MP4 container path must not preclude adding an audio track later.                                                                                                                                                  |
 
 ### Critical review of the original idea (kept for the record)
 
 - **"Secondary editor in a separate window"** — rejected for v1 (see table).
-  The vision survives as a *mode*; the window comes with Tauri multi-window.
+  The vision survives as a _mode_; the window comes with Tauri multi-window.
 - **"Lean on Hyperframe for advanced animations"** — demoted to a labs track.
   Hyperframes is young, agent-oriented, and needs a headless render
   environment (its CLI / cloud) that local-first users don't have. It cannot
   be the answer to "export MP4"; the in-app WebCodecs path is. Where
-  Hyperframes genuinely shines is the *agent* story (§10).
+  Hyperframes genuinely shines is the _agent_ story (§10).
 - **Full keyframe timeline** — rejected as v1 UI. It targets a user Calqo
   doesn't serve (motion designers) and is a large, ongoing UI investment. The
   IR keeps the door open.
@@ -65,10 +65,10 @@ These were settled with the maintainer on 2026-07-19:
   encoding (slow, hot), licensing questions around H.264. WebCodecs uses the
   platform encoder (hardware where available) at zero payload. Rejected.
 - **Server-side rendering (Remotion-style).** Violates local-first. Rejected.
-- **CSS/WAAPI as the *primary* renderer.** Tempting because HTML export
+- **CSS/WAAPI as the _primary_ renderer.** Tempting because HTML export
   exists, but the live canvas is Konva; previewing in a different renderer
   than we export from guarantees fidelity drift. Konva renders both the
-  preview and the exported frames; HTML/CSS is an *export target* with its own
+  preview and the exported frames; HTML/CSS is an _export target_ with its own
   documented fidelity warnings (mirroring the existing HTML export approach).
 
 ## 4. Animation model
@@ -127,45 +127,70 @@ fields, matching the existing schema's discipline):
 
 ```ts
 type AnimProp =
-  | 'dx' | 'dy' | 'scaleX' | 'scaleY' | 'rotation' | 'opacity'
-  | 'wipe-progress' | 'blur';
+  | 'dx'
+  | 'dy'
+  | 'scaleX'
+  | 'scaleY'
+  | 'rotation'
+  | 'opacity'
+  | 'wipe-progress'
+  | 'blur';
 
-type Easing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out'
-  | 'overshoot' | 'bounce';
+type Easing =
+  | 'linear'
+  | 'ease-in'
+  | 'ease-out'
+  | 'ease-in-out'
+  | 'overshoot'
+  | 'bounce';
 
 interface Keyframe {
-  t: number;            // 0–1, normalized to the owning window
-  value: number;        // finite; validated per-prop range
-  easing?: Easing;      // easing *into* this keyframe
+  t: number; // 0–1, normalized to the owning window
+  value: number; // finite; validated per-prop range
+  easing?: Easing; // easing *into* this keyframe
 }
 
 interface TrackWindow {
-  start: number;        // ms from scene start
-  duration: number;     // ms, > 0, window must fit inside the scene
+  start: number; // ms from scene start
+  duration: number; // ms, > 0, window must fit inside the scene
   tracks: { prop: AnimProp; keyframes: Keyframe[] }[]; // t ascending, unique
 }
 
 type PresetKind =
-  | 'fade' | 'slide' | 'pop' | 'rise' | 'wipe' | 'blur-in'   // enter/exit
-  | 'pulse' | 'wiggle' | 'float'                              // emphasis
-  | 'typewriter' | 'word-rise';                               // text (later phase)
+  | 'fade'
+  | 'slide'
+  | 'pop'
+  | 'rise'
+  | 'wipe'
+  | 'blur-in' // enter/exit
+  | 'pulse'
+  | 'wiggle'
+  | 'float' // emphasis
+  | 'typewriter'
+  | 'word-rise'; // text (later phase)
 
 interface PresetInstance {
   kind: PresetKind;
-  direction?: 'up' | 'down' | 'left' | 'right';  // slide/wipe/rise
-  distance?: number;      // px, slide/rise travel
-  duration: number;       // ms
-  delay: number;          // ms from slot anchor
+  direction?: 'up' | 'down' | 'left' | 'right'; // slide/wipe/rise
+  distance?: number; // px, slide/rise travel
+  duration: number; // ms
+  delay: number; // ms from slot anchor
   easing?: Easing;
-  stagger?: number;       // ms per child, group/list slots only
+  stagger?: number; // ms per child, group/list slots only
 }
 
 type LayerAnimation =
-  | { mode: 'preset'; enter?: PresetInstance; emphasis?: PresetInstance;
-      exit?: PresetInstance }
+  | {
+      mode: 'preset';
+      enter?: PresetInstance;
+      emphasis?: PresetInstance;
+      exit?: PresetInstance;
+    }
   | { mode: 'custom'; windows: TrackWindow[] };
 
-interface SceneTiming { duration: number; }   // ms, per artboard
+interface SceneTiming {
+  duration: number;
+} // ms, per artboard
 
 interface ClipSettings {
   fps: 24 | 30 | 60;
@@ -190,7 +215,7 @@ layer/asset/row id references at all, so project duplication and
   also gain the optional `animation` field, or groups silently drop it.
 - **Upgrade is one-way and old clients are strict**: a v1 build rejects
   `schemaVersion: 2` files outright. Policy: stored projects migrate on read
-  (as today, via the Dexie adapter); `.calqo` *file* export offers "current
+  (as today, via the Dexie adapter); `.calqo` _file_ export offers "current
   format" and — when the project has no animation — the option to write a
   v1-compatible envelope. The export dialog states which it wrote. This keeps
   the portable-file compatibility promises in `docs/plan.md` honest.
@@ -215,10 +240,10 @@ gate the whole feature on the hardest 10%.
   stage from the project document (not the live canvas). That is the right
   substrate for frame rendering, **but it is a parallel implementation of the
   live `LayerRenderer`, not the same code** — the two can drift, and the
-  frame pipeline inherits that risk. It also has at least one known gap today
-  (shape image-fill assets are not collected for loading — tracked as an
-  independent fix). AN-0.5 (§11) is a feasibility spike precisely because
-  "extract and reuse" needs proving, not asserting.
+  frame pipeline inherits that risk. Shape image-fill assets are now included
+  by `collectAssetIds`; preserve that fix with a regression test during the
+  refactor. AN-0.5 (§13) is a feasibility spike precisely because "extract and
+  reuse" needs proving, not asserting.
 - The frame loop must **reuse one stage and loaded image set across all
   frames** (build once, apply evaluator overrides to wrapper nodes, draw,
   capture), not reconstruct the stage per frame as the current single-shot
@@ -309,7 +334,7 @@ compiled clip ──► evaluator ──► one reusable offscreen stage
   timestamps/durations; keyframe cadence (~2 s GOP); backpressure via
   `encodeQueueSize`; `VideoFrame.close()` every frame; `flush()` before
   finalize; codec profile/level + bitrate presets per format (H.265 target
-  bitrate set *lower* than H.264 — same bitrate would mean same file size,
+  bitrate set _lower_ than H.264 — same bitrate would mean same file size,
   not smaller); even-dimension handling; and a decode-verify smoke pass on
   the produced file. If H.264 encode itself is unavailable, offer GIF/HTML
   and say why. The container path must leave room for a future audio track.
@@ -385,7 +410,7 @@ The maintainer's requirement: on Tauri macOS, encoding must be as fast as
 possible and use the M-series hardware encoder.
 
 1. **First path (expected sufficient, verified per install):** WKWebView's
-   WebCodecs sits on VideoToolbox, so the same browser code path *should* be
+   WebCodecs sits on VideoToolbox, so the same browser code path _should_ be
    hardware-accelerated in the Tauri shell — but Tauri uses the WebKit
    bundled with the installed macOS, so capabilities move with the OS.
    Treat it as **capability-tested, never guaranteed**: probe
@@ -398,13 +423,13 @@ possible and use the M-series hardware encoder.
    muxing, cancellation, and streamed output all cross the boundary together:
    `capabilities() → probe results`, `begin(config) → session`,
    `session.addFrame(frame)` (async, backpressured), `session.finalize() →
-   streamed file`, `session.cancel()`. Browser and Tauri-WKWebView share the
+streamed file`, `session.cancel()`. Browser and Tauri-WKWebView share the
    WebCodecs implementation; a native Rust/VideoToolbox implementation slots
    behind the same adapter if benchmarks disappoint.
 3. **Known risk of the native path:** raw RGBA frames are ~8 MB each
    (~15 GB/clip); Tauri IPC cannot carry that naively. It needs shared
    memory or chunked transfer with backpressure. This is exactly why the
-   native path is *contingency*, not plan-of-record.
+   native path is _contingency_, not plan-of-record.
 
 ## 8. Multilingual and layout-dependent recompilation
 
@@ -435,7 +460,7 @@ possible and use the M-series hardware encoder.
 ## 10. What v1 deliberately does not do
 
 - No audio (container leaves room; see §2).
-- No video or GIF *source* layers (animating imported video is a different
+- No video or GIF _source_ layers (animating imported video is a different
   product).
 - No scene sequencing / artboard transitions (v2 — `ClipSettings.scenes` is
   reserved for it).
@@ -464,79 +489,962 @@ export button; it is a package:
   HTML + CSS + JSON; Remotion, Motioner, or a future tool can consume the
   same artifact. Do not couple the manifest format to Hyperframes specifics.
 
-## 12. Phasing
+## 12. Delivery model and status conventions
 
-- **AN-0 — Schema + evaluator (no UI).** Schema v2 (strict Zod per §4.3),
-  real v1→v2 migration + `GroupLayer` typing + compatibility policy (§4.4),
-  preset → IR compiler with the invalidation-keyed cache (§8), evaluator.
-  Tests: migration fixtures (v1 files → v2), malformed-IR rejection, golden
-  evaluator values, duplication/remap invariants.
-- **AN-0.5 — Rendering/encoding feasibility spike (gate for everything
-  after).** Extract a reusable scene builder from `rasterExport` (after the
-  shape-fill asset fix lands); wrapper-node architecture on the live stage;
-  drive one stage through N timestamps; sampled-frame comparison against
-  live playback; WebCodecs encode benchmark (avc1 + hvc1, browser + Tauri
-  WKWebView, M1 acceptance ~2× realtime); Mediabunny mux + decode-verify;
-  GIF encoder bake-off on quality/memory fixtures. Output: measured numbers
-  replacing §6.4's targets, and a go/adjust decision.
-- **AN-1 — Animate mode UI.** Mode toggle (per-tab, `workspaceStore`),
-  inspector animation section, transport strip with display-only timing
-  bars, wrapper-node playback with the §6.2 lifecycle rules, undo/redo with
-  gesture coalescing, en+fr strings. Tests: command/undo/coalescing,
-  playback-vs-edit interaction (edit during playback, undo during playback,
-  tab/locale switch).
-- **AN-2 — Local export.** `VideoExportAdapter` (§7) with streamed output,
-  cancellation semantics, progress UI; MP4 (H.264 default, H.265
-  runtime-gated); GIF with caps and worker encoding; structured localized
-  warnings; sequential per-locale batch. Tests: cancellation/leak tests,
-  decode verification, codec capability matrix (Safari / Chrome / WKWebView)
-  recorded in the doc.
-- **AN-3 — Animated HTML + package.** Wrapper-div transform composition,
-  `@keyframes` compiler, CSS-vs-evaluator conformance sampling, group
-  downgrade warnings, `prefers-reduced-motion`, Hyperframes-ready package
-  (labs). Text-reveal presets enter here at the earliest, behind the
-  fragment compiler.
-- **AN-4 (v2) — Scenes + prompt-to-animation.** Multi-artboard sequencing,
-  transitions, LLM-generated `LayerAnimation` through `safeImportProject`,
-  MCP command-level animation operations.
+Animation is a post-beta track. It must not silently become a prerequisite for
+the reliability and 1.0 work in `docs/plan.md`.
 
-Each phase lands behind the mode toggle; the static editor is never at risk.
+### 12.1 Milestone order
 
-## 13. Review log
+| Milestone | Outcome                                            | Depends on                    | Gate                                |
+| --------- | -------------------------------------------------- | ----------------------------- | ----------------------------------- |
+| AN-0      | Schema v2, preset compiler, evaluator              | Stable schema/import contract | Unit and migration gate             |
+| AN-0.5    | Proven reusable renderer and viable local encoders | AN-0                          | Explicit go/adjust/stop decision    |
+| AN-1      | Usable desktop Animate mode and live playback      | AN-0.5 go/adjust              | Editor interaction gate             |
+| AN-2      | Local MP4 and GIF export                           | AN-1                          | Export correctness/performance gate |
+| AN-3      | Animated HTML and agent handoff package            | AN-2 IR stability             | Cross-renderer conformance gate     |
+| AN-4      | Scenes, transitions, prompt/MCP animation          | AN-3                          | Separate v2 product decision        |
 
-**2026-07-19 — external critical review (Codex) incorporated.** Major
-accepted points: compiled tracks removed from the persisted schema (single
-source of truth, small history snapshots); explicit composition semantics
-with transient wrapper nodes; text-reveal presets deferred (fragment
-targeting was unrepresentable in the first IR sketch); "refactor not build"
-claim tempered and backed by a feasibility spike (AN-0.5); migration/
-compatibility section made concrete (schemaVersion rewrite, `GroupLayer`
-typing, one-way-upgrade policy); mode state moved from `uiStore` to
-`workspaceStore`; `videoEncoder` adapter widened to a session-based
-`VideoExportAdapter`; Mediabunny replaces deprecated `mp4-muxer`; HEVC gate
-reworded to runtime-supported (`isConfigSupported` ≠ hardware) with
-`mediaCapabilities.encodingInfo().powerEfficient` as the added signal and
-codec-specific bitrate policy; static-export semantics defined (ignore
-animation); animated-HTML transform composition + group-downgrade rules;
-GIF judged on quality/memory, not speed; streaming/cancellation/memory made
-first-class; structured localized warnings; accessibility section added;
-timing-bar dragging cut from v1 rather than under-specified; testing strategy
-expanded per phase. Review also surfaced a live bug in the static exporter
-(shape image-fill assets never loaded) — tracked separately.
-Not adopted: dropping the preset/custom duality (kept, but as a discriminated
-union with compiled output demoted to a runtime cache, which resolves the
-reviewer's underlying objection).
+AN-0 may be implemented without exposing UI. AN-0.5 is a hard gate: do not
+build the full Animate surface until frame rendering, memory use, and codec
+support have measured results. AN-3 and AN-4 are separately shippable and do
+not delay the first useful MP4 release.
 
-## 14. Open questions
+### 12.2 Status markers
 
-1. Preset param surface: how much knob-turning per preset (direction +
-   distance + easing?) before it stops being "the focused 20%"?
-2. Tablets driving the desktop shell (iPad PWA / Sidecar): full Animate mode,
-   playback-only, or hidden in v1?
-3. Should `.calqo` files with animation get a distinct library badge / open
-   directly into Animate mode?
-4. v1→v2 upgrade UX: exact wording/placement of the one-time notice and the
-   "write v1-compatible file" option (§4.4).
-5. Timing semantics to be specced in AN-1 design: animation windows vs scene
-   duration (clamp or extend?), missing enter/exit states before/after
-   windows, emphasis loop count vs scene length.
+Use the following markers in this document as work lands:
+
+- `[ ]` not started.
+- `[~]` in progress or partially complete; add a dated note explaining what
+  remains.
+- `[x]` complete and verified; include the verification commands or manual
+  matrix where relevant.
+- `[!]` blocked; state the blocking decision or external capability.
+
+When a milestone completes, add a status banner beneath its heading with the
+completion date, the last verified app version, and its acceptance result.
+Update `docs/plan.md` only when the animation track becomes scheduled or ships;
+do not make the beta roadmap appear blocked by this document.
+
+### 12.3 Cross-cutting rules for every milestone
+
+- Keep all persisted animation data in `src/lib/schema/`; do not create a
+  second unvalidated animation document format.
+- Route document mutations through `src/editor/commands/projectCommands.ts`.
+- Keep transport time, playback status, hover preview, compiled clips, Konva
+  wrapper refs, export progress, and abort handles out of the project schema
+  and undo history.
+- Put filesystem/download/runtime differences behind adapters in
+  `src/lib/adapters/`.
+- Add every user-facing string to both `src/locales/en` and
+  `src/locales/fr` in the same change.
+- Preserve light, dark, and `html[data-transparency="solid"]` behavior for all
+  new controls.
+- Keep static PNG/JPG/WebP/SVG/HTML behavior unchanged. Animation-specific
+  exports must be new paths, not modes hidden inside static exporters.
+- Run `pnpm typecheck` and `pnpm test` for every implementation step. Run
+  `pnpm lint` and `pnpm build` at each milestone gate. Add focused Playwright
+  coverage when UI or download flows become available.
+- Do not add H.265, GIF, worker, or muxer dependencies before AN-0.5 measures
+  them and records the decision.
+
+## 13. Detailed implementation sequence
+
+### AN-0 — Schema v2, compiler, and evaluator
+
+**Goal:** establish a strict, deterministic animation contract with no user
+interface and no export dependency.
+
+#### AN-0.1 Freeze timing and composition semantics
+
+- [ ] Write executable examples for one enter, emphasis, and exit animation
+      before changing the schema. Include expected values immediately before,
+      within, and after each window.
+- [ ] Resolve the timing rules that currently remain open:
+  - A scene has a minimum of 250 ms and a maximum of 60,000 ms.
+  - A preset window that would end after the scene is rejected by the command
+    layer; it is not silently truncated.
+  - Before an enter window, the layer holds the preset's hidden start state.
+  - After enter, it holds identity until emphasis or exit.
+  - Emphasis repeats only inside its allocated window and evaluates to
+    identity at its end.
+  - After exit, the layer holds the preset's hidden end state.
+  - Missing slots always evaluate to identity in their region.
+- [ ] Define numeric precision: evaluator output keeps full JavaScript number
+      precision; serializers round only at their output boundary.
+- [ ] Define direction in artboard coordinates, independent of layer rotation:
+      `up` means negative artboard Y and `left` means negative artboard X.
+- [ ] Record the settled rules in §4.2 and in table-driven tests so later UI
+      code cannot invent different behavior.
+
+**Exit:** timing fixtures can be reviewed without reading the evaluator.
+
+#### AN-0.2 Add strict schema primitives
+
+Primary files:
+
+- `src/lib/schema/schema.ts`
+- `src/lib/schema/migrations.ts`
+- `src/lib/schema/defaults.ts`
+- `src/lib/schema/fixture.ts`
+- `src/tests/unit/schema.test.ts`
+- new `src/tests/unit/animationSchema.test.ts`
+
+Steps:
+
+- [ ] Add strict Zod schemas for `AnimProp`, `Easing`, `Keyframe`,
+      `Track`, `TrackWindow`, `PresetKind`, `PresetInstance`, `LayerAnimation`,
+      `SceneTiming`, and `ClipSettings`.
+- [ ] Use `.finite()` for every numeric value. Apply property-specific ranges:
+      opacity `0–1`, scale greater than `0` and capped, blur non-negative and
+      capped, rotation/distance bounded, normalized `t` in `0–1`, duration/delay
+      within scene limits, and stagger non-negative.
+- [ ] Require at least two keyframes per track, strictly increasing unique
+      `t` values, and no duplicate property inside one window.
+- [ ] Add `superRefine` checks for window bounds, per-property overlap, preset
+      slot compatibility, direction-only preset kinds, and text-only preset kinds
+      once those kinds are enabled.
+- [ ] Add optional `animation` to the shared base layer shape and explicitly to
+      the hand-declared `GroupLayer` TypeScript interface/type path. Confirm every
+      layer variant retains it after parse.
+- [ ] Add optional `timing` to artboards and optional `clipSettings` to the
+      project. Defaults must preserve static behavior without injecting animation
+      blocks into old documents unnecessarily.
+- [ ] Export inferred types from `src/lib/schema/index.ts`; runtime animation
+      modules import those types instead of redeclaring them.
+- [ ] Bump `CURRENT_SCHEMA_VERSION` from `1` to `2` only when the migration and
+      all fixture updates are present in the same change.
+
+Tests:
+
+- [ ] Accept a static v2 project with no animation fields.
+- [ ] Accept one valid instance of every v1 preset and every animatable
+      property.
+- [ ] Reject `NaN`, infinities, out-of-range values, unordered/equal keyframe
+      times, empty tracks, duplicate props, overlapping custom windows, unsupported
+      slot/preset combinations, and windows outside scene duration.
+- [ ] Verify unknown animation fields are not treated as an extension escape
+      hatch.
+- [ ] Parse all existing project fixtures after migration.
+
+**Exit:** the schema represents every v1 preset, rejects ambiguous timing, and
+keeps an unanimated project small.
+
+#### AN-0.3 Implement migration and file compatibility
+
+Primary files:
+
+- `src/lib/schema/migrations.ts`
+- `src/editor/export/calqoFile.ts`
+- `src/lib/adapters/file/FileImportExportAdapter.ts`
+- new versioned fixtures under `src/tests/fixtures/animation/`
+
+Steps:
+
+- [ ] Add `migrateV1ToV2`: clone the raw document, set `schemaVersion: 2`, and
+      leave all otherwise-valid project content unchanged.
+- [ ] Make `migrateToCurrent` fail clearly when a migration step is missing;
+      it must not fall through to an opaque literal-version validation error.
+- [ ] Add a frozen v1 `.calqo` fixture with nested groups, assets, all core
+      layer kinds, and multiple locales. Assert the migrated project is v2 and
+      semantically identical.
+- [ ] Add a v2 animated `.calqo` fixture and assert full export/import
+      round-trip.
+- [ ] Add a helper that determines whether a v2 project can be downgraded to
+      v1. The only allowed case is no animation, no scene timing, and no other v2
+      fields.
+- [ ] Implement explicit v1-compatible project serialization without mutating
+      the live project. Keep the envelope format version separate from project
+      schema version.
+- [ ] Add the compatibility choice to the `.calqo` export design backlog; the
+      UI itself may land in AN-1, but the serializer and tests land here.
+- [ ] Verify Dexie read migration and import migration use the same
+      `safeImportProject` path or produce identical results.
+- [ ] Verify duplication, backup restore, starter/template adoption, and asset
+      remapping preserve animation. No animation id rewrite should be necessary;
+      add an invariant test so this remains true.
+
+**Exit:** old files open, animated files round-trip, and unanimated projects
+can deliberately produce a v1-compatible document.
+
+#### AN-0.4 Build the preset catalog and compiler
+
+Create:
+
+- `src/editor/animation/presets.ts`
+- `src/editor/animation/compiler.ts`
+- `src/editor/animation/types.ts` for runtime-only types
+- `src/tests/unit/animationCompiler.test.ts`
+
+Steps:
+
+- [ ] Define preset metadata independently of localized labels: supported
+      slots, allowed layer kinds, default duration/delay/direction/distance/easing,
+      safe parameter ranges, and whether a preset repeats.
+- [ ] Implement enter and exit compilation for fade, slide, pop, rise, wipe,
+      and blur-in. Exit variants reverse the semantic motion without reversing
+      easing incorrectly.
+- [ ] Implement pulse, wiggle, and float emphasis as finite tracks. Compiler
+      output must end at identity even when the available window is not an exact
+      multiple of the loop period.
+- [ ] Make compiler output immutable and deterministic: the same document,
+      locale, font-layout signature, and preset catalog version produce byte-for-
+      byte equivalent track data.
+- [ ] Reject unsupported layer/preset combinations before compilation and
+      return structured issues with layer id, slot, and reason.
+- [ ] Define a `CompiledClip` containing scene duration, fps, layer ids, and
+      normalized runtime tracks. Do not persist it or attach it to Zustand project
+      state.
+- [ ] Define a cache key from only compilation inputs. Include project id,
+      artboard id, active locale, timing, animation values, relevant layer
+      geometry/style/content, loaded-font revision, and compiler version.
+- [ ] Implement a small bounded cache with explicit invalidation APIs; do not
+      depend on object identity because Immer replaces object branches.
+
+Tests:
+
+- [ ] Snapshot/golden test every preset at defaults.
+- [ ] Test min/max allowed parameters and all directions.
+- [ ] Assert enter/emphasis/exit property windows do not overlap.
+- [ ] Assert output is identity at all slot boundaries that should settle.
+- [ ] Assert cache hits for irrelevant project changes and misses for every
+      layout-affecting input named in §8.
+
+**Exit:** all v1 presets compile into one deterministic runtime IR.
+
+#### AN-0 step 5 — Implement easing and evaluation
+
+Create:
+
+- `src/editor/animation/easing.ts`
+- `src/editor/animation/evaluator.ts`
+- `src/tests/unit/animationEvaluator.test.ts`
+
+Steps:
+
+- [ ] Implement each easing as a pure function mapping clamped `0–1` input to
+      a finite output. Document whether overshoot/bounce may exceed `0–1` before
+      property clamping.
+- [ ] Evaluate keyframes with binary search or an equally bounded lookup; do
+      not allocate per layer per frame in the hot path.
+- [ ] Return wrapper overrides only for properties that differ from identity.
+      Use one documented identity object for reset behavior.
+- [ ] Apply composition rules once: dx/dy/rotation additive, scales and
+      opacity multiplicative, reveal/blur dedicated.
+- [ ] Define exact behavior for negative time, time after scene duration, zero
+      active tracks, hidden layers, and missing/deleted layer ids.
+- [ ] Add a bulk evaluator API that writes into reusable output objects for
+      export, while retaining a simple allocation-friendly API for tests.
+
+Tests:
+
+- [ ] Golden values at 0%, 25%, 50%, 75%, and 100% for each easing.
+- [ ] Boundary values one millisecond before/at/after every slot.
+- [ ] Base opacity/rotation/scale composition cases.
+- [ ] Determinism over repeated runs and no mutation of project/compiled data.
+- [ ] A 1,800-frame synthetic evaluation benchmark recorded as a non-flaky
+      diagnostic, not a timing assertion in CI.
+
+**AN-0 milestone acceptance:**
+
+- [ ] `pnpm typecheck`, `pnpm test`, `pnpm lint`, and `pnpm build` pass.
+- [ ] Static v1 fixtures migrate and existing static tests remain green.
+- [ ] No animation dependency has entered the UI, export adapter, or file
+      writer yet.
+- [ ] A developer can compile and evaluate a preset-only animated artboard in
+      a unit test without mounting React or Konva.
+
+### AN-0.5 — Rendering and encoding feasibility spike
+
+**Goal:** prove the risky renderer/encoder path before committing to the full
+UI. Spike code may be temporary, but measurements and the reusable renderer
+contract are durable deliverables.
+
+#### AN-0.5.1 Create representative fixtures and measurement protocol
+
+- [ ] Build at least five fixtures: flat vector brand card, photo-heavy story,
+      nested groups, creative effects/masks/frames, and multilingual text with a
+      webfont.
+- [ ] Include 1080×1080 and 1080×1920 outputs at 5 s, 15 s, and synthetic 60 s.
+- [ ] Record test machine, OS, browser/WebView version, codec config, frame
+      size, fps, bitrate, render time, encode time, peak memory when observable,
+      output size, and decode result.
+- [ ] Put the reusable fixture projects in test fixtures; do not depend on a
+      maintainer's private documents.
+
+#### AN-0.5.2 Extract a reusable offscreen scene
+
+Primary files:
+
+- `src/editor/export/rasterExport.ts`
+- new `src/editor/rendering/offscreenScene.ts`
+- existing helpers in `src/editor/canvas/`
+
+Steps:
+
+- [ ] Inventory fidelity drift between `LayerRenderer.tsx` and
+      `rasterExport.ts`. Convert the inventory into tests or tracked limitations.
+- [ ] Note that shape image-fill collection is already present in
+      `collectAssetIds`; add/retain a regression test instead of scheduling that
+      issue as unfixed work.
+- [ ] Extract asset discovery/loading, stage construction, draw, capture, and
+      cleanup into an offscreen-scene lifecycle:
+      `create → applyOverrides → render → capture → dispose`.
+- [ ] Build the Konva stage once per artboard/locale/export job. Load assets
+      and fonts once, and revoke every object URL exactly once on dispose.
+- [ ] Give every animated layer a wrapper `Group` registered by layer id.
+      Keep the base node geometry identical to static rendering.
+- [ ] Apply rotation/scale around the layer center without shifting its base
+      geometry. Verify nested groups and rotated children visually and numerically.
+- [ ] Support identity reset in one pass and make stale/deleted registry
+      entries harmless.
+- [ ] Refactor the current one-shot raster export to use the scene builder, or
+      explicitly defer that integration if it adds risk. Either way, run static
+      export regression tests against the same fixtures.
+
+#### AN-0.5.3 Prove sampled frame fidelity
+
+- [ ] Render reference frames at `0`, `25%`, `50%`, `75%`, and end time for
+      each fixture.
+- [ ] Compare offscreen output with live-stage playback at matching timestamps.
+      Use pixel-diff thresholds for stable fixtures and documented visual review
+      for font/filter cases that are platform-sensitive.
+- [ ] Verify wrapper reset reproduces the static export pixel result.
+- [ ] Verify repeated captures do not grow the stage node count, DOM container
+      count, asset URL count, or registry size.
+- [ ] Measure whether `stage.toCanvas()`, `transferToImageBitmap`, or
+      `VideoFrame(canvas)` provides the safest capture handoff on each target.
+
+#### AN-0.5.4 Probe WebCodecs and MP4 muxing
+
+- [ ] Add a spike-only capability probe for H.264 configurations at target
+      resolutions/fps/bitrates. Probe H.265 separately and treat it as optional.
+- [ ] Evaluate Mediabunny's current browser/Tauri compatibility and bundle
+      cost before adding it as a production dependency.
+- [ ] Encode frames with explicit microsecond timestamps and durations,
+      a roughly two-second keyframe cadence, queue backpressure, and prompt
+      `VideoFrame.close()` calls.
+- [ ] Flush before mux finalization, then decode the output with an independent
+      browser/media-tool smoke path.
+- [ ] Test odd artboard dimensions and settle whether export crops or pads to
+      even dimensions. The choice must be visible in readiness warnings if output
+      pixels change.
+- [ ] Test cancellation during rendering, during encoder backlog, and during
+      finalization. Confirm partial data is discarded.
+- [ ] Benchmark Chrome, Safari, and the Tauri WKWebView on at least one M1-class
+      machine. Record `isConfigSupported`, `mediaCapabilities.encodingInfo`, and
+      measured throughput separately; no single signal proves hardware encoding.
+
+#### AN-0.5.5 Select a GIF encoder
+
+- [ ] Compare at least two viable maintained encoders, including `gifenc` if
+      still suitable at implementation time.
+- [ ] Use the fixture set to compare global/per-frame palettes, dithering,
+      banding, transparency behavior, peak memory, worker compatibility, bundle
+      size, and encode time.
+- [ ] Verify the planned caps (15 s, 720 px long edge, 15 fps) keep memory and
+      UI responsiveness acceptable.
+- [ ] Record the chosen encoder and rejected alternatives in this document.
+
+#### AN-0.5.6 Make the gate decision
+
+Produce a dated decision block containing:
+
+- [ ] Measured render and encode results by runtime/codec.
+- [ ] Chosen capture handoff, muxer, GIF encoder, and output strategy.
+- [ ] Whether H.264 meets the required experience.
+- [ ] Whether H.265 is enabled, deferred, or Tauri-only.
+- [ ] Whether a native VideoToolbox contingency is needed.
+- [ ] Whether the main-thread renderer is acceptable or an OffscreenCanvas
+      architecture spike is required.
+- [ ] Updated performance expectations replacing §6.4 hypotheses.
+
+**Gate outcomes:**
+
+- **Go:** proceed with the architecture as written.
+- **Adjust:** update §§6–7 and proceed only after the changed architecture is
+  reviewed.
+- **Stop:** do not build AN-1; keep schema/evaluator dormant and document why
+  local export is not viable yet.
+
+### AN-1 — Desktop Animate mode and playback
+
+**Goal:** let a user add preset animation, preview it, scrub it, and undo/redo
+it without compromising static editing.
+
+#### AN-1.1 Add per-tab mode and transient playback state
+
+Primary files:
+
+- `src/lib/state/workspaceStore.ts`
+- new `src/lib/state/animationPlaybackStore.ts`
+- `src/app/shell/Workspace.tsx`
+- `src/app/shell/TabBar.tsx`
+
+Steps:
+
+- [ ] Extend persisted workspace state with a mode map keyed by project id,
+      not one global mode. Sanitize missing/closed ids during hydration.
+- [ ] Default every project to Design mode. Decide whether mode persists across
+      restart; if it does, it remains workspace preference, never project data.
+- [ ] Create a transient playback store keyed by project id/artboard id with
+      status, current time, preview override, and monotonic playback origin.
+- [ ] Expose explicit `play`, `pause`, `seek`, `stopAndReset`, and
+      `previewPreset` actions. Do not persist this store.
+- [ ] Stop/reset on tab close/switch, artboard switch, locale switch,
+      project replacement/import, and component unmount.
+
+#### AN-1.2 Add wrapper nodes to the live renderer
+
+Primary files:
+
+- `src/editor/canvas/LayerRenderer.tsx`
+- `src/editor/canvas/CalqoStage.tsx`
+- new `src/editor/animation/useAnimationPlayback.ts`
+
+Steps:
+
+- [ ] Introduce one transient wrapper group per layer while preserving the
+      existing node registry contract used by selection and transforms.
+- [ ] Keep selection outlines and transformer attachment on base geometry or a
+      stable selection target; animated transforms must not be committed when the
+      user begins a transform.
+- [ ] Drive wrappers through one `Konva.Animation`/RAF loop using the pure
+      evaluator. Avoid React state updates every frame.
+- [ ] Pause/reset before drag, transform, crop, text edit, layer creation,
+      delete, group/ungroup, locale change, undo, or redo.
+- [ ] Reset on playback end and on React error recovery.
+- [ ] Verify mobile `MobileStage.tsx`, which reuses `LayerRenderer`, receives
+      identity wrappers only and exposes no Animate UI.
+
+#### AN-1.3 Add animation commands and history behavior
+
+Primary file: `src/editor/commands/projectCommands.ts`
+
+- [ ] Add commands to set/replace/clear an enter, emphasis, or exit preset.
+- [ ] Add commands to update preset parameters, set scene duration, set clip
+      fps, clear all animation on a layer, and clear all animation on an artboard.
+- [ ] Validate the candidate project/animation block before committing it.
+      Commands return structured failure reasons for invalid window bounds.
+- [ ] Coalesce pointer-driven duration/delay/distance changes into one undo
+      step per gesture. Select changes and clear actions remain discrete steps.
+- [ ] Confirm undo/redo restores only document state, then stops/resets
+      playback and invalidates compiled caches.
+- [ ] Ensure duplicate/copy/paste/group/ungroup semantics are explicit:
+      animation follows duplicated layers; grouping does not silently invent or
+      flatten animation; ungrouping preserves child animation.
+
+#### AN-1.4 Build the mode shell
+
+Primary files:
+
+- `src/app/shell/TitleBar.tsx` or `Workspace.tsx` for the mode toggle
+- `src/app/shell/ToolRail.tsx`
+- `src/app/shell/Inspector.tsx`
+- `src/app/shell/inspector/LayersPane.tsx`
+- new `src/app/shell/animation/AnimationInspector.tsx`
+- new `src/app/shell/animation/AnimationTransport.tsx`
+- new `src/app/shell/animation/TimingOverview.tsx`
+
+Steps:
+
+- [ ] Add a Design/Animate segmented control visible only on the desktop shell.
+- [ ] In Animate mode, restrict the tool rail to selection and pan but keep
+      geometry editing available through canvas/inspector.
+- [ ] Annotate each layer row with enter/emphasis/exit state. Badges must remain
+      legible at narrow desktop widths and not replace visibility/lock controls.
+- [ ] Build preset cards from catalog metadata rather than duplicating preset
+      knowledge in JSX.
+- [ ] Add controls only when supported by the chosen preset: direction,
+      distance, duration, delay, easing, and (later) stagger.
+- [ ] Make hover/focus preview transient. Committing a card creates exactly one
+      history entry; leaving/cancelling restores the prior playback state.
+- [ ] Build the bottom transport with play/pause, jump-to-start, scrubber,
+      current/total time, scene duration, fps, and display-only timing bars.
+- [ ] Disable or explain playback when no layer is animated; do not show a
+      blank error state.
+- [ ] Add one-time schema-upgrade and v1-compatible export copy after wording
+      is approved.
+
+#### AN-1.5 Accessibility, responsive behavior, and localization
+
+- [ ] Add EN/FR strings for mode, slots, presets, directions, easing, timing,
+      validation, playback, upgrade, and compatibility export.
+- [ ] Give the mode toggle, preset picker, parameter fields, and transport full
+      keyboard access and visible focus.
+- [ ] Use Space for play/pause only when focus is not in an editable control;
+      reuse `src/app/keyboardGuards.ts` conventions.
+- [ ] Announce play/pause and validation failures without announcing every
+      frame/time tick.
+- [ ] Respect reduced motion for automatic hover previews; explicit user-
+      initiated playback may still run.
+- [ ] Verify light, dark, solid-transparency, 200% zoom, keyboard-only, and
+      coarse-pointer desktop shell behavior.
+- [ ] Keep phone UI unchanged. Record the tablet decision before release.
+
+#### AN-1.6 Tests and acceptance
+
+- [ ] Unit-test commands, validation failures, history coalescing, duplication,
+      and cache invalidation.
+- [ ] Component-test mode-per-tab behavior, preset commit/cancel, conditional
+      controls, and localized labels.
+- [ ] Integration-test edit/undo/tab/locale switches during playback.
+- [ ] Add Playwright coverage: open static project → enter Animate → apply
+      slide/fade/pulse → scrub → undo/redo → reload → verify persistence.
+- [ ] Manually verify no wrapper transform is committed into layer `x/y/w/h`,
+      rotation, scale, or opacity.
+
+**AN-1 milestone acceptance:** a user can animate a static design with presets,
+preview and scrub it, switch modes/tabs/locales safely, and undo every document
+change. Static and mobile flows remain unchanged.
+
+### AN-2 — Local MP4 and GIF export
+
+**Goal:** produce reliable social-ready files locally with bounded memory,
+honest capability reporting, progress, and cancellation.
+
+#### AN-2.1 Introduce export contracts and structured warnings
+
+Create or update:
+
+- `src/lib/adapters/video/VideoExportAdapter.ts`
+- `src/lib/adapters/index.ts`
+- `src/editor/export/exportWarnings.ts`
+- new `src/editor/export/animationExportReadiness.ts`
+
+Steps:
+
+- [ ] Define capability results separately for codec support, power-efficiency
+      signal, streaming destination support, max tested size/fps, and reason codes.
+- [ ] Define a session contract with async `addFrame`, `finalize`, and
+      idempotent `cancel`/`dispose` behavior.
+- [ ] Define output sinks for browser download and Tauri streaming. Avoid
+      changing the existing text-oriented file adapter into a video-specific
+      abstraction.
+- [ ] Expand structured warning codes for unsupported codec, software/unknown
+      efficiency, odd-dimension adjustment, GIF caps, unsupported effect,
+      missing asset, text overflow, memory fallback, cancellation, and partial
+      output cleanup.
+- [ ] Localize codes at the UI boundary; adapter and exporter code returns
+      codes plus parameters only.
+
+#### AN-2.2 Implement the WebCodecs/Mediabunny adapter
+
+- [ ] Add the dependency versions selected in AN-0.5 and record their licenses.
+- [ ] Probe codec configurations lazily when the export dialog opens; cache
+      results only for the current runtime session.
+- [ ] Implement H.264 presets for square, portrait, and arbitrary sizes with a
+      documented bitrate policy and approximately two-second GOP.
+- [ ] Implement H.265 only when the AN-0.5 gate allows it. Label it
+      runtime-supported and potentially power-efficient, never guaranteed
+      hardware-accelerated.
+- [ ] Apply encoder queue backpressure before rendering the next frame.
+- [ ] Close every frame in `finally`; make flush/mux errors cancel and dispose
+      the whole session.
+- [ ] Stream muxed chunks to the selected sink where supported. If browser
+      fallback requires a final Blob, enforce a preflight size estimate and show
+      an honest memory warning.
+- [ ] Make cancellation safe before first frame, mid-frame, during backpressure,
+      during flush, during mux finalization, and after finalization.
+
+#### AN-2.3 Implement frame orchestration
+
+Create `src/editor/export/animatedFrameExport.ts`.
+
+- [ ] Compile once per artboard/locale and build one offscreen scene.
+- [ ] Derive frame count and timestamps from integer frame indices to prevent
+      cumulative floating-point drift.
+- [ ] Apply evaluator output, draw, capture, enqueue, update progress, and yield
+      to the main thread at a measured cadence.
+- [ ] Thread one `AbortSignal` through font/asset load, frame generation,
+      encoder, muxer, and sink.
+- [ ] Report phases (`preparing`, `rendering`, `encoding`, `finalizing`) plus
+      completed/total frames and current locale.
+- [ ] Run multi-locale targets sequentially. Finish and release each output
+      before starting the next; do not ZIP videos in memory.
+- [ ] Reset/dispose the scene and revoke URLs on success, failure, and cancel.
+
+#### AN-2.4 Implement GIF worker export
+
+- [ ] Create a dedicated worker and typed message protocol for init, frame,
+      progress, finish, cancel, error, and dispose.
+- [ ] Enforce caps in both UI and worker input validation.
+- [ ] Downscale with a documented high-quality strategy and preserve aspect
+      ratio.
+- [ ] Apply the palette/dithering policy selected in AN-0.5.
+- [ ] Transfer frame buffers where possible and release them promptly.
+- [ ] Confirm worker cancellation terminates work and releases large buffers.
+
+#### AN-2.5 Extend the export dialog
+
+Primary file: `src/app/shell/ExportDialog.tsx`; split animation-specific UI
+into subcomponents before the file becomes harder to maintain.
+
+- [ ] Add MP4 and GIF only when the active project/artboard is eligible.
+- [ ] Show codec, resolution, fps, duration, estimated frame count, and runtime
+      capability before export.
+- [ ] Default MP4 to H.264. Hide or disable H.265 with a precise reason when
+      unavailable.
+- [ ] Enforce GIF caps interactively and show the effective resized/fps output.
+- [ ] Show structured warnings grouped by artboard/layer where possible.
+- [ ] Add progress and Cancel. Prevent duplicate exports while a job is active.
+- [ ] On close during export, ask to cancel or keep the dialog open; never
+      orphan a job.
+- [ ] Keep existing static export controls and results unchanged.
+
+#### AN-2.6 Verification matrix
+
+- [ ] Unit-test frame timestamp math, bitrate/config selection, warning
+      localization parameters, abort propagation, and sequential locale ordering.
+- [ ] Use fake encoders/sinks to test backpressure, failure at every lifecycle
+      phase, idempotent cancellation, and cleanup.
+- [ ] Decode-verify generated MP4 duration, dimensions, frame count/tolerance,
+      codec, and first/middle/last visual frames.
+- [ ] Verify GIF dimensions, effective fps, loop behavior, transparency policy,
+      and visual quality fixtures.
+- [ ] Run 5 s, 15 s, and 60 s jobs while monitoring responsiveness and memory.
+- [ ] Record a capability matrix for Chrome, Safari, and Tauri WKWebView. Test
+      unsupported-H.264 fallback explicitly.
+- [ ] Add Playwright coverage for capability-disabled UI and a mocked successful
+      export; keep real codec verification in an environment-controlled suite.
+
+**AN-2 milestone acceptance:** H.264 MP4 and capped GIF export complete locally,
+decode successfully, show truthful progress/capabilities, cancel cleanly, and
+do not regress static or multi-locale export.
+
+### AN-3 — Animated HTML and agent handoff
+
+**Goal:** export a self-contained animated representation of the same IR and a
+tool-neutral package suitable for Hyperframes or another coding agent.
+
+#### AN-3.1 Build the CSS animation compiler
+
+Create:
+
+- `src/editor/export/animationCssCompiler.ts`
+- `src/tests/unit/animationCssCompiler.test.ts`
+
+Steps:
+
+- [ ] Convert compiled tracks into stable, collision-resistant `@keyframes`
+      names scoped to the exported document.
+- [ ] Generate percentages from absolute clip time so sequential windows and
+      holds remain identical to evaluator semantics.
+- [ ] Compose base transforms on the inner layer element and animation
+      transforms on a wrapper element.
+- [ ] Map wipe to `clip-path` and blur to `filter` only where the HTML fidelity
+      analyzer allows it; otherwise return structured downgrade warnings.
+- [ ] Keep finite emphasis repetition and final state identical to MP4.
+- [ ] Gate animation behind `prefers-reduced-motion: no-preference`; reduced-
+      motion output renders the settled end state without a flash of hidden
+      content.
+
+#### AN-3.2 Extend editable HTML rendering
+
+Primary file: `src/editor/export/htmlLayoutExport.ts`.
+
+- [ ] Add wrapper divs only for animated layers; preserve current static HTML
+      structure when the project has no animation.
+- [ ] Carry layer/artboard identifiers as sanitized data attributes useful for
+      diagnostics and agents, not as runtime dependencies.
+- [ ] For groups that rasterize, animate the group as one unit. Emit one warning
+      per lost child animation and never silently flatten it.
+- [ ] Ensure embedded fonts/assets and CSP assumptions still work in a fully
+      self-contained file.
+- [ ] Define standalone and snippet behavior; snippets must include required
+      scoped keyframes without polluting host-page names.
+
+#### AN-3.3 Add cross-renderer conformance tests
+
+- [ ] Sample the evaluator and browser-computed wrapper styles at the same
+      timestamps for every transform/opacity preset.
+- [ ] Compare translate, scale, rotation, opacity, clip, and blur within stated
+      tolerances.
+- [ ] Include non-zero base rotation/opacity, nested groups, locale changes,
+      and reduced-motion mode.
+- [ ] Snapshot structured downgrade warnings and their EN/FR presentation.
+
+#### AN-3.4 Build the neutral animation package
+
+- [ ] Export `index.html`, assets, `manifest.json`, and `README.md` in a ZIP.
+- [ ] Version the manifest independently. Include clip settings, artboard
+      dimensions, locale, layer metadata, compiled IR, warnings, and content hashes.
+- [ ] Do not include provider keys, local paths, project history, private
+      settings, or raw Dexie records.
+- [ ] Document a Hyperframes command as one consumer example, while keeping the
+      package usable by any headless browser renderer.
+- [ ] Validate the manifest against a schema before download and add a package
+      round-trip fixture.
+
+#### AN-3.5 Consider text reveals as a separately gated sub-milestone
+
+- [ ] Build a fragment compiler from final text layout per locale; fragments
+      are runtime-only.
+- [ ] Invalidate on text, font, font-load revision, box size, line height,
+      letter spacing, alignment, and locale changes.
+- [ ] Implement typewriter and per-word rise only after live/MP4/HTML fragment
+      output conforms on the fixture matrix.
+- [ ] Keep text reveals behind a feature flag until font-loading and line-wrap
+      behavior is stable across Chrome/Safari/WKWebView.
+
+**AN-3 milestone acceptance:** animated standalone HTML matches evaluator timing
+within tolerance, degrades explicitly, honors reduced motion, and the neutral
+package renders without Calqo or secret state.
+
+### AN-4 — Scenes, transitions, and prompt/MCP animation (v2)
+
+**Goal:** extend the proven single-scene model only after v1 usage and export
+performance are understood.
+
+#### AN-4.1 Validate the product need
+
+- [ ] Review real v1 projects and determine whether users need artboard scenes,
+      longer clips, audio, video layers, or richer timing first.
+- [ ] Treat scene ordering as a new portable document decision; do not activate
+      the reserved field solely because it exists.
+- [ ] Define total-duration calculation, per-scene locale behavior, transitions,
+      poster frames, and transition ownership before schema changes.
+
+#### AN-4.2 Implement scene sequencing
+
+- [ ] Validate unique existing artboard ids and total duration ≤ 60 s.
+- [ ] Compile each scene independently, then compose a clip time map.
+- [ ] Implement cut first; add fade/slide only with explicit outgoing/incoming
+      frame composition rules.
+- [ ] Reuse/dispose offscreen scenes under a measured memory budget.
+- [ ] Extend transport and export progress without turning timing bars into an
+      accidental full timeline editor.
+
+#### AN-4.3 Add validated AI/MCP operations
+
+- [ ] Add command-level MCP schemas for set/clear preset, set scene duration,
+      reorder scenes, and optionally set custom windows.
+- [ ] Route execution through `projectCommands.ts`, existing permissions, and
+      `safeImportProject`; reject raw patches.
+- [ ] Update prompt contracts with the exact animation schema, preset catalog,
+      duration limits, and examples.
+- [ ] Validate generated animation separately before adoption and show precise
+      repairable issues.
+- [ ] Add deterministic mock-provider fixtures before testing real providers.
+
+#### AN-4.4 Reassess deferred formats and native encoding
+
+- [ ] Reconsider audio, WebM, imported video/GIF layers, native VideoToolbox,
+      and a richer timing UI based on measured user need and AN-2 telemetry/manual
+      reports.
+- [ ] Give each accepted item its own plan; do not fold them invisibly into
+      scene work.
+
+## 14. Test strategy and release evidence
+
+### 14.1 Test layers
+
+| Layer              | What it proves                                            | Representative evidence                |
+| ------------------ | --------------------------------------------------------- | -------------------------------------- |
+| Schema/migration   | Portable files are accepted or rejected deterministically | v1/v2 fixtures, malformed JSON matrix  |
+| Compiler/evaluator | Presets have stable timing and values                     | golden tracks and timestamp tables     |
+| Commands/history   | User edits are valid and undoable                         | command + coalescing tests             |
+| Renderer           | Live and offscreen frames match                           | sampled pixel/visual comparisons       |
+| Encoder/muxer      | Files are valid and resource-safe                         | decode verification, cancel/leak tests |
+| UI                 | Mode, inspector, transport, warnings are usable           | component and Playwright flows         |
+| Cross-runtime      | Capability claims are honest                              | Chrome/Safari/WKWebView matrix         |
+| Cross-renderer     | HTML agrees with evaluator                                | computed-style conformance samples     |
+
+### 14.2 Permanent fixture set
+
+Keep fixtures small enough for the repository and free of third-party/private
+content. At minimum include:
+
+- A v1 static `.calqo` file for migration.
+- A v2 static project.
+- A v2 preset-animated project using all v1 presets.
+- A v2 custom-track project at validation boundaries.
+- Nested groups with parent and child animation.
+- Non-zero base rotation, opacity, gradients, image fills, masks, frames,
+  filters, sticker outlines, expressive strokes, and list markers.
+- EN/FR content with different wrapping and an embedded/loaded webfont.
+- Odd-dimension and maximum-duration artboards.
+
+Large generated outputs and licensed photo fixtures should remain CI artifacts
+or documented local fixtures, not committed binaries.
+
+### 14.3 Required commands
+
+For an implementation change:
+
+```bash
+pnpm typecheck
+pnpm test
+```
+
+For a milestone gate:
+
+```bash
+pnpm typecheck
+pnpm test
+pnpm lint
+pnpm build
+pnpm e2e
+```
+
+If a runtime codec test cannot run in ordinary CI, keep its harness in the
+repository and record the exact manual command, runtime version, and result in
+the milestone decision block.
+
+## 15. Release, rollout, and rollback
+
+### 15.1 Feature flags
+
+- Keep Animate mode behind one build/runtime flag through AN-1 and AN-2.
+- Keep H.265, animated HTML, text reveals, and scenes behind separate flags so
+  one unstable capability does not disable H.264 preset animation.
+- Do not write feature flags into project files. A client that understands
+  schema v2 must preserve valid disabled-feature data even when it cannot edit
+  it.
+
+### 15.2 Rollout order
+
+1. Developer builds with schema/evaluator tests only.
+2. Internal Animate UI with export disabled.
+3. H.264 export on explicitly tested browser/Tauri runtimes.
+4. GIF after worker/memory verification.
+5. Optional H.265 by capability.
+6. Animated HTML/package.
+7. Scenes and agent authoring only after a new product review.
+
+### 15.3 Rollback behavior
+
+- Disabling UI/export must not make v2 projects unreadable.
+- Static editing/export continues to ignore animation data.
+- If an encoder is disabled after release, retain HTML/GIF/static fallbacks and
+  show a structured capability message.
+- Never downgrade and overwrite an animated project automatically. v1 output
+  is an explicit export of an unanimated project only.
+
+## 16. Risks and mitigations
+
+| Risk                                 | Early signal                     | Mitigation / decision owner                                                |
+| ------------------------------------ | -------------------------------- | -------------------------------------------------------------------------- |
+| Live/offscreen renderer drift        | Sampled frames differ            | Shared helpers, fixture diffs, AN-0.5 gate                                 |
+| WebCodecs missing or software-only   | Probe/benchmark failure          | Honest capability UI; GIF/HTML fallback; native contingency review         |
+| 60 s export exhausts memory          | Increasing heap/DOM/URLs         | Reusable stage, backpressure, streamed sinks, sequential locales           |
+| React and imperative Konva fight     | Jumps or geometry commits        | Wrapper/base separation and edit-start reset tests                         |
+| Schema v2 breaks portability         | Old fixtures/import failures     | Real migration, explicit compatibility export, strict fixtures             |
+| Full-snapshot history grows          | Large undo memory                | Persist presets only, coalesce gestures, benchmark representative projects |
+| HTML diverges from MP4               | Conformance samples differ       | Evaluator remains truth; CSS compiler tests and warnings                   |
+| Font arrival changes text motion     | Preview/export mismatch          | Font revision in cache key; compile after fonts settle                     |
+| GIF quality is unacceptable          | Banding/photo artifacts          | Fixture bake-off, hard caps, explicit format guidance                      |
+| Feature expands into motion suite    | Timeline/graph requests block v1 | Enforce preset UI and out-of-scope list; separate AN-4 decisions           |
+| Animation reaches phone accidentally | Mobile regression                | Desktop-only mode gate; identity wrappers in shared renderer               |
+
+## 17. Planned file map
+
+This map is a guide, not permission to create parallel abstractions when an
+existing module can own the work.
+
+```text
+src/
+  editor/
+    animation/
+      compiler.ts                 preset/custom document -> CompiledClip
+      easing.ts                   pure easing functions
+      evaluator.ts                CompiledClip + tMs -> wrapper overrides
+      presets.ts                  preset metadata/defaults/constraints
+      types.ts                    runtime-only, non-persisted types
+      useAnimationPlayback.ts     live Konva playback lifecycle
+    rendering/
+      offscreenScene.ts           reusable stage/assets/wrappers lifecycle
+    export/
+      animatedFrameExport.ts      frame loop, progress, abort, locale ordering
+      animationCssCompiler.ts     IR -> scoped CSS keyframes
+      animationExportReadiness.ts structured animation warnings
+  app/shell/animation/
+      AnimationInspector.tsx
+      AnimationTransport.tsx
+      TimingOverview.tsx
+  lib/
+    adapters/video/
+      VideoExportAdapter.ts
+      webCodecsVideoExportAdapter.ts
+    state/
+      animationPlaybackStore.ts   transient only
+  tests/
+    fixtures/animation/
+    unit/animationSchema.test.ts
+    unit/animationCompiler.test.ts
+    unit/animationEvaluator.test.ts
+    unit/animationCommands.test.ts
+    unit/animationCssCompiler.test.ts
+```
+
+Expected modifications include `schema.ts`, `migrations.ts`, `fixture.ts`,
+`projectCommands.ts`, `LayerRenderer.tsx`, `CalqoStage.tsx`,
+`rasterExport.ts`, `htmlLayoutExport.ts`, `exportWarnings.ts`,
+`ExportDialog.tsx`, `workspaceStore.ts`, shell mode/layout components, adapter
+exports, and both locale catalogs.
+
+## 18. Decisions required before implementation
+
+These decisions are intentionally placed at the milestone where they block
+work; they do not all need to be answered now.
+
+### Before AN-0 schema merge
+
+1. Confirm the normative timing behavior in AN-0.1, especially reject versus
+   auto-extend when a window exceeds scene duration.
+2. Confirm numeric caps for distance, blur, scale, rotation, delay, and
+   emphasis frequency.
+3. Decide whether `clipSettings` belongs on the project at schema v2 or can
+   remain runtime/export preference until scenes exist.
+
+### Before AN-1 UI merge
+
+4. Set the v1 preset knob surface. Recommendation: duration/delay/easing for
+   all; direction/distance only where meaningful; no stagger until fragment or
+   group semantics are implemented.
+5. Decide whether desktop-shell tablets get full Animate mode, playback-only,
+   or no Animate mode.
+6. Approve schema-upgrade and v1-compatible export wording.
+7. Decide whether animated projects receive a library badge or reopen in their
+   last workspace mode.
+
+### Before AN-2 export merge
+
+8. Approve AN-0.5's muxer, GIF encoder, bitrate presets, even-dimension policy,
+   and measured runtime support matrix.
+9. Decide the browser fallback when streamed file output is unavailable and a
+   predicted output exceeds the safe in-memory threshold.
+10. Decide whether H.265 is hidden, disabled with explanation, or enabled when
+    supported but not power-efficient.
+
+### Before AN-3/AN-4
+
+11. Approve animated snippet scoping and downgrade policy for rasterized groups.
+12. Revalidate Hyperframes CLI/package details at implementation time; it is an
+    external labs consumer, not a stable Calqo dependency.
+13. Make a fresh product decision before enabling scenes, transitions, custom
+    keyframe authoring, audio, or video layers.
+
+## 19. Review log
+
+**2026-07-19 — detailed implementation pass (Codex).** Expanded the original
+architecture proposal into gated, step-by-step milestones with concrete file
+ownership, migration/compatibility work, renderer and codec spike protocol,
+UI/history/playback lifecycle, adapter contracts, export cleanup, HTML
+conformance, test fixtures, rollout/rollback, and milestone acceptance. Updated
+the feasibility notes to reflect the current repository: shape image-fill asset
+collection is now implemented in `rasterExport.ts` and should receive a
+regression test rather than remain a prerequisite bug.
+
+**2026-07-19 — external critical review (Codex) incorporated.** Major accepted
+points: compiled tracks removed from the persisted schema; explicit composition
+semantics with transient wrapper nodes; text-reveal presets deferred; migration
+and one-way compatibility made concrete; mode state assigned per tab in
+`workspaceStore`; a session-based `VideoExportAdapter`; Mediabunny preferred
+over deprecated `mp4-muxer`, subject to the spike; HEVC capability wording;
+static-export semantics; animated-HTML transform composition and group warnings;
+GIF quality/memory evaluation; streaming/cancellation; structured localized
+warnings; accessibility; and display-only timing bars. Not adopted: removing
+the preset/custom discriminated union. Keeping presets as the persisted source
+and compiled tracks as runtime-only resolves the dual-source concern while
+retaining an agent/power-user path.
