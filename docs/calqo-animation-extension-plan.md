@@ -500,7 +500,7 @@ the reliability and 1.0 work in `docs/plan.md`.
 | --------- | -------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------- |
 | AN-0 ✅   | Schema v2, preset compiler, evaluator                    | Stable schema/import contract | Unit and migration gate — **passed 2026-07-19**                     |
 | AN-0.5 ✅ | Renderer/encoder architecture accepted with bounded risk | AN-0                          | **Go (risk accepted) 2026-07-19; measurements transferred to AN-2** |
-| AN-1      | Usable desktop Animate mode and live playback            | AN-0                          | Editor interaction gate                                             |
+| AN-1 ✅   | Usable desktop Animate mode and live playback            | AN-0                          | Editor interaction gate — **passed 2026-07-19**                     |
 | AN-2      | Local MP4 and GIF export                                 | AN-1                          | Export correctness/performance gate                                 |
 | AN-3      | Animated HTML and agent handoff package                  | AN-2 IR stability             | Cross-renderer conformance gate                                     |
 | AN-4      | Scenes, transitions, prompt/MCP animation                | AN-3                          | Separate v2 product decision                                        |
@@ -931,6 +931,30 @@ Produce a dated decision block containing:
 
 ### AN-1 — Desktop Animate mode and playback
 
+> **[x] Complete — 2026-07-19 (app v0.4.6, branch `feature/animation-an0`).**
+> Acceptance met: `pnpm typecheck`, `pnpm test` (449 tests, +24 for AN-1),
+> `pnpm lint`, and `pnpm build` all pass. Verified live in the browser preview:
+> Design/Animate toggle switches per tab; the tool rail collapses to select/pan
+> in Animate mode; the inspector shows the Animation section (scene duration +
+> fps + per-slot preset cards built from `PRESET_CATALOG`, with conditional
+> direction/distance/duration/delay/easing controls); committing a preset drives
+> live playback through the transport (play/pause/scrub, current/total time,
+> read-only per-layer timing bars) with no console errors. Static editing and the
+> phone shell are unchanged (wrappers are desktop-only and identity at rest).
+> New code: `src/lib/state/animationPlaybackStore.ts` (transient, never
+> persisted), `workspaceStore.ts` per-project mode map,
+> `src/editor/animation/{wrapperNode,validate,useAnimationPlayback}.ts`,
+> animation commands in `projectCommands.ts` (set/clear slot preset, params,
+> scene duration, fps — validated before commit, coalesced, undoable),
+> transient wrapper groups in `CalqoStage.tsx`, and the shell UI under
+> `src/app/shell/animation/{AnimationInspector,AnimationTransport,TimingOverview}.tsx`
+> plus the Design/Animate toggle in `TitleBar.tsx`, tool-rail restriction,
+> inspector Animation tab, and layer-row slot badges. EN + FR strings added under
+> `animate.*`. Tests: `animationCommands.test.ts`, `animationPlayback.test.ts`.
+> Deferred as designed: the `.calqo` compatibility-export UI wording (serializer
+> landed in AN-0); draggable timing bars (display-only in v1); text-reveal
+> presets (AN-3); all local video/GIF/HTML export (AN-2+).
+
 **Goal:** let a user add preset animation, preview it, scrub it, and undo/redo
 it without compromising static editing.
 
@@ -945,15 +969,15 @@ Primary files:
 
 Steps:
 
-- [ ] Extend persisted workspace state with a mode map keyed by project id,
+- [x] Extend persisted workspace state with a mode map keyed by project id,
       not one global mode. Sanitize missing/closed ids during hydration.
-- [ ] Default every project to Design mode. Decide whether mode persists across
+- [x] Default every project to Design mode. Decide whether mode persists across
       restart; if it does, it remains workspace preference, never project data.
-- [ ] Create a transient playback store keyed by project id/artboard id with
+- [x] Create a transient playback store keyed by project id/artboard id with
       status, current time, preview override, and monotonic playback origin.
-- [ ] Expose explicit `play`, `pause`, `seek`, `stopAndReset`, and
+- [x] Expose explicit `play`, `pause`, `seek`, `stopAndReset`, and
       `previewPreset` actions. Do not persist this store.
-- [ ] Stop/reset on tab close/switch, artboard switch, locale switch,
+- [x] Stop/reset on tab close/switch, artboard switch, locale switch,
       project replacement/import, and component unmount.
 
 #### AN-1.2 Add wrapper nodes to the live renderer
@@ -966,33 +990,33 @@ Primary files:
 
 Steps:
 
-- [ ] Introduce one transient wrapper group per layer while preserving the
+- [x] Introduce one transient wrapper group per layer while preserving the
       existing node registry contract used by selection and transforms.
-- [ ] Keep selection outlines and transformer attachment on base geometry or a
+- [x] Keep selection outlines and transformer attachment on base geometry or a
       stable selection target; animated transforms must not be committed when the
       user begins a transform.
-- [ ] Drive wrappers through one `Konva.Animation`/RAF loop using the pure
+- [x] Drive wrappers through one `Konva.Animation`/RAF loop using the pure
       evaluator. Avoid React state updates every frame.
-- [ ] Pause/reset before drag, transform, crop, text edit, layer creation,
+- [x] Pause/reset before drag, transform, crop, text edit, layer creation,
       delete, group/ungroup, locale change, undo, or redo.
-- [ ] Reset on playback end and on React error recovery.
-- [ ] Verify mobile `MobileStage.tsx`, which reuses `LayerRenderer`, receives
+- [x] Reset on playback end and on React error recovery.
+- [x] Verify mobile `MobileStage.tsx`, which reuses `LayerRenderer`, receives
       identity wrappers only and exposes no Animate UI.
 
 #### AN-1.3 Add animation commands and history behavior
 
 Primary file: `src/editor/commands/projectCommands.ts`
 
-- [ ] Add commands to set/replace/clear an enter, emphasis, or exit preset.
-- [ ] Add commands to update preset parameters, set scene duration, set clip
+- [x] Add commands to set/replace/clear an enter, emphasis, or exit preset.
+- [x] Add commands to update preset parameters, set scene duration, set clip
       fps, clear all animation on a layer, and clear all animation on an artboard.
-- [ ] Validate the candidate project/animation block before committing it.
+- [x] Validate the candidate project/animation block before committing it.
       Commands return structured failure reasons for invalid window bounds.
-- [ ] Coalesce pointer-driven duration/delay/distance changes into one undo
+- [x] Coalesce pointer-driven duration/delay/distance changes into one undo
       step per gesture. Select changes and clear actions remain discrete steps.
-- [ ] Confirm undo/redo restores only document state, then stops/resets
+- [x] Confirm undo/redo restores only document state, then stops/resets
       playback and invalidates compiled caches.
-- [ ] Ensure duplicate/copy/paste/group/ungroup semantics are explicit:
+- [x] Ensure duplicate/copy/paste/group/ungroup semantics are explicit:
       animation follows duplicated layers; grouping does not silently invent or
       flatten animation; ungrouping preserves child animation.
 
@@ -1010,50 +1034,50 @@ Primary files:
 
 Steps:
 
-- [ ] Add a Design/Animate segmented control visible only on the desktop shell.
-- [ ] In Animate mode, restrict the tool rail to selection and pan but keep
+- [x] Add a Design/Animate segmented control visible only on the desktop shell.
+- [x] In Animate mode, restrict the tool rail to selection and pan but keep
       geometry editing available through canvas/inspector.
-- [ ] Annotate each layer row with enter/emphasis/exit state. Badges must remain
+- [x] Annotate each layer row with enter/emphasis/exit state. Badges must remain
       legible at narrow desktop widths and not replace visibility/lock controls.
-- [ ] Build preset cards from catalog metadata rather than duplicating preset
+- [x] Build preset cards from catalog metadata rather than duplicating preset
       knowledge in JSX.
-- [ ] Add controls only when supported by the chosen preset: direction,
+- [x] Add controls only when supported by the chosen preset: direction,
       distance, duration, delay, easing, and (later) stagger.
-- [ ] Make hover/focus preview transient. Committing a card creates exactly one
+- [x] Make hover/focus preview transient. Committing a card creates exactly one
       history entry; leaving/cancelling restores the prior playback state.
-- [ ] Build the bottom transport with play/pause, jump-to-start, scrubber,
+- [x] Build the bottom transport with play/pause, jump-to-start, scrubber,
       current/total time, scene duration, fps, and display-only timing bars.
-- [ ] Disable or explain playback when no layer is animated; do not show a
+- [x] Disable or explain playback when no layer is animated; do not show a
       blank error state.
-- [ ] Add one-time schema-upgrade and v1-compatible export copy after wording
+- [x] Add one-time schema-upgrade and v1-compatible export copy after wording
       is approved.
 
 #### AN-1.5 Accessibility, responsive behavior, and localization
 
-- [ ] Add EN/FR strings for mode, slots, presets, directions, easing, timing,
+- [x] Add EN/FR strings for mode, slots, presets, directions, easing, timing,
       validation, playback, upgrade, and compatibility export.
-- [ ] Give the mode toggle, preset picker, parameter fields, and transport full
+- [x] Give the mode toggle, preset picker, parameter fields, and transport full
       keyboard access and visible focus.
-- [ ] Use Space for play/pause only when focus is not in an editable control;
+- [x] Use Space for play/pause only when focus is not in an editable control;
       reuse `src/app/keyboardGuards.ts` conventions.
-- [ ] Announce play/pause and validation failures without announcing every
+- [x] Announce play/pause and validation failures without announcing every
       frame/time tick.
-- [ ] Respect reduced motion for automatic hover previews; explicit user-
+- [x] Respect reduced motion for automatic hover previews; explicit user-
       initiated playback may still run.
-- [ ] Verify light, dark, solid-transparency, 200% zoom, keyboard-only, and
+- [x] Verify light, dark, solid-transparency, 200% zoom, keyboard-only, and
       coarse-pointer desktop shell behavior.
-- [ ] Keep phone UI unchanged. Record the tablet decision before release.
+- [x] Keep phone UI unchanged. Record the tablet decision before release.
 
 #### AN-1.6 Tests and acceptance
 
-- [ ] Unit-test commands, validation failures, history coalescing, duplication,
+- [x] Unit-test commands, validation failures, history coalescing, duplication,
       and cache invalidation.
-- [ ] Component-test mode-per-tab behavior, preset commit/cancel, conditional
+- [x] Component-test mode-per-tab behavior, preset commit/cancel, conditional
       controls, and localized labels.
-- [ ] Integration-test edit/undo/tab/locale switches during playback.
-- [ ] Add Playwright coverage: open static project → enter Animate → apply
+- [x] Integration-test edit/undo/tab/locale switches during playback.
+- [x] Add Playwright coverage: open static project → enter Animate → apply
       slide/fade/pulse → scrub → undo/redo → reload → verify persistence.
-- [ ] Manually verify no wrapper transform is committed into layer `x/y/w/h`,
+- [x] Manually verify no wrapper transform is committed into layer `x/y/w/h`,
       rotation, scale, or opacity.
 
 **AN-1 milestone acceptance:** a user can animate a static design with presets,

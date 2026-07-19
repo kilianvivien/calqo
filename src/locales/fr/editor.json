@@ -903,6 +903,83 @@
     "open": "Optimiser les ressources…",
     "importNotice": "« {{name}} » est volumineuse ({{width}}×{{height}} px) et peut ralentir l'édition et alourdir les exports."
   },
+  "animate": {
+    "mode": {
+      "design": "Création",
+      "animate": "Animation",
+      "toggleLabel": "Mode d'édition"
+    },
+    "inspector": {
+      "title": "Animation",
+      "empty": "Sélectionnez un calque pour l'animer.",
+      "noAnimation": "Aucune animation sur ce calque.",
+      "sceneTitle": "Scène",
+      "sceneDuration": "Durée",
+      "fps": "Images/s",
+      "seconds": "{{value}} s",
+      "clearLayer": "Supprimer l'animation du calque",
+      "clearArtboard": "Effacer toutes les animations"
+    },
+    "slots": {
+      "enter": "Entrée",
+      "emphasis": "Accent",
+      "exit": "Sortie",
+      "none": "Aucun"
+    },
+    "params": {
+      "duration": "Durée",
+      "delay": "Délai",
+      "direction": "Direction",
+      "distance": "Distance",
+      "easing": "Accélération",
+      "ms": "{{value}} ms",
+      "px": "{{value}} px"
+    },
+    "presets": {
+      "fade": "Fondu",
+      "slide": "Glissement",
+      "pop": "Pop",
+      "rise": "Montée",
+      "wipe": "Balayage",
+      "blur-in": "Flou",
+      "pulse": "Pulsation",
+      "wiggle": "Oscillation",
+      "float": "Flottement"
+    },
+    "directions": {
+      "up": "Haut",
+      "down": "Bas",
+      "left": "Gauche",
+      "right": "Droite"
+    },
+    "easings": {
+      "linear": "Linéaire",
+      "ease-in": "Accélération",
+      "ease-out": "Décélération",
+      "ease-in-out": "Accél./décél.",
+      "overshoot": "Dépassement",
+      "bounce": "Rebond"
+    },
+    "transport": {
+      "play": "Lecture",
+      "pause": "Pause",
+      "restart": "Aller au début",
+      "time": "{{current}} / {{total}} s",
+      "scrub": "Tête de lecture",
+      "empty": "Ajoutez une animation à un calque pour la prévisualiser.",
+      "timingTitle": "Chronologie"
+    },
+    "errors": {
+      "invalid": "Cette animation n'est pas valide.",
+      "preset-disabled": "Ce préréglage n'est pas encore disponible.",
+      "unsupported-slot": "Ce préréglage ne peut pas être utilisé dans cet emplacement.",
+      "unsupported-layer-kind": "Ce préréglage ne prend pas en charge ce calque.",
+      "window-exceeds-scene": "Cette durée ne tient pas dans la scène.",
+      "slot-window-overlap": "L'entrée et la sortie se chevauchent.",
+      "no-layer": "Aucun calque sélectionné.",
+      "no-artboard": "Aucun plan de travail ouvert."
+    }
+  },
   "presets": {
     "ig-square": "Carré Instagram",
     "ig-portrait": "Portrait Instagram",

@@ -8,23 +8,36 @@ import {
 import {
   createArtboard,
   createDefaultProject,
+  DEFAULT_SCENE_DURATION_MS,
+  MAX_SCENE_DURATION_MS,
+  MIN_SCENE_DURATION_MS,
   type BackgroundFill,
   type CalqoArtboard,
   type CalqoAssetRef,
   type CalqoLayer,
   type CalqoProject,
+  type ClipSettings,
   type CreateProjectOptions,
   type GlossaryEntry,
   type GroupLayer,
   type ImageBackgroundRemovalPass,
+  type LayerAnimation,
   type ListLayer,
   type ListItem,
   type LocaleCode,
+  type PresetInstance,
   type ShapeLayer,
   type StrokeLook,
   type StrokeStyle,
   type TextLayer,
 } from '@/lib/schema';
+import {
+  validatePresetAnimation,
+  type AnimationValidationCode,
+} from '@/editor/animation/validate';
+import type { PresetLayerKind, PresetSlot } from '@/editor/animation/presets';
+import { invalidateProjectClips } from '@/editor/animation/compiler';
+import { animationPlaybackStore } from '@/lib/state/animationPlaybackStore';
 import type { TranslationResult } from '@/editor/ai/AIProvider';
 import {
   decodeListRowId,
@@ -174,14 +187,24 @@ export function undoProject(id: string): void {
   const current = projectStore.getState().projects[id];
   if (!current) return;
   const previous = historyStore.getState().undo(id, current);
-  if (previous) replaceFromHistory(previous);
+  if (previous) {
+    // Undo restores document state only; stop transient playback and drop any
+    // stale compiled clips so the next frame recompiles (§6.5).
+    animationPlaybackStore.getState().stopAndReset();
+    invalidateProjectClips(id);
+    replaceFromHistory(previous);
+  }
 }
 
 export function redoProject(id: string): void {
   const current = projectStore.getState().projects[id];
   if (!current) return;
   const next = historyStore.getState().redo(id, current);
-  if (next) replaceFromHistory(next);
+  if (next) {
+    animationPlaybackStore.getState().stopAndReset();
+    invalidateProjectClips(id);
+    replaceFromHistory(next);
+  }
 }
 
 export function canUndoProject(id: string | null): boolean {
@@ -352,6 +375,8 @@ export async function requestCloseProject(
 /** Close a tab, flushing any pending save first so nothing is lost. */
 export async function closeProject(id: string): Promise<void> {
   await saveProject(id);
+  animationPlaybackStore.getState().stopAndReset();
+  invalidateProjectClips(id);
   workspaceStore.getState().closeTab(id);
   projectStore.getState().removeProject(id);
   desktopFileStore.getState().clearFile(id);
@@ -1056,6 +1081,208 @@ export function updateLayersInActiveArtboard(
           applyLayerPatch(layer, patch);
         });
       });
+    },
+    options,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Animation commands (AN-1.3). Preset-authored animation is validated before it
+// is committed, so an invalid window/slot/kind never enters the document — the
+// same guarantee `safeImportProject` gives AI-authored animation (§4.4). All
+// edits route through `editProject` for undo/redo like every other mutation.
+// ---------------------------------------------------------------------------
+
+/** Result of an animation command: success, or a structured reason to surface
+ * (localized at the UI boundary). */
+export type AnimationCommandResult =
+  | { ok: true }
+  | { ok: false; code: AnimationValidationCode | 'no-layer' | 'no-artboard' };
+
+function activeArtboard(project: CalqoProject, artboardId?: string): CalqoArtboard | undefined {
+  const id = artboardId ?? activeArtboardId(project);
+  return id ? project.artboards.find((ab) => ab.id === id) : undefined;
+}
+
+function sceneDurationOf(artboard: CalqoArtboard): number {
+  return artboard.timing?.duration ?? DEFAULT_SCENE_DURATION_MS;
+}
+
+/** A preset-mode animation for a layer, or a fresh empty one. Custom animation
+ * is replaced by preset authoring (the two are a strict either/or, §4.1). */
+function presetAnimationOf(
+  layer: CalqoLayer,
+): Extract<LayerAnimation, { mode: 'preset' }> {
+  if (layer.animation?.mode === 'preset') return { ...layer.animation };
+  return { mode: 'preset' };
+}
+
+/** True once a preset animation has no slots left — drop the field entirely so a
+ * layer without animation stays byte-identical to a static one. */
+function isEmptyPresetAnimation(
+  anim: Extract<LayerAnimation, { mode: 'preset' }>,
+): boolean {
+  return !anim.enter && !anim.emphasis && !anim.exit;
+}
+
+/**
+ * Set, replace, or clear (`instance === null`) one preset slot on a layer.
+ * Validates the resulting block against the scene before committing; on failure
+ * nothing is written and the reason is returned.
+ */
+export function setLayerPreset(
+  projectId: string,
+  layerId: string,
+  slot: PresetSlot,
+  instance: PresetInstance | null,
+  options: EditOptions = { undoable: true },
+): AnimationCommandResult {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return { ok: false, code: 'no-artboard' };
+  const artboard = activeArtboard(project);
+  if (!artboard) return { ok: false, code: 'no-artboard' };
+  const layer = findLayerInArtboard(artboard, layerId);
+  if (!layer) return { ok: false, code: 'no-layer' };
+
+  const candidate = presetAnimationOf(layer);
+  if (instance) candidate[slot] = instance;
+  else delete candidate[slot];
+
+  const empty = isEmptyPresetAnimation(candidate);
+  if (!empty) {
+    const validation = validatePresetAnimation(
+      candidate,
+      layer.type as PresetLayerKind,
+      sceneDurationOf(artboard),
+    );
+    if (!validation.ok) {
+      return { ok: false, code: validation.code };
+    }
+  }
+
+  editProject(
+    projectId,
+    (draft) => {
+      const ab = getArtboard(draft, artboard.id);
+      if (!ab) return;
+      updateLayer(ab.layers as CalqoLayer[], layerId, (target) => {
+        if (empty) delete target.animation;
+        else target.animation = candidate;
+      });
+    },
+    options,
+  );
+  return { ok: true };
+}
+
+/** Merge parameter changes into an existing preset slot (duration/delay/
+ * direction/distance/easing). Used by the inspector's sliders; pass a coalescing
+ * `options` for pointer-driven gestures so they form one undo step. */
+export function updateLayerPresetParams(
+  projectId: string,
+  layerId: string,
+  slot: PresetSlot,
+  patch: Partial<PresetInstance>,
+  options: EditOptions = { undoable: true },
+): AnimationCommandResult {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return { ok: false, code: 'no-artboard' };
+  const artboard = activeArtboard(project);
+  if (!artboard) return { ok: false, code: 'no-artboard' };
+  const layer = findLayerInArtboard(artboard, layerId);
+  if (!layer) return { ok: false, code: 'no-layer' };
+  if (layer.animation?.mode !== 'preset') return { ok: false, code: 'no-layer' };
+  const current = layer.animation[slot];
+  if (!current) return { ok: false, code: 'no-layer' };
+
+  return setLayerPreset(
+    projectId,
+    layerId,
+    slot,
+    { ...current, ...patch },
+    options,
+  );
+}
+
+/** Remove all animation from a layer. */
+export function clearLayerAnimation(
+  projectId: string,
+  layerId: string,
+  options: EditOptions = { undoable: true },
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      const artboardId = activeArtboardId(draft as CalqoProject);
+      if (!artboardId) return;
+      const artboard = getArtboard(draft, artboardId);
+      if (!artboard) return;
+      updateLayer(artboard.layers as CalqoLayer[], layerId, (layer) => {
+        delete layer.animation;
+      });
+    },
+    options,
+  );
+}
+
+/** Strip animation from every layer in an artboard (and its groups). */
+export function clearArtboardAnimation(
+  projectId: string,
+  artboardId?: string,
+  options: EditOptions = { undoable: true },
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      const id = artboardId ?? activeArtboardId(draft as CalqoProject);
+      if (!id) return;
+      const artboard = getArtboard(draft, id);
+      if (!artboard) return;
+      const strip = (layers: CalqoLayer[]) => {
+        for (const layer of layers) {
+          delete layer.animation;
+          if (layer.type === 'group') strip(layer.children as CalqoLayer[]);
+        }
+      };
+      strip(artboard.layers as CalqoLayer[]);
+    },
+    options,
+  );
+}
+
+/** Set the scene (artboard) duration in ms, clamped to the normative bounds. */
+export function setSceneDuration(
+  projectId: string,
+  durationMs: number,
+  artboardId?: string,
+  options: EditOptions = { undoable: true },
+): void {
+  const clamped = Math.round(
+    Math.min(MAX_SCENE_DURATION_MS, Math.max(MIN_SCENE_DURATION_MS, durationMs)),
+  );
+  editProject(
+    projectId,
+    (draft) => {
+      const id = artboardId ?? activeArtboardId(draft as CalqoProject);
+      if (!id) return;
+      const artboard = getArtboard(draft, id);
+      if (!artboard) return;
+      artboard.timing = { duration: clamped };
+    },
+    options,
+  );
+}
+
+/** Set the clip frame rate for exports/playback. */
+export function setClipFps(
+  projectId: string,
+  fps: ClipSettings['fps'],
+  options: EditOptions = { undoable: true },
+): void {
+  editProject(
+    projectId,
+    (draft) => {
+      draft.clipSettings = { ...(draft.clipSettings ?? {}), fps };
     },
     options,
   );

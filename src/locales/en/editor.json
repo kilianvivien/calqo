@@ -903,6 +903,83 @@
     "open": "Optimize assets…",
     "importNotice": "“{{name}}” is large ({{width}}×{{height}}px) and may slow editing and bloat exports."
   },
+  "animate": {
+    "mode": {
+      "design": "Design",
+      "animate": "Animate",
+      "toggleLabel": "Editing mode"
+    },
+    "inspector": {
+      "title": "Animation",
+      "empty": "Select a layer to animate it.",
+      "noAnimation": "No animation on this layer yet.",
+      "sceneTitle": "Scene",
+      "sceneDuration": "Duration",
+      "fps": "Frame rate",
+      "seconds": "{{value}}s",
+      "clearLayer": "Remove layer animation",
+      "clearArtboard": "Clear all animation"
+    },
+    "slots": {
+      "enter": "Enter",
+      "emphasis": "Emphasis",
+      "exit": "Exit",
+      "none": "None"
+    },
+    "params": {
+      "duration": "Duration",
+      "delay": "Delay",
+      "direction": "Direction",
+      "distance": "Distance",
+      "easing": "Easing",
+      "ms": "{{value}} ms",
+      "px": "{{value}} px"
+    },
+    "presets": {
+      "fade": "Fade",
+      "slide": "Slide",
+      "pop": "Pop",
+      "rise": "Rise",
+      "wipe": "Wipe",
+      "blur-in": "Blur",
+      "pulse": "Pulse",
+      "wiggle": "Wiggle",
+      "float": "Float"
+    },
+    "directions": {
+      "up": "Up",
+      "down": "Down",
+      "left": "Left",
+      "right": "Right"
+    },
+    "easings": {
+      "linear": "Linear",
+      "ease-in": "Ease in",
+      "ease-out": "Ease out",
+      "ease-in-out": "Ease in-out",
+      "overshoot": "Overshoot",
+      "bounce": "Bounce"
+    },
+    "transport": {
+      "play": "Play",
+      "pause": "Pause",
+      "restart": "Jump to start",
+      "time": "{{current}} / {{total}}s",
+      "scrub": "Playhead",
+      "empty": "Add animation to a layer to preview it.",
+      "timingTitle": "Timing"
+    },
+    "errors": {
+      "invalid": "That animation isn't valid.",
+      "preset-disabled": "That preset isn't available yet.",
+      "unsupported-slot": "That preset can't be used in this slot.",
+      "unsupported-layer-kind": "That preset doesn't support this layer.",
+      "window-exceeds-scene": "That timing doesn't fit inside the scene.",
+      "slot-window-overlap": "Enter and exit overlap in time.",
+      "no-layer": "No layer selected.",
+      "no-artboard": "No artboard open."
+    }
+  },
   "presets": {
     "ig-square": "Instagram square",
     "ig-portrait": "Instagram portrait",
