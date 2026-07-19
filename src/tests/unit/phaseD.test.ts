@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { rasterFilename } from '@/editor/export/rasterExport';
+import { collectAssetIds, rasterFilename } from '@/editor/export/rasterExport';
 import { htmlSnippet, htmlStandalone } from '@/editor/export/htmlExport';
 import { exportArtboardSvg } from '@/editor/export/svgExport';
 import { createShapeLayer, createTextLayer } from '@/editor/commands/projectCommands';
 import { createArtboard, createDefaultProject } from '@/lib/schema';
+import type { GroupLayer } from '@/lib/schema';
 
 describe('phase D — export helpers', () => {
   it('builds slugged raster filenames with scale + extension', () => {
@@ -12,6 +13,36 @@ describe('phase D — export helpers', () => {
     );
     expect(rasterFilename('My Project', 'Story', 'png', 2)).toBe('my-project-story@2x.png');
     expect(rasterFilename('P', 'A', 'jpeg', 3)).toBe('p-a@3x.jpg');
+  });
+
+  it('collects image-fill assets from shape layers, including nested groups', () => {
+    const shape = createShapeLayer('rect', 0, 0, 100, 100);
+    if (shape.type === 'shape') shape.fill = { type: 'image', assetId: 'fill-asset', fit: 'cover' };
+
+    const nested = createShapeLayer('ellipse', 0, 0, 50, 50);
+    if (nested.type === 'shape') {
+      nested.fill = { type: 'image', assetId: 'nested-fill-asset', fit: 'contain' };
+    }
+    const group: GroupLayer = {
+      id: 'group-1',
+      name: 'Group',
+      type: 'group',
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 100,
+      rotation: 0,
+      opacity: 1,
+      visible: true,
+      locked: false,
+      expanded: true,
+      children: [nested],
+    };
+
+    const solid = createShapeLayer('rect', 0, 0, 10, 10); // solid fill — no asset
+
+    const ids = collectAssetIds([shape, group, solid]);
+    expect(ids).toEqual(new Set(['fill-asset', 'nested-fill-asset']));
   });
 
   it('wraps a PNG data URL into a sized HTML snippet and standalone doc', () => {

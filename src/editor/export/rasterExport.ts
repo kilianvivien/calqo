@@ -69,10 +69,12 @@ function shapeFillConfig(
   return fillProps(fill, w, h, centered);
 }
 
-/** Asset ids referenced by image/svg layers anywhere in the tree. */
-function collectAssetIds(layers: CalqoLayer[], into = new Set<string>()): Set<string> {
+/** Asset ids referenced by image/svg layers, image shape fills, and list
+ * markers anywhere in the tree. */
+export function collectAssetIds(layers: CalqoLayer[], into = new Set<string>()): Set<string> {
   for (const layer of layers) {
     if (layer.type === 'image' || layer.type === 'svg') into.add(layer.assetId);
+    if (layer.type === 'shape' && layer.fill.type === 'image') into.add(layer.fill.assetId);
     if (layer.type === 'list' && layer.marker.kind === 'asset' && layer.marker.assetId) {
       into.add(layer.marker.assetId);
     }
