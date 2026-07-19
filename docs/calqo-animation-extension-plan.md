@@ -1086,6 +1086,19 @@ change. Static and mobile flows remain unchanged.
 
 ### AN-2 — Local MP4 and GIF export
 
+> **[~] Implementation complete — 2026-07-19; runtime acceptance pending.**
+> `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `pnpm test` (465 tests,
+> +16 focused AN-2 tests) pass. Delivered: the video adapter/session/sink
+> contracts; lazy WebCodecs/Mediabunny H.264 capability probing and MP4 muxing;
+> reusable Konva offscreen scenes; integer-index frame orchestration with
+> progress, backpressure, cancellation, cleanup, and sequential locale jobs;
+> capped `gifenc` export through a dedicated worker with an inline fallback;
+> and MP4/GIF controls, capability summaries, localized structured warnings,
+> progress, and Cancel in the export dialog. Remaining before milestone
+> acceptance: decode/visual verification of real outputs, 5/15/60-second memory
+> and responsiveness measurements, and the Chrome/Safari/Tauri capability
+> matrix listed in AN-2.6.
+
 **Goal:** produce reliable social-ready files locally with bounded memory,
 honest capability reporting, progress, and cancellation.
 

@@ -491,8 +491,27 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
           .map((layer) => nodeRefs.current.get(layer.id))
           .filter((node): node is Konva.Node => Boolean(node));
     transformer.nodes(nodes);
+    transformer.forceUpdate();
     transformer.getLayer()?.batchDraw();
-  }, [selectedLayers, croppingLayerId, drawingToolActive, playbackStatus]);
+    console.debug('[Calqo transformer state]', JSON.stringify({
+      mode: animateMode ? 'animate' : 'design',
+      nodes: transformer.nodes().map((node) => node.id()),
+      box: transformer.getClientRect(),
+      children: transformer.getChildren().map((node) => ({
+        name: node.name(),
+        visible: node.visible(),
+        opacity: node.opacity(),
+        x: node.x(),
+        y: node.y(),
+      })),
+    }));
+  }, [
+    selectedLayers,
+    croppingLayerId,
+    drawingToolActive,
+    playbackStatus,
+    animateMode,
+  ]);
 
   // Seed the crop frame and view when entering crop mode (or when the bitmap
   // loads): the frame starts as the layer's current rect.
@@ -1589,6 +1608,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             </>
           )}
           <Transformer
+            key={animateMode ? 'animate-transformer' : 'design-transformer'}
             ref={transformerRef}
             rotateEnabled
             ignoreStroke

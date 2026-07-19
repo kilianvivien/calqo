@@ -136,9 +136,10 @@ describe('runSpike orchestration (stubbed render/encode)', () => {
       expect(r.frames).toBe(60);
       expect(typeof r.evalMs).toBe('number');
       expect(Number.isFinite(r.evalMs!)).toBe(true);
-      // …but the renderer stub means render/encode is honestly skipped.
+      // The offscreen scene is now implemented (AN-2), so the encoder stub is
+      // what's honestly skipped — begin() throws before any frame is rendered.
       expect(r.status).toBe('skipped');
-      expect(r.note).toMatch(/AN-0\.5\.2/);
+      expect(r.note).toMatch(/AN-0\.5\.[45]/);
       expect(r.renderMs).toBeUndefined();
     }
     // The collector renders without throwing.

@@ -4,6 +4,9 @@ import { cn } from '@/lib/utils/cn';
 export interface SegmentOption<T extends string> {
   value: T;
   label: string;
+  disabled?: boolean;
+  /** Shown as a tooltip when the segment is unavailable. */
+  disabledReason?: string;
   /** When set, the segment shows this icon instead of the text; `label` stays
    * the accessible name (aria-label + tooltip). */
   icon?: ReactNode;
@@ -44,16 +47,18 @@ export function GlassSegmentedControl<T extends string>({
             type="button"
             role="radio"
             aria-checked={active}
+            disabled={opt.disabled}
             aria-label={iconOnly ? opt.label : undefined}
-            title={iconOnly ? opt.label : undefined}
+            title={opt.disabledReason ?? (iconOnly ? opt.label : undefined)}
             onClick={() => onChange(opt.value)}
             className={cn(
               'flex items-center justify-center rounded-[6px] h-6 text-[11.5px] font-medium',
               iconOnly ? 'w-7' : 'px-2.5',
               'transition-colors duration-[var(--calqo-t-fast)]',
+              opt.disabled && 'cursor-not-allowed opacity-45',
               active
                 ? 'bg-[var(--calqo-accent)] text-[var(--calqo-text-on-accent)]'
-                : 'text-[var(--calqo-text-2)] hover:text-[var(--calqo-text)]',
+                : 'text-[var(--calqo-text-2)] enabled:hover:text-[var(--calqo-text)]',
             )}
           >
             {opt.icon ?? opt.label}
