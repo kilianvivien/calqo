@@ -34,6 +34,7 @@ import {
   type PresetSlot,
 } from '@/editor/animation/presets';
 import { defaultPresetInstance } from '@/editor/animation/validate';
+import { ScenesPanel } from './ScenesPanel';
 
 const SLOTS: PresetSlot[] = ['enter', 'emphasis', 'exit'];
 const EASINGS: Easing[] = [
@@ -110,6 +111,9 @@ export function AnimationInspector() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Multi-scene clip sequencing (AN-4.2) ------------------------------- */}
+      <ScenesPanel />
+
       {/* Scene timing + fps ------------------------------------------------- */}
       <section className="flex flex-col gap-2">
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--calqo-text-3)]">

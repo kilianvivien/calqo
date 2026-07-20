@@ -999,6 +999,22 @@
       "empty": "Add animation to a layer to preview it.",
       "timingTitle": "Timing"
     },
+    "scenes": {
+      "title": "Scenes",
+      "empty": "Add artboards to build a multi-scene clip.",
+      "add": "Add a scene…",
+      "clear": "Clear scenes",
+      "total": "{{seconds}}s total",
+      "remove": "Remove scene",
+      "moveUp": "Move scene up",
+      "moveDown": "Move scene down",
+      "transitionFor": "Transition into {{name}}",
+      "transitions": {
+        "cut": "Cut",
+        "fade": "Fade",
+        "slide": "Slide"
+      }
+    },
     "errors": {
       "invalid": "That animation isn't valid.",
       "preset-disabled": "That preset isn't available yet.",

@@ -26,6 +26,8 @@ import {
   type ListItem,
   type LocaleCode,
   type PresetInstance,
+  type SceneEntry,
+  type SceneTransitionKind,
   type ShapeLayer,
   type StrokeLook,
   type StrokeStyle,
@@ -35,6 +37,10 @@ import {
   validatePresetAnimation,
   type AnimationValidationCode,
 } from '@/editor/animation/validate';
+import {
+  validateSceneSequence,
+  type SceneSequenceIssue,
+} from '@/editor/animation/sceneSequence';
 import type { PresetLayerKind, PresetSlot } from '@/editor/animation/presets';
 import { invalidateProjectClips } from '@/editor/animation/compiler';
 import { animationPlaybackStore } from '@/lib/state/animationPlaybackStore';
@@ -1286,6 +1292,119 @@ export function setClipFps(
     },
     options,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Scene sequencing commands (AN-4.2). A multi-scene clip is an ordered list of
+// artboards joined by transitions, persisted in `clipSettings.scenes`. Every
+// edit is validated (existing/unique/matching-size artboards, ≤60s total)
+// before it is committed, so an invalid sequence never enters the document —
+// the same guarantee `safeImportProject` gives an imported clip.
+// ---------------------------------------------------------------------------
+
+export type SceneCommandResult =
+  | { ok: true }
+  | { ok: false; issues: SceneSequenceIssue[] };
+
+/** Replace the clip's scene list, validating it first. Passing an empty list
+ * clears the multi-scene clip. */
+export function setClipScenes(
+  projectId: string,
+  scenes: SceneEntry[],
+  options: EditOptions = { undoable: true },
+): SceneCommandResult {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return { ok: false, issues: [] };
+  const candidate: CalqoProject = {
+    ...project,
+    clipSettings: { fps: project.clipSettings?.fps ?? 30, scenes },
+  };
+  const issues = validateSceneSequence(candidate);
+  if (issues.length > 0) return { ok: false, issues };
+
+  editProject(
+    projectId,
+    (draft) => {
+      const fps = draft.clipSettings?.fps ?? 30;
+      if (scenes.length === 0) {
+        if (draft.clipSettings) draft.clipSettings.scenes = undefined;
+      } else {
+        draft.clipSettings = { ...(draft.clipSettings ?? { fps }), fps, scenes };
+      }
+    },
+    options,
+  );
+  return { ok: true };
+}
+
+/** Current clip scenes (never undefined for convenience). */
+function currentScenes(project: CalqoProject): SceneEntry[] {
+  return project.clipSettings?.scenes ? [...project.clipSettings.scenes] : [];
+}
+
+/** Append an artboard as a new scene at the end of the clip. */
+export function addSceneToClip(
+  projectId: string,
+  artboardId: string,
+  options: EditOptions = { undoable: true },
+): SceneCommandResult {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return { ok: false, issues: [] };
+  const scenes = currentScenes(project);
+  scenes.push({ artboardId, transition: scenes.length === 0 ? undefined : 'cut' });
+  return setClipScenes(projectId, scenes, options);
+}
+
+/** Remove the scene at `index` from the clip. */
+export function removeSceneFromClip(
+  projectId: string,
+  index: number,
+  options: EditOptions = { undoable: true },
+): SceneCommandResult {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return { ok: false, issues: [] };
+  const scenes = currentScenes(project);
+  if (index < 0 || index >= scenes.length) return { ok: false, issues: [] };
+  scenes.splice(index, 1);
+  return setClipScenes(projectId, scenes, options);
+}
+
+/** Move the scene at `from` to `to`, keeping the rest in order. */
+export function moveScene(
+  projectId: string,
+  from: number,
+  to: number,
+  options: EditOptions = { undoable: true },
+): SceneCommandResult {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return { ok: false, issues: [] };
+  const scenes = currentScenes(project);
+  if (from < 0 || from >= scenes.length || to < 0 || to >= scenes.length) {
+    return { ok: false, issues: [] };
+  }
+  const [moved] = scenes.splice(from, 1);
+  scenes.splice(to, 0, moved);
+  return setClipScenes(projectId, scenes, options);
+}
+
+/** Set the transition (and optional duration) that plays into scene `index`. */
+export function setSceneTransition(
+  projectId: string,
+  index: number,
+  transition: SceneTransitionKind,
+  durationMs: number | undefined,
+  options: EditOptions = { undoable: true },
+): SceneCommandResult {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return { ok: false, issues: [] };
+  const scenes = currentScenes(project);
+  if (index < 0 || index >= scenes.length) return { ok: false, issues: [] };
+  scenes[index] = {
+    ...scenes[index],
+    transition,
+    transitionDurationMs: transition === 'cut' ? undefined : durationMs,
+  };
+  return setClipScenes(projectId, scenes, options);
 }
 
 /** Default gap (artboard px) used by the quick stack commands. */

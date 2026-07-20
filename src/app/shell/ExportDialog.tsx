@@ -36,6 +36,11 @@ import {
 import { exportAnimatedVideo } from '@/editor/export/animatedFrameExport';
 import { exportAnimatedGif } from '@/editor/export/gif/gifExport';
 import { buildAnimationPackage } from '@/editor/export/animationPackage';
+import {
+  exportAnimatedSceneGif,
+  exportAnimatedSceneVideo,
+} from '@/editor/export/animatedSceneExport';
+import { resolveSequence } from '@/editor/animation/sceneSequence';
 import { estimateEnvelopeBytes } from '@/editor/assets/assetHealth';
 import { useMissingAssetsStore } from '@/editor/assets/missingAssetsStore';
 import { localeLabel } from '@/editor/i18n-content/contentLocaleService';
@@ -110,10 +115,16 @@ export function ExportDialog({
   const missingAssetCount = useMissingAssetsStore((s) =>
     project ? (s.byProject[project.id]?.length ?? 0) : 0,
   );
-  // Animation export (MP4/GIF) is per-clip: only the active artboard. Animate
-  // mode always exposes both formats, but keeps them disabled until at least one
-  // layer is animated. Capabilities are probed lazily only once it is eligible.
-  const animatable = !!artboard && isArtboardAnimatable(artboard);
+  // Animation export (MP4/GIF). Eligible when the active artboard is animated
+  // OR the project defines a multi-scene clip (AN-4.2). Animate mode always
+  // exposes both formats but keeps them disabled until one of those holds.
+  // Capabilities are probed lazily only once eligible.
+  const clipSequence = useMemo(
+    () => (project ? resolveSequence(project) : null),
+    [project],
+  );
+  const hasClip = (clipSequence?.scenes.length ?? 0) >= 2;
+  const animatable = (!!artboard && isArtboardAnimatable(artboard)) || hasClip;
   const [videoCaps, setVideoCaps] = useState<VideoCapabilities | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   // Per-frame progress for the current animated export, plus its structured
@@ -223,13 +234,18 @@ export function ExportDialog({
   // Animation formats export the active artboard only (v1 clips are single
   // artboard), so they ignore the artboard scope entirely.
   const animLocaleTargets = localeTargets;
-  const sceneDurationMs = artboard.timing?.duration ?? 5000;
-  const videoDims = evenDimensions(artboard.width, artboard.height);
+  // For a multi-scene clip the exported dimensions/duration come from the whole
+  // sequence; otherwise from the single active artboard.
+  const animWidth = hasClip && clipSequence ? clipSequence.width : artboard.width;
+  const animHeight = hasClip && clipSequence ? clipSequence.height : artboard.height;
+  const sceneDurationMs =
+    hasClip && clipSequence ? clipSequence.totalMs : artboard.timing?.duration ?? 5000;
+  const videoDims = evenDimensions(animWidth, animHeight);
   const videoFrameCount = Math.max(
     1,
     Math.round((sceneDurationMs / 1000) * clipFps),
   );
-  const gifPlan = planGifOutput(artboard.width, artboard.height, clipFps, sceneDurationMs);
+  const gifPlan = planGifOutput(animWidth, animHeight, clipFps, sceneDurationMs);
   const h264Usable = videoCaps ? isCodecUsable(videoCaps, 'h264') : false;
   // A batch spanning multiple artboards and/or content locales is bundled into a
   // single .zip so the browser never suppresses the follow-up downloads.
@@ -241,7 +257,9 @@ export function ExportDialog({
   const filename = bundling
     ? `${slug(project.name)}.zip`
     : isAnimation(format)
-      ? `${slug(project.name)}-${slug(artboard.name)}.${animExt}`
+      ? hasClip
+        ? `${slug(project.name)}-clip.${animExt}`
+        : `${slug(project.name)}-${slug(artboard.name)}.${animExt}`
       : format === 'html'
         ? `${slug(project.name)}-${slug(artboard.name)}.html`
         : format === 'svg'
@@ -335,40 +353,56 @@ export function ExportDialog({
     const projectSlug = slug(project.name);
     const artboardSlug = slug(artboard.name);
     try {
+      const stem = hasClip ? 'clip' : artboardSlug;
       const outputs: { name: string; blob: Blob }[] = [];
       for (const locale of animLocaleTargets) {
         const dir = animLocaleTargets.length > 1 ? `${locale}/` : '';
         const onProgress = (p: { completedFrames: number; totalFrames: number }) =>
           setAnimProgress({ done: p.completedFrames, total: p.totalFrames });
         if (format === 'mp4') {
-          const result = await exportAnimatedVideo({
-            project,
-            artboard,
-            locale,
-            codec: 'h264',
-            signal: controller.signal,
-            onProgress,
-          });
+          const result = hasClip
+            ? await exportAnimatedSceneVideo({
+                project,
+                locale,
+                codec: 'h264',
+                signal: controller.signal,
+                onProgress,
+              })
+            : await exportAnimatedVideo({
+                project,
+                artboard,
+                locale,
+                codec: 'h264',
+                signal: controller.signal,
+                onProgress,
+              });
           collected.push(...result.warnings);
           if (result.blob) {
-            outputs.push({ name: `${dir}${projectSlug}-${artboardSlug}.mp4`, blob: result.blob });
+            outputs.push({ name: `${dir}${projectSlug}-${stem}.mp4`, blob: result.blob });
           }
         } else {
-          const result = await exportAnimatedGif({
-            project,
-            artboard,
-            locale,
-            signal: controller.signal,
-            onProgress,
-          });
+          const result = hasClip
+            ? await exportAnimatedSceneGif({
+                project,
+                locale,
+                signal: controller.signal,
+                onProgress,
+              })
+            : await exportAnimatedGif({
+                project,
+                artboard,
+                locale,
+                signal: controller.signal,
+                onProgress,
+              });
           collected.push(...result.warnings);
-          outputs.push({ name: `${dir}${projectSlug}-${artboardSlug}.gif`, blob: result.blob });
+          outputs.push({ name: `${dir}${projectSlug}-${stem}.gif`, blob: result.blob });
         }
       }
       // Merge pre-export config notes (codec/dimension) with runtime warnings.
       const configWarnings =
         format === 'mp4' && videoCaps
-          ? mp4ConfigWarnings(videoCaps, 'h264', artboard.width, artboard.height)
+          ? mp4ConfigWarnings(videoCaps, 'h264', animWidth, animHeight)
           : [];
       setAnimExportWarnings(
         dedupeAnimWarnings([...configWarnings, ...collected]),

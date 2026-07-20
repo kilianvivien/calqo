@@ -1321,27 +1321,54 @@ package renders without Calqo or secret state.
 
 ### AN-4 — Scenes, transitions, and prompt/MCP animation (v2)
 
+> **Status: AN-4.2 [x] complete — 2026-07-20.** Multi-scene clips ship: an
+> ordered set of artboards joined by cut/fade/slide transitions, exported as one
+> MP4 or GIF. Verified with `pnpm typecheck`, `pnpm test` (513 passing, incl.
+> new `sceneSequence`, `sceneSequenceRenderer`, `animatedSceneExport`, and
+> `sceneCommands` suites), `pnpm lint`, and `pnpm build`. AN-4.1's open design
+> questions were resolved as part of shipping 4.2 (see the notes below).
+> **AN-4.3 (prompt/MCP animation) and AN-4.4 (deferred-format reassessment)
+> remain [ ] not started** — separate product decisions, out of this milestone's
+> scope. Playwright coverage of the scenes UI is a follow-up (the gate ran
+> typecheck/test/lint/build).
+
 **Goal:** extend the proven single-scene model only after v1 usage and export
 performance are understood.
 
 #### AN-4.1 Validate the product need
 
-- [ ] Review real v1 projects and determine whether users need artboard scenes,
-      longer clips, audio, video layers, or richer timing first.
-- [ ] Treat scene ordering as a new portable document decision; do not activate
-      the reserved field solely because it exists.
-- [ ] Define total-duration calculation, per-scene locale behavior, transitions,
-      poster frames, and transition ownership before schema changes.
+Design questions settled while implementing AN-4.2 (2026-07-20):
+
+- [x] Scene ordering is a portable-document decision: it lives in the existing
+      reserved `clipSettings.scenes`, now consumed by the exporter (not activated
+      "because it exists" — it drives a real feature).
+- [x] **Total duration** = Σ scene durations + Σ transition durations (from the
+      2nd scene on), capped at 60 s and validated at parse + command time.
+- [x] **Per-scene locale**: each scene compiles at the export locale; a clip is
+      rendered once per selected content locale (no cross-locale reuse).
+- [x] **Transition ownership**: the transition is stored on the *incoming*
+      scene entry (plays into it from the previous scene); the first scene's is
+      ignored. `cut` is instant; fade/slide carry an optional `transitionDurationMs`.
+- [x] All scenes must share the clip's dimensions (validated); poster frames and
+      longer clips/audio/video layers stay deferred (AN-4.4).
+- [ ] Broader user-need review (do users want scenes vs. richer single-scene
+      timing) remains an open product question, revisited before AN-4.3/4.4.
 
 #### AN-4.2 Implement scene sequencing
 
-- [ ] Validate unique existing artboard ids and total duration ≤ 60 s.
-- [ ] Compile each scene independently, then compose a clip time map.
-- [ ] Implement cut first; add fade/slide only with explicit outgoing/incoming
-      frame composition rules.
-- [ ] Reuse/dispose offscreen scenes under a measured memory budget.
-- [ ] Extend transport and export progress without turning timing bars into an
-      accidental full timeline editor.
+- [x] Validate unique existing artboard ids and total duration ≤ 60 s (schema
+      `superRefine` + `validateSceneSequence` for the command/UI layer).
+- [x] Compile each scene independently, then compose a clip time map
+      (`sceneSequence.ts`: `resolveSequence` / `sampleSequence`).
+- [x] Implement cut first; add fade (crossfade) and slide (tiled offset) with
+      explicit outgoing-final / incoming-first composition rules
+      (`sceneSequenceRenderer.ts`).
+- [x] Reuse/dispose offscreen scenes under a measured memory budget — an LRU of
+      2 (the most one sampled time can need), evicting + disposing on scene change.
+- [x] Extend export progress (per-scene `sceneIndex/sceneCount`) and add a
+      display-only Scenes panel (order + transition + total duration); no
+      draggable timeline. MP4/GIF route to the sequence exporters when a clip has
+      ≥2 scenes (`animatedSceneExport.ts`).
 
 #### AN-4.3 Add validated AI/MCP operations
 

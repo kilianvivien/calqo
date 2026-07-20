@@ -999,6 +999,22 @@
       "empty": "Ajoutez une animation à un calque pour la prévisualiser.",
       "timingTitle": "Chronologie"
     },
+    "scenes": {
+      "title": "Scènes",
+      "empty": "Ajoutez des plans de travail pour créer un clip multi-scènes.",
+      "add": "Ajouter une scène…",
+      "clear": "Effacer les scènes",
+      "total": "{{seconds}} s au total",
+      "remove": "Supprimer la scène",
+      "moveUp": "Déplacer la scène vers le haut",
+      "moveDown": "Déplacer la scène vers le bas",
+      "transitionFor": "Transition vers {{name}}",
+      "transitions": {
+        "cut": "Coupe",
+        "fade": "Fondu",
+        "slide": "Glissement"
+      }
+    },
     "errors": {
       "invalid": "Cette animation n'est pas valide.",
       "preset-disabled": "Ce préréglage n'est pas encore disponible.",
