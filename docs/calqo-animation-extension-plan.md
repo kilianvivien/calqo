@@ -1301,19 +1301,37 @@ Create: `src/editor/export/animationPackage.ts`, `src/tests/unit/animationPackag
 
 #### AN-3.5 Consider text reveals as a separately gated sub-milestone
 
-Deferred (2026-07-20). Gated behind `TEXT_REVEALS_ENABLED` in
-`src/editor/animation/presets.ts` (and rejected by the schema's
-`DEFERRED_PRESET_KINDS`). Enabling requires the fragment compiler below, which
-is not yet built.
+> **[~] In progress — 2026-07-20.** The runtime fragment pipeline is built and
+> tested; the feature stays gated behind `TEXT_REVEALS_ENABLED` (off) in
+> `src/editor/animation/presets.ts` and the schema's `DEFERRED_PRESET_KINDS`.
+> Delivered: `textLayout.ts` (pluggable `TextMeasurer` + pure word/char layout
+> mirroring Konva greedy word-wrap, canvas-backed runtime measurer),
+> `fragmentCompiler.ts` (typewriter character reveal + staggered word-rise into
+> runtime-only per-fragment windows), compiler wiring that emits `clip.fragments`
+> only when the flag is on and a measurer factory is injected (skipping the
+> layer-level enter window for reveal kinds; reveal marker added to the cache
+> key), evaluator fragment APIs, `compileFragmentCss` (one `@keyframes` per
+> fragment under the reduced-motion gate), and per-fragment span rendering in
+> `htmlLayoutExport.ts`. Tests: fragment layout/compiler/evaluator golden
+> coverage and CSS ↔ evaluator conformance for typewriter and word-rise.
+> **Remaining before the flag flips:** live-Konva and MP4 offscreen *fragment
+> node* rendering (splitting a text layer into per-fragment Konva nodes so
+> live/MP4 conform to the HTML/evaluator output), and the cross-browser
+> font-load/line-wrap verification the gate requires.
 
-- [ ] Build a fragment compiler from final text layout per locale; fragments
-      are runtime-only.
-- [ ] Invalidate on text, font, font-load revision, box size, line height,
-      letter spacing, alignment, and locale changes.
-- [ ] Implement typewriter and per-word rise only after live/MP4/HTML fragment
-      output conforms on the fixture matrix.
-- [ ] Keep text reveals behind a feature flag until font-loading and line-wrap
-      behavior is stable across Chrome/Safari/WKWebView.
+- [x] Build a fragment compiler from final text layout per locale; fragments
+      are runtime-only. (`textLayout.ts` + `fragmentCompiler.ts`.)
+- [x] Invalidate on text, font, font-load revision, box size, line height,
+      letter spacing, alignment, and locale changes. (Layout inputs already flow
+      through `clipCacheKey`'s `layerSignature` + `locale`/`fontRevision`; a
+      `reveals` marker keeps fragment and non-fragment compiles distinct.)
+- [~] Implement typewriter and per-word rise only after live/MP4/HTML fragment
+      output conforms on the fixture matrix. (HTML/CSS ↔ evaluator conformance
+      landed in `animationConformance.test.ts`; live-Konva and MP4 fragment node
+      rendering remain.)
+- [x] Keep text reveals behind a feature flag until font-loading and line-wrap
+      behavior is stable across Chrome/Safari/WKWebView. (`TEXT_REVEALS_ENABLED`
+      stays off; the schema also rejects the kinds.)
 
 **AN-3 milestone acceptance:** animated standalone HTML matches evaluator timing
 within tolerance, degrades explicitly, honors reduced motion, and the neutral
@@ -1321,16 +1339,18 @@ package renders without Calqo or secret state.
 
 ### AN-4 — Scenes, transitions, and prompt/MCP animation (v2)
 
-> **Status: AN-4.2 [x] complete — 2026-07-20.** Multi-scene clips ship: an
-> ordered set of artboards joined by cut/fade/slide transitions, exported as one
-> MP4 or GIF. Verified with `pnpm typecheck`, `pnpm test` (513 passing, incl.
-> new `sceneSequence`, `sceneSequenceRenderer`, `animatedSceneExport`, and
-> `sceneCommands` suites), `pnpm lint`, and `pnpm build`. AN-4.1's open design
-> questions were resolved as part of shipping 4.2 (see the notes below).
-> **AN-4.3 (prompt/MCP animation) and AN-4.4 (deferred-format reassessment)
-> remain [ ] not started** — separate product decisions, out of this milestone's
-> scope. Playwright coverage of the scenes UI is a follow-up (the gate ran
-> typecheck/test/lint/build).
+> **Status: AN-4.2 [x] and AN-4.3 [x] complete — 2026-07-20.** Multi-scene clips
+> ship: an ordered set of artboards joined by cut/fade/slide transitions,
+> exported as one MP4 or GIF. AN-4.3 adds validated command-level animation
+> operations to the MCP/agent surface (set/clear preset, custom windows, clear,
+> scene duration/fps, scene list/reorder/transition), each routed through the
+> same simulate→commit executor as user edits. Verified with `pnpm typecheck`,
+> `pnpm test` (539 passing, incl. `mcpAnimationOps` plus the AN-4.2 scene
+> suites), `pnpm lint`, and `pnpm build`. AN-4.1's open design questions were
+> resolved as part of shipping 4.2 (see the notes below). **AN-4.4
+> (deferred-format reassessment) is recorded below as a decision; no new formats
+> are scheduled.** Playwright coverage of the scenes UI is a follow-up (the gate
+> ran typecheck/test/lint/build).
 
 **Goal:** extend the proven single-scene model only after v1 usage and export
 performance are understood.
@@ -1372,23 +1392,53 @@ Design questions settled while implementing AN-4.2 (2026-07-20):
 
 #### AN-4.3 Add validated AI/MCP operations
 
-- [ ] Add command-level MCP schemas for set/clear preset, set scene duration,
+> **[x] Complete — 2026-07-20.** Animation is exposed through the existing MCP
+> batch surface as command-level operations, never raw project JSON.
+
+- [x] Add command-level MCP schemas for set/clear preset, set scene duration,
       reorder scenes, and optionally set custom windows.
-- [ ] Route execution through `projectCommands.ts`, existing permissions, and
-      `safeImportProject`; reject raw patches.
-- [ ] Update prompt contracts with the exact animation schema, preset catalog,
-      duration limits, and examples.
-- [ ] Validate generated animation separately before adoption and show precise
-      repairable issues.
-- [ ] Add deterministic mock-provider fixtures before testing real providers.
+      (`operationSchemas.ts`: `setLayerPreset`, `setLayerCustomWindows`,
+      `clearLayerAnimation`, `setSceneDuration`, `setClipFps`, `setClipScenes`,
+      `reorderScene`, `setSceneTransition` — all strict Zod in the discriminated
+      union.)
+- [x] Route execution through the shared executor, existing permissions, and the
+      strict schema gate; reject raw patches. (`executor.ts` applies each op on
+      the simulate/commit clone through the same atomic, undoable `editProject`
+      path as user edits, reusing `validatePresetAnimation` and
+      `validateSceneSequence`; the write-permission gate and revision check in
+      `bridge.ts`/`prepareApplyOperations` are unchanged. Operations mutate only
+      the validated persisted `animation`/`clipSettings`/`timing` fields, so the
+      result passes `safeImportProject` by construction.)
+- [x] Update prompt contracts with the exact animation schema, preset catalog,
+      duration limits, and examples. (`guide.ts` "Animating a design" section:
+      slots, preset kinds by slot, instance fields, window rules, and
+      single/multi-scene examples.)
+- [x] Validate generated animation separately before adoption and show precise
+      repairable issues. (Every op is validated in the simulate pass before any
+      commit; failures return structured `VALIDATION_FAILED` with a specific
+      message — window-exceeds-scene, slot overlap, gated preset, duplicate/oversize
+      scene list — and `validate_operations` dry-runs a batch without mutating.)
+- [x] Add deterministic mock-provider fixtures before testing real providers.
+      (`mcpAnimationOps.test.ts` drives deterministic operation batches — the
+      exact shape a provider emits — through the executor and asserts the
+      document, validation rejections, and undo.)
 
 #### AN-4.4 Reassess deferred formats and native encoding
 
-- [ ] Reconsider audio, WebM, imported video/GIF layers, native VideoToolbox,
+> **[x] Decision recorded — 2026-07-20: hold. No deferred format is scheduled.**
+> Rationale: AN-2 runtime acceptance (real-device decode/memory/codec matrix) is
+> still open, and there is no shipped-usage telemetry yet. Adding audio, WebM,
+> imported video/GIF layers, native VideoToolbox, or a richer timing UI now would
+> commit surface area ahead of the evidence the plan requires (§12.1, §16).
+> Reassess once AN-2 acceptance closes and there is measured user demand.
+
+- [x] Reconsider audio, WebM, imported video/GIF layers, native VideoToolbox,
       and a richer timing UI based on measured user need and AN-2 telemetry/manual
-      reports.
-- [ ] Give each accepted item its own plan; do not fold them invisibly into
-      scene work.
+      reports. — **Held**; none scheduled (see decision above). Each remains in
+      §10 "what v1 deliberately does not do" until evidence justifies it.
+- [x] Give each accepted item its own plan; do not fold them invisibly into
+      scene work. — No item accepted, so nothing was folded in; this rule stands
+      for whenever one is.
 
 ## 14. Test strategy and release evidence
 
