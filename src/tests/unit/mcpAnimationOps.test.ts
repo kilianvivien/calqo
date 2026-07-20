@@ -164,17 +164,18 @@ describe('AN-4.3 preset operations', () => {
     expect(firstLayer(project.id)?.animation).toBeUndefined();
   });
 
-  it('rejects gated text-reveal presets through the agent surface', () => {
-    openProject();
-    expectMcpError(
-      () =>
-        executeApplyOperations({
-          operations: [
-            { type: 'setLayerPreset', layerId: 'layer_headline', slot: 'enter', preset: { kind: 'typewriter', duration: 800, delay: 0 } },
-          ],
-        }),
-      'VALIDATION_FAILED',
-    );
+  it('sets a text-reveal preset on a text layer (AN-3.5)', () => {
+    const project = openProject();
+    const result = executeApplyOperations({
+      operations: [
+        { type: 'setLayerPreset', layerId: 'layer_headline', slot: 'enter', preset: { kind: 'typewriter', duration: 800, delay: 0 } },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    expect(firstLayer(project.id)?.animation).toMatchObject({
+      mode: 'preset',
+      enter: { kind: 'typewriter' },
+    });
   });
 
   it('rejects an unknown layer id', () => {

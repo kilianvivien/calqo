@@ -14,7 +14,14 @@ import {
   resetWrapper,
   type LayerBox,
 } from '@/editor/animation/wrapperNode';
-import type { WrapperOverride } from '@/editor/animation/types';
+import {
+  buildFragmentContainer,
+  type FragmentNodeHandles,
+} from '@/editor/animation/fragmentNodes';
+import type {
+  CompiledFragmentAnimation,
+  WrapperOverride,
+} from '@/editor/animation/types';
 
 /**
  * Reusable offscreen scene (plan §6.3 / AN-0.5.2, delivered in AN-2). It fixes
@@ -65,6 +72,12 @@ export interface OffscreenSceneInput {
    * consulted.
    */
   loadAsset?: (assetId: string) => Promise<CanvasImageSource | null>;
+  /**
+   * Text-reveal fragment animation for top-level layers (AN-3.5). When a layer id
+   * appears here, the scene renders it as per-fragment nodes instead of one text
+   * node, so `applyFragmentOverrides` can animate each glyph/word.
+   */
+  fragments?: CompiledFragmentAnimation[];
 }
 
 export interface OffscreenScene {
@@ -73,7 +86,12 @@ export interface OffscreenScene {
   /** Apply per-layer wrapper overrides for the current frame. Ids not present in
    * the scene (nested children, deleted layers) are ignored. */
   applyOverrides(overrides: ReadonlyMap<string, WrapperOverride>): void;
-  /** Reset every wrapper to identity in a single pass. */
+  /** Apply per-fragment overrides for text-reveal layers. The value is the
+   * fragment overrides in fragment order; ids without fragment nodes are ignored. */
+  applyFragmentOverrides(
+    overrides: ReadonlyMap<string, readonly WrapperOverride[]>,
+  ): void;
+  /** Reset every wrapper (and fragment sub-wrapper) to identity in one pass. */
   resetToIdentity(): void;
   /** Draw the current state to the offscreen surface. */
   render(): void;
@@ -152,8 +170,23 @@ export const createOffscreenScene: CreateOffscreenScene = async (input) => {
   // the live `CalqoStage` wrapper contract so overrides compose identically.
   const wrappers = new Map<string, Group>();
   const boxes = topLevelBoxes(artboard.layers);
+  const fragmentsByLayer = new Map<string, CompiledFragmentAnimation>(
+    (input.fragments ?? []).map((f) => [f.layerId, f]),
+  );
+  const fragmentHandles = new Map<string, FragmentNodeHandles>();
   for (const l of artboard.layers) {
-    const node = buildNode(l, images, locale);
+    const fragmentAnim = fragmentsByLayer.get(l.id);
+    let node: ReturnType<typeof buildNode> = null;
+    if (fragmentAnim && l.visible) {
+      const handles = buildFragmentContainer(l, fragmentAnim);
+      if (handles) {
+        // Position the fragment container where the base text node would sit.
+        handles.container.setAttrs({ x: l.x, y: l.y, rotation: l.rotation, opacity: l.opacity });
+        fragmentHandles.set(l.id, handles);
+        node = handles.container;
+      }
+    }
+    if (!node) node = buildNode(l, images, locale);
     if (!node) continue;
     const wrapper = new Group();
     wrapper.add(node);
@@ -174,8 +207,21 @@ export const createOffscreenScene: CreateOffscreenScene = async (input) => {
         applyWrapperOverride(wrapper, override, box);
       }
     },
+    applyFragmentOverrides(overrides) {
+      for (const [id, fragmentOverrides] of overrides) {
+        const handles = fragmentHandles.get(id);
+        if (!handles) continue;
+        for (let i = 0; i < handles.wrappers.length; i++) {
+          const override = fragmentOverrides[i];
+          if (override) applyWrapperOverride(handles.wrappers[i], override, handles.boxes[i]);
+        }
+      }
+    },
     resetToIdentity() {
       for (const wrapper of wrappers.values()) resetWrapper(wrapper);
+      for (const handles of fragmentHandles.values()) {
+        for (const wrapper of handles.wrappers) resetWrapper(wrapper);
+      }
     },
     render() {
       layer.draw();

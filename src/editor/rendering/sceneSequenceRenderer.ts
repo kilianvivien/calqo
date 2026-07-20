@@ -1,6 +1,7 @@
 import type { CalqoProject, LocaleCode } from '@/lib/schema';
 import { compileClipCached } from '@/editor/animation/compiler';
-import { evaluateClipInto } from '@/editor/animation/evaluator';
+import { evaluateClipInto, evaluateFragmentsInto } from '@/editor/animation/evaluator';
+import { createCanvasMeasurer } from '@/editor/animation/textLayout';
 import type { CompiledClip, WrapperOverride } from '@/editor/animation/types';
 import {
   createOffscreenScene,
@@ -67,6 +68,7 @@ interface LoadedScene {
   scene: OffscreenScene;
   clip: CompiledClip;
   overrides: Map<string, WrapperOverride>;
+  fragmentOverrides: Map<string, WrapperOverride[]>;
 }
 
 /** Default compositor backed by a real 2D canvas. */
@@ -121,20 +123,27 @@ export async function createSceneSequenceRenderer(
       loaded.set(scene.artboardId, existing);
       return existing;
     }
+    const { clip } = compileClipCached({
+      projectId: project.id,
+      artboard: scene.artboard,
+      locale,
+      fps,
+      measurerFor: (font) => createCanvasMeasurer(font),
+    });
     const offscreen = await createScene({
       artboard: scene.artboard,
       locale,
       outputWidth,
       outputHeight,
       opaqueBackground: true,
+      fragments: clip.fragments,
     });
-    const { clip } = compileClipCached({
-      projectId: project.id,
-      artboard: scene.artboard,
-      locale,
-      fps,
-    });
-    const entry: LoadedScene = { scene: offscreen, clip, overrides: new Map() };
+    const entry: LoadedScene = {
+      scene: offscreen,
+      clip,
+      overrides: new Map(),
+      fragmentOverrides: new Map(),
+    };
     loaded.set(scene.artboardId, entry);
     while (loaded.size > memoryBudgetScenes) {
       const oldestKey = loaded.keys().next().value as string | undefined;
@@ -149,6 +158,17 @@ export async function createSceneSequenceRenderer(
   const drawScene = (entry: LoadedScene, localMs: number): FrameSource => {
     evaluateClipInto(entry.clip, localMs, entry.overrides);
     entry.scene.applyOverrides(entry.overrides);
+    if (entry.clip.fragments) {
+      for (const fragmentAnim of entry.clip.fragments) {
+        let buffer = entry.fragmentOverrides.get(fragmentAnim.layerId);
+        if (!buffer) {
+          buffer = [];
+          entry.fragmentOverrides.set(fragmentAnim.layerId, buffer);
+        }
+        evaluateFragmentsInto(fragmentAnim, localMs, buffer);
+      }
+      entry.scene.applyFragmentOverrides(entry.fragmentOverrides);
+    }
     entry.scene.render();
     return entry.scene.capture().source;
   };

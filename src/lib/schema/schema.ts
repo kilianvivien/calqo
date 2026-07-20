@@ -313,11 +313,20 @@ export const DIRECTIONAL_PRESET_KINDS = [
   'wipe',
   'rise',
 ] as const satisfies readonly PresetKind[];
-/** Preset kinds deferred to a later phase; rejected by validation in v1. */
-export const DEFERRED_PRESET_KINDS = [
+/** Text-reveal preset kinds (enter slot, text/list layers only) — AN-3.5. */
+export const TEXT_PRESET_KINDS = [
   'typewriter',
   'word-rise',
 ] as const satisfies readonly PresetKind[];
+/** Preset kinds valid in the enter slot: the enter/exit kinds plus text reveals
+ * (whose layer-kind restriction is enforced by the compiler/command layer). */
+export const ENTER_PRESET_KINDS = [
+  ...ENTER_EXIT_PRESET_KINDS,
+  ...TEXT_PRESET_KINDS,
+] as const satisfies readonly PresetKind[];
+/** No preset kind is deferred now that text reveals ship (AN-3.5); kept for
+ * backward compatibility with earlier imports. */
+export const DEFERRED_PRESET_KINDS = [] as const satisfies readonly PresetKind[];
 
 export const presetInstanceSchema = z.object({
   kind: presetKindSchema,
@@ -381,7 +390,7 @@ export const layerAnimationSchema = z.union([
     })
     .superRefine((anim, ctx) => {
       if (anim.enter)
-        refinePresetSlot(anim.enter, ENTER_EXIT_PRESET_KINDS, 'enter', ctx);
+        refinePresetSlot(anim.enter, ENTER_PRESET_KINDS, 'enter', ctx);
       if (anim.emphasis)
         refinePresetSlot(
           anim.emphasis,

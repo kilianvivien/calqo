@@ -974,7 +974,9 @@
       "blur-in": "Blur",
       "pulse": "Pulse",
       "wiggle": "Wiggle",
-      "float": "Float"
+      "float": "Float",
+      "typewriter": "Typewriter",
+      "word-rise": "Word rise"
     },
     "directions": {
       "up": "Up",

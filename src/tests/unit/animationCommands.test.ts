@@ -97,7 +97,8 @@ describe('animation commands', () => {
     expect(result).toEqual({ ok: false, code: 'slot-window-overlap' });
   });
 
-  it('rejects a deferred text preset', () => {
+  it('rejects a text-reveal preset on a non-text layer (AN-3.5)', () => {
+    // Text reveals only apply to text/list layers; the setup layer is a shape.
     const { project, layerId } = setupProject();
     const result = setLayerPreset(project.id, layerId, 'enter', {
       kind: 'typewriter',
@@ -105,7 +106,7 @@ describe('animation commands', () => {
       delay: 0,
     });
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe('invalid');
+    if (!result.ok) expect(result.code).toBe('unsupported-layer-kind');
   });
 
   it('coalesces slider-driven parameter changes into one undo step', () => {

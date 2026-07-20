@@ -20,6 +20,7 @@ import {
 import {
   EMPHASIS_PRESET_KINDS,
   ENTER_EXIT_PRESET_KINDS,
+  TEXT_PRESET_KINDS,
   MAX_SCENE_DURATION_MS,
   MIN_SCENE_DURATION_MS,
   type ClipSettings,
@@ -30,7 +31,10 @@ import {
 } from '@/lib/schema';
 import {
   PRESET_CATALOG,
+  isPresetEnabled,
+  presetSupportsLayerKind,
   type PresetDirection,
+  type PresetLayerKind,
   type PresetSlot,
 } from '@/editor/animation/presets';
 import { defaultPresetInstance } from '@/editor/animation/validate';
@@ -167,6 +171,7 @@ export function AnimationInspector() {
             <SlotSection
               key={slot}
               slot={slot}
+              layerKind={layer.type as PresetLayerKind}
               current={animation?.[slot] ?? null}
               onSelectKind={(kind) =>
                 commit(slot, kind ? defaultPresetInstance(kind) : null)
@@ -206,6 +211,7 @@ export function AnimationInspector() {
 
 interface SlotSectionProps {
   slot: PresetSlot;
+  layerKind: PresetLayerKind;
   current: PresetInstance | null;
   onSelectKind: (kind: PresetKind | null) => void;
   onParamChange: (patch: Partial<PresetInstance>, coalesce: boolean) => void;
@@ -215,6 +221,7 @@ interface SlotSectionProps {
 
 function SlotSection({
   slot,
+  layerKind,
   current,
   onSelectKind,
   onParamChange,
@@ -222,8 +229,16 @@ function SlotSection({
   onHoverEnd,
 }: SlotSectionProps) {
   const { t } = useTranslation('editor');
-  const kinds: readonly PresetKind[] =
-    slot === 'emphasis' ? EMPHASIS_PRESET_KINDS : ENTER_EXIT_PRESET_KINDS;
+  // The enter slot on a text/list layer also offers the text-reveal presets
+  // (typewriter / word-rise) when they are enabled (AN-3.5).
+  const kinds: readonly PresetKind[] = useMemo(() => {
+    if (slot === 'emphasis') return EMPHASIS_PRESET_KINDS;
+    if (slot !== 'enter') return ENTER_EXIT_PRESET_KINDS;
+    const textReveals = TEXT_PRESET_KINDS.filter(
+      (kind) => isPresetEnabled(kind) && presetSupportsLayerKind(kind, layerKind),
+    );
+    return [...ENTER_EXIT_PRESET_KINDS, ...textReveals];
+  }, [slot, layerKind]);
   const meta = current ? PRESET_CATALOG[current.kind] : null;
 
   return (

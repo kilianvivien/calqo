@@ -6,6 +6,7 @@ import {
   compileFragmentAnimation,
   textRevealEnterPreset,
 } from '@/editor/animation/fragmentCompiler';
+import { fragmentNodeSpecs } from '@/editor/animation/fragmentNodes';
 import { resolvePreset } from '@/editor/animation/presets';
 import { compileClip } from '@/editor/animation/compiler';
 import {
@@ -157,6 +158,26 @@ describe('fragment compiler — word-rise', () => {
   });
 });
 
+describe('fragmentNodeSpecs', () => {
+  it('maps compiled fragments to ordered render specs with layer-local boxes', () => {
+    const compiled = compileFragmentAnimation({
+      layer: textLayer('ab cd', 1000, 200),
+      preset: resolvePreset({ kind: 'word-rise', duration: 800, delay: 0 }),
+      box: { w: 1000, h: 200 },
+      sceneDuration: 4000,
+      measurer: fixedMeasurer(),
+      text: 'ab cd',
+      style,
+    })!;
+    const specs = fragmentNodeSpecs(compiled);
+    expect(specs.map((s) => s.text)).toEqual(['ab', 'cd']);
+    expect(specs[0].index).toBe(0);
+    // Boxes come straight from the compiled fragments (layer-local).
+    expect(specs[0].box).toMatchObject({ x: compiled.fragments[0].x, w: compiled.fragments[0].w });
+    expect(specs[1].box.x).toBeGreaterThan(specs[0].box.x);
+  });
+});
+
 describe('textRevealEnterPreset detection', () => {
   it('detects a text-reveal enter preset on a text layer', () => {
     const layer = {
@@ -175,11 +196,9 @@ describe('textRevealEnterPreset detection', () => {
   });
 });
 
-describe('compileClip fragment gate (production safety)', () => {
-  it('produces no fragments while the feature flag is off, even with a measurer', () => {
-    // The schema rejects text-reveal presets today, so a persisted layer cannot
-    // carry one; even if it could, the gated compiler emits nothing.
-    const artboard = {
+describe('compileClip fragment production (AN-3.5 enabled)', () => {
+  function artboardWith(layer: CalqoLayer) {
+    return {
       id: 'ab',
       name: 'a',
       preset: 'ig-square',
@@ -187,14 +206,38 @@ describe('compileClip fragment gate (production safety)', () => {
       height: 1080,
       background: { type: 'solid', color: '#ffffff' },
       timing: { duration: 4000 },
-      layers: [textLayer('hello world')],
-    };
+      layers: [layer],
+    } as never;
+  }
+
+  it('emits fragments for a top-level reveal layer when a measurer is supplied', () => {
+    const layer = {
+      ...textLayer('hello world'),
+      animation: { mode: 'preset', enter: { kind: 'word-rise', duration: 800, delay: 0 } },
+    } as unknown as CalqoLayer;
     const result = compileClip({
       projectId: 'p',
-      artboard: artboard as never,
+      artboard: artboardWith(layer),
       locale: 'en',
       fps: 30,
       measurerFor: () => fixedMeasurer(),
+    });
+    expect(result.clip.fragments).toHaveLength(1);
+    expect(result.clip.fragments?.[0].unit).toBe('word');
+    // The reveal is fragment-owned, so no layer-level enter window is emitted.
+    expect(result.clip.layers).toHaveLength(0);
+  });
+
+  it('emits no fragments without a measurer (e.g. non-canvas contexts)', () => {
+    const layer = {
+      ...textLayer('hello world'),
+      animation: { mode: 'preset', enter: { kind: 'typewriter', duration: 800, delay: 0 } },
+    } as unknown as CalqoLayer;
+    const result = compileClip({
+      projectId: 'p',
+      artboard: artboardWith(layer),
+      locale: 'en',
+      fps: 30,
     });
     expect(result.clip.fragments).toBeUndefined();
   });

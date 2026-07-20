@@ -26,11 +26,49 @@ function sceneDouble(events: string[]): OffscreenScene {
     width: 1080,
     height: 1920,
     applyOverrides: vi.fn(() => events.push('apply')),
+    applyFragmentOverrides: vi.fn(() => events.push('fragments')),
     resetToIdentity: vi.fn(),
     render: vi.fn(() => events.push('render')),
     capture: vi.fn(() => ({ width: 1080, height: 1920, source: canvas })),
     dispose: vi.fn(() => events.push('dispose')),
   };
+}
+
+/** A one-artboard project whose single top-level text layer reveals per word. */
+function revealFixture() {
+  const project = structuredClone(v2AllPresetsProject);
+  project.clipSettings = { fps: 30 };
+  const artboard = project.artboards[0];
+  artboard.timing = { duration: 100 };
+  artboard.layers = [
+    {
+      id: 'title',
+      name: 'Title',
+      type: 'text',
+      x: 0,
+      y: 0,
+      w: 800,
+      h: 200,
+      rotation: 0,
+      opacity: 1,
+      visible: true,
+      locked: false,
+      text: { en: 'one two three' },
+      style: {
+        fontFamily: 'Inter',
+        fontSize: 48,
+        fontWeight: 700,
+        fontStyle: 'normal',
+        textDecoration: 'none',
+        color: '#000000',
+        align: 'left',
+        lineHeight: 1.2,
+        letterSpacing: 0,
+      },
+      animation: { mode: 'preset', enter: { kind: 'word-rise', duration: 60, delay: 0 } },
+    },
+  ] as never;
+  return { project, artboard };
 }
 
 describe('animated MP4 frame orchestration', () => {
@@ -92,6 +130,38 @@ describe('animated MP4 frame orchestration', () => {
       frameCount: 3,
     });
     expect(session.cancel).not.toHaveBeenCalled();
+  });
+
+  it('drives text-reveal fragments into the scene each frame (AN-3.5)', async () => {
+    const { project, artboard } = revealFixture();
+    const events: string[] = [];
+    const scene = sceneDouble(events);
+    const createScene = vi.fn(async () => scene);
+    const session: VideoExportSession = {
+      addFrame: vi.fn(async () => {}),
+      finalize: vi.fn(async () => ({ blob: new Blob(['mp4']), streamed: false, byteLength: 3 })),
+      cancel: vi.fn(),
+    };
+    const adapter: VideoExportAdapter = {
+      capabilities: vi.fn(),
+      begin: vi.fn(async () => session),
+    };
+
+    await exportAnimatedVideo({
+      project,
+      artboard,
+      locale: 'en',
+      codec: 'h264',
+      adapter,
+      createScene,
+    });
+
+    // The scene is created with the compiled fragment animation…
+    const sceneInput = createScene.mock.calls[0][0] as { fragments?: unknown[] };
+    expect(sceneInput.fragments).toHaveLength(1);
+    // …and every rendered frame applies both layer and fragment overrides.
+    expect(events.filter((e) => e === 'fragments').length).toBeGreaterThan(0);
+    expect(scene.applyFragmentOverrides).toHaveBeenCalled();
   });
 
   it('propagates abort, cancels a partial session, and disposes the scene', async () => {

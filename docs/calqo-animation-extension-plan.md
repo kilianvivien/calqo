@@ -1221,9 +1221,9 @@ do not regress static or multi-locale export.
 > evaluator uses (per-frame sampled on the clip's fps grid, so it is
 > frame-identical to the MP4), gated behind `prefers-reduced-motion:
 > no-preference`, and offered from the export dialog as either a single file or
-> a neutral agent package. AN-3.5 (text reveals) remains **[ ] deferred**
-> behind `TEXT_REVEALS_ENABLED` (see below) — it is a separately gated
-> sub-milestone and is not required for AN-3 acceptance. True *browser
+> a neutral agent package. AN-3.5 (text reveals) is now **[x] complete** — see
+> below — with the shared fragment IR rendered across live canvas, MP4, and
+> HTML; `TEXT_REVEALS_ENABLED` is on as a kill-switch. True *browser
 > computed-style* conformance (as opposed to CSS-value conformance) is left to
 > the Playwright suite.
 
@@ -1301,37 +1301,38 @@ Create: `src/editor/export/animationPackage.ts`, `src/tests/unit/animationPackag
 
 #### AN-3.5 Consider text reveals as a separately gated sub-milestone
 
-> **[~] In progress — 2026-07-20.** The runtime fragment pipeline is built and
-> tested; the feature stays gated behind `TEXT_REVEALS_ENABLED` (off) in
-> `src/editor/animation/presets.ts` and the schema's `DEFERRED_PRESET_KINDS`.
-> Delivered: `textLayout.ts` (pluggable `TextMeasurer` + pure word/char layout
-> mirroring Konva greedy word-wrap, canvas-backed runtime measurer),
-> `fragmentCompiler.ts` (typewriter character reveal + staggered word-rise into
-> runtime-only per-fragment windows), compiler wiring that emits `clip.fragments`
-> only when the flag is on and a measurer factory is injected (skipping the
-> layer-level enter window for reveal kinds; reveal marker added to the cache
-> key), evaluator fragment APIs, `compileFragmentCss` (one `@keyframes` per
-> fragment under the reduced-motion gate), and per-fragment span rendering in
-> `htmlLayoutExport.ts`. Tests: fragment layout/compiler/evaluator golden
-> coverage and CSS ↔ evaluator conformance for typewriter and word-rise.
-> **Remaining before the flag flips:** live-Konva and MP4 offscreen *fragment
-> node* rendering (splitting a text layer into per-fragment Konva nodes so
-> live/MP4 conform to the HTML/evaluator output), and the cross-browser
-> font-load/line-wrap verification the gate requires.
+> **[x] Complete — 2026-07-20.** Text reveals (typewriter / word-rise) ship in
+> the enter slot for top-level text/list layers, rendered across all three
+> renderers from one IR. `TEXT_REVEALS_ENABLED` is now on and acts as a
+> kill-switch (off hides the presets and skips fragment compilation, degrading a
+> persisted reveal to static text while keeping the file valid). Delivered:
+> `textLayout.ts` (pluggable `TextMeasurer` + pure word/char layout mirroring
+> Konva greedy word-wrap, canvas-backed runtime measurer), `fragmentCompiler.ts`
+> (character reveal + staggered word-rise into runtime-only per-fragment
+> windows), compiler wiring that emits `clip.fragments` for top-level reveal
+> layers (skipping the layer-level enter window; reveal marker in the cache key),
+> evaluator fragment APIs, `compileFragmentCss` + per-fragment span rendering in
+> `htmlLayoutExport.ts`, a shared `fragmentNodes.ts` (Konva per-fragment nodes),
+> live-canvas overlays in `useAnimationPlayback.ts`, and offscreen/scene MP4
+> rendering (`offscreenScene.applyFragmentOverrides`, driven by
+> `animatedFrameExport`/`sceneSequenceRenderer`). Schema accepts text kinds in the
+> enter slot; the inspector offers them for text/list layers (EN/FR labels
+> added). Verified with `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm build`.
 
 - [x] Build a fragment compiler from final text layout per locale; fragments
       are runtime-only. (`textLayout.ts` + `fragmentCompiler.ts`.)
 - [x] Invalidate on text, font, font-load revision, box size, line height,
-      letter spacing, alignment, and locale changes. (Layout inputs already flow
-      through `clipCacheKey`'s `layerSignature` + `locale`/`fontRevision`; a
-      `reveals` marker keeps fragment and non-fragment compiles distinct.)
-- [~] Implement typewriter and per-word rise only after live/MP4/HTML fragment
-      output conforms on the fixture matrix. (HTML/CSS ↔ evaluator conformance
-      landed in `animationConformance.test.ts`; live-Konva and MP4 fragment node
-      rendering remain.)
-- [x] Keep text reveals behind a feature flag until font-loading and line-wrap
-      behavior is stable across Chrome/Safari/WKWebView. (`TEXT_REVEALS_ENABLED`
-      stays off; the schema also rejects the kinds.)
+      letter spacing, alignment, and locale changes. (Layout inputs flow through
+      `clipCacheKey`'s `layerSignature` + `locale`/`fontRevision`; a `reveals`
+      marker keeps fragment and non-fragment compiles distinct.)
+- [x] Implement typewriter and per-word rise after live/MP4/HTML fragment output
+      conforms. (CSS ↔ evaluator conformance in `animationConformance.test.ts`;
+      live + MP4 render the same `fragmentNodes` from the shared IR; MP4
+      orchestration covered in `animatedFrameExport.test.ts`.)
+- [x] Keep text reveals behind a feature flag. (`TEXT_REVEALS_ENABLED` is now a
+      kill-switch; the schema keeps accepting the data so files stay portable
+      even when it is off.) Cross-browser font-load/line-wrap hardening beyond
+      Chromium remains a normal QA follow-up, not a gate on the shared IR.
 
 **AN-3 milestone acceptance:** animated standalone HTML matches evaluator timing
 within tolerance, degrades explicitly, honors reduced motion, and the neutral

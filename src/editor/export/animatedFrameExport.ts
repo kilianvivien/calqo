@@ -1,6 +1,7 @@
 import type { CalqoArtboard, CalqoProject, LocaleCode } from '@/lib/schema';
 import { compileClipCached } from '@/editor/animation/compiler';
-import { evaluateClipInto } from '@/editor/animation/evaluator';
+import { evaluateClipInto, evaluateFragmentsInto } from '@/editor/animation/evaluator';
+import { createCanvasMeasurer } from '@/editor/animation/textLayout';
 import type { WrapperOverride } from '@/editor/animation/types';
 import {
   createOffscreenScene,
@@ -131,6 +132,7 @@ export async function exportAnimatedVideo(
     artboard,
     locale,
     fps: framesPerSecond,
+    measurerFor: (font) => createCanvasMeasurer(font),
   });
 
   const scene = await createScene({
@@ -139,10 +141,13 @@ export async function exportAnimatedVideo(
     outputWidth: width,
     outputHeight: height,
     opaqueBackground: true,
+    fragments: clip.fragments,
   });
 
   let session: Awaited<ReturnType<VideoExportAdapter['begin']>> | null = null;
   const overrides = new Map<string, WrapperOverride>();
+  // Reused per-fragment override buffers (no per-frame allocation, §6.4).
+  const fragmentOverrides = new Map<string, WrapperOverride[]>();
 
   try {
     session = await adapter.begin({
@@ -161,6 +166,17 @@ export async function exportAnimatedVideo(
       const tMs = (i / framesPerSecond) * 1000;
       evaluateClipInto(clip, tMs, overrides);
       scene.applyOverrides(overrides);
+      if (clip.fragments) {
+        for (const fragmentAnim of clip.fragments) {
+          let buffer = fragmentOverrides.get(fragmentAnim.layerId);
+          if (!buffer) {
+            buffer = [];
+            fragmentOverrides.set(fragmentAnim.layerId, buffer);
+          }
+          evaluateFragmentsInto(fragmentAnim, tMs, buffer);
+        }
+        scene.applyFragmentOverrides(fragmentOverrides);
+      }
       scene.render();
       await session.addFrame(frameTimestampMicros(i, framesPerSecond), frameDurationUs);
       onProgress?.({

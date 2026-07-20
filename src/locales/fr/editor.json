@@ -974,7 +974,9 @@
       "blur-in": "Flou",
       "pulse": "Pulsation",
       "wiggle": "Oscillation",
-      "float": "Flottement"
+      "float": "Flottement",
+      "typewriter": "Machine à écrire",
+      "word-rise": "Montée des mots"
     },
     "directions": {
       "up": "Haut",

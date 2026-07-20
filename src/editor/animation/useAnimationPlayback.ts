@@ -6,12 +6,26 @@ import {
   type PreviewPreset,
 } from '@/lib/state/animationPlaybackStore';
 import { compileClipCached } from './compiler';
-import { createIdentityOverride, evaluateClipInto } from './evaluator';
+import {
+  createIdentityOverride,
+  evaluateClipInto,
+  evaluateFragmentsInto,
+} from './evaluator';
 import { applyWrapperOverride, resetWrapper, type LayerBox } from './wrapperNode';
+import { buildFragmentContainer, type FragmentNodeHandles } from './fragmentNodes';
+import { createCanvasMeasurer } from './textLayout';
 import type { WrapperOverride } from './types';
 import type { NodeRegistry } from '@/editor/canvas/LayerRenderer';
 
 type WrapperRegistry = Map<string, Konva.Group>;
+
+/** A live fragment overlay: the built nodes plus what it hid, so teardown can
+ * restore the layer's base text node exactly. */
+interface FragmentOverlay extends FragmentNodeHandles {
+  baseNode: Konva.Node | undefined;
+  baseWasVisible: boolean;
+  overrides: WrapperOverride[];
+}
 
 /** Flatten a layer tree into an id→box map (artboard coords) for wrapper math. */
 function collectBoxes(layers: CalqoLayer[], out: Map<string, LayerBox>): void {
@@ -73,6 +87,7 @@ export function useAnimationPlayback({
   project,
   artboard,
   enabled,
+  nodeRefs,
   wrapperRefs,
   stageRef,
 }: UseAnimationPlaybackArgs): void {
@@ -87,6 +102,9 @@ export function useAnimationPlayback({
   const overridesRef = useRef<Map<string, WrapperOverride>>(new Map());
   const rafRef = useRef<number | null>(null);
   const touchedRef = useRef<Set<string>>(new Set());
+  // Live text-reveal overlays, keyed by layer id (AN-3.5). Built imperatively
+  // inside the layer's wrapper during playback and torn down on reset.
+  const overlaysRef = useRef<Map<string, FragmentOverlay>>(new Map());
 
   const locale = project.activeContentLocale;
   const fps = project.clipSettings?.fps ?? 30;
@@ -107,12 +125,23 @@ export function useAnimationPlayback({
   useEffect(() => {
     const stage = stageRef.current;
 
+    /** Remove every fragment overlay and restore the base text nodes. */
+    const teardownOverlays = () => {
+      for (const overlay of overlaysRef.current.values()) {
+        overlay.container.remove();
+        overlay.container.destroy();
+        overlay.baseNode?.visible(overlay.baseWasVisible);
+      }
+      overlaysRef.current.clear();
+    };
+
     const resetAll = () => {
       for (const id of touchedRef.current) {
         const node = wrapperRefs.current.get(id);
         if (node) resetWrapper(node);
       }
       touchedRef.current.clear();
+      teardownOverlays();
       stage?.batchDraw();
     };
 
@@ -128,7 +157,30 @@ export function useAnimationPlayback({
       artboard: artboardWithPreview(artboard, preview),
       locale,
       fps,
+      measurerFor: (font) => createCanvasMeasurer(font),
     }).clip;
+
+    // Build text-reveal overlays for this compile: one fragment container per
+    // reveal layer, added inside the layer's wrapper with its base node hidden.
+    teardownOverlays();
+    for (const fragmentAnim of compiled.fragments ?? []) {
+      const wrapper = wrapperRefs.current.get(fragmentAnim.layerId);
+      const layer = artboard.layers.find((l) => l.id === fragmentAnim.layerId);
+      if (!wrapper || !layer) continue;
+      const handles = buildFragmentContainer(layer, fragmentAnim);
+      if (!handles) continue;
+      handles.container.setAttrs({ x: layer.x, y: layer.y, rotation: layer.rotation, opacity: layer.opacity });
+      const baseNode = nodeRefs.current.get(fragmentAnim.layerId);
+      const baseWasVisible = baseNode?.visible() ?? true;
+      baseNode?.visible(false);
+      wrapper.add(handles.container);
+      overlaysRef.current.set(fragmentAnim.layerId, {
+        ...handles,
+        baseNode,
+        baseWasVisible,
+        overrides: handles.wrappers.map(() => createIdentityOverride()),
+      });
+    }
 
     const draw = (tMs: number) => {
       const overrides = evaluateClipInto(compiled, tMs, overridesRef.current);
@@ -149,13 +201,23 @@ export function useAnimationPlayback({
         }
       }
       touchedRef.current = nextTouched;
+      // Drive text-reveal fragments.
+      for (const [layerId, overlay] of overlaysRef.current) {
+        const fragmentAnim = compiled.fragments?.find((f) => f.layerId === layerId);
+        if (!fragmentAnim) continue;
+        evaluateFragmentsInto(fragmentAnim, tMs, overlay.overrides);
+        for (let i = 0; i < overlay.wrappers.length; i++) {
+          const o = overlay.overrides[i];
+          if (o) applyWrapperOverride(overlay.wrappers[i], o, overlay.boxes[i]);
+        }
+      }
       stage?.batchDraw();
     };
 
     if (status !== 'playing') {
       // Paused / idle / preview: draw once at the current playhead.
       draw(preview ? Math.min(seekTime, sceneDuration) : seekTime);
-      return;
+      return teardownOverlays;
     }
 
     // Playing: run a RAF loop from an origin anchored to the current playhead.
@@ -181,6 +243,7 @@ export function useAnimationPlayback({
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
+      teardownOverlays();
     };
     // A seek re-runs this effect and re-anchors the RAF origin to the new
     // playhead; the loop reads `seekTime` once as that origin.
@@ -194,6 +257,7 @@ export function useAnimationPlayback({
     locale,
     fps,
     sceneDuration,
+    nodeRefs,
     wrapperRefs,
     stageRef,
     reportTime,

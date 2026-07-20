@@ -370,9 +370,13 @@ function compileLayer(
   }
 }
 
-/** Walk layers (into groups) and compile any text-reveal enter preset into
- * fragment animation. Runs only when the feature flag is on and a measurer
- * factory is supplied (§4.5 gate); otherwise the output has no `fragments`. */
+/** Compile a top-level layer's text-reveal enter preset into fragment animation.
+ * Runs only when the feature flag is on and a measurer factory is supplied.
+ *
+ * Fragments are supported on **top-level** text/list layers only, so every
+ * renderer (live Konva, offscreen MP4, HTML/CSS) draws the same per-fragment
+ * nodes — a text layer nested inside a group is not split into fragments (its
+ * reveal preset is a no-op there; author it at the top level). */
 function compileFragments(
   layer: CalqoLayer,
   sceneDuration: number,
@@ -381,27 +385,20 @@ function compileFragments(
   out: CompiledFragmentAnimation[],
 ): void {
   const preset = textRevealEnterPreset(layer);
-  if (preset) {
-    const text = layerText(layer, locale);
-    const style = layerTextStyle(layer);
-    if (text !== null && style) {
-      const fragmentAnim = compileFragmentAnimation({
-        layer,
-        preset,
-        box: { w: layer.w, h: layer.h },
-        sceneDuration,
-        measurer: measurerFor(fontShorthandFor(style)),
-        text,
-        style,
-      });
-      if (fragmentAnim) out.push(fragmentAnim);
-    }
-  }
-  if (layer.type === 'group') {
-    for (const child of layer.children) {
-      compileFragments(child, sceneDuration, locale, measurerFor, out);
-    }
-  }
+  if (!preset) return;
+  const text = layerText(layer, locale);
+  const style = layerTextStyle(layer);
+  if (text === null || !style) return;
+  const fragmentAnim = compileFragmentAnimation({
+    layer,
+    preset,
+    box: { w: layer.w, h: layer.h },
+    sceneDuration,
+    measurer: measurerFor(fontShorthandFor(style)),
+    text,
+    style,
+  });
+  if (fragmentAnim) out.push(fragmentAnim);
 }
 
 /** Compile an artboard's preset/custom animation into a deterministic

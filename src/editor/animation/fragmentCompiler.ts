@@ -23,9 +23,10 @@ import type {
  * locale — plan §4.3/§8). The compiled output feeds the same evaluator the
  * transform presets use, so live playback, MP4, and CSS/HTML all consume one IR.
  *
- * Gated: the schema rejects text-reveal kinds and `TEXT_REVEALS_ENABLED` is off
- * until cross-browser line-wrap/font-load behaviour is verified (plan §4.5). The
- * compiler is complete and tested so flipping the flag needs no new logic.
+ * Text reveals ship enabled (AN-3.5): the schema accepts them in the enter slot
+ * for text/list layers and `TEXT_REVEALS_ENABLED` gates only the catalog/UI +
+ * fragment compilation as a kill-switch. Fragments are supported on top-level
+ * layers so live playback, MP4, and animated HTML all draw the same nodes.
  */
 
 /** Per-character crisp reveal cap (ms): a short ramp reads as a typewriter cut

@@ -204,9 +204,15 @@ describe('animation schema — rejection', () => {
     expect(reject({ mode: 'preset', emphasis: { kind: 'fade', duration: 400, delay: 0 } })).toBe(false);
   });
 
-  it('rejects deferred text-reveal presets', () => {
-    expect(reject({ mode: 'preset', enter: { kind: 'typewriter', duration: 400, delay: 0 } })).toBe(false);
-    expect(reject({ mode: 'preset', enter: { kind: 'word-rise', duration: 400, delay: 0 } })).toBe(false);
+  it('accepts text-reveal presets in the enter slot (AN-3.5)', () => {
+    expect(reject({ mode: 'preset', enter: { kind: 'typewriter', duration: 400, delay: 0 } })).toBe(true);
+    expect(reject({ mode: 'preset', enter: { kind: 'word-rise', duration: 400, delay: 0 } })).toBe(true);
+  });
+
+  it('rejects text-reveal presets outside the enter slot', () => {
+    // typewriter/word-rise are enter-only.
+    expect(reject({ mode: 'preset', exit: { kind: 'typewriter', duration: 400, delay: 0 } })).toBe(false);
+    expect(reject({ mode: 'preset', emphasis: { kind: 'word-rise', duration: 400, delay: 0 } })).toBe(false);
   });
 
   it('rejects a direction on a non-directional preset', () => {
