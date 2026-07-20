@@ -351,6 +351,7 @@
   "export": {
     "title": "Export",
     "subtitle": "Render the artboard to an image, SVG, or HTML wrapper.",
+    "animationSubtitle": "Export the active animated artboard as MP4 or GIF.",
     "close": "Close",
     "import": "Import .calqo",
     "importFailed": "Could not import this file. It may be invalid or corrupted.",
@@ -388,9 +389,37 @@
     "htmlWrapper": "Image wrapper",
     "htmlEditable": "Editable",
     "htmlEditableHint": "Editable HTML keeps text selectable and shapes as CSS/SVG. PNG stays the pixel-faithful path; unsupported layers embed as images with a note.",
+    "htmlAnimOutput": "Animation output",
+    "htmlAnimFile": "Single file",
+    "htmlAnimPackage": "Package (ZIP)",
     "warnEnvelopeSize": "The portable .calqo file is estimated at {{size}} MB — consider optimizing assets before moving it.",
     "warnEnvelopeContributors": "Largest assets: {{names}}.",
     "fidelityNotes": "Editable HTML notes",
+    "video": "Video",
+    "mp4Codec": "Codec",
+    "codecH264": "H.264 (compatible)",
+    "codecH265": "H.265 (smaller)",
+    "videoUnavailable": "Video export isn't available in this browser. Try GIF, or open Calqo in Chrome or the desktop app.",
+    "videoNotAnimated": "Please add an animation to a layer before exporting.",
+    "videoSummary": "{{width}}×{{height}} · {{fps}} fps · {{seconds}}s · ~{{frames}} frames",
+    "videoCancel": "Cancel",
+    "videoCancelling": "Cancelling…",
+    "videoRendering": "Rendering… ({{done}}/{{total}} frames)",
+    "videoEncoding": "Finalizing video…",
+    "videoCancelled": "Export cancelled.",
+    "gifCapsHint": "GIF is capped at {{seconds}}s, {{size}}px, and {{fps}} fps for size and memory.",
+    "animWarningsTitle": "Export notes",
+    "animWarnings": {
+      "unsupportedCodec": "{{codec}} isn't supported here — falling back to another format.",
+      "softwareEncoding": "{{codec}} encodes in software here, so export may be slow and hot.",
+      "oddDimensionAdjusted": "Output padded to even dimensions ({{width}}×{{height}}) for video.",
+      "gifCaps": "GIF reduced to {{width}}×{{height}} at {{fps}} fps, {{seconds}}s to stay within caps.",
+      "unsupportedEffect": "{{name}}: an effect can't be animated in this format and is approximated.",
+      "missingAsset": "{{name}}: a missing asset is skipped.",
+      "memoryFallback": "This clip is large; it is held in memory before download.",
+      "cancellation": "Export was cancelled and partial output discarded.",
+      "partialOutputCleanup": "Partial output was cleaned up after an error."
+    },
     "htmlWarnings": {
       "codes": {
         "fontFallback": "Fonts are referenced by family name and may fall back on another computer.",
@@ -399,7 +428,8 @@
         "vectorApproximation": "{{name}}: some vector styling is approximated.",
         "rasterized": "{{name}} is embedded as an image ({{reason}}).",
         "missingAsset": "{{name}}: the missing asset is skipped.",
-        "renderFailed": "{{name}} could not be rendered and is skipped."
+        "renderFailed": "{{name}} could not be rendered and is skipped.",
+        "animationDowngrade": "{{name}}: its animation is dropped because its group is flattened to one image."
       },
       "reasons": {
         "mask": "unsupported mask",
@@ -902,6 +932,101 @@
     "failed": "Optimization failed.",
     "open": "Optimize assets…",
     "importNotice": "“{{name}}” is large ({{width}}×{{height}}px) and may slow editing and bloat exports."
+  },
+  "animate": {
+    "mode": {
+      "design": "Design",
+      "animate": "Animate",
+      "toggleLabel": "Editing mode"
+    },
+    "inspector": {
+      "title": "Animation",
+      "empty": "Select a layer to animate it.",
+      "noAnimation": "No animation on this layer yet.",
+      "sceneTitle": "Scene",
+      "sceneDuration": "Duration",
+      "fps": "Frame rate",
+      "seconds": "{{value}}s",
+      "clearLayer": "Remove layer animation",
+      "clearArtboard": "Clear all animation"
+    },
+    "slots": {
+      "enter": "Enter",
+      "emphasis": "Emphasis",
+      "exit": "Exit",
+      "none": "None"
+    },
+    "params": {
+      "duration": "Duration",
+      "delay": "Delay",
+      "direction": "Direction",
+      "distance": "Distance",
+      "easing": "Easing",
+      "ms": "{{value}} ms",
+      "px": "{{value}} px"
+    },
+    "presets": {
+      "fade": "Fade",
+      "slide": "Slide",
+      "pop": "Pop",
+      "rise": "Rise",
+      "wipe": "Wipe",
+      "blur-in": "Blur",
+      "pulse": "Pulse",
+      "wiggle": "Wiggle",
+      "float": "Float",
+      "typewriter": "Typewriter",
+      "word-rise": "Word rise"
+    },
+    "directions": {
+      "up": "Up",
+      "down": "Down",
+      "left": "Left",
+      "right": "Right"
+    },
+    "easings": {
+      "linear": "Linear",
+      "ease-in": "Ease in",
+      "ease-out": "Ease out",
+      "ease-in-out": "Ease in-out",
+      "overshoot": "Overshoot",
+      "bounce": "Bounce"
+    },
+    "transport": {
+      "play": "Play",
+      "pause": "Pause",
+      "restart": "Jump to start",
+      "time": "{{current}} / {{total}}s",
+      "scrub": "Playhead",
+      "empty": "Add animation to a layer to preview it.",
+      "timingTitle": "Timing"
+    },
+    "scenes": {
+      "title": "Scenes",
+      "empty": "Add artboards to build a multi-scene clip.",
+      "add": "Add a scene…",
+      "clear": "Clear scenes",
+      "total": "{{seconds}}s total",
+      "remove": "Remove scene",
+      "moveUp": "Move scene up",
+      "moveDown": "Move scene down",
+      "transitionFor": "Transition into {{name}}",
+      "transitions": {
+        "cut": "Cut",
+        "fade": "Fade",
+        "slide": "Slide"
+      }
+    },
+    "errors": {
+      "invalid": "That animation isn't valid.",
+      "preset-disabled": "That preset isn't available yet.",
+      "unsupported-slot": "That preset can't be used in this slot.",
+      "unsupported-layer-kind": "That preset doesn't support this layer.",
+      "window-exceeds-scene": "That timing doesn't fit inside the scene.",
+      "slot-window-overlap": "Enter and exit overlap in time.",
+      "no-layer": "No layer selected.",
+      "no-artboard": "No artboard open."
+    }
   },
   "presets": {
     "ig-square": "Instagram square",

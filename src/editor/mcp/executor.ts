@@ -1,10 +1,13 @@
 import type { Draft } from 'immer';
 import {
   createArtboard,
+  layerAnimationSchema,
+  DEFAULT_SCENE_DURATION_MS,
   type CalqoArtboard,
   type CalqoLayer,
   type CalqoProject,
   type GroupLayer,
+  type LayerAnimation,
 } from '@/lib/schema';
 import {
   applyLayerPatch,
@@ -16,6 +19,12 @@ import {
   updateLayer,
   type LayerPatch,
 } from '@/editor/utils/layers';
+import {
+  validatePresetAnimation,
+  type AnimationValidationCode,
+} from '@/editor/animation/validate';
+import type { PresetLayerKind, PresetSlot } from '@/editor/animation/presets';
+import { validateSceneSequence } from '@/editor/animation/sceneSequence';
 import {
   applyAddContentLocale,
   applySetActiveContentLocale,
@@ -228,6 +237,43 @@ function warnIfTextOverflows(
     `Text in layer "${layer.name}" (${layer.id}) overflows its ${layer.w}x${layer.h} box ` +
       `for locale "${activeLocale}"; ${overflow.suggestedAction === 'reduce-font' ? 'reduce the font size or enlarge the box' : 'enlarge the box or shorten the copy'}.`,
   );
+}
+
+function sceneDurationOfArtboard(
+  artboard: CalqoArtboard | Draft<CalqoArtboard>,
+): number {
+  return artboard.timing?.duration ?? DEFAULT_SCENE_DURATION_MS;
+}
+
+/** Find a layer anywhere in the tree (top-level or nested in a group). */
+function findLayerDeep(
+  layers: CalqoLayer[],
+  id: string,
+): CalqoLayer | undefined {
+  return flattenLayers(layers).find((layer) => layer.id === id);
+}
+
+/** Agent-facing message for a preset-animation validation failure. */
+function presetValidationMessage(
+  code: AnimationValidationCode,
+  slot?: PresetSlot,
+): string {
+  const where = slot ? ` (${slot} slot)` : '';
+  switch (code) {
+    case 'preset-disabled':
+      return `That preset is not enabled yet${where}. Text-reveal presets are gated.`;
+    case 'unsupported-slot':
+      return `That preset cannot be used in the ${slot ?? 'given'} slot.`;
+    case 'unsupported-layer-kind':
+      return `That preset does not support this layer kind${where}.`;
+    case 'window-exceeds-scene':
+      return `The preset's timing falls outside the scene duration${where}. Shorten the duration/delay or lengthen the scene.`;
+    case 'slot-window-overlap':
+      return 'The enter and exit animations overlap in time; adjust their durations or delays.';
+    case 'invalid':
+    default:
+      return `The animation is invalid${where}.`;
+  }
 }
 
 /** Apply a normalized batch to a project document (clone during simulation,
@@ -446,6 +492,142 @@ export function applyBatchToProject(
           );
         }
         applySetActiveContentLocale(project, operation.locale);
+        break;
+      }
+      case 'setLayerPreset': {
+        const layerId = mappedId(operation.layerId, batch.idMap);
+        const layer = findLayerDeep(layers(), layerId);
+        if (!layer) {
+          opFail('LAYER_NOT_FOUND', `Layer "${layerId}" not found on this artboard.`);
+        }
+        // Preset authoring replaces any custom animation (strict either/or, §4.1).
+        const candidate: Extract<LayerAnimation, { mode: 'preset' }> =
+          layer.animation?.mode === 'preset'
+            ? { ...layer.animation }
+            : { mode: 'preset' };
+        if (operation.preset) candidate[operation.slot as PresetSlot] = operation.preset;
+        else delete candidate[operation.slot as PresetSlot];
+        const empty = !candidate.enter && !candidate.emphasis && !candidate.exit;
+        if (!empty) {
+          const validation = validatePresetAnimation(
+            candidate,
+            layer.type as PresetLayerKind,
+            sceneDurationOfArtboard(artboard),
+          );
+          if (!validation.ok) {
+            opFail(
+              'VALIDATION_FAILED',
+              presetValidationMessage(validation.code, validation.slot),
+            );
+          }
+        }
+        updateLayer(layers(), layerId, (target) => {
+          if (empty) delete target.animation;
+          else target.animation = candidate;
+        });
+        outcome.changedLayerIds.push(layerId);
+        break;
+      }
+      case 'setLayerCustomWindows': {
+        const layerId = mappedId(operation.layerId, batch.idMap);
+        const layer = findLayerDeep(layers(), layerId);
+        if (!layer) {
+          opFail('LAYER_NOT_FOUND', `Layer "${layerId}" not found on this artboard.`);
+        }
+        const candidate: LayerAnimation = { mode: 'custom', windows: operation.windows };
+        const parsed = layerAnimationSchema.safeParse(candidate);
+        if (!parsed.success) {
+          opFail('VALIDATION_FAILED', `Custom windows are invalid: ${parsed.error.issues[0]?.message ?? 'schema error'}.`);
+        }
+        const sceneDur = sceneDurationOfArtboard(artboard);
+        for (const window of operation.windows) {
+          const end = window.start + window.duration;
+          if (window.start < 0 || end > sceneDur) {
+            opFail(
+              'VALIDATION_FAILED',
+              `A custom window [${window.start}, ${end}]ms falls outside the ${sceneDur}ms scene.`,
+            );
+          }
+        }
+        updateLayer(layers(), layerId, (target) => {
+          target.animation = parsed.data;
+        });
+        outcome.changedLayerIds.push(layerId);
+        break;
+      }
+      case 'clearLayerAnimation': {
+        const layerId = mappedId(operation.layerId, batch.idMap);
+        const updated = updateLayer(layers(), layerId, (target) => {
+          delete target.animation;
+        });
+        if (!updated) {
+          opFail('LAYER_NOT_FOUND', `Layer "${layerId}" not found on this artboard.`);
+        }
+        outcome.changedLayerIds.push(layerId);
+        break;
+      }
+      case 'setSceneDuration': {
+        const abId = operation.artboardId ?? artboard.id;
+        const target = project.artboards.find((a) => a.id === abId);
+        if (!target) {
+          opFail('ARTBOARD_NOT_FOUND', `Artboard "${abId}" does not exist.`);
+        }
+        target.timing = { duration: Math.round(operation.durationMs) };
+        break;
+      }
+      case 'setClipFps': {
+        project.clipSettings = {
+          ...(project.clipSettings ?? { fps: 30 }),
+          fps: operation.fps,
+        };
+        break;
+      }
+      case 'setClipScenes':
+      case 'reorderScene':
+      case 'setSceneTransition': {
+        const fps = project.clipSettings?.fps ?? 30;
+        const current = project.clipSettings?.scenes
+          ? project.clipSettings.scenes.map((s) => ({ ...s }))
+          : [];
+        let next = current;
+        if (operation.type === 'setClipScenes') {
+          next = operation.scenes.map((s) => ({ ...s }));
+        } else if (operation.type === 'reorderScene') {
+          if (
+            operation.from < 0 ||
+            operation.from >= current.length ||
+            operation.to < 0 ||
+            operation.to >= current.length
+          ) {
+            opFail('VALIDATION_FAILED', `Scene index out of range (have ${current.length} scenes).`);
+          }
+          const [moved] = next.splice(operation.from, 1);
+          next.splice(operation.to, 0, moved);
+        } else {
+          if (operation.index < 0 || operation.index >= current.length) {
+            opFail('VALIDATION_FAILED', `Scene index out of range (have ${current.length} scenes).`);
+          }
+          next[operation.index] = {
+            ...next[operation.index],
+            transition: operation.transition,
+            transitionDurationMs:
+              operation.transition === 'cut' ? undefined : operation.transitionDurationMs,
+          };
+        }
+        const candidate = { ...project, clipSettings: { fps, scenes: next } } as CalqoProject;
+        const issues = validateSceneSequence(candidate);
+        if (issues.length > 0) {
+          opFail(
+            'VALIDATION_FAILED',
+            `Scene sequence is invalid: ${issues.map((i) => i.message).join('; ')}.`,
+            { issues },
+          );
+        }
+        if (next.length === 0) {
+          if (project.clipSettings) project.clipSettings.scenes = undefined;
+        } else {
+          project.clipSettings = { ...(project.clipSettings ?? { fps }), fps, scenes: next };
+        }
         break;
       }
     }

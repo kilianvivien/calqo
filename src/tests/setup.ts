@@ -23,23 +23,53 @@ vi.mock('react-konva', () => ({
   Transformer: mockKonvaComponent('Transformer'),
 }));
 
+// jsdom has no real 2D canvas. Raw Konva (used by the offscreen scene and raster
+// export, not the mocked react-konva) drives a wide surface of context methods
+// while rendering, so back the mock with a Proxy: known value-properties are
+// stored, gradient/pattern creators return an `addColorStop`-capable stub, and
+// every other method is a no-op. This lets `layer.draw()` run without throwing.
+function makeContext2D(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const store: Record<string, unknown> = {
+    canvas,
+    font: '10px sans-serif',
+    fillStyle: '#000',
+    strokeStyle: '#000',
+    globalAlpha: 1,
+    lineWidth: 1,
+  };
+  const gradientStub = { addColorStop: () => {} };
+  const explicit: Record<string, (...args: unknown[]) => unknown> = {
+    measureText: (text: unknown) => ({ width: String(text).length * 8 }),
+    getImageData: (_x, _y, w, h) => ({
+      data: new Uint8ClampedArray(Math.max(1, Number(w) || 1) * Math.max(1, Number(h) || 1) * 4),
+      width: Number(w) || 1,
+      height: Number(h) || 1,
+    }),
+    createImageData: (w, h) => ({
+      data: new Uint8ClampedArray(Math.max(1, Number(w) || 1) * Math.max(1, Number(h) || 1) * 4),
+    }),
+    createLinearGradient: () => gradientStub,
+    createRadialGradient: () => gradientStub,
+    createPattern: () => ({}),
+  };
+  return new Proxy(store, {
+    get(target, prop: string) {
+      if (prop in explicit) return explicit[prop];
+      if (prop in target) return target[prop];
+      return () => undefined;
+    },
+    set(target, prop: string, value) {
+      target[prop] = value;
+      return true;
+    },
+  }) as unknown as CanvasRenderingContext2D;
+}
+
 Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
   configurable: true,
-  value: vi.fn(() => ({
-    clearRect: vi.fn(),
-    drawImage: vi.fn(),
-    fillRect: vi.fn(),
-    getImageData: vi.fn(() => ({ data: new Uint8ClampedArray([255, 255, 255, 255]) })),
-    fillText: vi.fn(),
-    font: '',
-    measureText: vi.fn((text: string) => ({ width: text.length * 8 })),
-    putImageData: vi.fn(),
-    restore: vi.fn(),
-    save: vi.fn(),
-    scale: vi.fn(),
-    setTransform: vi.fn(),
-    strokeText: vi.fn(),
-  })),
+  value: vi.fn(function (this: HTMLCanvasElement) {
+    return makeContext2D(this);
+  }),
 });
 
 Object.defineProperty(HTMLCanvasElement.prototype, 'toDataURL', {
