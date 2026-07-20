@@ -1345,12 +1345,15 @@ package renders without Calqo or secret state.
 > operations to the MCP/agent surface (set/clear preset, custom windows, clear,
 > scene duration/fps, scene list/reorder/transition), each routed through the
 > same simulate→commit executor as user edits. Verified with `pnpm typecheck`,
-> `pnpm test` (539 passing, incl. `mcpAnimationOps` plus the AN-4.2 scene
-> suites), `pnpm lint`, and `pnpm build`. AN-4.1's open design questions were
-> resolved as part of shipping 4.2 (see the notes below). **AN-4.4
-> (deferred-format reassessment) is recorded below as a decision; no new formats
-> are scheduled.** Playwright coverage of the scenes UI is a follow-up (the gate
-> ran typecheck/test/lint/build).
+> `pnpm test` (550 passing, incl. `mcpAnimationOps`, `videoToolboxAdapter`, plus
+> the AN-4.2 scene suites), `pnpm lint`, and `pnpm build`. AN-4.1's open design
+> questions were resolved as part of shipping 4.2 (see the notes below). **AN-4.4
+> now ships the native macOS VideoToolbox encoder** behind the video export
+> adapter and a default-off `video-toolbox` Cargo feature (the macOS Rust path
+> compiles only on macOS; the TS integration is fully tested). Remaining deferred
+> formats (audio, WebM, imported video, richer timing UI) stay out of scope.
+> Playwright coverage of the scenes UI is a follow-up (the gate ran
+> typecheck/test/lint/build).
 
 **Goal:** extend the proven single-scene model only after v1 usage and export
 performance are understood.
@@ -1425,20 +1428,43 @@ Design questions settled while implementing AN-4.2 (2026-07-20):
 
 #### AN-4.4 Reassess deferred formats and native encoding
 
-> **[x] Decision recorded — 2026-07-20: hold. No deferred format is scheduled.**
-> Rationale: AN-2 runtime acceptance (real-device decode/memory/codec matrix) is
-> still open, and there is no shipped-usage telemetry yet. Adding audio, WebM,
-> imported video/GIF layers, native VideoToolbox, or a richer timing UI now would
-> commit surface area ahead of the evidence the plan requires (§12.1, §16).
-> Reassess once AN-2 acceptance closes and there is measured user demand.
+> **[~] Native VideoToolbox encoding implemented — 2026-07-20.** The one deferred
+> item taken up now is the native macOS encoder (§7's contingency, promoted to a
+> real path). Audio, WebM, imported video/GIF layers, and a richer timing UI stay
+> deferred (§10) — each still needs its own plan and evidence.
+>
+> The native path slots behind the existing `VideoExportAdapter`, so the frame
+> orchestrator, export dialog, and multi-locale flow are unchanged:
+>
+> - **TS** (`src/lib/adapters/video/`): `tauriVideoToolboxAdapter` speaks a small
+>   `vt_*` command protocol — probe / begin / add_frame / finalize / cancel.
+>   Each frame's RGBA pixels are read back from the scene canvas and sent to Rust
+>   as an `ArrayBuffer` (raw bytes → `Vec<u8>`, never JSON); `addFrame` awaits the
+>   native ack, so the await is the backpressure (the §7.3 ~8 MB/frame risk).
+>   Output streams to a native temp file during the encode and is moved to the
+>   caller's sink (Blob or `WritableStream`) at finalize. `selectingVideoExport
+>   Adapter` probes native + WebCodecs, routes each codec to the stronger backend,
+>   and falls back to WebCodecs if a native session can't start. Wired in
+>   `adapters/index.ts` (Tauri → selecting adapter; browser → WebCodecs). Fully
+>   unit-tested (`videoToolboxAdapter.test.ts`): capability mapping, pixel
+>   read-back + backpressure, buffer/stream finalize, temp cleanup, abort, and
+>   selecting-adapter routing/fallback.
+> - **Rust** (`src-tauri/src/video/`): the portable command surface + session
+>   registry always compile; the encoder itself is an `AVAssetWriter`/VideoToolbox
+>   implementation (`avfoundation.rs`) gated behind a **default-off `video-toolbox`
+>   Cargo feature** and `#[cfg(target_os = "macos")]`. With the feature off (the
+>   default build) the commands report the encoder unavailable and the web layer
+>   uses WebCodecs. Build/verify the native encoder on macOS with
+>   `cargo build --features video-toolbox`; it uses `objc2` FFI that the Linux CI
+>   host cannot compile, which is why it is feature-gated rather than default-on.
 
-- [x] Reconsider audio, WebM, imported video/GIF layers, native VideoToolbox,
-      and a richer timing UI based on measured user need and AN-2 telemetry/manual
-      reports. — **Held**; none scheduled (see decision above). Each remains in
-      §10 "what v1 deliberately does not do" until evidence justifies it.
+- [~] Reconsider audio, WebM, imported video/GIF layers, native VideoToolbox,
+      and a richer timing UI. — **Native VideoToolbox: implemented** behind the
+      adapter + Cargo feature (above). Audio, WebM, imported video/GIF, and a
+      richer timing UI remain deferred in §10 until evidence justifies them.
 - [x] Give each accepted item its own plan; do not fold them invisibly into
-      scene work. — No item accepted, so nothing was folded in; this rule stands
-      for whenever one is.
+      scene work. — The native encoder landed as its own adapter + Rust module and
+      feature flag, not folded into scene work.
 
 ## 14. Test strategy and release evidence
 
