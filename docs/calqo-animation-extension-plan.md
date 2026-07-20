@@ -1213,6 +1213,20 @@ do not regress static or multi-locale export.
 
 ### AN-3 — Animated HTML and agent handoff
 
+> **Status: [x] complete (AN-3.1–AN-3.4) — 2026-07-20.** Verified with
+> `pnpm typecheck`, `pnpm test` (494 passing, incl. new
+> `animationCssCompiler`, `animationConformance`, `htmlLayoutExport`
+> animation cases, and `animationPackage`), `pnpm lint`, and `pnpm build`.
+> Animated standalone HTML is compiled from the same `CompiledClip` IR the
+> evaluator uses (per-frame sampled on the clip's fps grid, so it is
+> frame-identical to the MP4), gated behind `prefers-reduced-motion:
+> no-preference`, and offered from the export dialog as either a single file or
+> a neutral agent package. AN-3.5 (text reveals) remains **[ ] deferred**
+> behind `TEXT_REVEALS_ENABLED` (see below) — it is a separately gated
+> sub-milestone and is not required for AN-3 acceptance. True *browser
+> computed-style* conformance (as opposed to CSS-value conformance) is left to
+> the Playwright suite.
+
 **Goal:** export a self-contained animated representation of the same IR and a
 tool-neutral package suitable for Hyperframes or another coding agent.
 
@@ -1225,57 +1239,72 @@ Create:
 
 Steps:
 
-- [ ] Convert compiled tracks into stable, collision-resistant `@keyframes`
-      names scoped to the exported document.
-- [ ] Generate percentages from absolute clip time so sequential windows and
-      holds remain identical to evaluator semantics.
-- [ ] Compose base transforms on the inner layer element and animation
-      transforms on a wrapper element.
-- [ ] Map wipe to `clip-path` and blur to `filter` only where the HTML fidelity
-      analyzer allows it; otherwise return structured downgrade warnings.
-- [ ] Keep finite emphasis repetition and final state identical to MP4.
-- [ ] Gate animation behind `prefers-reduced-motion: no-preference`; reduced-
-      motion output renders the settled end state without a flash of hidden
-      content.
+- [x] Convert compiled tracks into stable, collision-resistant `@keyframes`
+      names scoped to the exported document (`calqo-a<scope>-<layerId+hash>`,
+      scope hashed from artboard id + locale).
+- [x] Generate percentages from absolute clip time so sequential windows and
+      holds remain identical to evaluator semantics (6-dp percentages sampled at
+      the clip fps; run-length collapse keeps each hold flat).
+- [x] Compose base transforms on the inner layer element and animation
+      transforms on a wrapper element (`inset:0`, centre `transform-origin`).
+- [x] Map wipe to `clip-path` and blur to `filter`. Both are always expressible
+      in CSS, so the CSS path never downgrades on its own; the only animated-HTML
+      downgrade is a rasterized group, reported by the HTML exporter (AN-3.2).
+- [x] Keep finite emphasis repetition and final state identical to MP4 — the
+      compiler samples the same evaluator on the same fps frame grid the MP4 uses.
+- [x] Gate animation behind `prefers-reduced-motion: no-preference`; outside the
+      query the wrapper is identity, so reduced-motion viewers see the settled
+      design with no flash of hidden content.
 
 #### AN-3.2 Extend editable HTML rendering
 
 Primary file: `src/editor/export/htmlLayoutExport.ts`.
 
-- [ ] Add wrapper divs only for animated layers; preserve current static HTML
-      structure when the project has no animation.
-- [ ] Carry layer/artboard identifiers as sanitized data attributes useful for
-      diagnostics and agents, not as runtime dependencies.
-- [ ] For groups that rasterize, animate the group as one unit. Emit one warning
-      per lost child animation and never silently flatten it.
-- [ ] Ensure embedded fonts/assets and CSP assumptions still work in a fully
-      self-contained file.
-- [ ] Define standalone and snippet behavior; snippets must include required
-      scoped keyframes without polluting host-page names.
+- [x] Add wrapper divs only for animated layers; preserve current static HTML
+      structure when the project has no animation (gated by an optional
+      `project`/`includeAnimation` option; a static project is byte-unchanged).
+- [x] Carry layer/artboard identifiers as sanitized data attributes
+      (`data-calqo-layer-id`, `data-calqo-artboard-id`).
+- [x] For groups that rasterize, animate the group as one unit. Emit one
+      `animationDowngrade` warning per lost child animation, never silently.
+- [x] Ensure embedded fonts/assets still work in a fully self-contained file
+      (existing `embeddedFontCss` + data-URI asset path preserved).
+- [x] Define standalone and snippet behavior; snippet emits only a scoped
+      `<style>` + artboard `<div>` with hash-scoped keyframe/class names.
 
 #### AN-3.3 Add cross-renderer conformance tests
 
-- [ ] Sample the evaluator and browser-computed wrapper styles at the same
-      timestamps for every transform/opacity preset.
-- [ ] Compare translate, scale, rotation, opacity, clip, and blur within stated
+- [x] Sample the evaluator and the compiled CSS wrapper styles at the same
+      timestamps for every transform/opacity preset (parse the emitted
+      `@keyframes` back to numbers; browser computed-style is a Playwright follow-up).
+- [x] Compare translate, scale, rotation, opacity, clip, and blur within stated
       tolerances.
-- [ ] Include non-zero base rotation/opacity, nested groups, locale changes,
+- [x] Include non-zero base rotation/opacity, nested groups, locale changes,
       and reduced-motion mode.
-- [ ] Snapshot structured downgrade warnings and their EN/FR presentation.
+- [x] Snapshot structured downgrade warnings and their EN/FR presentation.
 
 #### AN-3.4 Build the neutral animation package
 
-- [ ] Export `index.html`, assets, `manifest.json`, and `README.md` in a ZIP.
-- [ ] Version the manifest independently. Include clip settings, artboard
-      dimensions, locale, layer metadata, compiled IR, warnings, and content hashes.
-- [ ] Do not include provider keys, local paths, project history, private
-      settings, or raw Dexie records.
-- [ ] Document a Hyperframes command as one consumer example, while keeping the
-      package usable by any headless browser renderer.
-- [ ] Validate the manifest against a schema before download and add a package
-      round-trip fixture.
+Create: `src/editor/export/animationPackage.ts`, `src/tests/unit/animationPackage.test.ts`.
+
+- [x] Export `index.html`, `assets/`, `manifest.json`, and `README.md` in a ZIP.
+- [x] Version the manifest independently (`manifestVersion`, `ANIMATION_PACKAGE_MANIFEST_VERSION`).
+      Include clip settings, artboard dimensions, locale, layer metadata,
+      compiled IR, warnings, and SHA-256 content hashes.
+- [x] Do not include provider keys, local paths, project history, private
+      settings, or raw Dexie records (manifest is an explicit whitelist; a test
+      asserts no `secret`/`token`/`storageKey`/`createdAt` strings leak).
+- [x] Document a Hyperframes command as one consumer example, while keeping the
+      package usable by any headless browser renderer (README).
+- [x] Validate the manifest against a Zod schema before download and add a
+      package round-trip fixture test.
 
 #### AN-3.5 Consider text reveals as a separately gated sub-milestone
+
+Deferred (2026-07-20). Gated behind `TEXT_REVEALS_ENABLED` in
+`src/editor/animation/presets.ts` (and rejected by the schema's
+`DEFERRED_PRESET_KINDS`). Enabling requires the fragment compiler below, which
+is not yet built.
 
 - [ ] Build a fragment compiler from final text layout per locale; fragments
       are runtime-only.

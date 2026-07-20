@@ -4,6 +4,7 @@ import type {
   BackgroundFill,
   CalqoArtboard,
   CalqoLayer,
+  CalqoProject,
   ImageLayer,
   ListLayer,
   TextLayer,
@@ -24,6 +25,12 @@ import {
   type HtmlRasterReason,
 } from './exportWarnings';
 import { embeddedFontCss } from './portableFonts';
+import { compileClipCached } from '@/editor/animation/compiler';
+import {
+  compileAnimationCss,
+  type AnimationCssBinding,
+} from './animationCssCompiler';
+import type { LayerBox } from '@/editor/animation/wrapperNode';
 
 /**
  * Editable HTML/CSS export ("HTML (editable)"): serializes the project
@@ -51,6 +58,99 @@ export interface HtmlLayoutOptions {
     artboard: CalqoArtboard,
     locale: string,
   ) => Promise<string | null>;
+  /**
+   * Full project — required to compile animation (needs the project id and
+   * clip fps for the deterministic compiled-clip cache). When omitted, the
+   * export is static regardless of `includeAnimation`.
+   */
+  project?: CalqoProject;
+  /** Emit `@keyframes` and wrapper divs for animated layers (default true when
+   * a `project` is supplied). A static project produces identical output either
+   * way — the flag only exists so a caller can force a settled static HTML. */
+  includeAnimation?: boolean;
+  /**
+   * `standalone` (default) emits a complete HTML document; `snippet` emits only
+   * a scoped `<style>` plus the artboard `<div>`, safe to paste into a host page
+   * (keyframe/class names are hash-scoped so they never collide) (AN-3.2).
+   */
+  mode?: 'standalone' | 'snippet';
+}
+
+/** Animation context threaded through {@link layerHtml}: which rendered layers
+ * get an animation wrapper, and where downgrade warnings accumulate. */
+interface AnimationContext {
+  bindings: Map<string, AnimationCssBinding>;
+}
+
+/** Short, stable scope for keyframe/class names, unique per artboard+locale so a
+ * multi-artboard/multi-locale batch never collides. */
+function animationScope(artboardId: string, locale: string): string {
+  let h = 5381;
+  const input = `${artboardId}:${locale}`;
+  for (let i = 0; i < input.length; i++) h = ((h << 5) + h + input.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+/**
+ * Pre-pass mirroring {@link layerHtml}'s render decisions to collect the boxes
+ * of layers that will render as their own DOM element AND carry animation, plus
+ * `animationDowngrade` warnings for any animated layer baked into a rasterized
+ * ancestor (its motion is lost — the ancestor animates only as one unit).
+ * `boxes` are in each layer's own (containing-block-local) coordinates, which is
+ * exactly what the wrapper's `inset:0` + centre `transform-origin` expects.
+ */
+function collectAnimation(
+  layer: CalqoLayer,
+  boxes: Map<string, LayerBox>,
+  warnings: HtmlExportWarning[],
+  rasterizedAncestor: boolean,
+  topLevel: boolean,
+): void {
+  if (!layer.visible) return;
+  const box: LayerBox = { x: layer.x, y: layer.y, w: layer.w, h: layer.h };
+
+  if (rasterizedAncestor) {
+    // Baked into an ancestor raster: this layer's own animation cannot survive.
+    if (layer.animation) {
+      warnings.push({ tier: 'approximated', code: 'animationDowngrade', layerName: layer.name });
+    }
+    if (isGroupLayer(layer)) {
+      layer.children.forEach((c) => collectAnimation(c, boxes, warnings, true, false));
+    }
+    return;
+  }
+
+  const reason = rasterReasonForLayer(layer);
+  if (reason) {
+    // Rasterizes to a single image. Only positionable (and thus animatable as a
+    // unit) at the top level; nested raster-needing layers are not rendered.
+    if (!topLevel) return;
+    if (layer.animation) boxes.set(layer.id, box);
+    if (isGroupLayer(layer)) {
+      layer.children.forEach((c) => collectAnimation(c, boxes, warnings, true, false));
+    }
+    return;
+  }
+
+  if (layer.animation) boxes.set(layer.id, box);
+  if (isGroupLayer(layer)) {
+    layer.children.forEach((c) => collectAnimation(c, boxes, warnings, false, false));
+  }
+}
+
+/** Wrap a rendered layer's markup in its animation wrapper `<div>` when the
+ * layer has a compiled binding; otherwise return the markup untouched. The
+ * wrapper spans its containing block (`inset:0`) so the inner element keeps its
+ * document geometry and only the wrapper is animated (§4.2 / AN-3.2). */
+function wrapAnimated(
+  layer: CalqoLayer,
+  markup: string,
+  anim: AnimationContext | undefined,
+): string {
+  if (!markup) return markup;
+  const binding = anim?.bindings.get(layer.id);
+  if (!binding) return markup;
+  return `<div class="${binding.wrapperClass}" data-calqo-layer-id="${escapeMarkup(layer.id)}">${markup}</div>`;
 }
 
 function blobToDataUrl(blob: Blob): Promise<string> {
@@ -259,6 +359,7 @@ async function layerHtml(
     containerW: number;
     containerH: number;
     topLevel: boolean;
+    anim?: AnimationContext;
   },
 ): Promise<string> {
   if (!layer.visible) return '';
@@ -280,13 +381,17 @@ async function layerHtml(
 
   if (isGroupLayer(layer)) {
     const children = await Promise.all(
-      layer.children.map((child) =>
-        layerHtml(child, {
-          ...context,
-          containerW: layer.w,
-          containerH: layer.h,
-          topLevel: false,
-        }),
+      layer.children.map(async (child) =>
+        wrapAnimated(
+          child,
+          await layerHtml(child, {
+            ...context,
+            containerW: layer.w,
+            containerH: layer.h,
+            topLevel: false,
+          }),
+          context.anim,
+        ),
       ),
     );
     const css = boxCss(layer) + commonEffectsCss(layer, warnings);
@@ -372,19 +477,53 @@ export async function exportArtboardHtmlLayout(
   ]);
   const rasterizeLayer = options.rasterizeLayer ?? defaultRasterizeLayer;
 
+  // Compile animation (AN-3.1/3.2). Only layers rendered as their own DOM
+  // element and carrying animation get a wrapper; children lost to a rasterized
+  // ancestor emit an `animationDowngrade` warning instead.
+  const includeAnimation = options.includeAnimation ?? true;
+  let anim: AnimationContext | undefined;
+  let animCss = '';
+  if (options.project && includeAnimation) {
+    const boxes = new Map<string, LayerBox>();
+    for (const layer of artboard.layers) {
+      collectAnimation(layer, boxes, warnings, false, true);
+    }
+    if (boxes.size > 0) {
+      const { clip } = compileClipCached({
+        projectId: options.project.id,
+        artboard,
+        locale,
+        fps: options.project.clipSettings?.fps ?? 30,
+      });
+      const compiled = compileAnimationCss({
+        clip,
+        boxes,
+        sceneDurationMs: artboard.timing?.duration ?? 5000,
+        scopeId: animationScope(artboard.id, locale),
+      });
+      animCss = compiled.css;
+      if (compiled.bindings.size > 0) anim = { bindings: compiled.bindings };
+    }
+  }
+
   const nodes: string[] = [];
   for (const layer of artboard.layers) {
     nodes.push(
-      await layerHtml(layer, {
-        artboard,
-        assets,
-        locale,
-        warnings,
-        rasterizeLayer,
-        containerW: artboard.width,
-        containerH: artboard.height,
-        topLevel: true,
-      }),
+      wrapAnimated(
+        layer,
+        await layerHtml(layer, {
+          artboard,
+          assets,
+          locale,
+          warnings,
+          rasterizeLayer,
+          containerW: artboard.width,
+          containerH: artboard.height,
+          topLevel: true,
+          anim,
+        }),
+        anim,
+      ),
     );
   }
 
@@ -395,6 +534,23 @@ export async function exportArtboardHtmlLayout(
   const fontNote = fontCss
     ? 'Web font files used by this artboard are embedded in this document.'
     : 'Fonts are referenced by family name and must be available on the viewing system.';
+
+  const artboardDiv = `<div class="calqo-artboard" data-calqo-artboard-id="${escapeMarkup(artboard.id)}" style="position:relative;width:${round(artboard.width)}px;height:${round(artboard.height)}px;overflow:hidden;${background.css}">
+${background.node}${nodes.filter(Boolean).join('\n')}
+    </div>`;
+
+  // Snippet mode: only a scoped <style> plus the artboard div. Keyframe/class
+  // names are hash-scoped so pasting into a host page cannot collide (AN-3.2).
+  if (options.mode === 'snippet') {
+    const styleInner = [fontCss, '.calqo-artboard * { margin: 0; box-sizing: border-box; }', animCss]
+      .filter(Boolean)
+      .join('\n      ');
+    const snippet = `<style>
+      ${styleInner}
+    </style>
+    ${artboardDiv}`;
+    return { html: snippet, warnings: unique };
+  }
 
   const html = `<!doctype html>
 <html lang="${escapeMarkup(locale || 'en')}">
@@ -412,12 +568,11 @@ ${notes}
       ${fontCss}
       body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0b0b0c; }
       .calqo-artboard * { margin: 0; box-sizing: border-box; }
+      ${animCss}
     </style>
   </head>
   <body>
-    <div class="calqo-artboard" style="position:relative;width:${round(artboard.width)}px;height:${round(artboard.height)}px;overflow:hidden;${background.css}">
-${background.node}${nodes.filter(Boolean).join('\n')}
-    </div>
+    ${artboardDiv}
   </body>
 </html>`;
 

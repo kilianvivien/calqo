@@ -389,6 +389,9 @@
     "htmlWrapper": "Image encapsulée",
     "htmlEditable": "Éditable",
     "htmlEditableHint": "Le HTML éditable garde le texte sélectionnable et les formes en CSS/SVG. Le PNG reste la sortie fidèle au pixel ; les calques non pris en charge sont intégrés en image avec une note.",
+    "htmlAnimOutput": "Sortie d’animation",
+    "htmlAnimFile": "Fichier unique",
+    "htmlAnimPackage": "Paquet (ZIP)",
     "warnEnvelopeSize": "Le fichier .calqo portable est estimé à {{size}} Mo — pensez à optimiser les ressources avant de le déplacer.",
     "warnEnvelopeContributors": "Ressources les plus volumineuses : {{names}}.",
     "fidelityNotes": "Notes HTML éditable",
@@ -425,7 +428,8 @@
         "vectorApproximation": "{{name}} : certains styles vectoriels sont approximés.",
         "rasterized": "{{name}} est intégré comme image ({{reason}}).",
         "missingAsset": "{{name}} : la ressource manquante est ignorée.",
-        "renderFailed": "{{name}} n’a pas pu être rendu et est ignoré."
+        "renderFailed": "{{name}} n’a pas pu être rendu et est ignoré.",
+        "animationDowngrade": "{{name}} : son animation est supprimée car son groupe est aplati en une seule image."
       },
       "reasons": {
         "mask": "masque non pris en charge",

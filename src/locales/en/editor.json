@@ -389,6 +389,9 @@
     "htmlWrapper": "Image wrapper",
     "htmlEditable": "Editable",
     "htmlEditableHint": "Editable HTML keeps text selectable and shapes as CSS/SVG. PNG stays the pixel-faithful path; unsupported layers embed as images with a note.",
+    "htmlAnimOutput": "Animation output",
+    "htmlAnimFile": "Single file",
+    "htmlAnimPackage": "Package (ZIP)",
     "warnEnvelopeSize": "The portable .calqo file is estimated at {{size}} MB — consider optimizing assets before moving it.",
     "warnEnvelopeContributors": "Largest assets: {{names}}.",
     "fidelityNotes": "Editable HTML notes",
@@ -425,7 +428,8 @@
         "vectorApproximation": "{{name}}: some vector styling is approximated.",
         "rasterized": "{{name}} is embedded as an image ({{reason}}).",
         "missingAsset": "{{name}}: the missing asset is skipped.",
-        "renderFailed": "{{name}} could not be rendered and is skipped."
+        "renderFailed": "{{name}} could not be rendered and is skipped.",
+        "animationDowngrade": "{{name}}: its animation is dropped because its group is flattened to one image."
       },
       "reasons": {
         "mask": "unsupported mask",

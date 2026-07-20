@@ -1,5 +1,6 @@
 import {
   ANIM_CAPS,
+  DEFERRED_PRESET_KINDS,
   EMPHASIS_PRESET_KINDS,
   ENTER_EXIT_PRESET_KINDS,
   type Easing,
@@ -165,10 +166,20 @@ export const PRESET_CATALOG: Record<PresetKind, PresetMeta> = {
   },
 };
 
-/** Preset kinds usable in v1 (text reveals excluded). */
+/**
+ * Text-reveal presets (`typewriter`, `word-rise`) stay gated (AN-3.5). They need
+ * a runtime fragment compiler driven by final per-locale line layout and font
+ * metrics — not yet built — and must stay behind this flag until line-wrap and
+ * font-load behavior is stable across Chrome/Safari/WKWebView (plan §4.5, §8,
+ * AN-3.5). The schema also rejects these kinds (`DEFERRED_PRESET_KINDS`), so the
+ * gate holds at both the document and catalog layers. */
+export const TEXT_REVEALS_ENABLED = false as const;
+
+/** Preset kinds usable in v1 (text reveals excluded while gated — see above). */
 export const ENABLED_PRESET_KINDS: readonly PresetKind[] = [
   ...ENTER_EXIT_PRESET_KINDS,
   ...EMPHASIS_PRESET_KINDS,
+  ...(TEXT_REVEALS_ENABLED ? DEFERRED_PRESET_KINDS : []),
 ];
 
 export function getPresetMeta(kind: PresetKind): PresetMeta {

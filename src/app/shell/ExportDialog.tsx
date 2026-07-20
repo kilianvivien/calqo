@@ -35,6 +35,7 @@ import {
 } from '@/editor/export/animationExportReadiness';
 import { exportAnimatedVideo } from '@/editor/export/animatedFrameExport';
 import { exportAnimatedGif } from '@/editor/export/gif/gifExport';
+import { buildAnimationPackage } from '@/editor/export/animationPackage';
 import { estimateEnvelopeBytes } from '@/editor/assets/assetHealth';
 import { useMissingAssetsStore } from '@/editor/assets/missingAssetsStore';
 import { localeLabel } from '@/editor/i18n-content/contentLocaleService';
@@ -89,6 +90,9 @@ export function ExportDialog({
   const [localeScope, setLocaleScope] = useState<Scope>('active');
   const [htmlKind, setHtmlKind] = useState<HtmlKind>('wrapper');
   const [htmlMode, setHtmlMode] = useState<HtmlMode>('standalone');
+  // Editable HTML for an animated artboard can emit a single file or a neutral
+  // agent-handoff package (index.html + assets + manifest + README) as a ZIP.
+  const [htmlAnimOutput, setHtmlAnimOutput] = useState<'file' | 'package'>('file');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   // Live render counter so a long multi-artboard/multi-locale export shows
@@ -285,6 +289,8 @@ export function ExportDialog({
       // raster fallbacks and grouped fidelity notes.
       const result = await exportArtboardHtmlLayout(target, locale, {
         title: `${project.name} — ${target.name}`,
+        project,
+        mode: htmlMode,
       });
       notes.push(...result.warnings);
       return {
@@ -390,9 +396,59 @@ export function ExportDialog({
     }
   };
 
+  /**
+   * Neutral animation-package export (plan §11 / AN-3.4): the active animated
+   * artboard as a ZIP of index.html + assets + manifest.json + README.md, one
+   * package per content locale, bundled together when more than one is selected.
+   */
+  const handlePackageExport = async () => {
+    setBusy(true);
+    setStatus(null);
+    const notes: HtmlExportWarning[] = [];
+    setRuntimeFidelityNotes([]);
+    const projectSlug = slug(project.name);
+    const artboardSlug = slug(artboard.name);
+    try {
+      const outputs: { name: string; blob: Blob }[] = [];
+      for (const locale of localeTargets) {
+        const dir = localeTargets.length > 1 ? `${locale}-` : '';
+        const pkg = await buildAnimationPackage(project, artboard, locale);
+        notes.push(...pkg.warnings);
+        outputs.push({
+          name: `${dir}${projectSlug}-${artboardSlug}-animation.zip`,
+          blob: new Blob([pkg.zip], { type: 'application/zip' }),
+        });
+      }
+      setRuntimeFidelityNotes(notes);
+      if (outputs.length === 1) {
+        await files.downloadBlob(outputs[0].blob, outputs[0].name);
+      } else {
+        const entries = await Promise.all(
+          outputs.map(async (o) => ({ name: o.name, data: await blobToBytes(o.blob) })),
+        );
+        await files.downloadBlob(createZip(entries), `${projectSlug}-animation.zip`);
+      }
+      setStatus(t('export.done'));
+    } catch (error) {
+      console.error('[Calqo] animation package export failed', error);
+      setStatus(t('export.failed'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleExport = async () => {
     if (isAnimation(format)) {
       await handleAnimatedExport();
+      return;
+    }
+    if (
+      format === 'html' &&
+      htmlKind === 'editable' &&
+      htmlAnimOutput === 'package' &&
+      animatable
+    ) {
+      await handlePackageExport();
       return;
     }
     setBusy(true);
@@ -638,6 +694,20 @@ export function ExportDialog({
             <p className="px-1 text-[11px] text-[var(--calqo-text-3)]">
               {t('export.htmlEditableHint')}
             </p>
+          )}
+
+          {format === 'html' && htmlKind === 'editable' && animatable && (
+            <Field label={t('export.htmlAnimOutput')}>
+              <GlassSegmentedControl<'file' | 'package'>
+                ariaLabel={t('export.htmlAnimOutput')}
+                value={htmlAnimOutput}
+                onChange={setHtmlAnimOutput}
+                options={[
+                  { value: 'file', label: t('export.htmlAnimFile') },
+                  { value: 'package', label: t('export.htmlAnimPackage') },
+                ]}
+              />
+            </Field>
           )}
 
           {format === 'html' && htmlKind === 'wrapper' && (

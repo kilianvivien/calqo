@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CalqoArtboard, CalqoLayer } from '@/lib/schema';
+import type { CalqoArtboard, CalqoLayer, CalqoProject } from '@/lib/schema';
 
 const adapterMocks = vi.hoisted(() => ({
   assetStorage: {
@@ -214,6 +214,111 @@ describe('exportArtboardHtmlLayout', () => {
   it('always names the font caveat and never loses fidelity silently', async () => {
     const { warnings } = await exportArtboardHtmlLayout(artboard([textLayer()]), 'en');
     expect(warnings.some((warning) => warning.code === 'fontFallback')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AN-3.2 — animated HTML export
+// ---------------------------------------------------------------------------
+
+function projectWith(ab: CalqoArtboard): CalqoProject {
+  return {
+    schemaVersion: 2,
+    id: 'proj-anim',
+    name: 'Anim',
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    contentLocales: ['en'],
+    activeContentLocale: 'en',
+    palette: [],
+    assets: [],
+    glossary: [],
+    clipSettings: { fps: 30 },
+    artboards: [ab],
+  };
+}
+
+function animatedTextLayer(): CalqoLayer {
+  return {
+    ...textLayer(),
+    id: 'text-1',
+    rotation: 0,
+    animation: { mode: 'preset', enter: { kind: 'fade', duration: 500, delay: 0 } },
+  } as CalqoLayer;
+}
+
+describe('exportArtboardHtmlLayout — animation (AN-3.2)', () => {
+  it('leaves static structure unchanged when no project is supplied', async () => {
+    const { html } = await exportArtboardHtmlLayout(artboard([animatedTextLayer()]), 'en');
+    expect(html).not.toContain('@keyframes');
+    expect(html).not.toContain('data-calqo-layer-id');
+  });
+
+  it('wraps animated layers and injects reduced-motion-gated keyframes', async () => {
+    const ab = { ...artboard([animatedTextLayer()]), timing: { duration: 2000 } };
+    const { html } = await exportArtboardHtmlLayout(ab, 'en', {
+      project: projectWith(ab),
+    });
+    expect(html).toContain('data-calqo-layer-id="text-1"');
+    expect(html).toContain('@keyframes calqo-a');
+    expect(html).toContain('@media (prefers-reduced-motion: no-preference)');
+    expect(html).toContain('data-calqo-artboard-id="ab-1"');
+    // The wrapper class the layer is tagged with also names its keyframes.
+    const parsed = new DOMParser().parseFromString(html, 'text/html');
+    const wrapper = parsed.querySelector<HTMLElement>('[data-calqo-layer-id="text-1"]');
+    expect(wrapper).not.toBeNull();
+    const cls = [...(wrapper?.classList ?? [])][0];
+    expect(cls).toMatch(/^calqo-a/);
+    expect(html).toContain(`@keyframes ${cls}`);
+  });
+
+  it('emits a snippet with scoped style and no document shell', async () => {
+    const ab = { ...artboard([animatedTextLayer()]), timing: { duration: 2000 } };
+    const { html } = await exportArtboardHtmlLayout(ab, 'en', {
+      project: projectWith(ab),
+      mode: 'snippet',
+    });
+    expect(html).not.toContain('<!doctype html>');
+    expect(html).not.toContain('<body');
+    expect(html).toContain('<style>');
+    expect(html).toContain('class="calqo-artboard"');
+    expect(html).toContain('@keyframes calqo-a');
+  });
+
+  it('warns once per child animation lost to a rasterized group', async () => {
+    const freehandChild: CalqoLayer = {
+      ...baseLayer,
+      id: 'doodle',
+      name: 'Doodle',
+      type: 'shape',
+      shape: 'freehand',
+      x: 0,
+      y: 0,
+      w: 10,
+      h: 10,
+      fill: { type: 'solid', color: 'transparent' },
+      animation: { mode: 'preset', enter: { kind: 'fade', duration: 300, delay: 0 } },
+    } as CalqoLayer;
+    const group: CalqoLayer = {
+      ...baseLayer,
+      id: 'g',
+      name: 'Group',
+      type: 'group',
+      x: 0,
+      y: 0,
+      w: 200,
+      h: 200,
+      children: [freehandChild],
+    } as CalqoLayer;
+    const ab = { ...artboard([group]), timing: { duration: 2000 } };
+    const rasterizeLayer = vi.fn().mockResolvedValue('data:image/png;base64,RASTER');
+    const { warnings } = await exportArtboardHtmlLayout(ab, 'en', {
+      project: projectWith(ab),
+      rasterizeLayer,
+    });
+    const downgrades = warnings.filter((w) => w.code === 'animationDowngrade');
+    expect(downgrades).toHaveLength(1);
+    expect(downgrades[0].layerName).toBe('Doodle');
   });
 });
 
