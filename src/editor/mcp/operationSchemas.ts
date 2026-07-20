@@ -10,6 +10,13 @@ import {
   strokeSchema,
   layerEffectsSchema,
   stickerOutlineSchema,
+  presetInstanceSchema,
+  trackWindowSchema,
+  sceneEntrySchema,
+  MIN_SCENE_DURATION_MS,
+  MAX_SCENE_DURATION_MS,
+  MAX_TRANSITION_MS,
+  SCENE_TRANSITION_KINDS,
   type ArtboardPresetId,
 } from '@/lib/schema';
 
@@ -154,6 +161,90 @@ export const setActiveContentLocaleOperationSchema = z
   })
   .strict();
 
+// --- Animation operations (AN-4.3) ----------------------------------------
+// Command-level animation edits, never raw project patches. Each mutates the
+// same persisted `animation` / `clipSettings` / artboard `timing` fields the
+// inspector commands do, and the executor runs the identical validation
+// (`validatePresetAnimation`, `validateSceneSequence`, strict Zod) before
+// committing — so agent-authored motion goes through the same gate as a user's.
+
+/** Set, replace, or clear (`preset: null`) one preset slot on a layer. */
+export const setLayerPresetOperationSchema = z
+  .object({
+    type: z.literal('setLayerPreset'),
+    layerId: z.string().min(1),
+    slot: z.enum(['enter', 'emphasis', 'exit']),
+    /** A preset instance, or null to clear this slot. */
+    preset: presetInstanceSchema.nullable(),
+  })
+  .strict();
+
+/** Replace a layer's animation with raw custom track windows (power-user/agent
+ * path). Mutually exclusive with preset authoring by construction. */
+export const setLayerCustomWindowsOperationSchema = z
+  .object({
+    type: z.literal('setLayerCustomWindows'),
+    layerId: z.string().min(1),
+    windows: z.array(trackWindowSchema).min(1),
+  })
+  .strict();
+
+/** Remove all animation from a layer. */
+export const clearLayerAnimationOperationSchema = z
+  .object({
+    type: z.literal('clearLayerAnimation'),
+    layerId: z.string().min(1),
+  })
+  .strict();
+
+/** Set the scene (artboard) duration in ms. Defaults to the batch artboard. */
+export const setSceneDurationOperationSchema = z
+  .object({
+    type: z.literal('setSceneDuration'),
+    durationMs: z
+      .number()
+      .finite()
+      .min(MIN_SCENE_DURATION_MS)
+      .max(MAX_SCENE_DURATION_MS),
+    artboardId: z.string().min(1).optional(),
+  })
+  .strict();
+
+/** Set the clip frame rate. */
+export const setClipFpsOperationSchema = z
+  .object({
+    type: z.literal('setClipFps'),
+    fps: z.union([z.literal(24), z.literal(30), z.literal(60)]),
+  })
+  .strict();
+
+/** Replace the multi-scene clip's ordered scene list (empty clears it). */
+export const setClipScenesOperationSchema = z
+  .object({
+    type: z.literal('setClipScenes'),
+    scenes: z.array(sceneEntrySchema),
+  })
+  .strict();
+
+/** Move the scene at `from` to `to`, keeping the rest in order. */
+export const reorderSceneOperationSchema = z
+  .object({
+    type: z.literal('reorderScene'),
+    from: z.number().int().nonnegative(),
+    to: z.number().int().nonnegative(),
+  })
+  .strict();
+
+/** Set the transition (and optional duration) that plays into scene `index`. */
+export const setSceneTransitionOperationSchema = z
+  .object({
+    type: z.literal('setSceneTransition'),
+    index: z.number().int().nonnegative(),
+    transition: z.enum(SCENE_TRANSITION_KINDS),
+    transitionDurationMs: z.number().finite().min(0).max(MAX_TRANSITION_MS).optional(),
+  })
+  .strict();
+
 export const mcpOperationSchema = z.discriminatedUnion('type', [
   addLayerOperationSchema,
   updateLayerOperationSchema,
@@ -165,6 +256,14 @@ export const mcpOperationSchema = z.discriminatedUnion('type', [
   setActiveArtboardOperationSchema,
   addContentLocaleOperationSchema,
   setActiveContentLocaleOperationSchema,
+  setLayerPresetOperationSchema,
+  setLayerCustomWindowsOperationSchema,
+  clearLayerAnimationOperationSchema,
+  setSceneDurationOperationSchema,
+  setClipFpsOperationSchema,
+  setClipScenesOperationSchema,
+  reorderSceneOperationSchema,
+  setSceneTransitionOperationSchema,
 ]);
 
 export const applyOperationsInputSchema = z
