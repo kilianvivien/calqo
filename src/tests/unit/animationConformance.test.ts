@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { compileClip } from '@/editor/animation/compiler';
-import { evaluateClip } from '@/editor/animation/evaluator';
-import { compileAnimationCss } from '@/editor/export/animationCssCompiler';
+import { evaluateClip, evaluateFragment } from '@/editor/animation/evaluator';
+import {
+  compileAnimationCss,
+  compileFragmentCss,
+} from '@/editor/export/animationCssCompiler';
+import { compileFragmentAnimation } from '@/editor/animation/fragmentCompiler';
+import { resolvePreset } from '@/editor/animation/presets';
+import type { TextMeasurer } from '@/editor/animation/textLayout';
 import { wipeClipRect, type LayerBox } from '@/editor/animation/wrapperNode';
-import type { CalqoArtboard, CalqoProject } from '@/lib/schema';
+import type { CalqoArtboard, CalqoLayer, CalqoProject, TextStyle } from '@/lib/schema';
+import { textStyleSchema } from '@/lib/schema';
 import { v2AllPresetsProject, v2NestedGroupProject } from '../fixtures/animation/fixtures';
 import enEditor from '@/locales/en/editor.json';
 import frEditor from '@/locales/fr/editor.json';
@@ -194,5 +201,72 @@ describe('AN-3.3 CSS ↔ evaluator conformance', () => {
     expect(en).toContain('{{name}}');
     expect(fr).toContain('{{name}}');
     expect(en).not.toBe(fr);
+  });
+});
+
+/**
+ * AN-3.5 text-reveal fragment conformance. Fragment CSS is a second
+ * implementation of the same fragment IR the evaluator drives for MP4; this
+ * samples both at identical timestamps for every fragment (parsing the emitted
+ * per-fragment `@keyframes` back to numbers). The fragment compiler is gated off
+ * in production, so these drive it directly rather than through `compileClip`.
+ */
+describe('AN-3.5 fragment CSS ↔ evaluator conformance', () => {
+  const style: TextStyle = textStyleSchema.parse({ fontSize: 40, lineHeight: 1.4 });
+  const fixed: TextMeasurer = { measure: (t) => t.length * 10 };
+  const layer = { id: 'tx', type: 'text', x: 0, y: 0, w: 400, h: 200 } as unknown as CalqoLayer;
+
+  function conform(kind: 'typewriter' | 'word-rise', text: string) {
+    const sceneDurationMs = 4000;
+    const compiled = compileFragmentAnimation({
+      layer,
+      preset: resolvePreset({ kind, duration: 1200, delay: 0 }),
+      box: { w: layer.w, h: layer.h },
+      sceneDuration: sceneDurationMs,
+      measurer: fixed,
+      text,
+      style,
+    });
+    expect(compiled).not.toBeNull();
+    const { css, bindings } = compileFragmentCss([compiled!], 30, sceneDurationMs, 's');
+    const binding = bindings.get(layer.id);
+    expect(binding).toBeDefined();
+
+    binding!.classes.forEach((name, fi) => {
+      if (!name) return; // fragment that never leaves identity
+      const stops = parseKeyframes(css, name, sceneDurationMs);
+      expect(stops.length).toBeGreaterThan(1);
+      for (const stop of stops) {
+        const o = evaluateFragment(compiled!.fragments[fi], stop.tMs);
+        expect(stop.dx, `dx f${fi}@${stop.tMs}`).toBeCloseTo(o.dx, 1);
+        expect(stop.dy, `dy f${fi}@${stop.tMs}`).toBeCloseTo(o.dy, 1);
+        expect(Math.abs(stop.opacity - o.opacity), `op f${fi}@${stop.tMs}`).toBeLessThanOrEqual(FACTOR_TOL);
+      }
+    });
+  }
+
+  it('conforms for typewriter character fragments', () => {
+    conform('typewriter', 'Hello');
+  });
+
+  it('conforms for word-rise word fragments', () => {
+    conform('word-rise', 'one two three');
+  });
+
+  it('keeps fragment keyframes inside the reduced-motion gate', () => {
+    const compiled = compileFragmentAnimation({
+      layer,
+      preset: resolvePreset({ kind: 'word-rise', duration: 1000, delay: 0 }),
+      box: { w: layer.w, h: layer.h },
+      sceneDuration: 4000,
+      measurer: fixed,
+      text: 'a b c',
+      style,
+    })!;
+    const { css } = compileFragmentCss([compiled], 30, 4000, 'g');
+    const gate = css.indexOf('@media (prefers-reduced-motion: no-preference)');
+    const firstKeyframes = css.indexOf('@keyframes');
+    expect(gate).toBeGreaterThanOrEqual(0);
+    expect(firstKeyframes).toBeGreaterThan(gate);
   });
 });

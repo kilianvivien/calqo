@@ -1,5 +1,8 @@
-import type { CompiledClip } from '@/editor/animation/types';
-import { evaluateClipInto } from '@/editor/animation/evaluator';
+import type {
+  CompiledClip,
+  CompiledFragmentAnimation,
+} from '@/editor/animation/types';
+import { evaluateClipInto, evaluateFragment } from '@/editor/animation/evaluator';
 import type { WrapperOverride } from '@/editor/animation/types';
 import { wipeClipRect, type LayerBox } from '@/editor/animation/wrapperNode';
 import { frameCountFor } from './animatedFrameExport';
@@ -130,27 +133,30 @@ function overrideDeclarations(override: WrapperOverride, box: LayerBox): string 
   return parts.join('');
 }
 
-/** Compile one layer's sampled frames into a `@keyframes` body. Consecutive
- * frames with identical declarations collapse into one stop, so a long hold (or
- * a static gap) costs a single keyframe rather than one per frame. Returns null
- * when the layer never leaves identity. */
-function keyframesBody(
-  clip: CompiledClip,
-  layerId: string,
+/**
+ * Sample a per-frame override function on the clip's fps grid into a collapsed
+ * `@keyframes` body. Consecutive frames with identical declarations collapse
+ * into one stop, so a long hold (or a static gap) costs a single keyframe rather
+ * than one per frame. Returns null when the value never leaves identity.
+ *
+ * `sampleAt(tMs)` returns the override at that time, or `undefined` if the
+ * subject is absent (bails the whole layer, as before).
+ */
+function sampleKeyframes(
+  sampleAt: (tMs: number) => WrapperOverride | undefined,
   box: LayerBox,
+  fps: number,
   sceneDurationMs: number,
 ): string | null {
-  const frames = frameCountFor(sceneDurationMs, clip.fps);
-  const overrides = new Map<string, WrapperOverride>();
+  const frames = frameCountFor(sceneDurationMs, fps);
   const samples: { pct: number; decls: string }[] = [];
   let sawNonIdentity = false;
 
   // Sample i = 0 … frames inclusive so the final sample lands exactly on the
   // settled scene-end state (100%), matching the MP4's last rendered frame.
   for (let i = 0; i <= frames; i++) {
-    const tMs = Math.min((i / clip.fps) * 1000, sceneDurationMs);
-    evaluateClipInto(clip, tMs, overrides);
-    const override = overrides.get(layerId);
+    const tMs = Math.min((i / fps) * 1000, sceneDurationMs);
+    const override = sampleAt(tMs);
     if (!override) return null;
     if (!isIdentity(override)) sawNonIdentity = true;
     const decls = overrideDeclarations(override, box);
@@ -174,6 +180,26 @@ function keyframesBody(
   }
 
   return stops.map((s) => `  ${s.pct}% { ${s.decls} }`).join('\n');
+}
+
+/** Compile one layer's sampled frames into a `@keyframes` body. Returns null
+ * when the layer never leaves identity. */
+function keyframesBody(
+  clip: CompiledClip,
+  layerId: string,
+  box: LayerBox,
+  sceneDurationMs: number,
+): string | null {
+  const overrides = new Map<string, WrapperOverride>();
+  return sampleKeyframes(
+    (tMs) => {
+      evaluateClipInto(clip, tMs, overrides);
+      return overrides.get(layerId);
+    },
+    box,
+    clip.fps,
+    sceneDurationMs,
+  );
 }
 
 /** Compile a clip into scoped animated-HTML CSS. Pure and deterministic. */
@@ -212,6 +238,87 @@ export function compileAnimationCss(input: AnimationCssInput): AnimationCssResul
 
   const css = [
     '/* Calqo animation (AN-3). Reduced-motion viewers see the settled design. */',
+    baseRules.join('\n'),
+    '@media (prefers-reduced-motion: no-preference) {',
+    keyframeBlocks.join('\n'),
+    animationRules.join('\n'),
+    '}',
+  ].join('\n');
+
+  return { css, bindings };
+}
+
+// ---------------------------------------------------------------------------
+// Text-reveal fragment CSS (AN-3.5)
+//
+// A text-reveal preset (typewriter / word-rise) animates per-fragment, so the
+// CSS path emits one `@keyframes` rule per fragment. Fragments only ever
+// translate and fade, so their declarations reuse `overrideDeclarations` over
+// the fragment's own box. Gated off in production; complete and tested so the
+// HTML export needs no new logic when the flag flips (§4.5).
+// ---------------------------------------------------------------------------
+
+/** Per-fragment CSS binding: the class carrying the fragment's animation. */
+export interface FragmentCssBinding {
+  /** Fragment index → wrapper class (also the `@keyframes` name). Absent index
+   * = fragment never leaves identity (unanimated), rendered without a class. */
+  classes: (string | null)[];
+}
+
+export interface FragmentCssResult {
+  css: string;
+  /** layerId → per-fragment class bindings, for layers with fragment animation. */
+  bindings: Map<string, FragmentCssBinding>;
+}
+
+/** Compile a clip's text-reveal fragments into scoped animated-HTML CSS. Pure and
+ * deterministic; empty when the clip has no fragment animation. */
+export function compileFragmentCss(
+  fragments: CompiledFragmentAnimation[] | undefined,
+  fps: number,
+  sceneDurationMs: number,
+  scopeId: string,
+): FragmentCssResult {
+  const bindings = new Map<string, FragmentCssBinding>();
+  if (!fragments || fragments.length === 0) return { css: '', bindings };
+
+  const baseRules: string[] = [];
+  const keyframeBlocks: string[] = [];
+  const animationRules: string[] = [];
+
+  for (const layerAnim of fragments) {
+    const classes: (string | null)[] = [];
+    layerAnim.fragments.forEach((fragment, fi) => {
+      const box: LayerBox = { x: fragment.x, y: fragment.y, w: fragment.w, h: fragment.h };
+      const body = sampleKeyframes(
+        (tMs) => evaluateFragment(fragment, tMs),
+        box,
+        fps,
+        sceneDurationMs,
+      );
+      if (!body) {
+        classes.push(null);
+        return;
+      }
+      const name = `calqo-f${scopeId}-${sanitizeId(layerAnim.layerId)}-${fi}`;
+      classes.push(name);
+      const cx = round(fragment.x + fragment.w / 2);
+      const cy = round(fragment.y + fragment.h / 2);
+      baseRules.push(`.${name} { transform-origin:${cx}px ${cy}px; }`);
+      keyframeBlocks.push(`@keyframes ${name} {\n${body}\n}`);
+      animationRules.push(
+        `  .${name} { animation:${name} ${round(sceneDurationMs)}ms linear both; will-change:transform, opacity; }`,
+      );
+    });
+    if (classes.some((c) => c !== null)) {
+      bindings.set(layerAnim.layerId, { classes });
+    }
+  }
+
+  if (bindings.size === 0) return { css: '', bindings };
+
+  const css = [
+    '/* Calqo text-reveal fragments (AN-3.5). */',
     baseRules.join('\n'),
     '@media (prefers-reduced-motion: no-preference) {',
     keyframeBlocks.join('\n'),

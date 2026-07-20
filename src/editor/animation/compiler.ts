@@ -10,6 +10,7 @@ import {
 } from '@/lib/schema';
 import {
   MIN_EMPHASIS_PERIOD_MS,
+  TEXT_REVEALS_ENABLED,
   presetSupportsLayerKind,
   presetSupportsSlot,
   resolvePreset,
@@ -18,6 +19,7 @@ import {
 } from './presets';
 import {
   COMPILER_VERSION,
+  type CompiledFragmentAnimation,
   type CompiledLayerAnimation,
   type CompiledTrack,
   type CompiledWindow,
@@ -25,6 +27,23 @@ import {
   type CompileResult,
   type WipeDirection,
 } from './types';
+import {
+  compileFragmentAnimation,
+  textRevealEnterPreset,
+} from './fragmentCompiler';
+import {
+  fontShorthandFor,
+  layerText,
+  layerTextStyle,
+  type TextMeasurer,
+} from './textLayout';
+
+/** A text reveal is a text-reveal enter preset kind (`typewriter`/`word-rise`);
+ * the fragment compiler owns it, so the layer-level compiler skips its enter
+ * window (fragments carry the reveal instead). */
+function isTextRevealKind(kind: string): boolean {
+  return kind === 'typewriter' || kind === 'word-rise';
+}
 
 /** Fixed blur radius applied by the `blur-in` preset (px). */
 const BLUR_IN_PX = 16;
@@ -40,6 +59,14 @@ export interface CompileClipInput {
   fps: number;
   /** Bumped when a webfont finishes loading; part of the cache key (§8). */
   fontRevision?: number;
+  /**
+   * Text-measurer factory for text-reveal fragment compilation (AN-3.5). Keyed by
+   * the layer's CSS `font` shorthand. Injected (not imported) so the compiler
+   * stays pure and unit-testable with a deterministic measurer; runtime callers
+   * pass `createCanvasMeasurer`. When absent (or the feature flag is off), no
+   * fragments are produced and every existing path is byte-identical.
+   */
+  measurerFor?: (fontShorthand: string) => TextMeasurer;
 }
 
 // ---------------------------------------------------------------------------
@@ -237,9 +264,10 @@ function compilePresetAnimation(
     return true;
   };
 
-  // Enter window: anchored at scene start.
+  // Enter window: anchored at scene start. Text-reveal kinds are owned by the
+  // fragment compiler, so they contribute no layer-level enter window here.
   let enterEnd = 0;
-  if (anim.enter && guard('enter', anim.enter)) {
+  if (anim.enter && !isTextRevealKind(anim.enter.kind) && guard('enter', anim.enter)) {
     const p = resolvePreset(anim.enter);
     const start = p.delay;
     const end = start + p.duration;
@@ -342,6 +370,40 @@ function compileLayer(
   }
 }
 
+/** Walk layers (into groups) and compile any text-reveal enter preset into
+ * fragment animation. Runs only when the feature flag is on and a measurer
+ * factory is supplied (§4.5 gate); otherwise the output has no `fragments`. */
+function compileFragments(
+  layer: CalqoLayer,
+  sceneDuration: number,
+  locale: LocaleCode,
+  measurerFor: (fontShorthand: string) => TextMeasurer,
+  out: CompiledFragmentAnimation[],
+): void {
+  const preset = textRevealEnterPreset(layer);
+  if (preset) {
+    const text = layerText(layer, locale);
+    const style = layerTextStyle(layer);
+    if (text !== null && style) {
+      const fragmentAnim = compileFragmentAnimation({
+        layer,
+        preset,
+        box: { w: layer.w, h: layer.h },
+        sceneDuration,
+        measurer: measurerFor(fontShorthandFor(style)),
+        text,
+        style,
+      });
+      if (fragmentAnim) out.push(fragmentAnim);
+    }
+  }
+  if (layer.type === 'group') {
+    for (const child of layer.children) {
+      compileFragments(child, sceneDuration, locale, measurerFor, out);
+    }
+  }
+}
+
 /** Compile an artboard's preset/custom animation into a deterministic
  * {@link CompiledClip}. Pure: same input → structurally identical output. */
 export function compileClip(input: CompileClipInput): CompileResult {
@@ -351,10 +413,22 @@ export function compileClip(input: CompileClipInput): CompileResult {
   for (const layer of input.artboard.layers) {
     compileLayer(layer, sceneDuration, layers, issues);
   }
-  return {
-    clip: { sceneDuration, fps: input.fps, layers, compilerVersion: COMPILER_VERSION },
-    issues,
+
+  const fragments: CompiledFragmentAnimation[] = [];
+  if (TEXT_REVEALS_ENABLED && input.measurerFor) {
+    for (const layer of input.artboard.layers) {
+      compileFragments(layer, sceneDuration, input.locale, input.measurerFor, fragments);
+    }
+  }
+
+  const clip: CompileResult['clip'] = {
+    sceneDuration,
+    fps: input.fps,
+    layers,
+    compilerVersion: COMPILER_VERSION,
   };
+  if (fragments.length > 0) clip.fragments = fragments;
+  return { clip, issues };
 }
 
 // ---------------------------------------------------------------------------
@@ -402,6 +476,9 @@ export function clipCacheKey(input: CompileClipInput): string {
     locale: input.locale,
     fps: input.fps,
     fontRevision: input.fontRevision ?? 0,
+    // Whether this compile produces text-reveal fragments (§4.5 gate). Keeps a
+    // fragment-producing compile from sharing a cache entry with one that isn't.
+    reveals: TEXT_REVEALS_ENABLED && !!input.measurerFor,
     timing: input.artboard.timing ?? null,
     layers: input.artboard.layers.map(layerSignature),
   };

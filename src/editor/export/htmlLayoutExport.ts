@@ -28,9 +28,13 @@ import { embeddedFontCss } from './portableFonts';
 import { compileClipCached } from '@/editor/animation/compiler';
 import {
   compileAnimationCss,
+  compileFragmentCss,
   type AnimationCssBinding,
+  type FragmentCssBinding,
 } from './animationCssCompiler';
 import type { LayerBox } from '@/editor/animation/wrapperNode';
+import type { CompiledFragmentAnimation } from '@/editor/animation/types';
+import { createCanvasMeasurer } from '@/editor/animation/textLayout';
 
 /**
  * Editable HTML/CSS export ("HTML (editable)"): serializes the project
@@ -80,6 +84,9 @@ export interface HtmlLayoutOptions {
  * get an animation wrapper, and where downgrade warnings accumulate. */
 interface AnimationContext {
   bindings: Map<string, AnimationCssBinding>;
+  /** Text-reveal fragment animation + CSS bindings by layer id (AN-3.5). A text
+   * layer here is rendered as per-fragment spans instead of one text node. */
+  fragments?: Map<string, { anim: CompiledFragmentAnimation; binding: FragmentCssBinding }>;
 }
 
 /** Short, stable scope for keyframe/class names, unique per artboard+locale so a
@@ -242,6 +249,36 @@ function commonEffectsCss(layer: CalqoLayer, warnings: HtmlExportWarning[]): str
   return css;
 }
 
+/**
+ * Render a text/list layer whose enter slot is a text-reveal preset as
+ * absolutely-positioned per-fragment spans, each carrying its fragment animation
+ * class (AN-3.5). The container keeps the layer's box and typography; the spans
+ * reconstruct the laid-out text from the fragment boxes so the CSS reveal plays
+ * per glyph/word. Reduced-motion viewers see every span at identity (its final
+ * position/opacity), i.e. the settled text.
+ */
+function fragmentTextHtml(
+  layer: TextLayer | ListLayer,
+  fragmentAnim: CompiledFragmentAnimation,
+  binding: FragmentCssBinding,
+  warnings: HtmlExportWarning[],
+): string {
+  const containerCss =
+    boxCss(layer) +
+    commonEffectsCss(layer, warnings) +
+    textStyleToCss(layer.style) +
+    'overflow:hidden;';
+  const spans = fragmentAnim.fragments
+    .map((frag, i) => {
+      const cls = binding.classes[i];
+      const clsAttr = cls ? ` class="${cls}"` : '';
+      const spanCss = `position:absolute;left:${round(frag.x)}px;top:${round(frag.y)}px;white-space:pre;display:inline-block;`;
+      return `<span${clsAttr} style="${spanCss}">${escapeMarkup(frag.text)}</span>`;
+    })
+    .join('');
+  return `<div data-layer="${escapeMarkup(layer.name)}" data-calqo-fragments="${fragmentAnim.unit}" style="${containerCss}">${spans}</div>`;
+}
+
 function textLayerHtml(layer: TextLayer, locale: string, warnings: HtmlExportWarning[]): string {
   const value = layer.text[locale] ?? Object.values(layer.text)[0] ?? '';
   const vAlign = layer.style.verticalAlign ?? 'top';
@@ -398,6 +435,10 @@ async function layerHtml(
     return `<div data-layer="${escapeMarkup(layer.name)}" style="${css}">${children.join('')}</div>`;
   }
 
+  const fragment = context.anim?.fragments?.get(layer.id);
+  if (fragment && (layer.type === 'text' || layer.type === 'list')) {
+    return fragmentTextHtml(layer, fragment.anim, fragment.binding, warnings);
+  }
   if (layer.type === 'text') return textLayerHtml(layer, locale, warnings);
   if (layer.type === 'list') return listLayerHtml(layer, locale, warnings);
   if (layer.type === 'image') return imageLayerHtml(layer, assets, warnings);
@@ -489,20 +530,43 @@ export async function exportArtboardHtmlLayout(
       collectAnimation(layer, boxes, warnings, false, true);
     }
     if (boxes.size > 0) {
+      const fps = options.project.clipSettings?.fps ?? 30;
+      const sceneDurationMs = artboard.timing?.duration ?? 5000;
+      const scopeId = animationScope(artboard.id, locale);
       const { clip } = compileClipCached({
         projectId: options.project.id,
         artboard,
         locale,
-        fps: options.project.clipSettings?.fps ?? 30,
+        fps,
+        // A canvas measurer lets the fragment compiler run when the feature flag
+        // is on; gated off in production, this is a no-op (no fragments emitted).
+        measurerFor: (font) => createCanvasMeasurer(font),
       });
       const compiled = compileAnimationCss({
         clip,
         boxes,
-        sceneDurationMs: artboard.timing?.duration ?? 5000,
-        scopeId: animationScope(artboard.id, locale),
+        sceneDurationMs,
+        scopeId,
       });
       animCss = compiled.css;
       if (compiled.bindings.size > 0) anim = { bindings: compiled.bindings };
+
+      // Text-reveal fragments (AN-3.5): one @keyframes per fragment plus a
+      // per-fragment binding used to render spans. Present only when a text
+      // layer carries an enabled reveal preset.
+      const fragmentCss = compileFragmentCss(clip.fragments, fps, sceneDurationMs, scopeId);
+      if (fragmentCss.bindings.size > 0 && clip.fragments) {
+        animCss = [animCss, fragmentCss.css].filter(Boolean).join('\n');
+        const fragMap = new Map<
+          string,
+          { anim: CompiledFragmentAnimation; binding: FragmentCssBinding }
+        >();
+        for (const fa of clip.fragments) {
+          const binding = fragmentCss.bindings.get(fa.layerId);
+          if (binding) fragMap.set(fa.layerId, { anim: fa, binding });
+        }
+        anim = { bindings: anim?.bindings ?? new Map(), fragments: fragMap };
+      }
     }
   }
 

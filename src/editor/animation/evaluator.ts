@@ -2,9 +2,12 @@ import { applyEasing } from './easing';
 import {
   IDENTITY_OVERRIDE,
   type CompiledClip,
+  type CompiledFragment,
+  type CompiledFragmentAnimation,
   type CompiledKeyframe,
   type CompiledLayerAnimation,
   type CompiledTrack,
+  type CompiledWindow,
   type WipeDirection,
   type WrapperOverride,
 } from './types';
@@ -82,12 +85,10 @@ function evalPropAt(segments: Segment[], tMs: number): number {
   return lastEnd ?? 0;
 }
 
-/** Build per-property segment lists for a compiled layer, sorted by start. */
-function segmentsByProp(
-  layerAnim: CompiledLayerAnimation,
-): Map<AnimProp, Segment[]> {
+/** Build per-property segment lists for a set of windows, sorted by start. */
+function segmentsByProp(windows: CompiledWindow[]): Map<AnimProp, Segment[]> {
   const byProp = new Map<AnimProp, Segment[]>();
-  for (const window of layerAnim.windows) {
+  for (const window of windows) {
     const end = window.start + window.duration;
     for (const track of window.tracks) {
       const seg: Segment = {
@@ -147,13 +148,8 @@ function applyProp(
   }
 }
 
-/** Evaluate one compiled layer into a caller-owned override object, which is
- * reset to identity first. Deleted/absent layers leave the object at identity. */
-export function evaluateLayerInto(
-  layerAnim: CompiledLayerAnimation | undefined,
-  tMs: number,
-  out: WrapperOverride,
-): WrapperOverride {
+/** Reset an override object to identity in place. */
+function resetOverride(out: WrapperOverride): void {
   out.dx = 0;
   out.dy = 0;
   out.scaleX = 1;
@@ -163,12 +159,75 @@ export function evaluateLayerInto(
   out.wipeProgress = 1;
   out.blur = 0;
   out.wipeDirection = undefined;
-  if (!layerAnim) return out;
-  const byProp = segmentsByProp(layerAnim);
+}
+
+/** Evaluate a set of windows into a caller-owned override object (reset to
+ * identity first). Shared by layer-level and per-fragment evaluation. */
+export function evaluateWindowsInto(
+  windows: CompiledWindow[] | undefined,
+  tMs: number,
+  out: WrapperOverride,
+): WrapperOverride {
+  resetOverride(out);
+  if (!windows || windows.length === 0) return out;
+  const byProp = segmentsByProp(windows);
   for (const [prop, segments] of byProp) {
     applyProp(out, prop, evalPropAt(segments, tMs), segments[0]?.wipeDirection);
   }
   return out;
+}
+
+/** Evaluate one compiled layer into a caller-owned override object, which is
+ * reset to identity first. Deleted/absent layers leave the object at identity. */
+export function evaluateLayerInto(
+  layerAnim: CompiledLayerAnimation | undefined,
+  tMs: number,
+  out: WrapperOverride,
+): WrapperOverride {
+  return evaluateWindowsInto(layerAnim?.windows, tMs, out);
+}
+
+/**
+ * Evaluate a layer's text-reveal fragments at `tMs` into per-fragment overrides,
+ * reusing caller-owned objects across frames (export/playback hot path). Every
+ * fragment gets an entry (reset then composed) in index order. Returns `out`.
+ */
+export function evaluateFragmentsInto(
+  fragmentAnim: CompiledFragmentAnimation | undefined,
+  tMs: number,
+  out: WrapperOverride[],
+): WrapperOverride[] {
+  if (!fragmentAnim) {
+    out.length = 0;
+    return out;
+  }
+  const { fragments } = fragmentAnim;
+  out.length = fragments.length;
+  for (let i = 0; i < fragments.length; i++) {
+    let override = out[i];
+    if (!override) {
+      override = createIdentityOverride();
+      out[i] = override;
+    }
+    evaluateWindowsInto(fragments[i].windows, tMs, override);
+  }
+  return out;
+}
+
+/** Look up a clip's fragment animation for a layer id. */
+export function fragmentAnimationFor(
+  clip: CompiledClip,
+  layerId: string,
+): CompiledFragmentAnimation | undefined {
+  return clip.fragments?.find((f) => f.layerId === layerId);
+}
+
+/** Evaluate a single fragment's override (tests / one-off reads). */
+export function evaluateFragment(
+  fragment: CompiledFragment,
+  tMs: number,
+): WrapperOverride {
+  return evaluateWindowsInto(fragment.windows, tMs, createIdentityOverride());
 }
 
 /** Allocation-friendly single-layer evaluation (tests / one-off reads). Returns
