@@ -292,6 +292,7 @@ function LayerRow({
             <span className="truncate">{layer.name}</span>
           </button>
         )}
+        <AnimationBadge layer={layer} />
         <button
           type="button"
           className="touch-hitarea text-[var(--calqo-text-3)] opacity-0 hover:text-[var(--calqo-text)] group-hover:opacity-70 any-pointer-coarse:opacity-70"
@@ -334,5 +335,28 @@ function LayerRow({
             />
           ))}
     </>
+  );
+}
+
+const BADGE_SLOTS = ['enter', 'emphasis', 'exit'] as const;
+
+/** Compact enter/emphasis/exit slot chips on a layer row. Only present when the
+ * layer carries preset animation; never replaces the visibility/lock controls. */
+function AnimationBadge({ layer }: { layer: CalqoLayer }) {
+  const { t } = useTranslation('editor');
+  const anim = layer.animation;
+  if (!anim || anim.mode !== 'preset') return null;
+  const active = BADGE_SLOTS.filter((slot) => anim[slot]);
+  if (active.length === 0) return null;
+  return (
+    <span className="flex shrink-0 items-center gap-0.5" aria-hidden>
+      {active.map((slot) => (
+        <span
+          key={slot}
+          title={t(`animate.slots.${slot}`)}
+          className="h-1.5 w-1.5 rounded-full bg-[var(--calqo-accent)] opacity-80"
+        />
+      ))}
+    </span>
   );
 }

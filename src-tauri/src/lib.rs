@@ -4,6 +4,7 @@
 // predefined items, and a native About) and system-font discovery. Menu
 // selections are emitted into the webview so React still owns command behavior.
 mod mcp;
+mod video;
 
 use std::collections::HashMap;
 use tauri::{
@@ -540,6 +541,7 @@ pub fn run() {
             })
             .build(),
         )
+        .manage(video::VideoState::default())
         .invoke_handler(tauri::generate_handler![
             list_system_fonts,
             list_font_variants,
@@ -550,7 +552,12 @@ pub fn run() {
             mcp::mcp_stop_server,
             mcp::mcp_server_status,
             mcp::mcp_bridge_respond,
-            mcp::setup::mcp_setup_client
+            mcp::setup::mcp_setup_client,
+            video::vt_probe,
+            video::vt_begin,
+            video::vt_add_frame,
+            video::vt_finalize,
+            video::vt_cancel
         ])
         .setup(|app| {
             // Default to English; the web shell pushes the resolved locale via

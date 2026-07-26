@@ -83,12 +83,12 @@ export function collectAssetIds(layers: CalqoLayer[], into = new Set<string>()):
   return into;
 }
 
-interface LoadedImages {
+export interface LoadedImages {
   images: Map<string, HTMLImageElement>;
   revoke: () => void;
 }
 
-async function loadImages(artboard: CalqoArtboard): Promise<LoadedImages> {
+export async function loadImages(artboard: CalqoArtboard): Promise<LoadedImages> {
   const idSet = collectAssetIds(artboard.layers);
   if (artboard.background.type === 'image') idSet.add(artboard.background.assetId);
   const ids = [...idSet];
@@ -279,7 +279,7 @@ function arrowHeadShapes(points: number[], arrow: ArrowStyle | undefined, color:
 }
 
 /** Build the Konva node for a layer, mirroring the on-canvas LayerRenderer. */
-function buildNode(
+export function buildNode(
   layer: CalqoLayer,
   images: Map<string, HTMLImageElement>,
   locale: string,
@@ -693,6 +693,41 @@ function buildListNode(
   return group;
 }
 
+/** Build the artboard background nodes (flat/gradient/pattern fill plus an
+ * optional clipped image), shared by the one-shot raster export and the reusable
+ * animation scene. Returns an empty list when `paintBackground` is false. */
+export function buildBackgroundNodes(
+  artboard: CalqoArtboard,
+  images: Map<string, HTMLImageElement>,
+  paintBackground: boolean,
+): (Rect | Group)[] {
+  if (!paintBackground) return [];
+  const bg = artboard.background;
+  const bgImage = bg.type === 'image' ? images.get(bg.assetId) : undefined;
+  const nodes: (Rect | Group)[] = [
+    new Rect({
+      x: 0,
+      y: 0,
+      width: artboard.width,
+      height: artboard.height,
+      ...(bg.type === 'image'
+        ? { fill: '#FFFFFF' }
+        : fillProps(bg, artboard.width, artboard.height)),
+    }),
+  ];
+  if (bgImage && bg.type === 'image') {
+    const clip = new Group({
+      clipX: 0,
+      clipY: 0,
+      clipWidth: artboard.width,
+      clipHeight: artboard.height,
+    });
+    clip.add(new KonvaImage(fitImageConfig(bgImage, bg.fit, artboard.width, artboard.height)));
+    nodes.push(clip);
+  }
+  return nodes;
+}
+
 /** Render an artboard to a raster blob via a detached offscreen Konva stage. */
 export async function exportArtboardRaster(
   options: RasterExportOptions,
@@ -716,31 +751,7 @@ export async function exportArtboardRaster(
 
   // JPEG cannot be transparent, so it always gets a background fill.
   const paintBackground = !transparent || format === 'jpeg';
-  if (paintBackground) {
-    const bg = artboard.background;
-    const bgImage = bg.type === 'image' ? images.get(bg.assetId) : undefined;
-    layer.add(
-      new Rect({
-        x: 0,
-        y: 0,
-        width: artboard.width,
-        height: artboard.height,
-        ...(bg.type === 'image'
-          ? { fill: '#FFFFFF' }
-          : fillProps(bg, artboard.width, artboard.height)),
-      }),
-    );
-    if (bgImage && bg.type === 'image') {
-      const clip = new Group({
-        clipX: 0,
-        clipY: 0,
-        clipWidth: artboard.width,
-        clipHeight: artboard.height,
-      });
-      clip.add(new KonvaImage(fitImageConfig(bgImage, bg.fit, artboard.width, artboard.height)));
-      layer.add(clip);
-    }
-  }
+  buildBackgroundNodes(artboard, images, paintBackground).forEach((node) => layer.add(node));
 
   // Clip content to the artboard bounds so nothing spills past the frame.
   const content = new Group({

@@ -10,6 +10,14 @@ license = "MIT"
 name = "calqo_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+# Native VideoToolbox (M-series hardware) video export (plan §7 / AN-4.4).
+# Off by default so the standard build never compiles the macOS AVFoundation
+# FFI; enable on macOS with `--features video-toolbox`. When off (or on any
+# non-macOS target), the vt_* commands report the encoder unavailable and the
+# web layer falls back to the WebCodecs export path.
+video-toolbox = ["dep:objc2", "dep:objc2-foundation"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -39,3 +47,15 @@ tokio-util = "0.7"
 rand = "0.9"
 dirs = "6"
 toml_edit = "0.25"
+
+# Native VideoToolbox encoder deps, pulled in only by the `video-toolbox`
+# feature (macOS-only path). Kept optional so the default build graph is
+# unchanged. The encoder itself is additionally `#[cfg(target_os = "macos")]`.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", optional = true }
+objc2-foundation = { version = "0.3", optional = true, features = [
+    "NSString",
+    "NSDictionary",
+    "NSValue",
+    "NSURL",
+] }

@@ -3,7 +3,7 @@ import { z } from 'zod';
 /** The project document is the single contract shared by the editor, Dexie
  * persistence, `.calqo` import/export, and AI template/translation output. It is
  * versioned so future shapes can migrate forward. */
-export const CURRENT_SCHEMA_VERSION = 1 as const;
+export const CURRENT_SCHEMA_VERSION = 2 as const;
 
 /** A BCP-47-ish content locale code, e.g. "fr", "tr", "en". */
 export const localeCodeSchema = z.string().min(2).max(10);
@@ -129,6 +129,352 @@ export const stickerOutlineSchema = z.object({
   shadow: shadowSchema.optional(),
 });
 
+// ---------------------------------------------------------------------------
+// Animation (schema v2, "Animate" mode — docs/calqo-animation-extension-plan.md)
+//
+// All animation fields are OPTIONAL: a static project stays a valid static
+// project. Presets are the persisted document; compiled keyframe tracks are a
+// runtime-only derivative (never persisted). Custom tracks persist because
+// there is nothing to compile them from. Numbers are `.finite()` with
+// property-specific ranges — no open numeric fields, matching the rest of the
+// schema's discipline.
+// ---------------------------------------------------------------------------
+
+/** Normative timing bounds. A scene (artboard) holds between 250 ms and 60 s. */
+export const MIN_SCENE_DURATION_MS = 250 as const;
+export const MAX_SCENE_DURATION_MS = 60_000 as const;
+/** Scene duration assumed for validation when an animated artboard omits an
+ * explicit `timing` block. Kept small so stray long windows are still caught. */
+export const DEFAULT_SCENE_DURATION_MS = 5_000 as const;
+
+/** Per-property numeric caps (decision §18.2). Reused by the preset catalog so
+ * generated tracks stay inside the validated ranges. */
+export const ANIM_CAPS = {
+  /** Additive pixel offset (dx/dy) magnitude. */
+  offset: 10_000,
+  /** Slide/rise travel distance in px. */
+  distance: 4_000,
+  /** Multiplicative scale factor (must stay > 0). */
+  scale: 10,
+  /** Additive rotation in degrees. */
+  rotation: 3_600,
+  /** Blur radius in px. */
+  blur: 200,
+  /** Per-child stagger in ms. */
+  stagger: 10_000,
+} as const;
+
+/** Animatable wrapper properties. Transform props compose over document
+ * geometry (§4.2); `wipe-progress`/`blur` are dedicated reveal props. */
+export const animPropSchema = z.enum([
+  'dx',
+  'dy',
+  'scaleX',
+  'scaleY',
+  'rotation',
+  'opacity',
+  'wipe-progress',
+  'blur',
+]);
+export type AnimProp = z.infer<typeof animPropSchema>;
+
+export const easingSchema = z.enum([
+  'linear',
+  'ease-in',
+  'ease-out',
+  'ease-in-out',
+  'overshoot',
+  'bounce',
+]);
+export type Easing = z.infer<typeof easingSchema>;
+
+/** Inclusive `[min, max]` value range accepted for each animatable property.
+ * `scaleX/scaleY` exclude 0 (a collapsed layer is a bug, not a keyframe). */
+const ANIM_PROP_RANGE: Record<AnimProp, { min: number; max: number }> = {
+  dx: { min: -ANIM_CAPS.offset, max: ANIM_CAPS.offset },
+  dy: { min: -ANIM_CAPS.offset, max: ANIM_CAPS.offset },
+  scaleX: { min: 0, max: ANIM_CAPS.scale },
+  scaleY: { min: 0, max: ANIM_CAPS.scale },
+  rotation: { min: -ANIM_CAPS.rotation, max: ANIM_CAPS.rotation },
+  opacity: { min: 0, max: 1 },
+  'wipe-progress': { min: 0, max: 1 },
+  blur: { min: 0, max: ANIM_CAPS.blur },
+};
+
+export function animPropRange(prop: AnimProp): { min: number; max: number } {
+  return ANIM_PROP_RANGE[prop];
+}
+
+export const keyframeSchema = z.object({
+  /** 0–1, normalized to the owning window. */
+  t: z.number().finite().min(0).max(1),
+  /** Finite; range validated per-prop at the track level. */
+  value: z.number().finite(),
+  /** Easing *into* this keyframe. */
+  easing: easingSchema.optional(),
+});
+export type Keyframe = z.infer<typeof keyframeSchema>;
+
+/** One property track: ≥2 keyframes, strictly-increasing unique `t`, each value
+ * within the property's range. */
+export const trackSchema = z
+  .object({
+    prop: animPropSchema,
+    keyframes: z.array(keyframeSchema).min(2),
+  })
+  .superRefine((track, ctx) => {
+    const { min, max } = ANIM_PROP_RANGE[track.prop];
+    const scaleProp = track.prop === 'scaleX' || track.prop === 'scaleY';
+    for (let i = 0; i < track.keyframes.length; i++) {
+      const kf = track.keyframes[i];
+      if (i > 0 && kf.t <= track.keyframes[i - 1].t) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `keyframe times must strictly increase (index ${i})`,
+          path: ['keyframes', i, 't'],
+        });
+      }
+      const belowMin = scaleProp ? kf.value <= min : kf.value < min;
+      if (belowMin || kf.value > max) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `value ${kf.value} out of range for ${track.prop} (${scaleProp ? '(' : '['}${min}, ${max}])`,
+          path: ['keyframes', i, 'value'],
+        });
+      }
+    }
+  });
+export type Track = z.infer<typeof trackSchema>;
+
+/** A custom animation window placed on the scene timeline. Tracks within a
+ * window carry unique props (no two tracks drive the same property). */
+export const trackWindowSchema = z
+  .object({
+    /** ms from scene start. */
+    start: z.number().finite().min(0).max(MAX_SCENE_DURATION_MS),
+    /** ms, > 0; the window must fit inside the scene (checked at artboard level). */
+    duration: z.number().finite().positive().max(MAX_SCENE_DURATION_MS),
+    tracks: z.array(trackSchema).min(1),
+  })
+  .superRefine((window, ctx) => {
+    const seen = new Set<AnimProp>();
+    for (let i = 0; i < window.tracks.length; i++) {
+      const prop = window.tracks[i].prop;
+      if (seen.has(prop)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `duplicate prop "${prop}" in one window`,
+          path: ['tracks', i, 'prop'],
+        });
+      }
+      seen.add(prop);
+    }
+  });
+export type TrackWindow = z.infer<typeof trackWindowSchema>;
+
+/** Preset kinds. Enter/exit and emphasis kinds ship in v1; the text-reveal
+ * kinds (`typewriter`, `word-rise`) are reserved but rejected until AN-3. */
+export const presetKindSchema = z.enum([
+  // enter / exit
+  'fade',
+  'slide',
+  'pop',
+  'rise',
+  'wipe',
+  'blur-in',
+  // emphasis
+  'pulse',
+  'wiggle',
+  'float',
+  // text (reserved, not yet enabled)
+  'typewriter',
+  'word-rise',
+]);
+export type PresetKind = z.infer<typeof presetKindSchema>;
+
+/** Preset kinds valid in the enter/exit slots. */
+export const ENTER_EXIT_PRESET_KINDS = [
+  'fade',
+  'slide',
+  'pop',
+  'rise',
+  'wipe',
+  'blur-in',
+] as const satisfies readonly PresetKind[];
+/** Preset kinds valid in the emphasis slot. */
+export const EMPHASIS_PRESET_KINDS = [
+  'pulse',
+  'wiggle',
+  'float',
+] as const satisfies readonly PresetKind[];
+/** Preset kinds that read a `direction`. */
+export const DIRECTIONAL_PRESET_KINDS = [
+  'slide',
+  'wipe',
+  'rise',
+] as const satisfies readonly PresetKind[];
+/** Text-reveal preset kinds (enter slot, text/list layers only) — AN-3.5. */
+export const TEXT_PRESET_KINDS = [
+  'typewriter',
+  'word-rise',
+] as const satisfies readonly PresetKind[];
+/** Preset kinds valid in the enter slot: the enter/exit kinds plus text reveals
+ * (whose layer-kind restriction is enforced by the compiler/command layer). */
+export const ENTER_PRESET_KINDS = [
+  ...ENTER_EXIT_PRESET_KINDS,
+  ...TEXT_PRESET_KINDS,
+] as const satisfies readonly PresetKind[];
+/** No preset kind is deferred now that text reveals ship (AN-3.5); kept for
+ * backward compatibility with earlier imports. */
+export const DEFERRED_PRESET_KINDS = [] as const satisfies readonly PresetKind[];
+
+export const presetInstanceSchema = z.object({
+  kind: presetKindSchema,
+  direction: z.enum(['up', 'down', 'left', 'right']).optional(),
+  /** px, slide/rise travel. */
+  distance: z.number().finite().positive().max(ANIM_CAPS.distance).optional(),
+  /** ms, > 0. */
+  duration: z.number().finite().positive().max(MAX_SCENE_DURATION_MS),
+  /** ms from the slot anchor. */
+  delay: z.number().finite().min(0).max(MAX_SCENE_DURATION_MS),
+  easing: easingSchema.optional(),
+  /** ms per child; group/list slots only. */
+  stagger: z.number().finite().min(0).max(ANIM_CAPS.stagger).optional(),
+});
+export type PresetInstance = z.infer<typeof presetInstanceSchema>;
+
+function refinePresetSlot(
+  instance: PresetInstance,
+  allowed: readonly PresetKind[],
+  slot: string,
+  ctx: z.RefinementCtx,
+): void {
+  if ((DEFERRED_PRESET_KINDS as readonly PresetKind[]).includes(instance.kind)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `preset "${instance.kind}" is not enabled yet`,
+      path: [slot, 'kind'],
+    });
+    return;
+  }
+  if (!allowed.includes(instance.kind)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `preset "${instance.kind}" is not valid in the ${slot} slot`,
+      path: [slot, 'kind'],
+    });
+  }
+  if (
+    instance.direction !== undefined &&
+    !(DIRECTIONAL_PRESET_KINDS as readonly PresetKind[]).includes(instance.kind)
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `preset "${instance.kind}" does not take a direction`,
+      path: [slot, 'direction'],
+    });
+  }
+}
+
+/** Per-layer animation: preset-authored (enter/emphasis/exit) or custom raw
+ * tracks — a `mode`-tagged union so a layer is one or the other, never both.
+ * `z.union` (not `discriminatedUnion`) because each arm carries a `superRefine`;
+ * the `mode` literal still narrows the inferred TypeScript type. */
+export const layerAnimationSchema = z.union([
+  z
+    .object({
+      mode: z.literal('preset'),
+      enter: presetInstanceSchema.optional(),
+      emphasis: presetInstanceSchema.optional(),
+      exit: presetInstanceSchema.optional(),
+    })
+    .superRefine((anim, ctx) => {
+      if (anim.enter)
+        refinePresetSlot(anim.enter, ENTER_PRESET_KINDS, 'enter', ctx);
+      if (anim.emphasis)
+        refinePresetSlot(
+          anim.emphasis,
+          EMPHASIS_PRESET_KINDS,
+          'emphasis',
+          ctx,
+        );
+      if (anim.exit)
+        refinePresetSlot(anim.exit, ENTER_EXIT_PRESET_KINDS, 'exit', ctx);
+    }),
+  z
+    .object({
+      mode: z.literal('custom'),
+      windows: z.array(trackWindowSchema).min(1),
+    })
+    .superRefine((anim, ctx) => {
+      // Per-prop overlap across windows is forbidden by construction.
+      const spans = new Map<AnimProp, Array<{ start: number; end: number }>>();
+      anim.windows.forEach((window, wi) => {
+        const end = window.start + window.duration;
+        for (const track of window.tracks) {
+          const list = spans.get(track.prop) ?? [];
+          for (const prev of list) {
+            if (window.start < prev.end && prev.start < end) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `windows overlap for prop "${track.prop}"`,
+                path: ['windows', wi],
+              });
+            }
+          }
+          list.push({ start: window.start, end });
+          spans.set(track.prop, list);
+        }
+      });
+    }),
+]);
+export type LayerAnimation = z.infer<typeof layerAnimationSchema>;
+
+/** Per-artboard scene timing. */
+export const sceneTimingSchema = z.object({
+  duration: z
+    .number()
+    .finite()
+    .min(MIN_SCENE_DURATION_MS)
+    .max(MAX_SCENE_DURATION_MS),
+});
+export type SceneTiming = z.infer<typeof sceneTimingSchema>;
+
+/** A clip is at most 60 s including transitions (AN-4.2). */
+export const MAX_CLIP_DURATION_MS = 60_000 as const;
+/** Scene transition kinds and their timing bounds (AN-4.2). `cut` is instant. */
+export const SCENE_TRANSITION_KINDS = ['cut', 'fade', 'slide'] as const;
+export type SceneTransitionKind = (typeof SCENE_TRANSITION_KINDS)[number];
+export const DEFAULT_TRANSITION_MS = 500 as const;
+export const MAX_TRANSITION_MS = 2_000 as const;
+
+/** One ordered entry in a multi-scene clip: an artboard plus the transition that
+ * plays *into* it from the previous scene (ignored on the first scene). */
+export const sceneEntrySchema = z.object({
+  artboardId: z.string(),
+  transition: z.enum(SCENE_TRANSITION_KINDS).optional(),
+  /** Transition duration in ms; defaults to {@link DEFAULT_TRANSITION_MS} for
+   * fade/slide and is forced to 0 for `cut`. */
+  transitionDurationMs: z
+    .number()
+    .finite()
+    .min(0)
+    .max(MAX_TRANSITION_MS)
+    .optional(),
+});
+export type SceneEntry = z.infer<typeof sceneEntrySchema>;
+
+/** Clip-level settings. `scenes` drives the multi-artboard sequence exporter
+ * (AN-4.2); a single-artboard clip leaves it empty and exports the active
+ * artboard. */
+export const clipSettingsSchema = z.object({
+  fps: z
+    .union([z.literal(24), z.literal(30), z.literal(60)])
+    .default(30),
+  scenes: z.array(sceneEntrySchema).optional(),
+});
+export type ClipSettings = z.infer<typeof clipSettingsSchema>;
+
 const baseLayerShape = {
   id: z.string(),
   name: z.string(),
@@ -144,6 +490,9 @@ const baseLayerShape = {
   effects: layerEffectsSchema.optional(),
   /** Optional sticker outline halo (Phase R). */
   sticker: stickerOutlineSchema.optional(),
+  /** Optional per-layer animation (schema v2, Animate mode). Absent on a static
+   * layer; presets or custom tracks otherwise. */
+  animation: layerAnimationSchema.optional(),
 };
 
 export const textStyleSchema = z.object({
@@ -363,6 +712,8 @@ export interface GroupLayer {
   blendMode?: 'normal' | 'multiply' | 'screen' | 'overlay';
   effects?: z.infer<typeof layerEffectsSchema>;
   sticker?: z.infer<typeof stickerOutlineSchema>;
+  /** Optional per-layer animation (schema v2). Groups animate as one unit. */
+  animation?: LayerAnimation;
   expanded?: boolean;
   children: CalqoLayer[];
 }
@@ -408,17 +759,71 @@ const guideSchema = z.object({
   position: z.number(),
 });
 
-export const artboardSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  preset: z.string(),
-  width: z.number().positive(),
-  height: z.number().positive(),
-  background: backgroundFillSchema,
-  layers: z.array(layerSchema).default([]),
-  guides: z.array(guideSchema).optional(),
-  grid: gridSettingsSchema.optional(),
-});
+/** Walk a layer tree and report any animation window/slot that would end after
+ * the scene. Preset windows are `delay + duration`; custom windows are
+ * `start + duration`. This is the import-time counterpart to the command-layer
+ * rejection described in §4.4 — AI-generated animation JSON is caught here. */
+function collectOutOfSceneAnimations(
+  layers: CalqoLayer[],
+  sceneDuration: number,
+  ctx: z.RefinementCtx,
+  path: (string | number)[] = ['layers'],
+): void {
+  layers.forEach((layer, i) => {
+    const base: (string | number)[] = [...path, i, 'animation'];
+    const anim = layer.animation;
+    if (anim) {
+      if (anim.mode === 'preset') {
+        for (const slot of ['enter', 'emphasis', 'exit'] as const) {
+          const inst = anim[slot];
+          if (inst && inst.delay + inst.duration > sceneDuration) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `${slot} preset ends at ${inst.delay + inst.duration}ms, after the ${sceneDuration}ms scene`,
+              path: [...base, slot],
+            });
+          }
+        }
+      } else {
+        anim.windows.forEach((w, wi) => {
+          if (w.start + w.duration > sceneDuration) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `window ends at ${w.start + w.duration}ms, after the ${sceneDuration}ms scene`,
+              path: [...base, 'windows', wi],
+            });
+          }
+        });
+      }
+    }
+    if (layer.type === 'group') {
+      collectOutOfSceneAnimations(layer.children, sceneDuration, ctx, [
+        ...path,
+        i,
+        'children',
+      ]);
+    }
+  });
+}
+
+export const artboardSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    preset: z.string(),
+    width: z.number().positive(),
+    height: z.number().positive(),
+    background: backgroundFillSchema,
+    layers: z.array(layerSchema).default([]),
+    guides: z.array(guideSchema).optional(),
+    grid: gridSettingsSchema.optional(),
+    /** Optional scene timing (schema v2). Absent on a static artboard. */
+    timing: sceneTimingSchema.optional(),
+  })
+  .superRefine((artboard, ctx) => {
+    const sceneDuration = artboard.timing?.duration ?? DEFAULT_SCENE_DURATION_MS;
+    collectOutOfSceneAnimations(artboard.layers, sceneDuration, ctx);
+  });
 
 export const assetRefSchema = z.object({
   id: z.string(),
@@ -448,21 +853,81 @@ export const glossaryEntrySchema = z.object({
   notes: z.string().optional(),
 });
 
-export const projectSchema = z.object({
-  schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),
-  id: z.string(),
-  name: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  contentLocales: z.array(localeCodeSchema).min(1),
-  activeContentLocale: localeCodeSchema,
-  palette: z.array(hexish).default([]),
-  artboards: z.array(artboardSchema).min(1),
-  assets: z.array(assetRefSchema).default([]),
-  /** Project-wide translation glossary / do-not-translate list (plan §13.5). */
-  glossary: z.array(glossaryEntrySchema).default([]),
-  metadata: projectMetadataSchema.optional(),
-});
+/** Resolved transition duration (ms): `cut` is instant; fade/slide default to
+ * {@link DEFAULT_TRANSITION_MS}. Shared by validation and the runtime sequence. */
+export function sceneTransitionDurationMs(entry: SceneEntry): number {
+  const kind = entry.transition ?? 'cut';
+  if (kind === 'cut') return 0;
+  return Math.min(entry.transitionDurationMs ?? DEFAULT_TRANSITION_MS, MAX_TRANSITION_MS);
+}
+
+export const projectSchema = z
+  .object({
+    schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),
+    id: z.string(),
+    name: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    contentLocales: z.array(localeCodeSchema).min(1),
+    activeContentLocale: localeCodeSchema,
+    palette: z.array(hexish).default([]),
+    artboards: z.array(artboardSchema).min(1),
+    assets: z.array(assetRefSchema).default([]),
+    /** Project-wide translation glossary / do-not-translate list (plan §13.5). */
+    glossary: z.array(glossaryEntrySchema).default([]),
+    /** Optional clip-level animation settings (schema v2). Absent on a static
+     * project; `fps` defaults to 30 once present. */
+    clipSettings: clipSettingsSchema.optional(),
+    metadata: projectMetadataSchema.optional(),
+  })
+  .superRefine((project, ctx) => {
+    // Multi-scene clip validation (AN-4.2): scenes must reference existing,
+    // unique artboards of matching dimensions, and the whole clip (scene
+    // durations + transitions) must fit inside the 60 s limit.
+    const scenes = project.clipSettings?.scenes;
+    if (!scenes || scenes.length === 0) return;
+    const byId = new Map(project.artboards.map((a) => [a.id, a]));
+    const seen = new Set<string>();
+    let total = 0;
+    let firstDims: { w: number; h: number } | undefined;
+    scenes.forEach((entry, i) => {
+      const artboard = byId.get(entry.artboardId);
+      if (!artboard) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `scene ${i} references unknown artboard "${entry.artboardId}"`,
+          path: ['clipSettings', 'scenes', i, 'artboardId'],
+        });
+        return;
+      }
+      if (seen.has(entry.artboardId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `artboard "${entry.artboardId}" appears in more than one scene`,
+          path: ['clipSettings', 'scenes', i, 'artboardId'],
+        });
+      }
+      seen.add(entry.artboardId);
+      if (!firstDims) {
+        firstDims = { w: artboard.width, h: artboard.height };
+      } else if (artboard.width !== firstDims.w || artboard.height !== firstDims.h) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `scene ${i} artboard size ${artboard.width}×${artboard.height} does not match the clip size ${firstDims.w}×${firstDims.h}`,
+          path: ['clipSettings', 'scenes', i, 'artboardId'],
+        });
+      }
+      total += artboard.timing?.duration ?? DEFAULT_SCENE_DURATION_MS;
+      if (i > 0) total += sceneTransitionDurationMs(entry);
+    });
+    if (total > MAX_CLIP_DURATION_MS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `clip is ${total}ms, over the ${MAX_CLIP_DURATION_MS}ms limit`,
+        path: ['clipSettings', 'scenes'],
+      });
+    }
+  });
 
 export type CalqoProject = z.infer<typeof projectSchema>;
 export type CalqoArtboard = z.infer<typeof artboardSchema>;

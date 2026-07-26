@@ -17,7 +17,10 @@ export type HtmlWarningCode =
   | 'vectorApproximation'
   | 'rasterized'
   | 'missingAsset'
-  | 'renderFailed';
+  | 'renderFailed'
+  /** A child layer's animation is lost because an ancestor rasterizes to a
+   * single image, which animates only as one unit (plan §6.3 / AN-3.2). */
+  | 'animationDowngrade';
 
 export type HtmlRasterReason = keyof typeof HTML_RASTER_REASONS;
 

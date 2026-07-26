@@ -1,6 +1,10 @@
 import { assetStorage, files, storage } from '@/lib/adapters';
 import type { CalqoFile } from '@/lib/adapters';
-import { safeImportProject, type CalqoProject } from '@/lib/schema';
+import {
+  safeImportProject,
+  toV1CompatibleDocument,
+  type CalqoProject,
+} from '@/lib/schema';
 import { noticeIfOversized } from '@/lib/utils/imageAsset';
 import { createId } from '@/lib/utils/ids';
 import { projectStore } from '@/lib/state/projectStore';
@@ -31,8 +35,7 @@ export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   return response.blob();
 }
 
-/** Serialize a project and its assets into a portable `.calqo` envelope. */
-export async function buildCalqoFile(project: CalqoProject): Promise<CalqoFile> {
+async function collectEnvelopeAssets(project: CalqoProject) {
   const assets = await Promise.all(
     project.assets.map(async (ref) => {
       const blob = await assetStorage.getAssetBlob(ref.id);
@@ -46,16 +49,40 @@ export async function buildCalqoFile(project: CalqoProject): Promise<CalqoFile> 
         : null;
     }),
   );
+  return assets.filter((a): a is NonNullable<typeof a> => a !== null);
+}
+
+/** Serialize a project and its assets into a portable `.calqo` envelope. */
+export async function buildCalqoFile(project: CalqoProject): Promise<CalqoFile> {
   return {
     kind: 'calqo.project',
     formatVersion: 1,
     project,
-    assets: assets.filter((a): a is NonNullable<typeof a> => a !== null),
+    assets: await collectEnvelopeAssets(project),
   };
 }
 
 export async function buildCalqoFileText(project: CalqoProject): Promise<string> {
   return JSON.stringify(await buildCalqoFile(project), null, 2);
+}
+
+/** Serialize a project as a v1-compatible (`schemaVersion: 1`) envelope so it
+ * opens in older Calqo builds. Returns `null` when the project carries
+ * animation/timing/clip settings a v1 client cannot represent — the caller then
+ * offers only the current-format export (§4.4). The envelope `formatVersion`
+ * (transport) stays independent of the project `schemaVersion` (document). */
+export async function buildV1CompatibleCalqoFileText(
+  project: CalqoProject,
+): Promise<string | null> {
+  const downgraded = toV1CompatibleDocument(project);
+  if (!downgraded) return null;
+  const envelope = {
+    kind: 'calqo.project' as const,
+    formatVersion: 1 as const,
+    project: downgraded,
+    assets: await collectEnvelopeAssets(project),
+  };
+  return JSON.stringify(envelope, null, 2);
 }
 
 /** Export a project to a downloaded `.calqo` JSON file. Works for an open

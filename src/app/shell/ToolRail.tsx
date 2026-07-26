@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { GlassIconButton } from '@/components/glass';
 import { useUiStore, type EditorTool } from '@/lib/state/uiStore';
+import { useWorkspaceStore } from '@/lib/state/workspaceStore';
 
 interface ToolDef {
   id: EditorTool;
@@ -63,6 +64,12 @@ export function ToolRail() {
   const { t } = useTranslation('editor');
   const active = useUiStore((s) => s.activeTool);
   const setActive = useUiStore((s) => s.setActiveTool);
+  const animate = useWorkspaceStore(
+    (s) =>
+      (s.activeProjectId
+        ? (s.modeByProject[s.activeProjectId] ?? 'design')
+        : 'design') === 'animate',
+  );
   const setSvgDialog = useUiStore((s) => s.setSvgDialog);
   const setEmojiDialog = useUiStore((s) => s.setEmojiDialog);
   const setMarkerPickerLayerId = useUiStore((s) => s.setMarkerPickerLayerId);
@@ -82,9 +89,23 @@ export function ToolRail() {
     setActive(tool);
   };
 
+  // Animate mode collapses the rail to select/pan — drawing tools would author
+  // static geometry, not animation (§6.1). Geometry editing stays available via
+  // the canvas transform handles and inspector.
+  const animateTools = new Set<EditorTool>(['select', 'pan']);
+
+  // Leaving a drawing tool armed when Animate mode opens would keep the canvas
+  // in a placement state with no visible tool; fall back to Select.
+  useEffect(() => {
+    if (animate && !animateTools.has(active)) setActive('select');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animate, active]);
+
   // Render the drawing group first, then the polygon flyout, then freeform —
   // the polygon slot sits between them as its own divided section.
-  const navigation = TOOLS.filter((tool) => tool.group === 'navigation');
+  const navigation = TOOLS.filter(
+    (tool) => tool.group === 'navigation' && (!animate || animateTools.has(tool.id)),
+  );
   const drawing = TOOLS.filter((tool) => tool.group === 'drawing');
   const freeform = TOOLS.filter((tool) => tool.group === 'freeform');
 
@@ -119,11 +140,15 @@ export function ToolRail() {
       className="glass panel-anim relative z-40 m-1.5 flex flex-col items-center gap-1 overflow-visible p-2"
     >
       {navigation.map(renderTool)}
-      {divider}
-      {drawing.map(renderTool)}
-      <PolygonToolButton active={active} setActive={setActive} />
-      {divider}
-      {freeform.map(renderTool)}
+      {!animate && (
+        <>
+          {divider}
+          {drawing.map(renderTool)}
+          <PolygonToolButton active={active} setActive={setActive} />
+          {divider}
+          {freeform.map(renderTool)}
+        </>
+      )}
     </nav>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Clapperboard,
   Copy,
   Download,
   FilePlus2,
@@ -9,6 +10,7 @@ import {
   Github,
   Languages,
   Moon,
+  PenTool,
   Redo2,
   Save,
   Share,
@@ -16,13 +18,16 @@ import {
   Sun,
   Undo2,
 } from 'lucide-react';
-import { GlassButton, GlassIconButton } from '@/components/glass';
+import { GlassButton, GlassIconButton, GlassSegmentedControl } from '@/components/glass';
 import { isTauri } from '@/lib/platform/runtime';
 import { invokeAppCommandSync } from '@/app/commands/appCommands';
 import { useHistoryStore } from '@/lib/state/historyStore';
 import { useProjectStore } from '@/lib/state/projectStore';
 import { useUiStore } from '@/lib/state/uiStore';
-import { useWorkspaceStore } from '@/lib/state/workspaceStore';
+import {
+  useWorkspaceStore,
+  type WorkspaceMode,
+} from '@/lib/state/workspaceStore';
 import { isAiEnabled, useAiSettingsStore } from '@/editor/ai/aiSettings';
 import {
   renameProject,
@@ -43,6 +48,10 @@ export function TitleBar() {
 
   const theme = useUiStore((s) => s.theme);
   const activeProjectId = useWorkspaceStore((s) => s.activeProjectId);
+  const mode = useWorkspaceStore((s) =>
+    activeProjectId ? (s.modeByProject[activeProjectId] ?? 'design') : 'design',
+  );
+  const setMode = useWorkspaceStore((s) => s.setMode);
   const aiEnabled = useAiSettingsStore((s) => isAiEnabled(s.settings));
   const activeProjectName = useProjectStore((s) =>
     activeProjectId ? s.projects[activeProjectId]?.name : null,
@@ -79,6 +88,27 @@ export function TitleBar() {
             {t('app.webName')}
           </span>
         </div>
+      )}
+
+      {activeProjectId && (
+        <GlassSegmentedControl<WorkspaceMode>
+          className="shrink-0"
+          ariaLabel={t('editor:animate.mode.toggleLabel')}
+          value={mode}
+          onChange={(next) => setMode(activeProjectId, next)}
+          options={[
+            {
+              value: 'design',
+              label: t('editor:animate.mode.design'),
+              icon: <PenTool size={14} />,
+            },
+            {
+              value: 'animate',
+              label: t('editor:animate.mode.animate'),
+              icon: <Clapperboard size={14} />,
+            },
+          ]}
+        />
       )}
 
       <div className="flex min-w-0 flex-1 justify-center" data-tauri-drag-region>

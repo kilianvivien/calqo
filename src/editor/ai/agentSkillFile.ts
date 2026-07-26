@@ -54,7 +54,7 @@ Use one of these preset ids and matching dimensions:
 
 Project fields:
 
-- schemaVersion: 1
+- schemaVersion: 2
 - id, name, createdAt, updatedAt
 - contentLocales: at least one locale code, for example ["en"]
 - activeContentLocale: one of contentLocales
@@ -282,7 +282,7 @@ function rectLayer(name, x, y, w, h, color, cornerRadius = 0) {
 }
 
 const project = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   id: id("proj"),
   name: "AI generated Calqo design",
   createdAt: now,

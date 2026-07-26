@@ -15,6 +15,9 @@ import { browserDialogAdapter } from './dialog/browserDialogAdapter';
 import { tauriDialogAdapter } from './dialog/tauriDialogAdapter';
 import { dexieStarterLibraryAdapter } from './starters/dexieStarterLibraryAdapter';
 import { dexieBrandProfileAdapter } from './brand/dexieBrandProfileAdapter';
+import { webCodecsVideoExportAdapter } from './video/webCodecsVideoExportAdapter';
+import { tauriVideoToolboxAdapter } from './video/tauriVideoToolboxAdapter';
+import { createSelectingVideoExportAdapter } from './video/selectingVideoExportAdapter';
 import { isTauri } from '@/lib/platform/runtime';
 
 import type { StorageAdapter } from './storage/StorageAdapter';
@@ -26,6 +29,7 @@ import type { SettingsAdapter } from './settings/SettingsAdapter';
 import type { DialogAdapter } from './dialog/DialogAdapter';
 import type { StarterLibraryAdapter } from './starters/StarterLibraryAdapter';
 import type { BrandProfileAdapter } from './brand/BrandProfileAdapter';
+import type { VideoExportAdapter } from './video/VideoExportAdapter';
 
 export const storage: StorageAdapter = dexieStorageAdapter;
 export const assetStorage: AssetStorageAdapter = dexieAssetStorageAdapter;
@@ -44,6 +48,15 @@ export const dialog: DialogAdapter = isTauri
   : browserDialogAdapter;
 export const starterLibrary: StarterLibraryAdapter = dexieStarterLibraryAdapter;
 export const brandProfiles: BrandProfileAdapter = dexieBrandProfileAdapter;
+// On Tauri, prefer the native VideoToolbox (M-series hardware) encoder and fall
+// back to WebCodecs when it is unavailable; the browser uses WebCodecs directly
+// (plan §7 / AN-4.4).
+export const videoExport: VideoExportAdapter = isTauri
+  ? createSelectingVideoExportAdapter(
+      tauriVideoToolboxAdapter,
+      webCodecsVideoExportAdapter,
+    )
+  : webCodecsVideoExportAdapter;
 
 export type { StorageAdapter, ProjectSummary } from './storage/StorageAdapter';
 export type { AssetStorageAdapter, AssetMeta } from './assets/AssetStorageAdapter';
@@ -55,3 +68,12 @@ export type { DialogAdapter } from './dialog/DialogAdapter';
 export type { StarterLibraryAdapter, StarterRecord } from './starters/StarterLibraryAdapter';
 export type { BrandProfileAdapter, BrandProfileRecord } from './brand/BrandProfileAdapter';
 export { BRAND_ASSET_SCOPE } from './brand/BrandProfileAdapter';
+export type {
+  VideoExportAdapter,
+  VideoCapabilities,
+  VideoCodecId,
+  VideoExportBeginConfig,
+  VideoExportSession,
+  VideoExportResult,
+  VideoSink,
+} from './video/VideoExportAdapter';

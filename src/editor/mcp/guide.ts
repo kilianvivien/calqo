@@ -118,6 +118,69 @@ List layer (bullet lists / agendas):
 }
 \`\`\`
 
+## Animating a design (Animate mode)
+
+Calqo turns a static design into a short clip (≤ 60 s) by animating layers with
+presets, all inside the same batch. Animation edits are command-level operations
+— never raw project JSON — and are validated exactly like a user's before they
+commit.
+
+Per-layer preset slots: \`enter\` (plays in at scene start), \`emphasis\` (loops
+in the hold), \`exit\` (plays out at scene end). A layer is preset-authored OR
+custom, never both.
+
+Preset kinds by slot:
+
+- enter / exit: \`fade\`, \`slide\`, \`pop\`, \`rise\`, \`wipe\`, \`blur-in\`.
+  \`slide\`, \`rise\`, \`wipe\` take a \`direction\` (\`up\`|\`down\`|\`left\`|\`right\`);
+  \`slide\`/\`rise\` also take a \`distance\` in px.
+- emphasis (loop, settles to identity): \`pulse\`, \`wiggle\`, \`float\`.
+- Text-reveal kinds (\`typewriter\`, \`word-rise\`) are reserved and currently
+  rejected — do not use them yet.
+
+Preset instance fields: \`kind\` (required), \`duration\` ms (required),
+\`delay\` ms from the slot anchor (required), optional \`easing\`
+(\`linear\`|\`ease-in\`|\`ease-out\`|\`ease-in-out\`|\`overshoot\`|\`bounce\`),
+optional \`direction\`/\`distance\` where the kind supports them. An enter window
+(delay + duration) must fit the scene; an exit window must not start before it;
+enter and exit must not overlap.
+
+\`\`\`json
+{
+  "baseRevision": "<revision>",
+  "operations": [
+    { "type": "setSceneDuration", "durationMs": 4000 },
+    { "type": "setClipFps", "fps": 30 },
+    { "type": "setLayerPreset", "layerId": "layer_headline", "slot": "enter",
+      "preset": { "kind": "rise", "duration": 600, "delay": 0, "direction": "up", "distance": 80, "easing": "ease-out" } },
+    { "type": "setLayerPreset", "layerId": "layer_badge", "slot": "emphasis",
+      "preset": { "kind": "pulse", "duration": 900, "delay": 0 } },
+    { "type": "setLayerPreset", "layerId": "layer_headline", "slot": "exit",
+      "preset": { "kind": "fade", "duration": 400, "delay": 0 } },
+    { "type": "setLayerPreset", "layerId": "layer_badge", "slot": "enter", "preset": null }
+  ]
+}
+\`\`\`
+
+- \`setLayerPreset\` sets/replaces a slot, or clears it with \`"preset": null\`.
+- \`clearLayerAnimation\` removes all animation from a layer.
+- \`setLayerCustomWindows\` sets raw per-property track windows for a power-user
+  path; every window must fit inside the scene and no two windows may overlap on
+  the same property.
+- \`setSceneDuration\` sets a scene's length (250–60000 ms); \`setClipFps\` sets
+  24/30/60.
+
+Multi-scene clips (an ordered set of artboards joined by transitions):
+
+- \`setClipScenes\` replaces the ordered list:
+  \`{ "type": "setClipScenes", "scenes": [ { "artboardId": "ab1" }, { "artboardId": "ab2", "transition": "fade", "transitionDurationMs": 500 } ] }\`.
+  The transition plays *into* a scene from the previous one (\`cut\`|\`fade\`|\`slide\`;
+  the first scene's is ignored). All scenes share the clip's dimensions and the
+  total (scene durations + transitions) must stay ≤ 60 s.
+- \`reorderScene\` moves a scene by index; \`setSceneTransition\` sets the
+  transition into scene \`index\`. An empty \`setClipScenes\` clears the multi-scene
+  clip and exports just the active artboard.
+
 ## Generated and web images
 
 Use \`calqo_insert_image\` only when imagery serves the user's request. Calqo

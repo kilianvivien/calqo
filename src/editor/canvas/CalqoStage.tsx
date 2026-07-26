@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Arrow, Circle, Image as KonvaImage, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
+import { Arrow, Circle, Group, Image as KonvaImage, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import { useTranslation } from 'react-i18next';
 import {
@@ -34,6 +34,9 @@ import type {
 } from '@/lib/schema';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
+import { useWorkspaceStore } from '@/lib/state/workspaceStore';
+import { useAnimationPlaybackStore } from '@/lib/state/animationPlaybackStore';
+import { useAnimationPlayback } from '@/editor/animation/useAnimationPlayback';
 import { useCoarsePointer } from '@/lib/hooks/useResponsiveMode';
 import { saveImageAsset } from '@/lib/utils/imageAsset';
 import { TextEditOverlay } from './TextEditOverlay';
@@ -186,6 +189,10 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const transformerRef = useRef<Konva.Transformer>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nodeRefs = useRef<NodeRegistry>(new Map());
+  // Transient per-layer wrapper groups that carry animation transforms (§4.2).
+  // Base nodes in `nodeRefs` keep document geometry; playback only ever touches
+  // these wrappers, so selection/transform always read document coordinates.
+  const wrapperRefs = useRef<Map<string, Konva.Group>>(new Map());
   const [size, setSize] = useState<StageSize>({ width: 1, height: 1 });
   const [pendingAssetPoint, setPendingAssetPoint] = useState({ x: 96, y: 96 });
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
@@ -244,6 +251,28 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const setActiveArtboard = useSelectionStore((s) => s.setActiveArtboard);
   const croppingLayerId = useUiStore((s) => s.croppingLayerId);
   const setCroppingLayerId = useUiStore((s) => s.setCroppingLayerId);
+  // Animate mode drives the transient wrapper nodes below; Design mode leaves
+  // them at identity so static editing is untouched.
+  const animateMode = useWorkspaceStore(
+    (s) => (s.modeByProject[project.id] ?? 'design') === 'animate',
+  );
+  const stopPlayback = useAnimationPlaybackStore((s) => s.stopAndReset);
+  const playbackStatus = useAnimationPlaybackStore((s) => s.status);
+
+  useAnimationPlayback({
+    project,
+    artboard,
+    enabled: animateMode,
+    nodeRefs,
+    wrapperRefs,
+    stageRef,
+  });
+
+  /** Any geometry edit during playback pauses & resets wrappers so handlers
+   * read base geometry (§6.2). No-op when nothing is playing. */
+  const haltPlaybackForEdit = () => {
+    if (playbackStatus !== 'idle') stopPlayback();
+  };
 
   // Interactive image crop: the targeted image layer, its source bitmap, and the
   // live view (image position/scale behind the fixed crop frame).
@@ -451,17 +480,38 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   useEffect(() => {
     const transformer = transformerRef.current;
     if (!transformer) return;
-    // No transform handles while cropping or drawing — the crop editor / the
-    // active drawing tool owns interaction.
-    const nodes = croppingLayerId || drawingToolActive
+    // No transform handles while cropping, drawing, or playing an animation —
+    // the crop editor / drawing tool owns interaction, and during playback the
+    // base nodes ride inside animated wrappers (§6.2), so handles are hidden
+    // until playback stops and wrappers reset to identity.
+    const nodes = croppingLayerId || drawingToolActive || playbackStatus === 'playing'
       ? []
       : selectedLayers
           .filter((layer) => !layer.locked && layer.visible)
           .map((layer) => nodeRefs.current.get(layer.id))
           .filter((node): node is Konva.Node => Boolean(node));
     transformer.nodes(nodes);
+    transformer.forceUpdate();
     transformer.getLayer()?.batchDraw();
-  }, [selectedLayers, croppingLayerId, drawingToolActive]);
+    console.debug('[Calqo transformer state]', JSON.stringify({
+      mode: animateMode ? 'animate' : 'design',
+      nodes: transformer.nodes().map((node) => node.id()),
+      box: transformer.getClientRect(),
+      children: transformer.getChildren().map((node) => ({
+        name: node.name(),
+        visible: node.visible(),
+        opacity: node.opacity(),
+        x: node.x(),
+        y: node.y(),
+      })),
+    }));
+  }, [
+    selectedLayers,
+    croppingLayerId,
+    drawingToolActive,
+    playbackStatus,
+    animateMode,
+  ]);
 
   // Seed the crop frame and view when entering crop mode (or when the bitmap
   // loads): the frame starts as the layer's current rect.
@@ -1206,35 +1256,54 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             drafts can start on top of existing layers. */}
         <Layer x={artboardX} y={artboardY} scaleX={zoom} scaleY={zoom} clipX={0} clipY={0} clipWidth={artboard.width} clipHeight={artboard.height} listening={!pinching && !drawingToolActive}>
           {artboard.layers.map((layer) => (
-            <LayerRenderer
+            // Transient animation wrapper (§4.2): identity in Design mode, driven
+            // by the evaluator during Animate playback. The base node still
+            // registers itself in `nodeRefs`, so selection/transform are
+            // unaffected by this extra group.
+            <Group
               key={layer.id}
-              layer={layer}
-              activeLocale={project.activeContentLocale}
-              selected={selectedLayerIds.includes(layer.id)}
-              nodeRefs={nodeRefs}
-              onSelect={selectLayer}
-              onDragMove={snapNode}
-              onDragEnd={(layerToUpdate, node) => {
-                setGuides([]);
-                normalizeNode(layerToUpdate, node);
+              ref={(node) => {
+                if (node) wrapperRefs.current.set(layer.id, node);
+                else wrapperRefs.current.delete(layer.id);
               }}
-              onTransformEnd={normalizeNode}
-              onTextEdit={(layerToEdit) => {
-                if (
-                  (layerToEdit.type === 'text' || layerToEdit.type === 'list') &&
-                  !layerToEdit.locked
-                ) {
-                  setSelection([layerToEdit.id]);
-                  setEditingTextId(layerToEdit.id);
-                }
-              }}
-              onImageCrop={(layerToCrop) => {
-                if (layerToCrop.type === 'image' && !layerToCrop.locked) {
-                  setSelection([layerToCrop.id]);
-                  setCroppingLayerId(layerToCrop.id);
-                }
-              }}
-            />
+            >
+              <LayerRenderer
+                layer={layer}
+                activeLocale={project.activeContentLocale}
+                selected={selectedLayerIds.includes(layer.id)}
+                nodeRefs={nodeRefs}
+                onSelect={selectLayer}
+                onDragMove={(layerToUpdate, node) => {
+                  haltPlaybackForEdit();
+                  snapNode(layerToUpdate, node);
+                }}
+                onDragEnd={(layerToUpdate, node) => {
+                  setGuides([]);
+                  normalizeNode(layerToUpdate, node);
+                }}
+                onTransformEnd={(layerToUpdate, node) => {
+                  haltPlaybackForEdit();
+                  normalizeNode(layerToUpdate, node);
+                }}
+                onTextEdit={(layerToEdit) => {
+                  if (
+                    (layerToEdit.type === 'text' || layerToEdit.type === 'list') &&
+                    !layerToEdit.locked
+                  ) {
+                    haltPlaybackForEdit();
+                    setSelection([layerToEdit.id]);
+                    setEditingTextId(layerToEdit.id);
+                  }
+                }}
+                onImageCrop={(layerToCrop) => {
+                  if (layerToCrop.type === 'image' && !layerToCrop.locked) {
+                    haltPlaybackForEdit();
+                    setSelection([layerToCrop.id]);
+                    setCroppingLayerId(layerToCrop.id);
+                  }
+                }}
+              />
+            </Group>
           ))}
           {draftShape && (
             draftShape.shape === 'ellipse' ? (
@@ -1539,6 +1608,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
             </>
           )}
           <Transformer
+            key={animateMode ? 'animate-transformer' : 'design-transformer'}
             ref={transformerRef}
             rotateEnabled
             ignoreStroke

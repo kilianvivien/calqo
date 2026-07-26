@@ -5,10 +5,12 @@ import { createProject } from '@/editor/commands/projectCommands';
 import { CalqoStage } from '@/editor/canvas/CalqoStage';
 import { GlassButton } from '@/components/glass';
 import { useUiStore } from '@/lib/state/uiStore';
+import { useWorkspaceStore } from '@/lib/state/workspaceStore';
 import { ArtboardDots } from './ArtboardDots';
 import { ArtboardOverview } from './ArtboardOverview';
 import { FormatGrid } from './NewProjectModal';
 import { ZoomControl } from './ZoomControl';
+import { AnimationTransport } from './animation/AnimationTransport';
 
 /** Neutral canvas workspace with the live Konva editor stage. */
 export function Workspace() {
@@ -16,6 +18,12 @@ export function Workspace() {
   const project = useActiveProject();
   const artboard = useActiveArtboard();
   const overviewMode = useUiStore((s) => s.overviewMode);
+  const animate = useWorkspaceStore(
+    (s) =>
+      (s.activeProjectId
+        ? (s.modeByProject[s.activeProjectId] ?? 'design')
+        : 'design') === 'animate',
+  );
 
   return (
     <div
@@ -56,6 +64,7 @@ export function Workspace() {
           <ArtboardDots />
           {!overviewMode && <ZoomControl />}
           <ArtboardOverview />
+          {animate && !overviewMode && <AnimationTransport />}
         </>
       )}
     </div>
