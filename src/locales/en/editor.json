@@ -937,6 +937,8 @@
     "mode": {
       "design": "Design",
       "animate": "Animate",
+      "designHint": "lay out and style layers on the artboard",
+      "animateHint": "add keyframes, scenes, and timing, then export video",
       "toggleLabel": "Editing mode"
     },
     "inspector": {

@@ -10,6 +10,8 @@ export interface SegmentOption<T extends string> {
   /** When set, the segment shows this icon instead of the text; `label` stays
    * the accessible name (aria-label + tooltip). */
   icon?: ReactNode;
+  /** Appended to the tooltip to explain what picking the segment does. */
+  hint?: string;
 }
 
 interface GlassSegmentedControlProps<T extends string> {
@@ -41,6 +43,11 @@ export function GlassSegmentedControl<T extends string>({
       {options.map((opt) => {
         const active = opt.value === value;
         const iconOnly = opt.icon != null;
+        const tooltip = opt.hint
+          ? `${opt.label} — ${opt.hint}`
+          : iconOnly
+            ? opt.label
+            : undefined;
         return (
           <button
             key={opt.value}
@@ -49,7 +56,7 @@ export function GlassSegmentedControl<T extends string>({
             aria-checked={active}
             disabled={opt.disabled}
             aria-label={iconOnly ? opt.label : undefined}
-            title={opt.disabledReason ?? (iconOnly ? opt.label : undefined)}
+            title={opt.disabledReason ?? tooltip}
             onClick={() => onChange(opt.value)}
             className={cn(
               'flex items-center justify-center rounded-[6px] h-6 text-[11.5px] font-medium',

@@ -92,7 +92,9 @@ export function TitleBar() {
 
       {activeProjectId && (
         <GlassSegmentedControl<WorkspaceMode>
-          className="shrink-0"
+          /* Under Tauri the picker is the first control after the native traffic
+             lights, so it needs extra breathing room. */
+          className={isTauri ? 'ml-3 shrink-0' : 'shrink-0'}
           ariaLabel={t('editor:animate.mode.toggleLabel')}
           value={mode}
           onChange={(next) => setMode(activeProjectId, next)}
@@ -100,11 +102,13 @@ export function TitleBar() {
             {
               value: 'design',
               label: t('editor:animate.mode.design'),
+              hint: t('editor:animate.mode.designHint'),
               icon: <PenTool size={14} />,
             },
             {
               value: 'animate',
               label: t('editor:animate.mode.animate'),
+              hint: t('editor:animate.mode.animateHint'),
               icon: <Clapperboard size={14} />,
             },
           ]}

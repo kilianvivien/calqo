@@ -937,6 +937,8 @@
     "mode": {
       "design": "Création",
       "animate": "Animation",
+      "designHint": "disposer et styliser les calques sur le plan de travail",
+      "animateHint": "ajouter images clés, scènes et minutage, puis exporter la vidéo",
       "toggleLabel": "Mode d'édition"
     },
     "inspector": {
