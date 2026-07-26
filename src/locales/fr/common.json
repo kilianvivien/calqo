@@ -109,6 +109,16 @@
       "envelopeMb": "Fichier projet (Mo)",
       "reset": "Rétablir les valeurs"
     },
+    "videoEncoder": {
+      "title": "Encodeur vidéo",
+      "hint": "L'encodeur utilisé pour l'export MP4. Le mode automatique choisit l'encodeur matériel s'il est disponible et bascule seul si besoin.",
+      "auto": "Automatique",
+      "autoHint": "Préférer l'encodeur matériel macOS, revenir à WebCodecs si besoin",
+      "native": "Matériel",
+      "nativeHint": "Toujours essayer l'encodeur natif macOS VideoToolbox en premier",
+      "webcodecs": "WebCodecs",
+      "webcodecsHint": "Toujours encoder dans la WebView avec WebCodecs"
+    },
     "ai": {
       "title": "Fournisseur IA",
       "provider": "Fournisseur",

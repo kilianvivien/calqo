@@ -1350,11 +1350,26 @@ package renders without Calqo or secret state.
 > the AN-4.2 scene suites), `pnpm lint`, and `pnpm build`. AN-4.1's open design
 > questions were resolved as part of shipping 4.2 (see the notes below). **AN-4.4
 > now ships the native macOS VideoToolbox encoder** behind the video export
-> adapter and a default-off `video-toolbox` Cargo feature (the macOS Rust path
-> compiles only on macOS; the TS integration is fully tested). Remaining deferred
+> adapter and a default-off `video-toolbox` Cargo feature. Remaining deferred
 > formats (audio, WebM, imported video, richer timing UI) stay out of scope.
 > Playwright coverage of the scenes UI is a follow-up (the gate ran
 > typecheck/test/lint/build).
+>
+> **Corrected 2026-07-26 (v0.5.0 release prep).** The note above originally
+> claimed the macOS Rust path "compiles only on macOS"; in fact it had never been
+> compiled at all — `cargo check --features video-toolbox` failed with 29 errors
+> (encoder state not `Send`, so `VideoState` could not satisfy Tauri's
+> `State<T>: Send + Sync`; a raw-pointer `alloc` receiver that defeated `objc2`'s
+> init semantics; a missing `RefEncode` for `CVPixelBufferRef`; and no `#[link]`
+> attributes for AVFoundation/CoreVideo). All are fixed and both feature
+> configurations are now verified by `cargo check`/`cargo clippy`. Two runtime
+> defects found in the first real export are fixed too: frame pixels were nested
+> inside a JSON args object (so every ~8 MB frame went through `JSON.stringify`,
+> making "hardware" export slower than WebCodecs), and offscreen scenes inherited
+> a `devicePixelRatio` backing store, so encoders received the top-left quadrant
+> of a 2× canvas. Release builds must use `pnpm tauri:build:mac`, which passes
+> `--features video-toolbox`; a plain `pnpm tauri:build` ships without the native
+> encoder. The encoder backend is now user-selectable (Settings → Video encoder).
 
 **Goal:** extend the proven single-scene model only after v1 usage and export
 performance are understood.

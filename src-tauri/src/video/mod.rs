@@ -20,6 +20,7 @@ mod avfoundation;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Mutex;
+use tauri::ipc::{InvokeBody, Request};
 use tauri::State;
 
 /// Result of `vt_probe`: which codecs the native encoder can produce here.
@@ -67,19 +68,33 @@ pub fn vt_begin(
     Ok(())
 }
 
+/// Frame pixels arrive as the *entire* invoke payload so Tauri transfers them as
+/// a raw body (`InvokeBody::Raw`). Nesting an `ArrayBuffer` inside a JSON args
+/// object instead would push ~8 MB per frame through `JSON.stringify`, which is
+/// both ruinously slow and lossy. The per-frame metadata rides in headers.
 #[tauri::command]
-pub fn vt_add_frame(
-    state: State<'_, VideoState>,
-    session_id: String,
-    timestamp_micros: i64,
-    duration_micros: i64,
-    rgba: Vec<u8>,
-) -> Result<(), String> {
+pub fn vt_add_frame(state: State<'_, VideoState>, request: Request<'_>) -> Result<(), String> {
+    let rgba = match request.body() {
+        InvokeBody::Raw(bytes) => bytes.as_slice(),
+        InvokeBody::Json(_) => {
+            return Err("frame payload must be raw bytes, not JSON".to_string())
+        }
+    };
+
+    let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok());
+    let session_id = header("x-session-id").ok_or("missing x-session-id header")?;
+    let timestamp_micros: i64 = header("x-timestamp-micros")
+        .and_then(|v| v.parse().ok())
+        .ok_or("missing or invalid x-timestamp-micros header")?;
+    let duration_micros: i64 = header("x-duration-micros")
+        .and_then(|v| v.parse().ok())
+        .ok_or("missing or invalid x-duration-micros header")?;
+
     let mut sessions = state.sessions.lock().map_err(|_| "session lock poisoned")?;
     let session = sessions
-        .get_mut(&session_id)
+        .get_mut(session_id)
         .ok_or_else(|| format!("unknown export session \"{session_id}\""))?;
-    session.add_frame(timestamp_micros, duration_micros, &rgba)
+    session.add_frame(timestamp_micros, duration_micros, rgba)
 }
 
 #[tauri::command]

@@ -6,23 +6,31 @@ import {
 } from '@/lib/adapters/video/tauriVideoToolboxAdapter';
 import { createSelectingVideoExportAdapter } from '@/lib/adapters/video/selectingVideoExportAdapter';
 import type {
+  VideoEncoderPreference,
   VideoExportAdapter,
   VideoExportBeginConfig,
   VideoSinkChunk,
 } from '@/lib/adapters/video/VideoExportAdapter';
 import { unavailableCapabilities } from '@/lib/adapters/video/VideoExportAdapter';
 
-/** A fake scene canvas whose getImageData returns a fixed-size RGBA buffer. */
+/** A fake scene canvas whose getImageData returns a fixed-size RGBA buffer. The
+ * backing store matches the encode size, as real scenes now guarantee. */
 function fakeCanvas(width: number, height: number): HTMLCanvasElement {
   const data = new Uint8ClampedArray(width * height * 4).fill(200);
   return {
+    width,
+    height,
     getContext: () => ({ getImageData: () => ({ data, width, height }) }),
   } as unknown as HTMLCanvasElement;
 }
 
 interface RuntimeCalls {
   runtime: TauriVideoRuntime;
-  calls: Array<{ command: string; args?: Record<string, unknown> }>;
+  calls: Array<{
+    command: string;
+    args?: Record<string, unknown> | ArrayBuffer;
+    options?: { headers: Record<string, string> };
+  }>;
   removed: string[];
 }
 
@@ -31,8 +39,12 @@ function mockRuntime(overrides: Partial<TauriVideoRuntime> = {}): RuntimeCalls {
   const removed: string[] = [];
   const runtime: TauriVideoRuntime = {
     isTauri: true,
-    async invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
-      calls.push({ command, args });
+    async invoke<T>(
+      command: string,
+      args?: Record<string, unknown> | ArrayBuffer,
+      options?: { headers: Record<string, string> },
+    ): Promise<T> {
+      calls.push({ command, args, options });
       if (command === VT_COMMANDS.probe) {
         return { available: true, h264: true, h265: false, powerEfficient: true } as T;
       }
@@ -108,14 +120,50 @@ describe('tauriVideoToolboxAdapter session', () => {
     expect(calls[0].command).toBe(VT_COMMANDS.begin);
     const frameCalls = calls.filter((c) => c.command === VT_COMMANDS.addFrame);
     expect(frameCalls).toHaveLength(2);
-    // RGBA is passed as an ArrayBuffer of exactly w*h*4 bytes.
-    const rgba = frameCalls[0].args?.rgba as ArrayBuffer;
+    // Pixels are the *entire* payload (a raw ArrayBuffer of exactly w*h*4 bytes)
+    // so Tauri transfers them as a raw body instead of JSON-encoding megabytes.
+    const rgba = frameCalls[0].args as ArrayBuffer;
+    expect(rgba).toBeInstanceOf(ArrayBuffer);
     expect(rgba.byteLength).toBe(1080 * 1920 * 4);
-    expect(frameCalls[0].args?.timestampMicros).toBe(0);
+    // Per-frame metadata rides in headers.
+    expect(frameCalls[0].options?.headers['x-timestamp-micros']).toBe('0');
+    expect(frameCalls[1].options?.headers['x-timestamp-micros']).toBe('33333');
+    expect(frameCalls[0].options?.headers['x-session-id']).toBeTruthy();
 
     expect(result.streamed).toBe(false);
     expect(result.blob).toBeInstanceOf(Blob);
     expect(removed).toEqual(['/tmp/out.mp4']); // temp cleaned up
+  });
+
+  it('rescales an oversized scene canvas instead of encoding the top-left crop', async () => {
+    // Regression: a Konva layer backed at devicePixelRatio produced a canvas 2×
+    // the encode size. Reading `getImageData(0, 0, w, h)` straight off it
+    // returned the top-left quadrant, so exports showed a zoomed corner.
+    let readDirectly = false;
+    const source = {
+      width: 2160,
+      height: 3840,
+      getContext: () => ({
+        getImageData: () => {
+          readDirectly = true;
+          return {
+            data: new Uint8ClampedArray(2160 * 3840 * 4),
+            width: 2160,
+            height: 3840,
+          };
+        },
+      }),
+    } as unknown as HTMLCanvasElement;
+
+    const { runtime, calls } = mockRuntime();
+    const adapter = createTauriVideoToolboxAdapter(async () => runtime);
+    const session = await adapter.begin(beginConfig({ canvas: source }));
+    await session.addFrame(0, 33333);
+
+    const frame = calls.find((c) => c.command === VT_COMMANDS.addFrame);
+    // Full frame at the encode size, not a crop of the larger backing store.
+    expect((frame?.args as ArrayBuffer).byteLength).toBe(1080 * 1920 * 4);
+    expect(readDirectly).toBe(false);
   });
 
   it('pipes the finished file to a stream sink in chunks', async () => {
@@ -243,5 +291,60 @@ describe('selectingVideoExportAdapter', () => {
     await adapter.begin(beginConfig());
     expect(webcodecs.began).toBe(1);
     expect(native.began).toBe(0);
+  });
+
+  it('honors a WebCodecs preference even when native supports the codec', async () => {
+    const native = fakeAdapter(true, async () => okSession);
+    const webcodecs = fakeAdapter(true, async () => okSession);
+    const adapter = createSelectingVideoExportAdapter(
+      native,
+      webcodecs,
+      () => 'webcodecs',
+    );
+    const caps = await adapter.capabilities(PROBE);
+    // The advertised capability is WebCodecs', not the unused native one.
+    expect(caps.codecs.h264.powerEfficient).toBe(true);
+    await adapter.begin(beginConfig());
+    expect(native.began).toBe(0);
+    expect(webcodecs.began).toBe(1);
+  });
+
+  it('tries native under a native preference even if the probe said unsupported', async () => {
+    const native = fakeAdapter(false, async () => okSession);
+    const webcodecs = fakeAdapter(true, async () => okSession);
+    const adapter = createSelectingVideoExportAdapter(native, webcodecs, () => 'native');
+    await adapter.capabilities(PROBE);
+    await adapter.begin(beginConfig());
+    expect(native.began).toBe(1);
+    expect(webcodecs.began).toBe(0);
+  });
+
+  it('still falls back when the preferred native encoder cannot start', async () => {
+    const native = fakeAdapter(true, async () => {
+      throw new Error('native begin failed');
+    });
+    const webcodecs = fakeAdapter(true, async () => okSession);
+    const adapter = createSelectingVideoExportAdapter(native, webcodecs, () => 'native');
+    await adapter.capabilities(PROBE);
+    await adapter.begin(beginConfig());
+    expect(native.began).toBe(1);
+    expect(webcodecs.began).toBe(1);
+  });
+
+  it('reads the preference fresh on each export', async () => {
+    const native = fakeAdapter(true, async () => okSession);
+    const webcodecs = fakeAdapter(true, async () => okSession);
+    let preference: VideoEncoderPreference = 'webcodecs';
+    const adapter = createSelectingVideoExportAdapter(native, webcodecs, () => preference);
+
+    await adapter.capabilities(PROBE);
+    await adapter.begin(beginConfig());
+    expect(webcodecs.began).toBe(1);
+
+    // Changing the setting takes effect without rebuilding the adapter.
+    preference = 'native';
+    await adapter.capabilities(PROBE);
+    await adapter.begin(beginConfig());
+    expect(native.began).toBe(1);
   });
 });

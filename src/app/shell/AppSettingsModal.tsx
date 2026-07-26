@@ -21,6 +21,9 @@ import {
   ModalOverlay,
 } from '@/components/glass';
 import i18n, { type AppLanguage } from '@/lib/i18n';
+import { isTauri } from '@/lib/platform/runtime';
+import { saveVideoEncoderPreference } from '@/editor/export/videoEncoderSettings';
+import type { VideoEncoderPreference } from '@/lib/adapters/video/VideoExportAdapter';
 import {
   useUiStore,
   type ThemeMode,
@@ -107,6 +110,7 @@ export function AppSettingsModal({
   const transparency = useUiStore((s) => s.transparency);
   const setTransparency = useUiStore((s) => s.setTransparency);
   const assetHealthThresholds = useUiStore((s) => s.assetHealthThresholds);
+  const videoEncoderPreference = useUiStore((s) => s.videoEncoderPreference);
   const aiSettings = useAiSettingsStore((s) => s.settings);
   const setProvider = useAiSettingsStore((s) => s.setProvider);
   const setStoreKey = useAiSettingsStore((s) => s.setStoreKey);
@@ -299,6 +303,41 @@ export function AppSettingsModal({
                     </div>
                   </div>
                 </div>
+                {/* Browser builds only ever have WebCodecs, so the choice is
+                    meaningful on the desktop shell alone. */}
+                {isTauri && (
+                  <div className="border-t border-[var(--calqo-divider)] pt-5">
+                    <h4 className="mb-1 text-[13px] font-semibold text-[var(--calqo-text)]">
+                      {t('settings.videoEncoder.title')}
+                    </h4>
+                    <p className="mb-4 text-[11.5px] text-[var(--calqo-text-3)]">
+                      {t('settings.videoEncoder.hint')}
+                    </p>
+                    <GlassSegmentedControl<VideoEncoderPreference>
+                      ariaLabel={t('settings.videoEncoder.title')}
+                      options={[
+                        {
+                          value: 'auto',
+                          label: t('settings.videoEncoder.auto'),
+                          hint: t('settings.videoEncoder.autoHint'),
+                        },
+                        {
+                          value: 'native',
+                          label: t('settings.videoEncoder.native'),
+                          hint: t('settings.videoEncoder.nativeHint'),
+                        },
+                        {
+                          value: 'webcodecs',
+                          label: t('settings.videoEncoder.webcodecs'),
+                          hint: t('settings.videoEncoder.webcodecsHint'),
+                        },
+                      ]}
+                      value={videoEncoderPreference}
+                      onChange={(value) => void saveVideoEncoderPreference(value)}
+                      className="justify-self-start"
+                    />
+                  </div>
+                )}
               </section>
             )}
 

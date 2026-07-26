@@ -154,6 +154,12 @@ export const createOffscreenScene: CreateOffscreenScene = async (input) => {
   const stage = new Stage({ container, width, height });
   const layer = new Layer({ listening: false });
   stage.add(layer);
+  // `capture()` hands the raw layer canvas to encoders that trust `width`/`height`
+  // as its pixel dimensions. Konva sizes a layer's backing store by
+  // `window.devicePixelRatio`, so on a Retina display the canvas would be 2W×2H
+  // and every consumer would encode only the top-left quadrant, upscaled. Pin it
+  // to 1: `width`/`height` already carry the requested output resolution.
+  layer.getCanvas().setPixelRatio(1);
 
   buildBackgroundNodes(artboard, images, opaque).forEach((node) => layer.add(node));
 

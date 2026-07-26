@@ -15,6 +15,22 @@ import type { FrameSource } from '@/editor/rendering/offscreenScene';
 /** v1 codecs. H.264 is the default social deliverable; H.265 is deferred (§2). */
 export type VideoCodecId = 'h264' | 'h265';
 
+/**
+ * Which encoder backend the user wants video export to use.
+ *
+ * - `auto` (default) — prefer the native VideoToolbox encoder where it reports
+ *   a codec supported, otherwise WebCodecs.
+ * - `native` — use the native encoder whenever it can start.
+ * - `webcodecs` — always use the in-WebView WebCodecs encoder.
+ *
+ * `native` and `webcodecs` express a preference, not a guarantee: an export
+ * never fails just because the preferred backend is missing, it falls back and
+ * reports the substitution.
+ */
+export type VideoEncoderPreference = 'auto' | 'native' | 'webcodecs';
+
+export const DEFAULT_VIDEO_ENCODER_PREFERENCE: VideoEncoderPreference = 'auto';
+
 /** Stable reason codes for an unavailable/limited capability. Localized at the
  * UI boundary — the adapter never returns display strings (§6.3). */
 export type VideoCapabilityReason =

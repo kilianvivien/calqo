@@ -18,6 +18,7 @@ import { dexieBrandProfileAdapter } from './brand/dexieBrandProfileAdapter';
 import { webCodecsVideoExportAdapter } from './video/webCodecsVideoExportAdapter';
 import { tauriVideoToolboxAdapter } from './video/tauriVideoToolboxAdapter';
 import { createSelectingVideoExportAdapter } from './video/selectingVideoExportAdapter';
+import { getVideoEncoderPreference } from './video/encoderPreference';
 import { isTauri } from '@/lib/platform/runtime';
 
 import type { StorageAdapter } from './storage/StorageAdapter';
@@ -55,6 +56,7 @@ export const videoExport: VideoExportAdapter = isTauri
   ? createSelectingVideoExportAdapter(
       tauriVideoToolboxAdapter,
       webCodecsVideoExportAdapter,
+      getVideoEncoderPreference,
     )
   : webCodecsVideoExportAdapter;
 

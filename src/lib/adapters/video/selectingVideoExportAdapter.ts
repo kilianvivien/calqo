@@ -2,6 +2,7 @@ import type {
   VideoCapabilities,
   VideoCapabilityProbe,
   VideoCodecId,
+  VideoEncoderPreference,
   VideoExportAdapter,
   VideoExportBeginConfig,
   VideoExportSession,
@@ -15,6 +16,10 @@ import type {
  * falls back to WebCodecs if the native session cannot start. The merged
  * capabilities the UI sees advertise the strongest backend per codec, so an
  * export never silently downgrades from hardware to software without a reason.
+ *
+ * The user's `VideoEncoderPreference` biases that routing (Settings → Video
+ * export). It can force WebCodecs outright, or ask for native, but it can never
+ * make an export fail: an unavailable preferred backend still falls back.
  */
 
 type Backend = 'native' | 'webcodecs';
@@ -25,11 +30,17 @@ function mergeCapabilities(
   probe: VideoCapabilityProbe,
   native: VideoCapabilities,
   webcodecs: VideoCapabilities,
+  preference: VideoEncoderPreference,
 ): { capabilities: VideoCapabilities; routes: Record<VideoCodecId, Backend> } {
   const routes = {} as Record<VideoCodecId, Backend>;
   const codecs = {} as VideoCapabilities['codecs'];
   for (const codec of CODECS) {
-    if (native.codecs[codec].supported) {
+    // `webcodecs` forces the WebView encoder. `auto` and `native` both prefer
+    // native where it works; they differ only in `begin()`, where `native`
+    // retries a native session even for a codec the probe reported unsupported.
+    const useNative =
+      preference !== 'webcodecs' && native.codecs[codec].supported;
+    if (useNative) {
       routes[codec] = 'native';
       codecs[codec] = native.codecs[codec];
     } else {
@@ -55,23 +66,33 @@ function mergeCapabilities(
 export function createSelectingVideoExportAdapter(
   native: VideoExportAdapter,
   webcodecs: VideoExportAdapter,
+  /** Read fresh on every call so changing the setting takes effect immediately,
+   * without rebuilding the adapter singleton. */
+  getPreference: () => VideoEncoderPreference = () => 'auto',
 ): VideoExportAdapter {
   let routes: Record<VideoCodecId, Backend> | null = null;
 
   return {
     async capabilities(probe): Promise<VideoCapabilities> {
+      const preference = getPreference();
       const [nativeCaps, webCaps] = await Promise.all([
         native.capabilities(probe),
         webcodecs.capabilities(probe),
       ]);
-      const merged = mergeCapabilities(probe, nativeCaps, webCaps);
+      const merged = mergeCapabilities(probe, nativeCaps, webCaps, preference);
       routes = merged.routes;
       return merged.capabilities;
     },
 
     async begin(config: VideoExportBeginConfig): Promise<VideoExportSession> {
-      const chosen = routes?.[config.codec] ?? 'webcodecs';
-      if (chosen === 'native') {
+      const preference = getPreference();
+      if (preference === 'webcodecs') return webcodecs.begin(config);
+      // `native` tries the native encoder even when the probe reported this
+      // codec unsupported — the probe is advisory and the fallback below keeps
+      // the attempt free.
+      const tryNative =
+        preference === 'native' || (routes?.[config.codec] ?? 'webcodecs') === 'native';
+      if (tryNative) {
         try {
           return await native.begin(config);
         } catch {

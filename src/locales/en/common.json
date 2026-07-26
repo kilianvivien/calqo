@@ -109,6 +109,16 @@
       "envelopeMb": "Project file (MB)",
       "reset": "Reset defaults"
     },
+    "videoEncoder": {
+      "title": "Video encoder",
+      "hint": "Which encoder MP4 export uses. Automatic picks the hardware encoder when it is available and falls back on its own.",
+      "auto": "Automatic",
+      "autoHint": "Prefer the macOS hardware encoder, fall back to WebCodecs",
+      "native": "Hardware",
+      "nativeHint": "Always try the native macOS VideoToolbox encoder first",
+      "webcodecs": "WebCodecs",
+      "webcodecsHint": "Always encode in the WebView with WebCodecs"
+    },
     "ai": {
       "title": "AI provider",
       "provider": "Provider",

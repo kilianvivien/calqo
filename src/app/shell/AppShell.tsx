@@ -4,6 +4,7 @@ import { useAiSettingsStore } from '@/editor/ai/aiSettings';
 import { useSavedSvgStore } from '@/editor/assets/savedSvgStore';
 import { useMissingAssetsWatcher } from '@/editor/assets/useMissingAssetsWatcher';
 import { loadAssetHealthThresholds } from '@/editor/assets/assetHealthSettings';
+import { loadVideoEncoderPreference } from '@/editor/export/videoEncoderSettings';
 import {
   registerAppCommandHandlers,
   invokeAppCommandSync,
@@ -63,6 +64,7 @@ export function AppShell() {
     void loadAiSettings();
     void loadSavedSvgs();
     void loadAssetHealthThresholds();
+    void loadVideoEncoderPreference();
   }, [loadAiSettings, loadSavedSvgs]);
 
   useEffect(() => {

@@ -60,7 +60,13 @@ interface VtFinalizeResult {
 /** Minimal injectable runtime surface, so the adapter is unit-testable without a
  * Tauri host. Production wires these to `@tauri-apps/api` + `plugin-fs`. */
 export interface TauriVideoRuntime {
-  invoke<T>(command: string, args?: Record<string, unknown>): Promise<T>;
+  /** `args` may be a raw `ArrayBuffer`, which Tauri transfers as an untouched
+   * request body; `headers` then carries the accompanying metadata. */
+  invoke<T>(
+    command: string,
+    args?: Record<string, unknown> | ArrayBuffer,
+    options?: { headers: Record<string, string> },
+  ): Promise<T>;
   /** Read a finished temp file back into memory (finalize → sink). */
   readFile(path: string): Promise<Uint8Array>;
   /** Delete the temp file after it has been moved to the sink. */
@@ -77,26 +83,60 @@ async function defaultRuntime(): Promise<TauriVideoRuntime> {
     import('@/lib/platform/runtime'),
   ]);
   return {
-    invoke: (command, args) => invoke(command, args),
+    invoke: (command, args, options) => invoke(command, args, options),
     readFile: (path) => fs.readFile(path),
     removeFile: (path) => fs.remove(path),
     isTauri,
   };
 }
 
-/** Read the current pixels of a scene canvas as tightly-packed RGBA bytes. */
+/** Scratch canvas reused across frames when the scene's backing store does not
+ * already match the encode size (avoids allocating one per frame). */
+let scaleCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+
+/**
+ * Read the current pixels of a scene canvas as tightly-packed RGBA bytes at
+ * exactly `width`×`height`.
+ *
+ * `getImageData(0, 0, width, height)` reads *backing-store* pixels, so if the
+ * canvas is larger than the encode target (a devicePixelRatio-scaled Konva
+ * layer, say) a naive read silently returns the top-left crop rather than the
+ * whole frame. Scenes now pin their pixel ratio to 1, but the encoder must not
+ * depend on that: rescale whenever the sizes disagree.
+ */
 function readCanvasRgba(
   canvas: HTMLCanvasElement | OffscreenCanvas,
   width: number,
   height: number,
 ): ArrayBuffer {
-  const ctx = canvas.getContext('2d') as
+  let source = canvas;
+  if (canvas.width !== width || canvas.height !== height) {
+    if (!scaleCanvas) {
+      scaleCanvas =
+        typeof OffscreenCanvas !== 'undefined'
+          ? new OffscreenCanvas(width, height)
+          : document.createElement('canvas');
+    }
+    scaleCanvas.width = width;
+    scaleCanvas.height = height;
+    const scaleCtx = scaleCanvas.getContext('2d') as
+      | CanvasRenderingContext2D
+      | OffscreenCanvasRenderingContext2D
+      | null;
+    if (!scaleCtx) throw new Error('cannot allocate a 2D context to resize the frame');
+    scaleCtx.clearRect(0, 0, width, height);
+    // Draws the *whole* source, scaled to the encode size.
+    scaleCtx.drawImage(canvas as CanvasImageSource, 0, 0, width, height);
+    source = scaleCanvas;
+  }
+
+  const ctx = source.getContext('2d') as
     | CanvasRenderingContext2D
     | OffscreenCanvasRenderingContext2D
     | null;
   if (!ctx) throw new Error('scene canvas has no 2D context for pixel read-back');
   const image = ctx.getImageData(0, 0, width, height);
-  // Copy out of the (possibly larger) backing store into an exact-size buffer.
+  // Copy out into an exact-size, tightly-packed buffer.
   return image.data.buffer.slice(
     image.data.byteOffset,
     image.data.byteOffset + width * height * 4,
@@ -130,13 +170,17 @@ class VideoToolboxSession implements VideoExportSession {
       this.config.width,
       this.config.height,
     );
+    // The pixels are the whole payload so Tauri sends them as a raw body rather
+    // than JSON-encoding ~8 MB per frame; metadata travels in headers.
+    //
     // Awaiting the ack applies backpressure: the encoder resolves only once it is
     // ready for the next frame (AVAssetWriterInput.isReadyForMoreMediaData).
-    await this.runtime.invoke(VT_COMMANDS.addFrame, {
-      sessionId: this.sessionId,
-      timestampMicros,
-      durationMicros,
-      rgba,
+    await this.runtime.invoke(VT_COMMANDS.addFrame, rgba, {
+      headers: {
+        'x-session-id': this.sessionId,
+        'x-timestamp-micros': String(Math.round(timestampMicros)),
+        'x-duration-micros': String(Math.round(durationMicros)),
+      },
     });
   }
 

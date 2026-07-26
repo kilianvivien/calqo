@@ -564,12 +564,14 @@ dependencies = [
 
 [[package]]
 name = "calqo"
-version = "0.4.5"
+version = "0.5.0"
 dependencies = [
  "axum",
  "base64 0.22.1",
  "dirs 6.0.0",
  "font-kit",
+ "objc2",
+ "objc2-foundation",
  "rand 0.9.4",
  "rmcp",
  "schemars 1.2.1",

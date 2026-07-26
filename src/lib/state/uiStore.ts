@@ -1,4 +1,8 @@
 import { create } from 'zustand';
+import {
+  DEFAULT_VIDEO_ENCODER_PREFERENCE,
+  type VideoEncoderPreference,
+} from '@/lib/adapters/video/VideoExportAdapter';
 
 export type ThemeMode = 'light' | 'dark';
 export type TransparencyMode = 'auto' | 'glass' | 'solid';
@@ -168,6 +172,8 @@ interface UiState {
   toast: string | null;
   /** Soft limits for asset-health warnings; app preference, not project data. */
   assetHealthThresholds: AssetHealthThresholds;
+  /** Which video encoder backend export should prefer; app preference. */
+  videoEncoderPreference: VideoEncoderPreference;
   /** Brand-profile font defaults the text/list tools read, or null. */
   brandFontDefaults: BrandFontDefaults | null;
   setTheme: (theme: ThemeMode) => void;
@@ -223,6 +229,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   assetHealthNotice: null,
   toast: null,
   assetHealthThresholds: { ...DEFAULT_ASSET_HEALTH_THRESHOLDS },
+  videoEncoderPreference: DEFAULT_VIDEO_ENCODER_PREFERENCE,
   brandFontDefaults: null,
   setTheme: (theme) => {
     safeSet(THEME_KEY, theme);

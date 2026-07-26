@@ -84,7 +84,7 @@ impl Session {
 pub fn probe(width: u32, height: u32, fps: u32) -> VtProbeResult {
     #[cfg(all(target_os = "macos", feature = "video-toolbox"))]
     {
-        return avfoundation::probe(width, height, fps);
+        avfoundation::probe(width, height, fps)
     }
     #[cfg(not(all(target_os = "macos", feature = "video-toolbox")))]
     {

@@ -9,12 +9,14 @@
 </p>
 
 <p align="center">
-  The open-source, local-first visual maker for static social content —<br />
+  The open-source, local-first visual maker for social content —<br />
   the focused 20% of Canva, without the cloud-suite weight.
 </p>
 
 <p align="center">
   <a href="https://github.com/kilianvivien/calqo/releases/latest"><strong>Download for macOS</strong></a>
+  ·
+  <a href="#animate-mode">Animate mode</a>
   ·
   <a href="#run-from-source">Run from source</a>
   ·
@@ -46,8 +48,11 @@ quote cards, campaign variants, and multilingual public information.
   open JSON, validated by a versioned schema, and easy to back up or move.
 - **One design, many outputs.** Keep multiple artboards and content languages
   in one project, then export individual files or organized ZIP bundles.
-- **Focused on static social work.** No animation timeline, publishing
-  calendar, or enterprise suite to navigate around.
+- **Now it moves.** Switch a finished design into Animate mode, apply
+  enter/emphasis/exit presets, and export MP4, GIF, or animated HTML — rendered
+  locally, no cloud renderer.
+- **Focused on social work.** No publishing calendar, stock-media upsell, or
+  enterprise suite to navigate around.
 
 ## What Calqo can do
 
@@ -59,34 +64,50 @@ quote cards, campaign variants, and multilingual public information.
 | **Formats**          | Square and portrait posts, stories, thumbnails, banners, custom sizes, and multi-artboard projects                              |
 | **Starters & brand** | 42 categorized starter models, saved personal models, palettes, fonts, logos, and glossary-aware brand profiles                 |
 | **Languages**        | Per-locale text variants inside one design, in-place AI translation, and locale-grouped exports                                 |
+| **Animation**        | Animate mode with enter/emphasis/exit presets, text reveals, multi-scene clips, transitions, and scrubbable live playback       |
 | **Export**           | PNG, JPEG, WebP, SVG, editable HTML, raster fallback, clipboard/share paths, batch export, and ZIP bundles                      |
+| **Video export**     | Local MP4 (H.264/H.265) and capped GIF, hardware-encoded on Apple Silicon, plus self-contained animated HTML                    |
 | **Asset safety**     | Missing-asset detection and repair, oversized-image notices, one-step downscale/relink, project backup and restore              |
 | **AI templates**     | Prompt-to-template generation that produces validated, editable Calqo project JSON instead of a flat picture                    |
 | **Agent drawing**    | A local MCP server lets Codex, Claude Code, Antigravity, OpenCode, and other agents draw directly in the live desktop app       |
 | **Touch & stylus**   | Responsive phone quick-edit UI, tablet gestures, coarse-pointer controls, long-press menus, and pressure-aware brush strokes    |
 | **Desktop**          | Native macOS menus, `.calqo` open/save, image drop and clipboard support, local font discovery, and secure AI-key storage       |
 
-## Calqo 0.4.5
+## Calqo 0.5.0 — Calqo moves
 
-This release makes the desktop agent workflow much more practical:
+The biggest release since the editor itself: static designs can now become
+short animated clips, without leaving the app or touching a cloud renderer.
 
-- Generated images can be inserted with a short local `filePath`; large binary
-  payloads no longer have to pass through an LLM's context as base64.
-- PNG, JPEG, and WebP inputs are size-bounded and signature-checked before
-  Calqo stores them as editable image assets.
-- Base64 remains available as a compatibility fallback and now tolerates line
-  wrapping introduced by text-oriented agent tools.
-- Local MCP sessions stay alive through long image-generation and debugging
-  pauses instead of expiring after five idle minutes.
-- Tablet editing is smoother, with touch-visible controls, long-press menus,
-  more reliable brush sessions, and clearer pressure-sensitive brush styles.
+- **Animate mode.** Flip any artboard from Design to Animate, then give layers
+  `enter`, `emphasis`, and `exit` presets — fade, slide, pop, rise, wipe, blur,
+  pulse, wiggle, and float — with per-slot duration, delay, direction,
+  distance, and easing.
+- **Text reveals.** Typewriter and word-rise presets animate text
+  character-by-character or word-by-word, and stay real text throughout.
+- **Live playback.** A transport bar plays, pauses, restarts, and scrubs the
+  clip on the real Konva canvas, so the preview is the renderer that exports.
+- **Multi-scene clips.** Sequence several artboards into one clip joined by
+  cut, fade, or slide transitions, up to 60 seconds total.
+- **Local video export.** MP4 (H.264, with H.265 where supported) and a capped
+  GIF fallback, encoded on your machine with progress, cancellation, and honest
+  capability reporting. The macOS build ships a native VideoToolbox encoder and
+  falls back to WebCodecs when hardware encoding is unavailable.
+- **Animated HTML.** A self-contained animated HTML file, or a neutral handoff
+  package a coding agent can take further.
+- **Agents can animate.** The MCP surface gained validated animation
+  operations — set/clear presets, custom windows, scene duration, frame rate,
+  scene order, and transitions — routed through the same undoable command path
+  as manual edits.
+
+Static PNG/JPEG/WebP/SVG/HTML export behavior is unchanged, and `.calqo`
+projects migrate to schema v2 automatically.
 
 See the complete history on the
 [Releases page](https://github.com/kilianvivien/calqo/releases).
 
 ## Download
 
-Download **Calqo 0.4.5 for macOS on Apple Silicon** from the
+Download **Calqo 0.5.0 for macOS on Apple Silicon** from the
 [latest GitHub release](https://github.com/kilianvivien/calqo/releases/latest).
 
 The current desktop build is ad-hoc signed, not Developer ID signed or
@@ -95,6 +116,46 @@ manually in System Settings.
 
 Calqo is a public alpha. The editor is useful today, but project compatibility,
 packaging, and experimental features may still change before 1.0.
+
+## Animate mode
+
+Animation is an extra layer on top of a finished design, not a separate
+document. Switch the editor from **Design** to **Animate**, select a layer, and
+give it up to three preset slots:
+
+| Slot         | Presets                                                    |
+| ------------ | ---------------------------------------------------------- |
+| **Enter**    | Fade, slide, pop, rise, wipe, blur, typewriter, word rise   |
+| **Emphasis** | Pulse, wiggle, float                                        |
+| **Exit**     | Fade, slide, pop, wipe, blur                                |
+
+Each slot takes a duration, delay, direction, distance, and easing (including
+overshoot and bounce). The transport bar plays and scrubs the result on the
+real canvas.
+
+A few properties worth knowing:
+
+- **Your design is never rewritten.** Animation runs on a transient wrapper
+  node: offsets are additive, scale is multiplicative, and document geometry
+  stays exactly as you left it. Turning animation off restores the static
+  design bit-for-bit.
+- **Presets are the document.** Calqo stores the preset, not baked keyframes,
+  and compiles it to a keyframe IR on demand — so files stay small, portable,
+  and re-editable.
+- **One renderer.** Live playback, MP4, and GIF all render through the same
+  Konva path, so the preview matches the export. Animated HTML is a separate
+  target and reports its own fidelity limits.
+
+Export from the same dialog as everything else. MP4 and GIF appear once the
+active artboard has animation; GIF is capped in duration, size, and frame rate
+to keep files and memory sane, and the dialog explains any adjustment it makes.
+
+The macOS app encodes MP4 with a native VideoToolbox (Apple Silicon hardware)
+encoder, and falls back to the in-WebView WebCodecs encoder when that is
+unavailable. **Settings → Video encoder** lets you pin the choice — *Automatic*
+(default), *Hardware*, or *WebCodecs* — which is useful for comparing output or
+working around a driver issue. A preference never causes a failed export; if the
+preferred backend can't start, Calqo falls back.
 
 ## Agent drawing
 
@@ -154,8 +215,13 @@ pnpm test
 pnpm lint
 pnpm build
 pnpm e2e
-pnpm tauri:build # produces the macOS .app and .dmg
+pnpm tauri:build     # macOS .app and .dmg, WebCodecs encoding only
+pnpm tauri:build:mac # release build: adds the native VideoToolbox encoder
 ```
+
+Release builds use `pnpm tauri:build:mac`, which passes
+`--features video-toolbox`. That Cargo feature is off by default so the crate
+still builds on non-macOS hosts, where the AVFoundation FFI cannot compile.
 
 ## Architecture
 
@@ -173,12 +239,19 @@ The important boundaries are deliberate:
 - `src/editor/mcp/` validates and executes agent operations through the same
   command path as manual edits.
 - `src/editor/export/` owns raster, SVG, HTML, ZIP, and multi-locale export.
+- `src/editor/animation/` compiles animation presets to the keyframe IR that
+  live playback and every animated exporter share.
 
 ## Current scope
 
-Calqo deliberately focuses on static RGB social graphics. It does not currently
-offer animation/video editing, print/CMYK production, realtime multiplayer, a
-hosted publishing calendar, or a template marketplace.
+Calqo deliberately focuses on RGB social graphics. It does not currently offer
+print/CMYK production, realtime multiplayer, a hosted publishing calendar, or a
+template marketplace.
+
+Animation is preset-based motion applied to a static design, not a video editor:
+there is no keyframe timeline, no audio track, and no imported video or GIF
+footage as source material. Clips are capped at 60 seconds. Animate mode is
+desktop-only — the phone layout stays a static quick-editor.
 
 The packaged release is currently Apple Silicon only. SVG and editable HTML
 exports report fidelity limits for effects that cannot be represented exactly;
