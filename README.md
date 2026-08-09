@@ -64,7 +64,7 @@ quote cards, campaign variants, and multilingual public information.
 | **Formats**          | Square and portrait posts, stories, thumbnails, banners, custom sizes, and multi-artboard projects                              |
 | **Starters & brand** | 42 categorized starter models, saved personal models, palettes, fonts, logos, and glossary-aware brand profiles                 |
 | **Languages**        | Per-locale text variants inside one design, in-place AI translation, and locale-grouped exports                                 |
-| **Animation**        | Animate mode with enter/emphasis/exit presets, text reveals, multi-scene clips, transitions, and scrubbable live playback       |
+| **Animation**        | Animate mode with effects or simple transform keyframes, text reveals, multi-scene clips, transitions, and live playback        |
 | **Export**           | PNG, JPEG, WebP, SVG, editable HTML, raster fallback, clipboard/share paths, batch export, and ZIP bundles                      |
 | **Video export**     | Local MP4 (H.264/H.265) and capped GIF, hardware-encoded on Apple Silicon, plus self-contained animated HTML                    |
 | **Asset safety**     | Missing-asset detection and repair, oversized-image notices, one-step downscale/relink, project backup and restore              |
@@ -72,6 +72,24 @@ quote cards, campaign variants, and multilingual public information.
 | **Agent drawing**    | A local MCP server lets Codex, Claude Code, Antigravity, OpenCode, and other agents draw directly in the live desktop app       |
 | **Touch & stylus**   | Responsive phone quick-edit UI, tablet gestures, coarse-pointer controls, long-press menus, and pressure-aware brush strokes    |
 | **Desktop**          | Native macOS menus, `.calqo` open/save, image drop and clipboard support, local font discovery, and secure AI-key storage       |
+
+## Calqo 0.6.0 — Simple motion, your way
+
+Calqo's Animate mode now includes a deliberately compact keyframe editor. Pick
+**Keyframes** for a layer, move the playhead, then drag, resize, or rotate the
+object directly on the canvas. Calqo records the whole pose automatically and
+shows it as one diamond in the existing transport — no property stack, graph
+editor, or second timeline.
+
+- Position, scale, and rotation share one easy-to-read pose.
+- Start and end poses are created automatically; add or remove intermediate
+  poses from the selected layer's single timeline lane.
+- Clicking a diamond seeks to it, and canvas edits at any playhead create or
+  update that pose.
+- Keyframe edits use the same validated custom-track format as playback, MP4,
+  GIF, and animated HTML export, with full undo/redo.
+- Effects and keyframes stay explicit alternatives per layer, keeping the UI
+  and the saved animation source of truth unambiguous.
 
 ## Calqo 0.5.0 — Calqo moves
 
@@ -107,7 +125,7 @@ See the complete history on the
 
 ## Download
 
-Download **Calqo 0.5.0 for macOS on Apple Silicon** from the
+Download **Calqo 0.6.0 for macOS on Apple Silicon** from the
 [latest GitHub release](https://github.com/kilianvivien/calqo/releases/latest).
 
 The current desktop build is ad-hoc signed, not Developer ID signed or
@@ -123,11 +141,11 @@ Animation is an extra layer on top of a finished design, not a separate
 document. Switch the editor from **Design** to **Animate**, select a layer, and
 give it up to three preset slots:
 
-| Slot         | Presets                                                    |
-| ------------ | ---------------------------------------------------------- |
-| **Enter**    | Fade, slide, pop, rise, wipe, blur, typewriter, word rise   |
-| **Emphasis** | Pulse, wiggle, float                                        |
-| **Exit**     | Fade, slide, pop, wipe, blur                                |
+| Slot         | Presets                                                   |
+| ------------ | --------------------------------------------------------- |
+| **Enter**    | Fade, slide, pop, rise, wipe, blur, typewriter, word rise |
+| **Emphasis** | Pulse, wiggle, float                                      |
+| **Exit**     | Fade, slide, pop, wipe, blur                              |
 
 Each slot takes a duration, delay, direction, distance, and easing (including
 overshoot and bounce). The transport bar plays and scrubs the result on the
@@ -152,8 +170,8 @@ to keep files and memory sane, and the dialog explains any adjustment it makes.
 
 The macOS app encodes MP4 with a native VideoToolbox (Apple Silicon hardware)
 encoder, and falls back to the in-WebView WebCodecs encoder when that is
-unavailable. **Settings → Video encoder** lets you pin the choice — *Automatic*
-(default), *Hardware*, or *WebCodecs* — which is useful for comparing output or
+unavailable. **Settings → Video encoder** lets you pin the choice — _Automatic_
+(default), _Hardware_, or _WebCodecs_ — which is useful for comparing output or
 working around a driver issue. A preference never causes a failed export; if the
 preferred backend can't start, Calqo falls back.
 
@@ -248,10 +266,11 @@ Calqo deliberately focuses on RGB social graphics. It does not currently offer
 print/CMYK production, realtime multiplayer, a hosted publishing calendar, or a
 template marketplace.
 
-Animation is preset-based motion applied to a static design, not a video editor:
-there is no keyframe timeline, no audio track, and no imported video or GIF
-footage as source material. Clips are capped at 60 seconds. Animate mode is
-desktop-only — the phone layout stays a static quick-editor.
+Animation is motion applied to a static design, not a video editor. Calqo offers
+presets and one compact whole-pose keyframe lane for the selected layer; there
+is no property timeline or graph editor, audio track, or imported video/GIF
+footage. Clips are capped at 60 seconds. Animate mode is desktop-only — the
+phone layout stays a static quick-editor.
 
 The packaged release is currently Apple Silicon only. SVG and editable HTML
 exports report fidelity limits for effects that cannot be represented exactly;

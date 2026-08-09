@@ -24,8 +24,10 @@ interface LayerRendererProps {
   interactive?: boolean;
   nodeRefs: React.MutableRefObject<NodeRegistry>;
   onSelect: (layer: CalqoLayer, additive: boolean) => void;
+  onDragStart: (layer: CalqoLayer, node: Konva.Node) => void;
   onDragMove: (layer: CalqoLayer, node: Konva.Node) => void;
   onDragEnd: (layer: CalqoLayer, node: Konva.Node) => void;
+  onTransformStart: (layer: CalqoLayer, node: Konva.Node) => void;
   onTransformEnd: (layer: CalqoLayer, node: Konva.Node) => void;
   onTextEdit: (layer: CalqoLayer) => void;
   onImageCrop?: (layer: CalqoLayer) => void;
@@ -35,8 +37,10 @@ function commonProps(
   layer: CalqoLayer,
   nodeRefs: React.MutableRefObject<NodeRegistry>,
   onSelect: (layer: CalqoLayer, additive: boolean) => void,
+  onDragStart: (layer: CalqoLayer, node: Konva.Node) => void,
   onDragMove: (layer: CalqoLayer, node: Konva.Node) => void,
   onDragEnd: (layer: CalqoLayer, node: Konva.Node) => void,
+  onTransformStart: (layer: CalqoLayer, node: Konva.Node) => void,
   onTransformEnd: (layer: CalqoLayer, node: Konva.Node) => void,
   interactive = true,
 ) {
@@ -51,6 +55,9 @@ function commonProps(
           event.cancelBubble = true;
           onSelect(layer, false);
         },
+        onDragStart: (event: Konva.KonvaEventObject<DragEvent>) => {
+          onDragStart(layer, event.target);
+        },
         onDragMove: (event: Konva.KonvaEventObject<DragEvent>) => {
           onDragMove(layer, event.target);
         },
@@ -59,6 +66,9 @@ function commonProps(
         },
         onTransformEnd: (event: Konva.KonvaEventObject<Event>) => {
           onTransformEnd(layer, event.target);
+        },
+        onTransformStart: (event: Konva.KonvaEventObject<Event>) => {
+          onTransformStart(layer, event.target);
         },
       }
     : {};
@@ -358,8 +368,10 @@ export function LayerRenderer(props: LayerRendererProps) {
     interactive = true,
     nodeRefs,
     onSelect,
+    onDragStart,
     onDragMove,
     onDragEnd,
+    onTransformStart,
     onTransformEnd,
     onTextEdit,
     onImageCrop,
@@ -389,8 +401,10 @@ export function LayerRenderer(props: LayerRendererProps) {
       layer,
       nodeRefs,
       onSelect,
+      onDragStart,
       onDragMove,
       onDragEnd,
+      onTransformStart,
       onTransformEnd,
       interactive,
     );
@@ -413,8 +427,10 @@ export function LayerRenderer(props: LayerRendererProps) {
     layer,
     nodeRefs,
     onSelect,
+    onDragStart,
     onDragMove,
     onDragEnd,
+    onTransformStart,
     onTransformEnd,
     interactive,
   );

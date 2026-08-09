@@ -546,11 +546,13 @@ export function MobileStage({
                 selected={selectedLayerIds.includes(layer.id)}
                 nodeRefs={nodeRefs}
                 onSelect={(target) => selectOne(target.id)}
+                onDragStart={() => {}}
                 onDragMove={snapNode}
                 onDragEnd={(target, node) => {
                   commitNode(project.id, target, node);
                   setGuides([]);
                 }}
+                onTransformStart={() => {}}
                 onTransformEnd={(target, node) => commitNode(project.id, target, node)}
                 onTextEdit={(target) => {
                   if (

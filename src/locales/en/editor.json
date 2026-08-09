@@ -958,6 +958,26 @@
       "exit": "Exit",
       "none": "None"
     },
+    "keyframes": {
+      "authoringMode": "Animation authoring mode",
+      "modes": {
+        "effects": "Effects",
+        "keyframes": "Keyframes"
+      },
+      "title": "Transform keyframes",
+      "description": "Create a simple motion path for this layer.",
+    "instructions": "Move the playhead, then drag, resize, or rotate the layer on the canvas. Calqo records the pose automatically.",
+    "replacesEffects": "Keyframes replace this layer’s current effects. You can undo the change.",
+    "replacesKeyframes": "Choosing an effect replaces this layer’s keyframes. You can undo the change.",
+      "create": "Create keyframes",
+      "count_one": "{{count}} pose across the scene",
+      "count_other": "{{count}} poses across the scene",
+      "lane": "Keyframes for {{name}}",
+      "add": "Add keyframe at playhead",
+      "delete": "Delete keyframe at playhead",
+      "goTo": "Go to {{time}} seconds",
+      "time": "Keyframe at {{time}}s"
+    },
     "params": {
       "duration": "Duration",
       "delay": "Delay",

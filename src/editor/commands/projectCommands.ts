@@ -6,6 +6,7 @@ import {
   rewriteAssetIdsInPlace,
 } from '@/editor/assets/assetRemap';
 import {
+  ANIM_CAPS,
   createArtboard,
   createDefaultProject,
   DEFAULT_SCENE_DURATION_MS,
@@ -44,6 +45,13 @@ import {
 import type { PresetLayerKind, PresetSlot } from '@/editor/animation/presets';
 import { invalidateProjectClips } from '@/editor/animation/compiler';
 import { animationPlaybackStore } from '@/lib/state/animationPlaybackStore';
+import {
+  createEditableMotion,
+  motionPoseAt,
+  removeMotionKeyframe,
+  upsertMotionKeyframe,
+  type MotionPose,
+} from '@/editor/animation/keyframes';
 import type { TranslationResult } from '@/editor/ai/AIProvider';
 import {
   decodeListRowId,
@@ -1231,6 +1239,144 @@ export function clearLayerAnimation(
   );
 }
 
+/** Start Calqo's compact keyframe authoring format. This explicitly replaces a
+ * preset animation because `LayerAnimation` keeps preset and custom authoring
+ * as mutually exclusive modes. */
+export function createLayerMotion(
+  projectId: string,
+  layerId: string,
+  options: EditOptions = { undoable: true },
+): AnimationCommandResult {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return { ok: false, code: 'no-artboard' };
+  const artboard = activeArtboard(project);
+  if (!artboard) return { ok: false, code: 'no-artboard' };
+  const layer = findLayerInArtboard(artboard, layerId);
+  if (!layer) return { ok: false, code: 'no-layer' };
+  const animation = createEditableMotion(sceneDurationOf(artboard));
+
+  editProject(
+    projectId,
+    (draft) => {
+      const ab = getArtboard(draft, artboard.id);
+      if (!ab) return;
+      updateLayer(ab.layers as CalqoLayer[], layerId, (target) => {
+        target.animation = animation;
+      });
+    },
+    options,
+  );
+  return { ok: true };
+}
+
+function clampMotionPose(pose: MotionPose): MotionPose {
+  const clamp = (value: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, Number.isFinite(value) ? value : 0));
+  return {
+    dx: clamp(pose.dx, -ANIM_CAPS.offset, ANIM_CAPS.offset),
+    dy: clamp(pose.dy, -ANIM_CAPS.offset, ANIM_CAPS.offset),
+    scaleX: clamp(Math.abs(pose.scaleX), 0.0001, ANIM_CAPS.scale),
+    scaleY: clamp(Math.abs(pose.scaleY), 0.0001, ANIM_CAPS.scale),
+    rotation: clamp(pose.rotation, -ANIM_CAPS.rotation, ANIM_CAPS.rotation),
+    opacity: clamp(pose.opacity, 0, 1),
+  };
+}
+
+/** Insert or update the selected layer's transform pose at the playhead. */
+export function setLayerMotionKeyframe(
+  projectId: string,
+  layerId: string,
+  timeMs: number,
+  pose: MotionPose,
+  options: EditOptions = { undoable: true },
+): AnimationCommandResult {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return { ok: false, code: 'no-artboard' };
+  const artboard = activeArtboard(project);
+  if (!artboard) return { ok: false, code: 'no-artboard' };
+  const layer = findLayerInArtboard(artboard, layerId);
+  if (!layer) return { ok: false, code: 'no-layer' };
+  const duration = sceneDurationOf(artboard);
+  const animation = upsertMotionKeyframe(
+    layer.animation,
+    duration,
+    timeMs,
+    clampMotionPose(pose),
+  );
+
+  editProject(
+    projectId,
+    (draft) => {
+      const ab = getArtboard(draft, artboard.id);
+      if (!ab) return;
+      updateLayer(ab.layers as CalqoLayer[], layerId, (target) => {
+        target.animation = animation;
+      });
+    },
+    options,
+  );
+  return { ok: true };
+}
+
+/** Add a pose without changing the visible result by sampling the current
+ * interpolation at the requested playhead time. */
+export function addLayerMotionKeyframe(
+  projectId: string,
+  layerId: string,
+  timeMs: number,
+  options: EditOptions = { undoable: true },
+): AnimationCommandResult {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return { ok: false, code: 'no-artboard' };
+  const artboard = activeArtboard(project);
+  if (!artboard) return { ok: false, code: 'no-artboard' };
+  const layer = findLayerInArtboard(artboard, layerId);
+  if (!layer) return { ok: false, code: 'no-layer' };
+  const duration = sceneDurationOf(artboard);
+  return setLayerMotionKeyframe(
+    projectId,
+    layerId,
+    timeMs,
+    motionPoseAt(layer.animation, duration, timeMs),
+    options,
+  );
+}
+
+/** Delete the pose at the playhead. The two endpoint poses are the minimum
+ * valid motion, so deletion is a no-op once only two remain. */
+export function deleteLayerMotionKeyframe(
+  projectId: string,
+  layerId: string,
+  timeMs: number,
+  options: EditOptions = { undoable: true },
+): AnimationCommandResult {
+  const project = projectStore.getState().projects[projectId];
+  if (!project) return { ok: false, code: 'no-artboard' };
+  const artboard = activeArtboard(project);
+  if (!artboard) return { ok: false, code: 'no-artboard' };
+  const layer = findLayerInArtboard(artboard, layerId);
+  if (!layer) return { ok: false, code: 'no-layer' };
+  const animation = removeMotionKeyframe(
+    layer.animation,
+    sceneDurationOf(artboard),
+    timeMs,
+  );
+  if (!animation) return { ok: true };
+
+  editProject(
+    projectId,
+    (draft) => {
+      const ab = getArtboard(draft, artboard.id);
+      if (!ab) return;
+      updateLayer(ab.layers as CalqoLayer[], layerId, (target) => {
+        target.animation = animation;
+      });
+    },
+    options,
+  );
+  return { ok: true };
+}
+
 /** Strip animation from every layer in an artboard (and its groups). */
 export function clearArtboardAnimation(
   projectId: string,
@@ -1273,6 +1419,20 @@ export function setSceneDuration(
       if (!id) return;
       const artboard = getArtboard(draft, id);
       if (!artboard) return;
+      const previous = artboard.timing?.duration ?? DEFAULT_SCENE_DURATION_MS;
+      const ratio = previous > 0 ? clamped / previous : 1;
+      const scaleCustomWindows = (layers: CalqoLayer[]) => {
+        for (const layer of layers) {
+          if (layer.animation?.mode === 'custom') {
+            for (const window of layer.animation.windows) {
+              window.start *= ratio;
+              window.duration *= ratio;
+            }
+          }
+          if (layer.type === 'group') scaleCustomWindows(layer.children);
+        }
+      };
+      scaleCustomWindows(artboard.layers as CalqoLayer[]);
       artboard.timing = { duration: clamped };
     },
     options,

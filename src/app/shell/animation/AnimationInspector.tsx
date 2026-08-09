@@ -1,6 +1,6 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trash2 } from 'lucide-react';
+import { Diamond, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useActiveArtboard, useActiveProject } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
@@ -11,6 +11,7 @@ import {
   beginHistoryCoalescing,
   clearArtboardAnimation,
   clearLayerAnimation,
+  createLayerMotion,
   endHistoryCoalescing,
   setClipFps,
   setLayerPreset,
@@ -38,6 +39,7 @@ import {
   type PresetSlot,
 } from '@/editor/animation/presets';
 import { defaultPresetInstance } from '@/editor/animation/validate';
+import { isEditableMotion, motionKeyframeTimes } from '@/editor/animation/keyframes';
 import { ScenesPanel } from './ScenesPanel';
 
 const SLOTS: PresetSlot[] = ['enter', 'emphasis', 'exit'];
@@ -51,6 +53,7 @@ const EASINGS: Easing[] = [
 ];
 const DIRECTIONS: PresetDirection[] = ['up', 'down', 'left', 'right'];
 const FPS_OPTIONS: ClipSettings['fps'][] = [24, 30, 60];
+type AuthoringMode = 'effects' | 'keyframes';
 
 function prefersReducedMotion(): boolean {
   return (
@@ -71,6 +74,10 @@ export function AnimationInspector() {
   const setPreview = useAnimationPlaybackStore((s) => s.setPreview);
   const play = useAnimationPlaybackStore((s) => s.play);
   const stopAndReset = useAnimationPlaybackStore((s) => s.stopAndReset);
+  const [authoringChoice, setAuthoringChoice] = useState<{
+    layerId: string;
+    mode: AuthoringMode;
+  } | null>(null);
 
   const layer = useMemo(() => {
     const id = selectedIds[0];
@@ -81,6 +88,13 @@ export function AnimationInspector() {
 
   const animation: Extract<LayerAnimation, { mode: 'preset' }> | null =
     layer?.animation?.mode === 'preset' ? layer.animation : null;
+
+  const inferredMode: AuthoringMode =
+    layer?.animation?.mode === 'custom' ? 'keyframes' : 'effects';
+  const authoringMode =
+    layer && authoringChoice?.layerId === layer.id
+      ? authoringChoice.mode
+      : inferredMode;
 
   const commit = useCallback(
     (slot: PresetSlot, instance: PresetInstance | null) => {
@@ -112,6 +126,7 @@ export function AnimationInspector() {
 
   const sceneDuration = artboard.timing?.duration ?? 5000;
   const fps = project.clipSettings?.fps ?? 30;
+  const editableMotion = isEditableMotion(layer?.animation, sceneDuration);
 
   return (
     <div className="flex flex-col gap-4">
@@ -167,25 +182,102 @@ export function AnimationInspector() {
         </p>
       ) : (
         <>
-          {SLOTS.map((slot) => (
-            <SlotSection
-              key={slot}
-              slot={slot}
-              layerKind={layer.type as PresetLayerKind}
-              current={animation?.[slot] ?? null}
-              onSelectKind={(kind) =>
-                commit(slot, kind ? defaultPresetInstance(kind) : null)
-              }
-              onParamChange={(patch) => {
-                // Coalescing boundaries are owned by the slider's pointer down/up;
-                // discrete selects (direction/easing) are single undoable edits.
-                updateLayerPresetParams(project.id, layer.id, slot, patch);
-              }}
-              onHover={(kind) => previewSlot(slot, kind)}
-              onHoverEnd={endPreview}
-            />
-          ))}
-          {animation && (
+          <div
+            className="grid grid-cols-2 rounded-[var(--calqo-radius-md)] bg-[var(--calqo-hover)] p-0.5"
+            role="tablist"
+            aria-label={t('animate.keyframes.authoringMode')}
+          >
+            {(['effects', 'keyframes'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                role="tab"
+                aria-selected={authoringMode === mode}
+                onClick={() => setAuthoringChoice({ layerId: layer.id, mode })}
+                className={cn(
+                  'rounded-[var(--calqo-radius-sm)] px-2 py-1.5 text-[11.5px] font-medium transition-colors',
+                  authoringMode === mode
+                    ? 'bg-[var(--calqo-glass)] text-[var(--calqo-text)] shadow-sm'
+                    : 'text-[var(--calqo-text-3)] hover:text-[var(--calqo-text-2)]',
+                )}
+              >
+                {t(`animate.keyframes.modes.${mode}`)}
+              </button>
+            ))}
+          </div>
+
+          {authoringMode === 'effects' ? (
+            <>
+              {layer.animation?.mode === 'custom' && (
+                <p className="text-[11px] text-[var(--calqo-text-3)]">
+                  {t('animate.keyframes.replacesKeyframes')}
+                </p>
+              )}
+              {SLOTS.map((slot) => (
+                <SlotSection
+                  key={slot}
+                  slot={slot}
+                  layerKind={layer.type as PresetLayerKind}
+                  current={animation?.[slot] ?? null}
+                  onSelectKind={(kind) =>
+                    commit(slot, kind ? defaultPresetInstance(kind) : null)
+                  }
+                  onParamChange={(patch) => {
+                    // Coalescing boundaries are owned by the slider's pointer down/up;
+                    // discrete selects (direction/easing) are single undoable edits.
+                    updateLayerPresetParams(project.id, layer.id, slot, patch);
+                  }}
+                  onHover={(kind) => previewSlot(slot, kind)}
+                  onHoverEnd={endPreview}
+                />
+              ))}
+            </>
+          ) : (
+            <section className="flex flex-col gap-3 rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] p-3">
+              <div className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]">
+                  <Diamond size={13} fill="currentColor" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-[12px] font-semibold text-[var(--calqo-text)]">
+                    {t('animate.keyframes.title')}
+                  </h3>
+                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--calqo-text-3)]">
+                    {editableMotion
+                      ? t('animate.keyframes.instructions')
+                      : t('animate.keyframes.description')}
+                  </p>
+                </div>
+              </div>
+              {editableMotion ? (
+                <p className="rounded-[var(--calqo-radius-sm)] bg-[var(--calqo-hover)] px-2.5 py-2 text-[11.5px] text-[var(--calqo-text-2)]">
+                  {t('animate.keyframes.count', {
+                    count: motionKeyframeTimes(layer.animation, sceneDuration).length,
+                  })}
+                </p>
+              ) : (
+                <>
+                  {layer.animation && (
+                    <p className="text-[11px] text-[var(--calqo-text-3)]">
+                      {t('animate.keyframes.replacesEffects')}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const result = createLayerMotion(project.id, layer.id);
+                      if (!result.ok) setToast(t(`animate.errors.${result.code}`));
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-[var(--calqo-radius-sm)] bg-[var(--calqo-accent)] px-3 py-2 text-[12px] font-medium text-[var(--calqo-text-on-accent)] hover:brightness-110"
+                  >
+                    <Diamond size={12} />
+                    {t('animate.keyframes.create')}
+                  </button>
+                </>
+              )}
+            </section>
+          )}
+          {layer.animation && (
             <button
               type="button"
               onClick={() => clearLayerAnimation(project.id, layer.id)}

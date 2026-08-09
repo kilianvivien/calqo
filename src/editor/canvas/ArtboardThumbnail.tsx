@@ -74,8 +74,10 @@ export function ArtboardThumbnail({
             interactive={false}
             nodeRefs={nodeRefs}
             onSelect={noop}
+            onDragStart={noop}
             onDragMove={noop}
             onDragEnd={noop}
+            onTransformStart={noop}
             onTransformEnd={noop}
             onTextEdit={noop}
           />

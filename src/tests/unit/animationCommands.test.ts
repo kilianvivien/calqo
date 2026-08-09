@@ -1,14 +1,18 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  addLayerMotionKeyframe,
   beginHistoryCoalescing,
   clearArtboardAnimation,
   clearLayerAnimation,
+  createLayerMotion,
   createShapeLayer,
   duplicateLayerById,
+  deleteLayerMotionKeyframe,
   endHistoryCoalescing,
   redoProject,
   setClipFps,
   setLayerPreset,
+  setLayerMotionKeyframe,
   setSceneDuration,
   undoProject,
   updateLayerPresetParams,
@@ -21,6 +25,7 @@ import { historyStore } from '@/lib/state/historyStore';
 import { projectStore } from '@/lib/state/projectStore';
 import { selectionStore } from '@/lib/state/selectionStore';
 import { animationPlaybackStore } from '@/lib/state/animationPlaybackStore';
+import { motionKeyframeTimes, motionPoseAt } from '@/editor/animation/keyframes';
 
 function setupProject(): { project: CalqoProject; layerId: string } {
   const project = createDefaultProject();
@@ -188,5 +193,51 @@ describe('animation commands', () => {
     setLayerPreset(project.id, layerId, 'enter', defaultPresetInstance('fade'));
     undoProject(project.id);
     expect(clipCacheSize()).toBe(0);
+  });
+
+  it('creates keyframe motion explicitly and replaces preset authoring', () => {
+    const { project, layerId } = setupProject();
+    setLayerPreset(project.id, layerId, 'enter', defaultPresetInstance('slide'));
+    expect(createLayerMotion(project.id, layerId).ok).toBe(true);
+    const animation = currentLayer(project.id, layerId)?.animation;
+    expect(animation?.mode).toBe('custom');
+    expect(motionKeyframeTimes(animation, 5000)).toEqual([0, 5000]);
+  });
+
+  it('adds, updates, deletes, and undoes whole-pose keyframes', () => {
+    const { project, layerId } = setupProject();
+    createLayerMotion(project.id, layerId);
+    addLayerMotionKeyframe(project.id, layerId, 2000);
+    setLayerMotionKeyframe(project.id, layerId, 2000, {
+      dx: 140,
+      dy: -30,
+      scaleX: 1.25,
+      scaleY: 0.9,
+      rotation: 18,
+      opacity: 0.8,
+    });
+    let animation = currentLayer(project.id, layerId)?.animation;
+    expect(motionKeyframeTimes(animation, 5000)).toEqual([0, 2000, 5000]);
+    expect(motionPoseAt(animation, 5000, 2000)).toMatchObject({
+      dx: 140,
+      dy: -30,
+      rotation: 18,
+    });
+
+    deleteLayerMotionKeyframe(project.id, layerId, 2000);
+    animation = currentLayer(project.id, layerId)?.animation;
+    expect(motionKeyframeTimes(animation, 5000)).toEqual([0, 5000]);
+    undoProject(project.id);
+    animation = currentLayer(project.id, layerId)?.animation;
+    expect(motionKeyframeTimes(animation, 5000)).toEqual([0, 2000, 5000]);
+  });
+
+  it('rescales custom windows when the scene duration changes', () => {
+    const { project, layerId } = setupProject();
+    createLayerMotion(project.id, layerId);
+    addLayerMotionKeyframe(project.id, layerId, 2500);
+    setSceneDuration(project.id, 10000);
+    const animation = currentLayer(project.id, layerId)?.animation;
+    expect(motionKeyframeTimes(animation, 10000)).toEqual([0, 5000, 10000]);
   });
 });

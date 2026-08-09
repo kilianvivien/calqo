@@ -19,6 +19,7 @@ import {
   groupLayersInArtboard,
   groupSelectedLayers,
   polygonPoints,
+  setLayerMotionKeyframe,
   type PolygonPreset,
   ungroupSelected,
   updateLayerInActiveArtboard,
@@ -35,8 +36,19 @@ import type {
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
 import { useWorkspaceStore } from '@/lib/state/workspaceStore';
-import { useAnimationPlaybackStore } from '@/lib/state/animationPlaybackStore';
+import {
+  animationPlaybackStore,
+  useAnimationPlaybackStore,
+} from '@/lib/state/animationPlaybackStore';
 import { useAnimationPlayback } from '@/editor/animation/useAnimationPlayback';
+import {
+  isEditableMotion,
+  motionPoseFromWrapperMatrix,
+} from '@/editor/animation/keyframes';
+import {
+  applyWrapperOverride,
+  resetWrapper,
+} from '@/editor/animation/wrapperNode';
 import { useCoarsePointer } from '@/lib/hooks/useResponsiveMode';
 import { saveImageAsset } from '@/lib/utils/imageAsset';
 import { TextEditOverlay } from './TextEditOverlay';
@@ -89,6 +101,25 @@ type Marquee = {
 
 /** Where the canvas context menu is anchored (container-relative pixels). */
 type ContextMenuState = { x: number; y: number };
+
+interface MotionTransformEdit {
+  layerId: string;
+  timeMs: number;
+  baseTransform: Konva.Transform;
+  baseOpacity: number;
+  baseAttrs: {
+    x: number;
+    y: number;
+    scaleX: number;
+    scaleY: number;
+    rotation: number;
+    skewX: number;
+    skewY: number;
+    offsetX: number;
+    offsetY: number;
+    opacity: number;
+  };
+}
 
 type ShapeTool = 'rect' | 'ellipse' | 'line' | 'arrow' | PolygonPreset;
 
@@ -193,6 +224,7 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   // Base nodes in `nodeRefs` keep document geometry; playback only ever touches
   // these wrappers, so selection/transform always read document coordinates.
   const wrapperRefs = useRef<Map<string, Konva.Group>>(new Map());
+  const motionTransformEdit = useRef<MotionTransformEdit | null>(null);
   const [size, setSize] = useState<StageSize>({ width: 1, height: 1 });
   const [pendingAssetPoint, setPendingAssetPoint] = useState({ x: 96, y: 96 });
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
@@ -272,6 +304,97 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
    * read base geometry (§6.2). No-op when nothing is playing. */
   const haltPlaybackForEdit = () => {
     if (playbackStatus !== 'idle') stopPlayback();
+  };
+
+  /** Flatten the currently evaluated wrapper into the base node for the length
+   * of one pointer gesture. This lets the normal Konva transformer edit the
+   * visible pose while document geometry remains untouched. */
+  const beginMotionTransformEdit = (
+    layer: CalqoLayer,
+    node: Konva.Node,
+  ): boolean => {
+    const sceneDuration = artboard.timing?.duration ?? 5000;
+    if (!animateMode || !isEditableMotion(layer.animation, sceneDuration)) {
+      return false;
+    }
+    if (motionTransformEdit.current?.layerId === layer.id) return true;
+    const wrapper = wrapperRefs.current.get(layer.id);
+    if (!wrapper) return false;
+
+    animationPlaybackStore.getState().pause();
+    const baseTransform = node.getTransform().copy();
+    const flattened = wrapper
+      .getTransform()
+      .copy()
+      .multiply(baseTransform.copy())
+      .decompose();
+    const baseOpacity = node.opacity();
+    const baseAttrs = {
+      x: node.x(),
+      y: node.y(),
+      scaleX: node.scaleX(),
+      scaleY: node.scaleY(),
+      rotation: node.rotation(),
+      skewX: node.skewX(),
+      skewY: node.skewY(),
+      offsetX: node.offsetX(),
+      offsetY: node.offsetY(),
+      opacity: baseOpacity,
+    };
+    const timeMs = animationPlaybackStore.getState().timeMs;
+    const flattenedOpacity = baseOpacity * wrapper.opacity();
+    resetWrapper(wrapper);
+    node.setAttrs({
+      ...flattened,
+      offsetX: 0,
+      offsetY: 0,
+      opacity: flattenedOpacity,
+    });
+    motionTransformEdit.current = {
+      layerId: layer.id,
+      timeMs,
+      baseTransform,
+      baseOpacity,
+      baseAttrs,
+    };
+    node.getLayer()?.batchDraw();
+    return true;
+  };
+
+  /** Convert the edited node matrix back into Calqo's centre-pivot wrapper
+   * pose, restore the base node, and commit one undoable keyframe edit. */
+  const commitMotionTransformEdit = (
+    layer: CalqoLayer,
+    node: Konva.Node,
+  ): boolean => {
+    const edit = motionTransformEdit.current;
+    if (!edit || edit.layerId !== layer.id) return false;
+    motionTransformEdit.current = null;
+
+    const wrapper = wrapperRefs.current.get(layer.id);
+    if (!wrapper) return false;
+    const relative = node
+      .getTransform()
+      .copy()
+      .multiply(edit.baseTransform.copy().invert());
+    const matrix = relative.getMatrix();
+    const decomposed = relative.decompose();
+    const pose = motionPoseFromWrapperMatrix(
+      matrix as [number, number, number, number, number, number],
+      decomposed,
+      { x: layer.x, y: layer.y, w: layer.w, h: layer.h },
+      edit.baseOpacity > 0 ? node.opacity() / edit.baseOpacity : 1,
+    );
+
+    node.setAttrs(edit.baseAttrs);
+    setLayerMotionKeyframe(project.id, layer.id, edit.timeMs, pose);
+    applyWrapperOverride(
+      wrapper,
+      { ...pose, wipeProgress: 1, blur: 0 },
+      { x: layer.x, y: layer.y, w: layer.w, h: layer.h },
+    );
+    node.getLayer()?.batchDraw();
+    return true;
   };
 
   // Interactive image crop: the targeted image layer, its source bitmap, and the
@@ -1273,17 +1396,33 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
                 selected={selectedLayerIds.includes(layer.id)}
                 nodeRefs={nodeRefs}
                 onSelect={selectLayer}
+                onDragStart={(layerToUpdate, node) => {
+                  if (!beginMotionTransformEdit(layerToUpdate, node)) {
+                    haltPlaybackForEdit();
+                  }
+                }}
                 onDragMove={(layerToUpdate, node) => {
-                  haltPlaybackForEdit();
+                  if (motionTransformEdit.current?.layerId !== layerToUpdate.id) {
+                    haltPlaybackForEdit();
+                  }
                   snapNode(layerToUpdate, node);
                 }}
                 onDragEnd={(layerToUpdate, node) => {
                   setGuides([]);
-                  normalizeNode(layerToUpdate, node);
+                  if (!commitMotionTransformEdit(layerToUpdate, node)) {
+                    normalizeNode(layerToUpdate, node);
+                  }
+                }}
+                onTransformStart={(layerToUpdate, node) => {
+                  if (!beginMotionTransformEdit(layerToUpdate, node)) {
+                    haltPlaybackForEdit();
+                  }
                 }}
                 onTransformEnd={(layerToUpdate, node) => {
-                  haltPlaybackForEdit();
-                  normalizeNode(layerToUpdate, node);
+                  if (!commitMotionTransformEdit(layerToUpdate, node)) {
+                    haltPlaybackForEdit();
+                    normalizeNode(layerToUpdate, node);
+                  }
                 }}
                 onTextEdit={(layerToEdit) => {
                   if (

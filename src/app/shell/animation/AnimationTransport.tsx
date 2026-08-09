@@ -4,9 +4,12 @@ import { Pause, Play, SkipBack } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useActiveArtboard, useActiveProject } from '@/lib/state/selectors';
 import { useAnimationPlaybackStore } from '@/lib/state/animationPlaybackStore';
-import { flattenLayers } from '@/editor/utils/layers';
+import { useSelectionStore } from '@/lib/state/selectionStore';
+import { findLayerInArtboard, flattenLayers } from '@/editor/utils/layers';
+import { isEditableMotion } from '@/editor/animation/keyframes';
 import { isEditableKeyboardTarget } from '@/app/keyboardGuards';
 import { TimingOverview } from './TimingOverview';
+import { KeyframeLane } from './KeyframeLane';
 
 /** Thin bottom transport for Animate mode (§6.1): play/pause, jump-to-start,
  * scrubber, current/total time, and read-only per-layer timing bars. Mounted
@@ -22,6 +25,7 @@ export function AnimationTransport() {
   const pause = useAnimationPlaybackStore((s) => s.pause);
   const seek = useAnimationPlaybackStore((s) => s.seek);
   const stopAndReset = useAnimationPlaybackStore((s) => s.stopAndReset);
+  const selectedIds = useSelectionStore((s) => s.selectedLayerIds);
 
   const hasAnimation =
     !!artboard &&
@@ -50,6 +54,15 @@ export function AnimationTransport() {
   }, [hasAnimation, playing]);
 
   if (!project || !artboard) return null;
+
+  const selectedLayer =
+    selectedIds.length === 1
+      ? findLayerInArtboard(artboard, selectedIds[0])
+      : null;
+  const keyframeLayer =
+    selectedLayer && isEditableMotion(selectedLayer.animation, durationMs)
+      ? selectedLayer
+      : null;
 
   const totalSecs = (durationMs / 1000).toFixed(1);
   const currentSecs = (Math.min(timeMs, durationMs) / 1000).toFixed(1);
@@ -103,7 +116,18 @@ export function AnimationTransport() {
       </div>
 
       {hasAnimation ? (
-        <TimingOverview artboard={artboard} />
+        <>
+          {keyframeLayer && (
+            <KeyframeLane
+              projectId={project.id}
+              layer={keyframeLayer}
+              durationMs={durationMs}
+              timeMs={timeMs}
+              onSeek={seek}
+            />
+          )}
+          <TimingOverview artboard={artboard} />
+        </>
       ) : (
         <p className="text-[11px] text-[var(--calqo-text-3)]">
           {t('animate.transport.empty')}

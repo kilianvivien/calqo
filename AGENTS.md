@@ -32,6 +32,11 @@ pnpm format     # Prettier write
 
 Run `pnpm typecheck` and `pnpm test` before committing.
 
+## Verification
+
+- Prefer the in-app Browser plugin for live Calqo web UI verification when it
+  is available; use standalone Playwright only as a fallback.
+
 ## Stack
 
 React 19, TypeScript, Vite, Tailwind v4, Konva/react-konva, Zustand + immer,

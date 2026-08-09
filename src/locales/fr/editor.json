@@ -958,6 +958,26 @@
       "exit": "Sortie",
       "none": "Aucun"
     },
+    "keyframes": {
+      "authoringMode": "Mode de création de l’animation",
+      "modes": {
+        "effects": "Effets",
+        "keyframes": "Images clés"
+      },
+      "title": "Images clés de transformation",
+      "description": "Créez un mouvement simple pour ce calque.",
+    "instructions": "Déplacez la tête de lecture, puis déplacez, redimensionnez ou faites pivoter le calque sur le canevas. Calqo enregistre automatiquement la pose.",
+    "replacesEffects": "Les images clés remplacent les effets actuels de ce calque. Vous pouvez annuler la modification.",
+    "replacesKeyframes": "Choisir un effet remplace les images clés de ce calque. Vous pouvez annuler la modification.",
+      "create": "Créer des images clés",
+      "count_one": "{{count}} pose dans la scène",
+      "count_other": "{{count}} poses dans la scène",
+      "lane": "Images clés de {{name}}",
+      "add": "Ajouter une image clé à la tête de lecture",
+      "delete": "Supprimer l’image clé à la tête de lecture",
+      "goTo": "Aller à {{time}} secondes",
+      "time": "Image clé à {{time}} s"
+    },
     "params": {
       "duration": "Durée",
       "delay": "Délai",

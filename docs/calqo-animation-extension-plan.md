@@ -1,7 +1,7 @@
 # Calqo Animation Extension — "Animate" Mode
 
-**Status:** Proposed (not scheduled). Written 2026-07-19; revised same day
-after an external critical review (see §13).
+**Status:** Implemented through compact transform keyframes (app v0.6.0).
+Written 2026-07-19; compact keyframe authoring added 2026-08-09.
 **Depends on:** the shipped static editor (schema v1, Konva renderers, offscreen
 raster export, HTML (editable) export, `.calqo` envelopes).
 **Relationship to `docs/plan.md`:** the beta/1.0 roadmap deliberately biases
@@ -51,9 +51,9 @@ These were settled with the maintainer on 2026-07-19:
   environment (its CLI / cloud) that local-first users don't have. It cannot
   be the answer to "export MP4"; the in-app WebCodecs path is. Where
   Hyperframes genuinely shines is the _agent_ story (§10).
-- **Full keyframe timeline** — rejected as v1 UI. It targets a user Calqo
-  doesn't serve (motion designers) and is a large, ongoing UI investment. The
-  IR keeps the door open.
+- **Full keyframe timeline** — still rejected. Calqo 0.6.0 exposes the useful
+  subset as one whole-pose diamond lane for the selected layer, with direct
+  canvas editing; property rows, graphs, and a second timeline remain out.
 
 ## 3. Alternatives considered and rejected
 
@@ -464,8 +464,9 @@ streamed file`, `session.cancel()`. Browser and Tauri-WKWebView share the
   product).
 - No scene sequencing / artboard transitions (v2 — `ClipSettings.scenes` is
   reserved for it).
-- No keyframe timeline UI, no property graph editor, no draggable timing
-  bars.
+- No full/property keyframe timeline, graph editor, or draggable timing bars.
+  Since 0.6.0, one compact whole-pose diamond lane supports direct transform
+  keyframes for the selected layer.
 - No text-reveal presets at first ship (deferred within the track, §4.5).
 - No mobile/tablet authoring UI (desktop shell only; touch surfaces may get
   playback later).
@@ -504,6 +505,7 @@ the reliability and 1.0 work in `docs/plan.md`.
 | AN-2      | Local MP4 and GIF export                                 | AN-1                          | Export correctness/performance gate                                 |
 | AN-3      | Animated HTML and agent handoff package                  | AN-2 IR stability             | Cross-renderer conformance gate                                     |
 | AN-4      | Scenes, transitions, prompt/MCP animation                | AN-3                          | Separate v2 product decision                                        |
+| AN-5 ✅   | Compact transform keyframes                              | AN-1 custom-track IR          | Data, command, UI, and export-path gate — **passed 2026-08-09**     |
 
 AN-0 may be implemented without exposing UI. AN-0.5 is closed by the dated
 risk-acceptance decision in `docs/animation/AN-0.5-decision.md`; AN-1 may
@@ -1220,11 +1222,11 @@ do not regress static or multi-locale export.
 > Animated standalone HTML is compiled from the same `CompiledClip` IR the
 > evaluator uses (per-frame sampled on the clip's fps grid, so it is
 > frame-identical to the MP4), gated behind `prefers-reduced-motion:
-> no-preference`, and offered from the export dialog as either a single file or
+no-preference`, and offered from the export dialog as either a single file or
 > a neutral agent package. AN-3.5 (text reveals) is now **[x] complete** — see
 > below — with the shared fragment IR rendered across live canvas, MP4, and
-> HTML; `TEXT_REVEALS_ENABLED` is on as a kill-switch. True *browser
-> computed-style* conformance (as opposed to CSS-value conformance) is left to
+> HTML; `TEXT_REVEALS_ENABLED` is on as a kill-switch. True _browser
+> computed-style_ conformance (as opposed to CSS-value conformance) is left to
 > the Playwright suite.
 
 **Goal:** export a self-contained animated representation of the same IR and a
@@ -1385,7 +1387,7 @@ Design questions settled while implementing AN-4.2 (2026-07-20):
       2nd scene on), capped at 60 s and validated at parse + command time.
 - [x] **Per-scene locale**: each scene compiles at the export locale; a clip is
       rendered once per selected content locale (no cross-locale reuse).
-- [x] **Transition ownership**: the transition is stored on the *incoming*
+- [x] **Transition ownership**: the transition is stored on the _incoming_
       scene entry (plays into it from the previous scene); the first scene's is
       ignored. `cut` is instant; fade/slide carry an optional `transitionDurationMs`.
 - [x] All scenes must share the clip's dimensions (validated); poster frames and
@@ -1459,7 +1461,7 @@ Design questions settled while implementing AN-4.2 (2026-07-20):
 >   native ack, so the await is the backpressure (the §7.3 ~8 MB/frame risk).
 >   Output streams to a native temp file during the encode and is moved to the
 >   caller's sink (Blob or `WritableStream`) at finalize. `selectingVideoExport
->   Adapter` probes native + WebCodecs, routes each codec to the stronger backend,
+Adapter` probes native + WebCodecs, routes each codec to the stronger backend,
 >   and falls back to WebCodecs if a native session can't start. Wired in
 >   `adapters/index.ts` (Tauri → selecting adapter; browser → WebCodecs). Fully
 >   unit-tested (`videoToolboxAdapter.test.ts`): capability mapping, pixel
@@ -1475,12 +1477,42 @@ Design questions settled while implementing AN-4.2 (2026-07-20):
 >   host cannot compile, which is why it is feature-gated rather than default-on.
 
 - [~] Reconsider audio, WebM, imported video/GIF layers, native VideoToolbox,
-      and a richer timing UI. — **Native VideoToolbox: implemented** behind the
-      adapter + Cargo feature (above). Audio, WebM, imported video/GIF, and a
-      richer timing UI remain deferred in §10 until evidence justifies them.
+  and a richer timing UI. — **Native VideoToolbox: implemented** behind the
+  adapter + Cargo feature (above). Audio, WebM, imported video/GIF, and a
+  richer timing UI remain deferred in §10 until evidence justifies them.
 - [x] Give each accepted item its own plan; do not fold them invisibly into
       scene work. — The native encoder landed as its own adapter + Rust module and
       feature flag, not folded into scene work.
+
+### AN-5 — Compact transform keyframes (v0.6.0)
+
+> **Status: [x] complete — 2026-08-09 (app v0.6.0).** The selected layer can
+> switch explicitly between Effects and Keyframes. Keyframe authoring uses one
+> scene-spanning, aligned transform pose in the existing validated `custom`
+> track IR; the bottom transport shows one diamond lane, and moving, resizing,
+> or rotating the visible canvas object records the pose at the playhead.
+> Verified by focused keyframe/command tests plus the milestone command gate.
+
+**Product boundary:** this is not a professional timeline. Calqo exposes one
+pose lane for the selected layer, with position, scale, and rotation
+stored together. It has start/end poses, inert insertion of intermediate poses,
+click-to-seek markers, deletion above the two-pose minimum, and direct canvas
+editing. Property rows, curve graphs, draggable timing bars, and hybrid
+preset-plus-custom composition remain out of scope.
+
+- [x] Reuse schema v2 `LayerAnimation.mode = "custom"`; no migration or second
+      persisted format.
+- [x] Keep Effects and Keyframes mutually exclusive and make replacement
+      explicit in the inspector.
+- [x] Route create/add/update/delete through `projectCommands.ts` for autosave
+      and undo/redo.
+- [x] Preserve design geometry by flattening the evaluated wrapper only during
+      the pointer gesture, then committing the recovered centre-pivot pose.
+- [x] Rescale custom animation windows when scene duration changes.
+- [x] Add the selected layer's compact, keyboard-operable diamond lane to the
+      existing transport, with EN/FR strings.
+- [x] Cover canonical pose construction, interpolation, matrix recovery,
+      command history, deletion limits, and duration rescaling.
 
 ## 14. Test strategy and release evidence
 
@@ -1669,10 +1701,19 @@ work; they do not all need to be answered now.
 11. Approve animated snippet scoping and downgrade policy for rasterized groups.
 12. Revalidate Hyperframes CLI/package details at implementation time; it is an
     external labs consumer, not a stable Calqo dependency.
-13. Make a fresh product decision before enabling scenes, transitions, custom
-    keyframe authoring, audio, or video layers.
+13. ~~Make a fresh product decision before enabling scenes, transitions, custom
+    keyframe authoring, audio, or video layers.~~ **Resolved:** scenes and
+    transitions shipped in AN-4; compact custom keyframes shipped in AN-5.
+    Audio and video source layers remain separate future decisions.
 
 ## 19. Review log
+
+**2026-08-09 — AN-5 compact keyframes shipped (Codex).** Approved the narrow
+whole-pose model instead of a full timeline: explicit Effects/Keyframes
+authoring per layer, one selected-layer diamond lane, and direct canvas
+position/scale/rotation editing at the playhead. The implementation reuses the
+existing schema-v2 custom-track IR and every established evaluator/export path;
+no document migration or animation renderer fork was introduced.
 
 **2026-07-19 — AN-0.5 gate closed by maintainer risk acceptance (Codex).**
 Recorded a `Go` decision without fabricated measurements so AN-1 can proceed.
