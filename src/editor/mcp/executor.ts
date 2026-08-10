@@ -26,6 +26,15 @@ import {
 import type { PresetLayerKind, PresetSlot } from '@/editor/animation/presets';
 import { validateSceneSequence } from '@/editor/animation/sceneSequence';
 import {
+  hasMotionKeyframeAt,
+  isEditableMotion,
+  motionKeyframeTimes,
+  motionPoseAt,
+  removeMotionKeyframe,
+  rescaleCustomWindows,
+  upsertMotionKeyframe,
+} from '@/editor/animation/keyframes';
+import {
   applyAddContentLocale,
   applySetActiveContentLocale,
   editProject,
@@ -274,6 +283,15 @@ function presetValidationMessage(
     default:
       return `The animation is invalid${where}.`;
   }
+}
+
+/** Agent-facing message when compact keyframe editing meets an animation it
+ * cannot extend. Both modes are recoverable, but only by an explicit choice the
+ * agent has to make — never by silently discarding the user's motion. */
+function motionModeConflictMessage(animation: LayerAnimation): string {
+  return animation.mode === 'preset'
+    ? 'This layer is animated with effect presets, and presets and keyframes are mutually exclusive. Call clearLayerAnimation first if you mean to replace them.'
+    : "This layer's custom windows are not Calqo's compact keyframe lane. Call clearLayerAnimation first to start a lane, or keep editing it with setLayerCustomWindows.";
 }
 
 /** Apply a normalized batch to a project document (clone during simulation,
@@ -555,6 +573,83 @@ export function applyBatchToProject(
         outcome.changedLayerIds.push(layerId);
         break;
       }
+      case 'setLayerMotionKeyframe': {
+        const layerId = mappedId(operation.layerId, batch.idMap);
+        const layer = findLayerDeep(layers(), layerId);
+        if (!layer) {
+          opFail('LAYER_NOT_FOUND', `Layer "${layerId}" not found on this artboard.`);
+        }
+        const sceneDur = sceneDurationOfArtboard(artboard);
+        if (operation.timeMs > sceneDur) {
+          opFail(
+            'VALIDATION_FAILED',
+            `timeMs ${operation.timeMs} falls outside the ${sceneDur}ms scene.`,
+          );
+        }
+        if (layer.animation && !isEditableMotion(layer.animation, sceneDur)) {
+          opFail('VALIDATION_FAILED', motionModeConflictMessage(layer.animation));
+        }
+        // Unspecified properties inherit the pose the layer already shows at
+        // this time, so a partial pose is a targeted edit and an empty one is
+        // an inert insertion — the same semantics as the app's keyframe lane.
+        const pose = {
+          ...motionPoseAt(layer.animation, sceneDur, operation.timeMs),
+          ...operation.pose,
+        };
+        const candidate = upsertMotionKeyframe(
+          layer.animation,
+          sceneDur,
+          operation.timeMs,
+          pose,
+          operation.easing,
+        );
+        const parsed = layerAnimationSchema.safeParse(candidate);
+        if (!parsed.success) {
+          opFail(
+            'VALIDATION_FAILED',
+            `The pose is invalid: ${parsed.error.issues[0]?.message ?? 'schema error'}.`,
+          );
+        }
+        updateLayer(layers(), layerId, (target) => {
+          target.animation = parsed.data;
+        });
+        outcome.changedLayerIds.push(layerId);
+        break;
+      }
+      case 'deleteLayerMotionKeyframe': {
+        const layerId = mappedId(operation.layerId, batch.idMap);
+        const layer = findLayerDeep(layers(), layerId);
+        if (!layer) {
+          opFail('LAYER_NOT_FOUND', `Layer "${layerId}" not found on this artboard.`);
+        }
+        const sceneDur = sceneDurationOfArtboard(artboard);
+        if (!isEditableMotion(layer.animation, sceneDur)) {
+          opFail(
+            'VALIDATION_FAILED',
+            'This layer has no keyframe lane to delete a pose from.',
+          );
+        }
+        if (!hasMotionKeyframeAt(layer.animation, sceneDur, operation.timeMs)) {
+          opFail(
+            'VALIDATION_FAILED',
+            `No pose at ${Math.round(operation.timeMs)}ms. Existing poses: ` +
+              `${motionKeyframeTimes(layer.animation, sceneDur).join(', ')}ms.`,
+          );
+        }
+        const next = removeMotionKeyframe(layer.animation, sceneDur, operation.timeMs);
+        if (!next) {
+          opFail(
+            'VALIDATION_FAILED',
+            'The first and last poses define the scene and cannot be deleted, ' +
+              'and a lane keeps at least two poses. Use clearLayerAnimation to remove the motion.',
+          );
+        }
+        updateLayer(layers(), layerId, (target) => {
+          target.animation = next;
+        });
+        outcome.changedLayerIds.push(layerId);
+        break;
+      }
       case 'clearLayerAnimation': {
         const layerId = mappedId(operation.layerId, batch.idMap);
         const updated = updateLayer(layers(), layerId, (target) => {
@@ -572,7 +667,16 @@ export function applyBatchToProject(
         if (!target) {
           opFail('ARTBOARD_NOT_FOUND', `Artboard "${abId}" does not exist.`);
         }
-        target.timing = { duration: Math.round(operation.durationMs) };
+        const duration = Math.round(operation.durationMs);
+        const previous = sceneDurationOfArtboard(target);
+        // Stretch custom windows with the scene, exactly as the user command
+        // does: otherwise shrinking leaves out-of-scene windows the project
+        // schema rejects, and growing breaks compact keyframe alignment.
+        rescaleCustomWindows(
+          target.layers as CalqoLayer[],
+          previous > 0 ? duration / previous : 1,
+        );
+        target.timing = { duration };
         break;
       }
       case 'setClipFps': {

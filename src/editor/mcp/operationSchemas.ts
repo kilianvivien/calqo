@@ -12,6 +12,7 @@ import {
   stickerOutlineSchema,
   presetInstanceSchema,
   trackWindowSchema,
+  easingSchema,
   sceneEntrySchema,
   MIN_SCENE_DURATION_MS,
   MAX_SCENE_DURATION_MS,
@@ -189,6 +190,53 @@ export const setLayerCustomWindowsOperationSchema = z
   })
   .strict();
 
+/** One whole transform pose in Calqo's compact keyframe format. Every field is
+ * optional: omitted properties keep the value the layer already shows at that
+ * time, so an empty pose inserts an inert keyframe the same way the app's
+ * "add keyframe" button does. Ranges are enforced by the animation schema when
+ * the pose is committed. */
+export const motionPoseSchema = z
+  .object({
+    /** Horizontal offset from the layer's design position, px. */
+    dx: z.number().finite(),
+    /** Vertical offset from the layer's design position, px. */
+    dy: z.number().finite(),
+    scaleX: z.number().finite(),
+    scaleY: z.number().finite(),
+    /** Degrees, clockwise, about the layer centre. */
+    rotation: z.number().finite(),
+    opacity: z.number().min(0).max(1),
+  })
+  .partial()
+  .strict();
+
+/** Insert or update one transform pose on a layer's compact keyframe lane —
+ * the same format the user's Keyframes tab edits, so agent motion stays
+ * editable by hand afterwards. Creates the lane when the layer has no
+ * animation yet. */
+export const setLayerMotionKeyframeOperationSchema = z
+  .object({
+    type: z.literal('setLayerMotionKeyframe'),
+    layerId: z.string().min(1),
+    /** ms from scene start; must fall inside the scene. */
+    timeMs: z.number().finite().nonnegative(),
+    /** Omit entirely to insert an inert pose at `timeMs`. */
+    pose: motionPoseSchema.optional(),
+    /** Easing *into* this pose (ignored at t=0). Defaults to ease-in-out. */
+    easing: easingSchema.optional(),
+  })
+  .strict();
+
+/** Remove one intermediate pose from a layer's compact keyframe lane. The two
+ * endpoint poses define the scene bounds and cannot be deleted. */
+export const deleteLayerMotionKeyframeOperationSchema = z
+  .object({
+    type: z.literal('deleteLayerMotionKeyframe'),
+    layerId: z.string().min(1),
+    timeMs: z.number().finite().nonnegative(),
+  })
+  .strict();
+
 /** Remove all animation from a layer. */
 export const clearLayerAnimationOperationSchema = z
   .object({
@@ -258,6 +306,8 @@ export const mcpOperationSchema = z.discriminatedUnion('type', [
   setActiveContentLocaleOperationSchema,
   setLayerPresetOperationSchema,
   setLayerCustomWindowsOperationSchema,
+  setLayerMotionKeyframeOperationSchema,
+  deleteLayerMotionKeyframeOperationSchema,
   clearLayerAnimationOperationSchema,
   setSceneDurationOperationSchema,
   setClipFpsOperationSchema,
@@ -316,6 +366,7 @@ export const insertImageInputSchema = z
   })
   .strict();
 
+export type McpMotionPose = z.infer<typeof motionPoseSchema>;
 export type McpOperation = z.infer<typeof mcpOperationSchema>;
 export type ApplyOperationsInput = z.infer<typeof applyOperationsInputSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectInputSchema>;

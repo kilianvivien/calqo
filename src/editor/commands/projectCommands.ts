@@ -49,6 +49,7 @@ import {
   createEditableMotion,
   motionPoseAt,
   removeMotionKeyframe,
+  rescaleCustomWindows,
   upsertMotionKeyframe,
   type MotionPose,
 } from '@/editor/animation/keyframes';
@@ -1420,19 +1421,10 @@ export function setSceneDuration(
       const artboard = getArtboard(draft, id);
       if (!artboard) return;
       const previous = artboard.timing?.duration ?? DEFAULT_SCENE_DURATION_MS;
-      const ratio = previous > 0 ? clamped / previous : 1;
-      const scaleCustomWindows = (layers: CalqoLayer[]) => {
-        for (const layer of layers) {
-          if (layer.animation?.mode === 'custom') {
-            for (const window of layer.animation.windows) {
-              window.start *= ratio;
-              window.duration *= ratio;
-            }
-          }
-          if (layer.type === 'group') scaleCustomWindows(layer.children);
-        }
-      };
-      scaleCustomWindows(artboard.layers as CalqoLayer[]);
+      rescaleCustomWindows(
+        artboard.layers as CalqoLayer[],
+        previous > 0 ? clamped / previous : 1,
+      );
       artboard.timing = { duration: clamped };
     },
     options,

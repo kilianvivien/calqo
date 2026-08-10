@@ -1,7 +1,8 @@
 # Calqo Animation Extension — "Animate" Mode
 
-**Status:** Implemented through compact transform keyframes (app v0.6.0).
-Written 2026-07-19; compact keyframe authoring added 2026-08-09.
+**Status:** Implemented through compact transform keyframes, on both the UI and
+the agent surface (app v0.6.1). Written 2026-07-19; compact keyframe authoring
+added 2026-08-09, exposed to MCP agents 2026-08-10.
 **Depends on:** the shipped static editor (schema v1, Konva renderers, offscreen
 raster export, HTML (editable) export, `.calqo` envelopes).
 **Relationship to `docs/plan.md`:** the beta/1.0 roadmap deliberately biases
@@ -506,6 +507,7 @@ the reliability and 1.0 work in `docs/plan.md`.
 | AN-3      | Animated HTML and agent handoff package                  | AN-2 IR stability             | Cross-renderer conformance gate                                     |
 | AN-4      | Scenes, transitions, prompt/MCP animation                | AN-3                          | Separate v2 product decision                                        |
 | AN-5 ✅   | Compact transform keyframes                              | AN-1 custom-track IR          | Data, command, UI, and export-path gate — **passed 2026-08-09**     |
+| AN-5.1 ✅ | Compact keyframes on the agent (MCP) surface             | AN-4.3, AN-5                  | Agent motion stays UI-editable — **passed 2026-08-10**              |
 
 AN-0 may be implemented without exposing UI. AN-0.5 is closed by the dated
 risk-acceptance decision in `docs/animation/AN-0.5-decision.md`; AN-1 may
@@ -1513,6 +1515,37 @@ preset-plus-custom composition remain out of scope.
       existing transport, with EN/FR strings.
 - [x] Cover canonical pose construction, interpolation, matrix recovery,
       command history, deletion limits, and duration rescaling.
+
+### AN-5.1 — Keyframes on the agent surface (v0.6.1)
+
+> **Status: [x] complete — 2026-08-10 (app v0.6.1).** AN-5 shipped the keyframe
+> lane to the UI only; the MCP contract still exposed animation as presets plus
+> raw `setLayerCustomWindows`, which writes motion the user's lane cannot edit.
+> AN-5.1 closes that gap and the read-side blind spot behind it.
+
+**Why it was a gap, not a preference:** `setLayerCustomWindows` can express the
+compact IR, but nothing documented the alignment invariant, so an agent had no
+way to know that a window must span the scene with all six aligned tracks to
+stay editable. Agent motion therefore landed as a lane the user could only
+replace, never adjust.
+
+- [x] Add `setLayerMotionKeyframe` / `deleteLayerMotionKeyframe` operations that
+      write the compact lane through the shared `keyframes.ts` helpers, so the
+      agent path and the canvas path produce identical documents.
+- [x] Inherit unspecified pose properties from the pose evaluated at that time:
+      a partial pose is a targeted edit, an omitted one an inert insertion.
+- [x] Refuse (never silently discard) an existing preset or non-compact custom
+      animation; the agent must call `clearLayerAnimation` deliberately.
+- [x] Report animation, `sceneDurationMs`, and clip settings in the MCP context
+      serializers so motion can be refined rather than overwritten.
+- [x] Share one `rescaleCustomWindows` helper between `projectCommands` and the
+      MCP executor. The executor previously set `timing` without rescaling,
+      which could shrink a scene under its own windows and produce a document
+      that fails `safeImportProject` — covered by a round-trip test.
+- [x] Replace `structuredClone` in the keyframe helpers with a field-by-field
+      clone: the executor edits immer drafts, and cloning a proxy throws.
+- [x] Document keyframes in the agent guide, and stop advertising text-reveal
+      presets as rejected — they shipped in AN-3.5.
 
 ## 14. Test strategy and release evidence
 

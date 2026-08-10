@@ -1,4 +1,10 @@
-import type { Easing, Keyframe, LayerAnimation, Track } from '@/lib/schema';
+import type {
+  CalqoLayer,
+  Easing,
+  Keyframe,
+  LayerAnimation,
+  Track,
+} from '@/lib/schema';
 import { evaluateWindowsInto, createIdentityOverride } from './evaluator';
 import type { CompiledWindow, WrapperOverride } from './types';
 
@@ -97,6 +103,25 @@ export function isEditableMotion(
 
 function identityValue(prop: MotionProp): number {
   return IDENTITY_MOTION_POSE[prop];
+}
+
+/** Deep-copy the compact motion IR field by field. `structuredClone` cannot be
+ * used here: callers that edit a document in place (the MCP executor) pass an
+ * immer draft, and cloning a proxy throws `DataCloneError`. */
+function cloneMotion(
+  animation: Extract<LayerAnimation, { mode: 'custom' }>,
+): Extract<LayerAnimation, { mode: 'custom' }> {
+  return {
+    mode: 'custom',
+    windows: animation.windows.map((window) => ({
+      start: window.start,
+      duration: window.duration,
+      tracks: window.tracks.map((track) => ({
+        prop: track.prop,
+        keyframes: track.keyframes.map((keyframe) => ({ ...keyframe })),
+      })),
+    })),
+  };
 }
 
 /** Create the two endpoint poses required by the schema. */
@@ -208,7 +233,7 @@ export function upsertMotionKeyframe(
   easing: Easing = 'ease-in-out',
 ): Extract<LayerAnimation, { mode: 'custom' }> {
   const next = isEditableMotion(animation, sceneDurationMs)
-    ? structuredClone(animation)
+    ? cloneMotion(animation)
     : createEditableMotion(sceneDurationMs);
   const t = normalizedTime(timeMs, sceneDurationMs);
   next.windows[0].tracks = next.windows[0].tracks.map((track) => ({
@@ -236,7 +261,7 @@ export function removeMotionKeyframe(
   // Start/end poses define the scene bounds and stay permanent in the compact
   // editor; only intermediate diamonds can be deleted.
   if (t <= TIME_EPSILON || t >= 1 - TIME_EPSILON) return null;
-  const next = structuredClone(animation);
+  const next = cloneMotion(animation);
   next.windows[0].tracks = next.windows[0].tracks.map((track) => ({
     ...track,
     keyframes: track.keyframes.filter(
@@ -244,6 +269,30 @@ export function removeMotionKeyframe(
     ),
   })) as Track[];
   return next;
+}
+
+/** Stretch every custom window in a layer tree by `ratio`, in place.
+ *
+ * Scene duration and custom windows are coupled twice over: the schema rejects
+ * a window that ends after the scene (`artboardSchema`), and the compact
+ * keyframe lane only recognises a window that spans the scene exactly
+ * ({@link isEditableMotion}). Any code path that changes a scene's duration must
+ * therefore rescale alongside it — the user command and the MCP executor share
+ * this helper so the two cannot drift. */
+export function rescaleCustomWindows(
+  layers: CalqoLayer[],
+  ratio: number,
+): void {
+  if (!Number.isFinite(ratio) || ratio === 1) return;
+  for (const layer of layers) {
+    if (layer.animation?.mode === 'custom') {
+      for (const window of layer.animation.windows) {
+        window.start *= ratio;
+        window.duration *= ratio;
+      }
+    }
+    if (layer.type === 'group') rescaleCustomWindows(layer.children, ratio);
+  }
 }
 
 export function hasMotionKeyframeAt(
