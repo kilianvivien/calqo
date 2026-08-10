@@ -135,8 +135,8 @@ Preset kinds by slot:
   \`slide\`, \`rise\`, \`wipe\` take a \`direction\` (\`up\`|\`down\`|\`left\`|\`right\`);
   \`slide\`/\`rise\` also take a \`distance\` in px.
 - emphasis (loop, settles to identity): \`pulse\`, \`wiggle\`, \`float\`.
-- Text-reveal kinds (\`typewriter\`, \`word-rise\`) are reserved and currently
-  rejected — do not use them yet.
+- text reveals (enter slot, text layers only): \`typewriter\` reveals character
+  by character, \`word-rise\` lifts words in sequence.
 
 Preset instance fields: \`kind\` (required), \`duration\` ms (required),
 \`delay\` ms from the slot anchor (required), optional \`easing\`
@@ -164,11 +164,58 @@ enter and exit must not overlap.
 
 - \`setLayerPreset\` sets/replaces a slot, or clears it with \`"preset": null\`.
 - \`clearLayerAnimation\` removes all animation from a layer.
-- \`setLayerCustomWindows\` sets raw per-property track windows for a power-user
-  path; every window must fit inside the scene and no two windows may overlap on
-  the same property.
-- \`setSceneDuration\` sets a scene's length (250–60000 ms); \`setClipFps\` sets
-  24/30/60.
+- \`setSceneDuration\` sets a scene's length (250–60000 ms) and stretches any
+  keyframes/custom windows on it to match; \`setClipFps\` sets 24/30/60.
+
+### Keyframes
+
+Presets cover most motion. Reach for keyframes when the user asks for a
+specific path or timing a preset cannot express — "drift left while fading",
+"pop at 1.2 s, settle by 2 s".
+
+\`setLayerMotionKeyframe\` writes one whole transform pose at a time onto the
+same compact lane the user's **Keyframes** tab edits, so everything you author
+stays editable by hand afterwards:
+
+\`\`\`json
+{ "type": "setLayerMotionKeyframe", "layerId": "layer_badge", "timeMs": 1200,
+  "pose": { "dx": -40, "scaleX": 1.2, "scaleY": 1.2, "opacity": 1 },
+  "easing": "overshoot" }
+\`\`\`
+
+- \`pose\` fields: \`dx\`/\`dy\` (px from the layer's design position),
+  \`scaleX\`/\`scaleY\` (1 = design size), \`rotation\` (deg about the centre),
+  \`opacity\` (0–1). Every field is optional and any you omit keeps the value the
+  layer already shows at \`timeMs\` — so a partial pose is a targeted change, and
+  omitting \`pose\` entirely inserts a pose that changes nothing (useful as a
+  hold before a move).
+- A lane always spans the scene: the first call creates poses at 0 ms and the
+  scene end, then each further call inserts or updates one.
+- \`easing\` applies *into* the pose (\`linear\`, \`ease-in\`, \`ease-out\`,
+  \`ease-in-out\`, \`overshoot\`, \`bounce\`); it defaults to \`ease-in-out\` and is
+  ignored at 0 ms.
+- \`deleteLayerMotionKeyframe\` removes one intermediate pose
+  (\`{ "type": "deleteLayerMotionKeyframe", "layerId": "…", "timeMs": 1200 }\`).
+  The first and last poses are permanent — use \`clearLayerAnimation\` to drop
+  the whole lane.
+- Presets and keyframes are mutually exclusive per layer. On a preset-animated
+  layer, \`setLayerMotionKeyframe\` fails rather than silently discarding the
+  user's effects; call \`clearLayerAnimation\` first if replacing them is what
+  the user wants.
+
+\`setLayerCustomWindows\` remains the escape hatch for motion the pose lane
+cannot express (per-property windows, \`wipe-progress\`, \`blur\`). Every window
+must fit inside the scene and no two may overlap on the same property. Windows
+written this way are *not* editable in the user's keyframe lane, so prefer
+\`setLayerMotionKeyframe\` for ordinary transform motion.
+
+### Reading existing animation
+
+Layer summaries carry an \`animation\` field so you can refine motion instead of
+overwriting it: \`{"mode":"preset", …}\` with the instances,
+\`{"mode":"keyframes","times":[0,1200,4000],"poses":[…]}\` for a compact lane, or
+\`{"mode":"custom","windows":[…]}\` for raw windows. Artboards report
+\`sceneDurationMs\`, and the project reports \`clip\` (fps and scenes).
 
 Multi-scene clips (an ordered set of artboards joined by transitions):
 

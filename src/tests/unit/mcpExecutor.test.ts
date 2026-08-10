@@ -626,4 +626,82 @@ describe('mcp context serializers', () => {
     expect(status.activeProject?.id).toBe(project.id);
     expect(status.writeAccess).toBe('requires-approval');
   });
+
+  it('reports animation so an agent can refine motion instead of overwriting it', () => {
+    const project = openProject();
+    executeApplyOperations({
+      operations: [
+        { type: 'addLayer', layer: textLayer('layer_head') },
+        { type: 'addLayer', layer: shapeLayer('layer_panel') },
+        { type: 'setSceneDuration', durationMs: 4000 },
+        {
+          type: 'setLayerPreset',
+          layerId: 'layer_head',
+          slot: 'enter',
+          preset: { kind: 'fade', duration: 500, delay: 0 },
+        },
+        {
+          type: 'setLayerMotionKeyframe',
+          layerId: 'layer_panel',
+          timeMs: 2000,
+          pose: { dx: -40 },
+        },
+        { type: 'setClipFps', fps: 60 },
+      ],
+    });
+
+    const summary = serializeProjectSummary(currentProject(project.id));
+    const artboard = summary.artboards[0];
+    expect(artboard.sceneDurationMs).toBe(4000);
+    expect(summary.clip).toMatchObject({ fps: 60 });
+
+    const byId = new Map(artboard.layers.map((layer) => [layer.id, layer]));
+    expect(byId.get('layer_head')?.animation).toMatchObject({
+      mode: 'preset',
+      enter: { kind: 'fade', duration: 500 },
+    });
+    expect(byId.get('layer_panel')?.animation).toMatchObject({
+      mode: 'keyframes',
+      times: [0, 2000, 4000],
+    });
+
+    const status = serializeAppStatus();
+    expect(status.activeProject?.clipFps).toBe(60);
+    expect(status.activeProject?.artboards[0].sceneDurationMs).toBe(4000);
+  });
+
+  it('summarizes raw custom windows without dumping the whole track IR', () => {
+    const project = openProject();
+    executeApplyOperations({
+      operations: [
+        { type: 'addLayer', layer: textLayer('layer_head') },
+        {
+          type: 'setLayerCustomWindows',
+          layerId: 'layer_head',
+          windows: [
+            {
+              start: 0,
+              duration: 1000,
+              tracks: [
+                {
+                  prop: 'blur',
+                  keyframes: [
+                    { t: 0, value: 8 },
+                    { t: 1, value: 0 },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const summary = serializeProjectSummary(currentProject(project.id));
+    expect(summary.artboards[0].layers[0].animation).toMatchObject({
+      mode: 'custom',
+      windows: [
+        { start: 0, duration: 1000, props: ['blur'], keyframeCount: 2 },
+      ],
+    });
+  });
 });

@@ -73,6 +73,21 @@ quote cards, campaign variants, and multilingual public information.
 | **Touch & stylus**   | Responsive phone quick-edit UI, tablet gestures, coarse-pointer controls, long-press menus, and pressure-aware brush strokes    |
 | **Desktop**          | Native macOS menus, `.calqo` open/save, image drop and clipboard support, local font discovery, and secure AI-key storage       |
 
+## Calqo 0.6.1 — Agents animate too
+
+The keyframe lane is now a first-class part of the agent surface, so a
+connected agent animates the same way you do.
+
+- `setLayerMotionKeyframe` and `deleteLayerMotionKeyframe` write whole transform
+  poses onto the same compact lane the Keyframes tab edits, so agent-authored
+  motion stays editable by hand afterwards.
+- Layer summaries now report existing animation — presets, keyframe poses, or
+  raw windows — along with scene duration and clip settings, so an agent can
+  refine motion instead of overwriting it blindly.
+- Changing a scene's duration over MCP rescales its keyframes and custom
+  windows, matching the in-app command.
+- Text-reveal presets are documented for agents now that they ship.
+
 ## Calqo 0.6.0 — Simple motion, your way
 
 Calqo's Animate mode now includes a deliberately compact keyframe editor. Pick

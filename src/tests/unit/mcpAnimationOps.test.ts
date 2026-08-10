@@ -5,8 +5,14 @@ import { undoProject } from '@/editor/commands/projectCommands';
 import {
   createArtboard,
   createDefaultProject,
+  safeImportProject,
   type CalqoProject,
 } from '@/lib/schema';
+import {
+  isEditableMotion,
+  motionKeyframeTimes,
+  motionPoseAt,
+} from '@/editor/animation/keyframes';
 import { historyStore } from '@/lib/state/historyStore';
 import { projectStore } from '@/lib/state/projectStore';
 import { selectionStore } from '@/lib/state/selectionStore';
@@ -323,5 +329,316 @@ describe('AN-4.3 scene and clip operations', () => {
     });
     executeApplyOperations({ operations: [{ type: 'setClipScenes', scenes: [] }] });
     expect(currentProject(project.id).clipSettings?.scenes).toBeUndefined();
+  });
+});
+
+/**
+ * AN-5.1 exposes the compact keyframe lane (AN-5) through the agent surface.
+ * The gate is that agent-authored motion lands in exactly the format the user's
+ * Keyframes tab edits — asserted with `isEditableMotion` throughout, since a
+ * lane that fails that predicate is invisible to the user even though it plays.
+ */
+describe('AN-5.1 keyframe operations', () => {
+  const laneOf = (projectId: string) => {
+    const layer = firstLayer(projectId);
+    const duration =
+      currentProject(projectId).artboards[0].timing?.duration ?? 0;
+    return {
+      animation: layer?.animation,
+      duration,
+      editable: isEditableMotion(layer?.animation, duration),
+      times: motionKeyframeTimes(layer?.animation, duration),
+      poseAt: (t: number) => motionPoseAt(layer?.animation, duration, t),
+    };
+  };
+
+  it('creates a lane the keyframe editor recognises', () => {
+    const project = openProject();
+    const result = executeApplyOperations({
+      operations: [
+        {
+          type: 'setLayerMotionKeyframe',
+          layerId: 'layer_headline',
+          timeMs: 2500,
+          pose: { dx: -40, scaleX: 1.2, scaleY: 1.2 },
+        },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    expect(result.changedLayerIds).toContain('layer_headline');
+
+    const lane = laneOf(project.id);
+    expect(lane.editable).toBe(true);
+    // Endpoint poses bracket the scene; the agent's pose sits between them.
+    expect(lane.times).toEqual([0, 2500, 5000]);
+    expect(lane.poseAt(2500)).toMatchObject({
+      dx: -40,
+      scaleX: 1.2,
+      scaleY: 1.2,
+    });
+    expect(lane.poseAt(0)).toMatchObject({ dx: 0, scaleX: 1 });
+
+    undoProject(project.id);
+    expect(firstLayer(project.id)?.animation).toBeUndefined();
+  });
+
+  it('inherits unspecified pose properties from the visible pose', () => {
+    const project = openProject();
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'setLayerMotionKeyframe',
+          layerId: 'layer_headline',
+          timeMs: 2500,
+          pose: { dx: -40, opacity: 0.5 },
+        },
+        // A second, partial edit at the same time must not reset dx.
+        {
+          type: 'setLayerMotionKeyframe',
+          layerId: 'layer_headline',
+          timeMs: 2500,
+          pose: { opacity: 1 },
+        },
+      ],
+    });
+    expect(laneOf(project.id).poseAt(2500)).toMatchObject({
+      dx: -40,
+      opacity: 1,
+    });
+  });
+
+  it('inserts an inert pose when the pose is omitted', () => {
+    const project = openProject();
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'setLayerMotionKeyframe',
+          layerId: 'layer_headline',
+          timeMs: 5000,
+          pose: { dx: 100 },
+        },
+      ],
+    });
+    const before = laneOf(project.id).poseAt(2000);
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'setLayerMotionKeyframe',
+          layerId: 'layer_headline',
+          timeMs: 2000,
+        },
+      ],
+    });
+    const after = laneOf(project.id);
+    expect(after.times).toEqual([0, 2000, 5000]);
+    expect(after.poseAt(2000).dx).toBeCloseTo(before.dx, 6);
+  });
+
+  it('refuses to overwrite a preset animation', () => {
+    const project = openProject();
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'setLayerPreset',
+          layerId: 'layer_headline',
+          slot: 'enter',
+          preset: { kind: 'fade', duration: 500, delay: 0 },
+        },
+      ],
+    });
+    const error = expectMcpError(
+      () =>
+        executeApplyOperations({
+          operations: [
+            {
+              type: 'setLayerMotionKeyframe',
+              layerId: 'layer_headline',
+              timeMs: 1000,
+            },
+          ],
+        }),
+      'VALIDATION_FAILED',
+    );
+    expect(error.message).toContain('clearLayerAnimation');
+    // The user's preset survives the rejected batch.
+    expect(firstLayer(project.id)?.animation).toMatchObject({ mode: 'preset' });
+  });
+
+  it('rejects a pose outside the scene and an out-of-range value', () => {
+    const project = openProject();
+    expectMcpError(
+      () =>
+        executeApplyOperations({
+          operations: [
+            {
+              type: 'setLayerMotionKeyframe',
+              layerId: 'layer_headline',
+              timeMs: 6000,
+            },
+          ],
+        }),
+      'VALIDATION_FAILED',
+    );
+    expectMcpError(
+      () =>
+        executeApplyOperations({
+          operations: [
+            {
+              type: 'setLayerMotionKeyframe',
+              layerId: 'layer_headline',
+              timeMs: 1000,
+              pose: { scaleX: 9999 },
+            },
+          ],
+        }),
+      'VALIDATION_FAILED',
+    );
+    expect(firstLayer(project.id)?.animation).toBeUndefined();
+  });
+
+  it('deletes an intermediate pose but keeps the endpoints', () => {
+    const project = openProject();
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'setLayerMotionKeyframe',
+          layerId: 'layer_headline',
+          timeMs: 2500,
+          pose: { dx: -40 },
+        },
+      ],
+    });
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'deleteLayerMotionKeyframe',
+          layerId: 'layer_headline',
+          timeMs: 2500,
+        },
+      ],
+    });
+    expect(laneOf(project.id).times).toEqual([0, 5000]);
+
+    expectMcpError(
+      () =>
+        executeApplyOperations({
+          operations: [
+            {
+              type: 'deleteLayerMotionKeyframe',
+              layerId: 'layer_headline',
+              timeMs: 0,
+            },
+          ],
+        }),
+      'VALIDATION_FAILED',
+    );
+    expect(laneOf(project.id).times).toEqual([0, 5000]);
+  });
+
+  it('reports the poses that exist when asked to delete a missing one', () => {
+    openProject();
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'setLayerMotionKeyframe',
+          layerId: 'layer_headline',
+          timeMs: 2500,
+        },
+      ],
+    });
+    const error = expectMcpError(
+      () =>
+        executeApplyOperations({
+          operations: [
+            {
+              type: 'deleteLayerMotionKeyframe',
+              layerId: 'layer_headline',
+              timeMs: 1234,
+            },
+          ],
+        }),
+      'VALIDATION_FAILED',
+    );
+    expect(error.message).toContain('0, 2500, 5000');
+  });
+
+  it('rejects deletion on a layer with no lane', () => {
+    openProject();
+    expectMcpError(
+      () =>
+        executeApplyOperations({
+          operations: [
+            {
+              type: 'deleteLayerMotionKeyframe',
+              layerId: 'layer_headline',
+              timeMs: 1000,
+            },
+          ],
+        }),
+      'VALIDATION_FAILED',
+    );
+  });
+});
+
+describe('AN-5.1 scene duration rescaling', () => {
+  it('stretches a keyframe lane with the scene so it stays editable', () => {
+    const project = openProject();
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'setLayerMotionKeyframe',
+          layerId: 'layer_headline',
+          timeMs: 2500,
+          pose: { dx: -40 },
+        },
+        { type: 'setSceneDuration', durationMs: 8000 },
+      ],
+    });
+    const layer = firstLayer(project.id);
+    expect(currentProject(project.id).artboards[0].timing?.duration).toBe(8000);
+    expect(isEditableMotion(layer?.animation, 8000)).toBe(true);
+    // Normalized keyframe times are preserved, so the pose keeps its relative
+    // place in the longer scene.
+    expect(motionKeyframeTimes(layer?.animation, 8000)).toEqual([
+      0, 4000, 8000,
+    ]);
+  });
+
+  it('keeps custom windows inside a shortened scene', () => {
+    const project = openProject();
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'setLayerCustomWindows',
+          layerId: 'layer_headline',
+          windows: [
+            {
+              start: 2500,
+              duration: 2500,
+              tracks: [
+                {
+                  prop: 'opacity',
+                  keyframes: [
+                    { t: 0, value: 0 },
+                    { t: 1, value: 1 },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        { type: 'setSceneDuration', durationMs: 2000 },
+      ],
+    });
+    const animation = firstLayer(project.id)?.animation;
+    expect(animation?.mode).toBe('custom');
+    const window = animation?.mode === 'custom' ? animation.windows[0] : null;
+    expect(window).toMatchObject({ start: 1000, duration: 1000 });
+    // The decisive check: a scene shrunk without rescaling leaves windows the
+    // project schema rejects, so the document would fail its own re-import.
+    const imported = safeImportProject(
+      JSON.parse(JSON.stringify(currentProject(project.id))),
+    );
+    expect(imported.ok).toBe(true);
   });
 });
