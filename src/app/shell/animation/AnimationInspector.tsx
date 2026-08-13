@@ -55,6 +55,12 @@ const DIRECTIONS: PresetDirection[] = ['up', 'down', 'left', 'right'];
 const FPS_OPTIONS: ClipSettings['fps'][] = [24, 30, 60];
 type AuthoringMode = 'effects' | 'keyframes';
 
+/** Shortest preset duration the slider offers. */
+const MIN_PRESET_DURATION_MS = 100;
+/** Sliders step in 50 ms up to this span, then in 100 ms so a long scene stays
+ * draggable end to end. */
+const COARSE_STEP_ABOVE_MS = 10_000;
+
 function prefersReducedMotion(): boolean {
   return (
     typeof window !== 'undefined' &&
@@ -218,6 +224,7 @@ export function AnimationInspector() {
                   key={slot}
                   slot={slot}
                   layerKind={layer.type as PresetLayerKind}
+                  sceneDuration={sceneDuration}
                   current={animation?.[slot] ?? null}
                   onSelectKind={(kind) =>
                     commit(slot, kind ? defaultPresetInstance(kind) : null)
@@ -225,7 +232,11 @@ export function AnimationInspector() {
                   onParamChange={(patch) => {
                     // Coalescing boundaries are owned by the slider's pointer down/up;
                     // discrete selects (direction/easing) are single undoable edits.
-                    updateLayerPresetParams(project.id, layer.id, slot, patch);
+                    const result = updateLayerPresetParams(project.id, layer.id, slot, patch);
+                    // The sliders keep each knob inside the scene, so a rejection
+                    // here means a real conflict (an enter/exit overlap) the
+                    // author needs to see rather than a silently dropped drag.
+                    if (!result.ok) setToast(t(`animate.errors.${result.code}`));
                   }}
                   onHover={(kind) => previewSlot(slot, kind)}
                   onHoverEnd={endPreview}
@@ -304,6 +315,8 @@ export function AnimationInspector() {
 interface SlotSectionProps {
   slot: PresetSlot;
   layerKind: PresetLayerKind;
+  /** Scene length in ms — the ceiling every timing knob is measured against. */
+  sceneDuration: number;
   current: PresetInstance | null;
   onSelectKind: (kind: PresetKind | null) => void;
   onParamChange: (patch: Partial<PresetInstance>, coalesce: boolean) => void;
@@ -314,6 +327,7 @@ interface SlotSectionProps {
 function SlotSection({
   slot,
   layerKind,
+  sceneDuration,
   current,
   onSelectKind,
   onParamChange,
@@ -321,6 +335,26 @@ function SlotSection({
   onHoverEnd,
 }: SlotSectionProps) {
   const { t } = useTranslation('editor');
+  /** ms rendered as ms below a second and as seconds above it, so a long
+   * typewriter reads "8.5 s" instead of "8500 ms". */
+  const timing = (value: number): string => {
+    const ms = Math.round(value);
+    if (ms < 1000) return t('animate.params.ms', { value: ms });
+    const seconds = ms / 1000;
+    return t('animate.params.seconds', {
+      value: seconds.toFixed(Number.isInteger(seconds) ? 0 : 1),
+    });
+  };
+  // Timing knobs run to the scene length rather than a fixed cap: a typewriter
+  // over a long paragraph needs seconds, not milliseconds. Each knob leaves room
+  // for the other so the pair always fits the scene — the command layer rejects
+  // a slot window that runs past it (`validatePresetAnimation`).
+  const timingStep = sceneDuration > COARSE_STEP_ABOVE_MS ? 100 : 50;
+  const durationMax = Math.max(
+    MIN_PRESET_DURATION_MS,
+    sceneDuration - (current?.delay ?? 0),
+  );
+  const delayMax = Math.max(0, sceneDuration - (current?.duration ?? 0));
   // The enter slot on a text/list layer also offers the text-reveal presets
   // (typewriter / word-rise) when they are enabled (AN-3.5).
   const kinds: readonly PresetKind[] = useMemo(() => {
@@ -395,19 +429,19 @@ function SlotSection({
           <SliderRow
             label={t('animate.params.duration')}
             value={current.duration}
-            min={100}
-            max={4000}
-            step={50}
-            display={t('animate.params.ms', { value: Math.round(current.duration) })}
+            min={MIN_PRESET_DURATION_MS}
+            max={durationMax}
+            step={timingStep}
+            display={timing(current.duration)}
             onChange={(value, coalesce) => onParamChange({ duration: value }, coalesce)}
           />
           <SliderRow
             label={t('animate.params.delay')}
             value={current.delay}
             min={0}
-            max={4000}
-            step={50}
-            display={t('animate.params.ms', { value: Math.round(current.delay) })}
+            max={delayMax}
+            step={timingStep}
+            display={timing(current.delay)}
             onChange={(value, coalesce) => onParamChange({ delay: value }, coalesce)}
           />
           <ParamRow label={t('animate.params.easing')}>

@@ -92,7 +92,11 @@ export function useAnimationPlayback({
   stageRef,
 }: UseAnimationPlaybackArgs): void {
   const status = useAnimationPlaybackStore((s) => s.status);
-  const seekTime = useAnimationPlaybackStore((s) => s.timeMs);
+  // The playhead is read imperatively (see `seekEpoch` in the store): subscribing
+  // to `timeMs` would re-render the whole stage — and re-run the effect below,
+  // rebuilding every fragment overlay — on each ~20 Hz time report from our own
+  // RAF loop, which is what made text reveals flicker in the editor preview.
+  const seekEpoch = useAnimationPlaybackStore((s) => s.seekEpoch);
   const preview = useAnimationPlaybackStore((s) => s.preview);
   const bind = useAnimationPlaybackStore((s) => s.bind);
   const stopAndReset = useAnimationPlaybackStore((s) => s.stopAndReset);
@@ -214,6 +218,8 @@ export function useAnimationPlayback({
       stage?.batchDraw();
     };
 
+    const seekTime = useAnimationPlaybackStore.getState().timeMs;
+
     if (status !== 'playing') {
       // Paused / idle / preview: draw once at the current playhead.
       draw(preview ? Math.min(seekTime, sceneDuration) : seekTime);
@@ -223,6 +229,10 @@ export function useAnimationPlayback({
     // Playing: run a RAF loop from an origin anchored to the current playhead.
     const originPerf = performance.now();
     const originMs = seekTime >= sceneDuration ? 0 : seekTime;
+    // Draw the anchor frame now. Freshly built overlays sit at identity (every
+    // fragment revealed); waiting for the first RAF would let Konva paint that
+    // settled state for a frame.
+    draw(originMs);
     let lastReport = 0;
     const tick = () => {
       const elapsed = performance.now() - originPerf;
@@ -245,12 +255,13 @@ export function useAnimationPlayback({
       }
       teardownOverlays();
     };
-    // A seek re-runs this effect and re-anchors the RAF origin to the new
-    // playhead; the loop reads `seekTime` once as that origin.
+    // A seek (or play/stop/bind) bumps `seekEpoch`, which re-runs this effect and
+    // re-anchors the RAF origin to the playhead read once at that moment. Time
+    // reports from the loop itself do not, so the loop runs uninterrupted.
   }, [
     enabled,
     status,
-    seekTime,
+    seekEpoch,
     preview,
     project.id,
     artboard,

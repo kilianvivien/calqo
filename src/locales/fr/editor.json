@@ -985,6 +985,7 @@
       "distance": "Distance",
       "easing": "Accélération",
       "ms": "{{value}} ms",
+      "seconds": "{{value}} s",
       "px": "{{value}} px"
     },
     "presets": {
