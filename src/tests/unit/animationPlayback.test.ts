@@ -66,6 +66,7 @@ describe('animationPlaybackStore', () => {
       artboardId: null,
       status: 'idle',
       timeMs: 0,
+      seekEpoch: 0,
       durationMs: 0,
       preview: null,
     });
@@ -109,6 +110,28 @@ describe('animationPlaybackStore', () => {
     animationPlaybackStore.getState().play();
     expect(animationPlaybackStore.getState().timeMs).toBe(0);
     expect(animationPlaybackStore.getState().status).toBe('playing');
+  });
+
+  it('reportTime advances the playhead without bumping the seek epoch', () => {
+    // The playback effect keys on `seekEpoch`, so the RAF loop's own ~20 Hz time
+    // reports must not look like a seek — re-entering the effect would rebuild
+    // every text-reveal fragment overlay mid-play and flicker the preview.
+    const s = animationPlaybackStore.getState();
+    s.bind('p1', 'a1', 5000);
+    s.play();
+    const epoch = animationPlaybackStore.getState().seekEpoch;
+    animationPlaybackStore.getState().reportTime(120);
+    animationPlaybackStore.getState().reportTime(240);
+    expect(animationPlaybackStore.getState().timeMs).toBe(240);
+    expect(animationPlaybackStore.getState().seekEpoch).toBe(epoch);
+
+    // A user scrub, a stop, and a play all do re-anchor the loop.
+    animationPlaybackStore.getState().seek(1000);
+    expect(animationPlaybackStore.getState().seekEpoch).toBe(epoch + 1);
+    animationPlaybackStore.getState().stopAndReset();
+    expect(animationPlaybackStore.getState().seekEpoch).toBe(epoch + 2);
+    animationPlaybackStore.getState().play();
+    expect(animationPlaybackStore.getState().seekEpoch).toBe(epoch + 3);
   });
 
   it('stopAndReset clears status, time, and preview', () => {

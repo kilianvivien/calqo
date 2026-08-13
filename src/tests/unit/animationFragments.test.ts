@@ -69,6 +69,17 @@ describe('textLayout', () => {
     expect(layout.words[1].y - layout.words[0].y).toBeCloseTo(60);
   });
 
+  it('gives characters a cadence tick that counts spaces and line breaks', () => {
+    const layout = layoutText('ab cd\nef', style, { w: 1000, h: 400 }, fixedMeasurer());
+    expect(layout.chars.map((c) => c.text)).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+    // Indices are dense; ticks leave one position for the space and one for the
+    // line break, so a timed reveal pauses at each word boundary.
+    expect(layout.chars.map((c) => c.index)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(layout.chars.map((c) => c.tick)).toEqual([0, 1, 3, 4, 6, 7]);
+    // Words are reveal units themselves — their cadence is their reading order.
+    expect(layout.words.map((w) => w.tick)).toEqual(layout.words.map((w) => w.index));
+  });
+
   it('centre-aligns lines within the box', () => {
     const centered: TextStyle = { ...style, align: 'center' };
     const layout = layoutText('ab', centered, { w: 100, h: 200 }, fixedMeasurer());
@@ -104,6 +115,56 @@ describe('fragment compiler — typewriter', () => {
     // By the end of the window every char is fully shown.
     expect(evaluateFragment(last, 1000).opacity).toBeCloseTo(1);
   });
+
+  it('finishes exactly on the window end at any length', () => {
+    const long = 'the quick brown fox jumps over the lazy dog';
+    const compiled = compileFragmentAnimation({
+      layer: textLayer(long, 4000, 200),
+      preset: resolvePreset({ kind: 'typewriter', duration: 9000, delay: 500 }),
+      box: { w: 4000, h: 200 },
+      sceneDuration: 12_000,
+      measurer: fixedMeasurer(),
+      text: long,
+      style,
+    })!;
+    const last = compiled.fragments[compiled.fragments.length - 1];
+    // Still hidden a beat before the end, fully typed exactly at delay+duration.
+    expect(evaluateFragment(last, 9000).opacity).toBeCloseTo(0);
+    expect(evaluateFragment(last, 9500).opacity).toBeCloseTo(1);
+  });
+
+  it('keeps each glyph a crisp cut when the duration is long', () => {
+    const compiled = compileFragmentAnimation({
+      layer: textLayer('abcd', 1000, 200),
+      preset: resolvePreset({ kind: 'typewriter', duration: 8000, delay: 0 }),
+      box: { w: 1000, h: 200 },
+      sceneDuration: 10_000,
+      measurer: fixedMeasurer(),
+      text: 'abcd',
+      style,
+    })!;
+    // A 4-glyph reveal over 8s spaces the glyphs ~2.6s apart, but each one still
+    // snaps in — no glyph fades for a second and a half.
+    for (const fragment of compiled.fragments) {
+      expect(fragment.windows[0].duration).toBeLessThanOrEqual(70);
+    }
+  });
+
+  it('pauses at a word boundary instead of running words together', () => {
+    const compiled = compileFragmentAnimation({
+      layer: textLayer('ab cd', 1000, 200),
+      preset: resolvePreset({ kind: 'typewriter', duration: 1000, delay: 0 }),
+      box: { w: 1000, h: 200 },
+      sceneDuration: 4000,
+      measurer: fixedMeasurer(),
+      text: 'ab cd',
+      style,
+    })!;
+    const starts = compiled.fragments.map((f) => f.windows[0].start);
+    const withinWord = starts[1] - starts[0];
+    const acrossSpace = starts[2] - starts[1];
+    expect(acrossSpace).toBeCloseTo(withinWord * 2, 1);
+  });
 });
 
 describe('fragment compiler — word-rise', () => {
@@ -137,6 +198,54 @@ describe('fragment compiler — word-rise', () => {
     const lastWord = compiled!.fragments[2];
     expect(evaluateFragment(lastWord, 0).opacity).toBeCloseTo(0);
     expect(evaluateFragment(lastWord, 1000).opacity).toBeCloseTo(1);
+  });
+
+  it('spends a long duration on stagger, not on slower words', () => {
+    const text = 'one two three four five';
+    const compile = (duration: number) =>
+      compileFragmentAnimation({
+        layer: textLayer(text, 2000, 200),
+        preset: resolvePreset({ kind: 'word-rise', duration, delay: 0 }),
+        box: { w: 2000, h: 200 },
+        sceneDuration: 12_000,
+        measurer: fixedMeasurer(),
+        text,
+        style,
+      })!;
+    const short = compile(1500);
+    const long = compile(9000);
+    const stagger = (c: typeof short) =>
+      c.fragments[1].windows[0].start - c.fragments[0].windows[0].start;
+    // Six times the duration buys six times the stagger; one word's travel stays
+    // inside its cap instead of stretching into a slow drift.
+    expect(stagger(long)).toBeGreaterThan(stagger(short) * 4);
+    expect(long.fragments[0].windows[0].duration).toBeLessThanOrEqual(700);
+    // The last word still lands exactly on the window end.
+    const last = long.fragments[long.fragments.length - 1].windows[0];
+    expect(last.start + last.duration).toBeCloseTo(9000);
+  });
+
+  it('never dips a word back to transparent under a bounce easing', () => {
+    const compiled = compileFragmentAnimation({
+      layer: textLayer('one two', 1000, 200),
+      preset: resolvePreset({ kind: 'word-rise', duration: 1000, delay: 0, easing: 'bounce' }),
+      box: { w: 1000, h: 200 },
+      sceneDuration: 4000,
+      measurer: fixedMeasurer(),
+      text: 'one two',
+      style,
+    })!;
+    const first = compiled.fragments[0];
+    let peak = 0;
+    for (let t = 0; t <= 1000; t += 10) {
+      const opacity = evaluateFragment(first, t).opacity;
+      // Monotonic: once a word has faded up it never fades back down.
+      expect(opacity).toBeGreaterThanOrEqual(peak - 1e-9);
+      peak = Math.max(peak, opacity);
+    }
+    // Fully legible well before it finishes settling.
+    expect(evaluateFragment(first, 400).opacity).toBeCloseTo(1);
+    expect(evaluateFragment(first, 400).dy).toBeGreaterThan(0);
   });
 
   it('evaluateFragmentsInto reuses caller objects across frames', () => {

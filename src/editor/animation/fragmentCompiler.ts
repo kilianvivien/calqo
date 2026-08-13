@@ -31,10 +31,29 @@ import type {
 
 /** Per-character crisp reveal cap (ms): a short ramp reads as a typewriter cut
  * rather than a slow fade even when few characters share a long window. */
-const TYPEWRITER_MAX_STEP_MS = 80;
+const TYPEWRITER_MAX_STEP_MS = 70;
+/** Floor for the same ramp: below ~1 frame at 60 fps a glyph pops so hard it
+ * reads as a strobe when a whole line lands at once. */
+const TYPEWRITER_MIN_STEP_MS = 16;
+/** Share of one cadence tick a glyph spends ramping in. */
+const TYPEWRITER_STEP_FRACTION = 0.5;
+
 /** Fraction of the word-rise window one word spends moving; the rest is stagger. */
 const WORD_RISE_TRAVEL_FRACTION = 0.5;
-const WORD_RISE_MIN_TRAVEL_MS = 150;
+const WORD_RISE_MIN_TRAVEL_MS = 180;
+/** Cap on one word's travel. Without it a long reveal stretches every word into
+ * the same slow drift; capped, extra duration becomes stagger and the line
+ * cascades word by word however long it runs. */
+const WORD_RISE_MAX_TRAVEL_MS = 700;
+/** Share of a word's travel spent fading in: it is legible well before it has
+ * finished settling, which reads far better than a fade over the full travel. */
+const WORD_RISE_FADE_FRACTION = 0.6;
+/** Scale a word lifts from, so the rise reads as depth rather than a slide. */
+const WORD_RISE_START_SCALE = 0.94;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
 
 function trackOf(prop: CompiledTrack['prop'], points: readonly [number, number][], easing: Easing): CompiledTrack {
   return {
@@ -49,19 +68,31 @@ function riseDistance(style: TextStyle): number {
 }
 
 /** Compile character fragments into a typewriter reveal. Each glyph holds hidden
- * (opacity 0) until its slice, ramps to 1 over a short step, then holds visible. */
+ * (opacity 0) until its slice, ramps to 1 over a short step, then holds visible.
+ *
+ * Two things keep the rhythm right at any duration: the cadence counts the
+ * spaces and line breaks between words (`TextFragment.tick`), so words are not
+ * typed into each other; and the slice is sized so the *last* glyph lands
+ * exactly on the window end, which makes `duration` mean "fully typed by then"
+ * whether the text is five characters or five hundred. */
 function compileTypewriter(chars: TextFragment[], preset: ResolvedPreset, sceneDuration: number): CompiledFragment[] {
   const n = chars.length;
   if (n === 0) return [];
   const start = Math.min(preset.delay, sceneDuration);
-  const span = Math.min(preset.duration, sceneDuration - start);
-  const slice = span / n;
-  const step = Math.min(slice, TYPEWRITER_MAX_STEP_MS);
+  const span = Math.max(0, Math.min(preset.duration, sceneDuration - start));
+  const ticks = chars[n - 1].tick + 1;
+  const step = Math.min(
+    clamp((span / ticks) * TYPEWRITER_STEP_FRACTION, TYPEWRITER_MIN_STEP_MS, TYPEWRITER_MAX_STEP_MS),
+    Math.max(span, 1),
+  );
+  const slice = ticks > 1 ? Math.max(0, span - step) / (ticks - 1) : 0;
   return chars.map((frag) => {
-    const charStart = start + frag.index * slice;
+    const charStart = start + frag.tick * slice;
     const window: CompiledWindow = {
       start: charStart,
-      duration: Math.max(step, 1),
+      // Never ramp past the scene end: a glyph cut short there would hold a
+      // partial opacity for the rest of the scene.
+      duration: Math.max(Math.min(step, sceneDuration - charStart), 1),
       tracks: [trackOf('opacity', [[0, 0], [1, 1]], 'linear')],
     };
     return fragmentFrom(frag, [window]);
@@ -69,25 +100,33 @@ function compileTypewriter(chars: TextFragment[], preset: ResolvedPreset, sceneD
 }
 
 /** Compile word fragments into a staggered rise+fade. Words start in reading
- * order; the last word finishes exactly at the window end. */
+ * order; the last word finishes exactly at the window end. One word's travel is
+ * capped, so a longer duration buys more stagger rather than slower words. */
 function compileWordRise(words: TextFragment[], preset: ResolvedPreset, style: TextStyle, sceneDuration: number): CompiledFragment[] {
   const n = words.length;
   if (n === 0) return [];
   const start = Math.min(preset.delay, sceneDuration);
-  const span = Math.min(preset.duration, sceneDuration - start);
-  const travel = Math.max(WORD_RISE_MIN_TRAVEL_MS, span * WORD_RISE_TRAVEL_FRACTION);
-  const clampedTravel = Math.min(travel, span);
-  const perWordDelay = n > 1 ? (span - clampedTravel) / (n - 1) : 0;
+  const span = Math.max(0, Math.min(preset.duration, sceneDuration - start));
+  const travel = Math.min(
+    clamp(span * WORD_RISE_TRAVEL_FRACTION, WORD_RISE_MIN_TRAVEL_MS, WORD_RISE_MAX_TRAVEL_MS),
+    span,
+  );
+  const perWordDelay = n > 1 ? (span - travel) / (n - 1) : 0;
   const distance = riseDistance(style);
   const { easing } = preset;
   return words.map((frag) => {
     const wordStart = start + frag.index * perWordDelay;
     const window: CompiledWindow = {
       start: wordStart,
-      duration: clampedTravel,
+      duration: Math.max(travel, 1),
       tracks: [
         trackOf('dy', [[0, distance], [1, 0]], easing),
-        trackOf('opacity', [[0, 0], [1, 1]], easing),
+        trackOf('scaleX', [[0, WORD_RISE_START_SCALE], [1, 1]], easing),
+        trackOf('scaleY', [[0, WORD_RISE_START_SCALE], [1, 1]], easing),
+        // The fade resolves early and always eases out, whatever easing drives
+        // the movement: an overshoot/bounce curve on opacity clamps at 0/1 and
+        // makes a word flash on its way in.
+        trackOf('opacity', [[0, 0], [WORD_RISE_FADE_FRACTION, 1], [1, 1]], 'ease-out'),
       ],
     };
     return fragmentFrom(frag, [window]);

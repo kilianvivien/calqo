@@ -34,6 +34,14 @@ export type FragmentUnit = 'word' | 'char';
 export interface TextFragment {
   /** Reading-order index (0-based) among fragments of the same unit. */
   index: number;
+  /**
+   * Cadence position (0-based) used for evenly-timed reveals. It differs from
+   * `index` for characters: the spaces and line breaks between words each cost
+   * one position even though they carry no glyph, so a typewriter pauses at a
+   * word boundary instead of running words together. For words it equals
+   * `index`.
+   */
+  tick: number;
   /** Line index (0-based) the fragment sits on. */
   line: number;
   text: string;
@@ -193,22 +201,48 @@ export function layoutText(
   const chars: TextFragment[] = [];
   let wordIndex = 0;
   let charIndex = 0;
+  // Character cadence: advances once per glyph *and* once per separator (a
+  // space or a line break), so timed reveals keep the gaps a reader expects.
+  let charTick = 0;
 
   lines.forEach((lineWords, lineIdx) => {
     const width = lineWidth(lineWords, measurer, ls);
     let cursorX = lineOffsetX(style.align, box.w, width);
     const y = offsetY + lineIdx * lh;
+    if (lineIdx > 0) charTick += 1;
 
     lineWords.forEach((word, wi) => {
-      if (wi > 0) cursorX += spaceWidth;
+      if (wi > 0) {
+        cursorX += spaceWidth;
+        charTick += 1;
+      }
       const wordWidth = advance(measurer, word, ls);
       if (word.length > 0) {
-        words.push({ index: wordIndex++, line: lineIdx, text: word, x: cursorX, y, w: wordWidth, h: lh });
+        words.push({
+          index: wordIndex,
+          tick: wordIndex,
+          line: lineIdx,
+          text: word,
+          x: cursorX,
+          y,
+          w: wordWidth,
+          h: lh,
+        });
+        wordIndex += 1;
         // Character fragments walk the same cursor so chars and words align.
         let charX = cursorX;
         for (const ch of word) {
           const cw = advance(measurer, ch, ls);
-          chars.push({ index: charIndex++, line: lineIdx, text: ch, x: charX, y, w: cw, h: lh });
+          chars.push({
+            index: charIndex++,
+            tick: charTick++,
+            line: lineIdx,
+            text: ch,
+            x: charX,
+            y,
+            w: cw,
+            h: lh,
+          });
           charX += cw;
         }
       }

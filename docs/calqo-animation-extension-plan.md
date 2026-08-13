@@ -1323,6 +1323,22 @@ Create: `src/editor/export/animationPackage.ts`, `src/tests/unit/animationPackag
 > enter slot; the inspector offers them for text/list layers (EN/FR labels
 > added). Verified with `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm build`.
 
+> **Refined — 2026-08-13 (app v0.6.2).** Long-form reveals: the inspector's
+> duration/delay sliders now run to the scene length (each leaving room for the
+> other) instead of a fixed 4000 ms cap, and read in seconds past 1 s, so a
+> paragraph can be typed over as much of a 60 s scene as the author wants.
+> Typewriter cadence now counts the spaces and line breaks between words
+> (`TextFragment.tick`) and sizes its slice so the last glyph lands exactly on
+> `delay + duration`, with the per-glyph ramp held short at any length. Word-rise
+> caps one word's travel (700 ms) so extra duration becomes stagger rather than
+> drift, resolves its fade in the first 60 % of that travel on a fixed ease-out
+> (an overshoot/bounce easing no longer flashes a word), and lifts from a slight
+> scale. Editor preview flicker fixed: `useAnimationPlayback` keyed its effect on
+> `timeMs`, so the loop's own ~20 Hz `reportTime` re-entered it, rebuilding every
+> fragment overlay (briefly painting the settled text) and re-anchoring the RAF
+> loop; it now keys on a `seekEpoch` that only real transport moves bump. Export
+> paths were unaffected and are unchanged.
+
 - [x] Build a fragment compiler from final text layout per locale; fragments
       are runtime-only. (`textLayout.ts` + `fragmentCompiler.ts`.)
 - [x] Invalidate on text, font, font-load revision, box size, line height,

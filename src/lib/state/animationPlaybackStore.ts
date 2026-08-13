@@ -27,6 +27,13 @@ interface AnimationPlaybackState {
   status: PlaybackStatus;
   /** Current transport time in ms from scene start. */
   timeMs: number;
+  /**
+   * Bumped only when the playhead moves for a reason the renderer must react to
+   * — a bind, a play, a scrub, a stop — and never by `reportTime`. The playback
+   * effect keys on this instead of `timeMs`, so the ~20 Hz time reports it emits
+   * while playing cannot re-enter (and restart) the loop that produced them.
+   */
+  seekEpoch: number;
   /** Scene duration in ms (mirrored for the scrubber range). */
   durationMs: number;
   /** Active hover/focus preview, or null. */
@@ -51,6 +58,7 @@ export const useAnimationPlaybackStore = create<AnimationPlaybackState>(
     artboardId: null,
     status: 'idle',
     timeMs: 0,
+    seekEpoch: 0,
     durationMs: 0,
     preview: null,
 
@@ -66,16 +74,18 @@ export const useAnimationPlaybackStore = create<AnimationPlaybackState>(
         // the playhead but clamps it into range.
         status: changed ? 'idle' : s.status,
         timeMs: changed ? 0 : Math.min(s.timeMs, durationMs),
+        seekEpoch: s.seekEpoch + 1,
         preview: changed ? null : s.preview,
       });
     },
 
     play: () => {
-      const { durationMs, timeMs } = get();
+      const { durationMs, timeMs, seekEpoch } = get();
       // Restart from the top when the playhead already sits at the end.
       set({
         status: 'playing',
         timeMs: timeMs >= durationMs ? 0 : timeMs,
+        seekEpoch: seekEpoch + 1,
       });
     },
 
@@ -84,17 +94,21 @@ export const useAnimationPlaybackStore = create<AnimationPlaybackState>(
     },
 
     seek: (timeMs) => {
-      const { durationMs, status } = get();
+      const { durationMs, status, seekEpoch } = get();
       const clamped = Math.max(0, Math.min(timeMs, durationMs));
-      set({ timeMs: clamped, status: status === 'idle' ? 'paused' : status });
+      set({
+        timeMs: clamped,
+        seekEpoch: seekEpoch + 1,
+        status: status === 'idle' ? 'paused' : status,
+      });
     },
 
     reportTime: (timeMs) => set({ timeMs }),
 
     stopAndReset: () => {
-      const { status, timeMs, preview } = get();
+      const { status, timeMs, preview, seekEpoch } = get();
       if (status === 'idle' && timeMs === 0 && preview === null) return;
-      set({ status: 'idle', timeMs: 0, preview: null });
+      set({ status: 'idle', timeMs: 0, seekEpoch: seekEpoch + 1, preview: null });
     },
 
     setPreview: (preview) => set({ preview }),
