@@ -73,6 +73,20 @@ quote cards, campaign variants, and multilingual public information.
 | **Touch & stylus**   | Responsive phone quick-edit UI, tablet gestures, coarse-pointer controls, long-press menus, and pressure-aware brush strokes    |
 | **Desktop**          | Native macOS menus, `.calqo` open/save, image drop and clipboard support, local font discovery, and secure AI-key storage       |
 
+## Calqo 0.6.2 — Smoother text reveals
+
+Long-form animated text is now practical, and its canvas preview stays stable
+from the first character to the last.
+
+- Typewriter and word-rise timing can span the full scene instead of stopping
+  at four seconds, with clearer second-based controls for longer animations.
+- Typewriter reveals now preserve the cadence of spaces and line breaks and
+  land the final glyph exactly at the end of the configured duration.
+- Word-rise keeps each word's movement crisp while using longer durations for
+  a natural stagger, with smoother fading and a subtle scale lift.
+- Animation previews no longer flash fully rendered text between frames.
+- Invalid timing edits now surface an error instead of failing silently.
+
 ## Calqo 0.6.1 — Agents animate too
 
 The keyframe lane is now a first-class part of the agent surface, so a
@@ -140,7 +154,7 @@ See the complete history on the
 
 ## Download
 
-Download **Calqo 0.6.0 for macOS on Apple Silicon** from the
+Download **Calqo 0.6.2 for macOS on Apple Silicon** from the
 [latest GitHub release](https://github.com/kilianvivien/calqo/releases/latest).
 
 The current desktop build is ad-hoc signed, not Developer ID signed or
