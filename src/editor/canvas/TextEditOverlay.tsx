@@ -76,12 +76,19 @@ export function TextEditOverlay({
     textarea.style.height = `${textarea.scrollHeight}px`;
   }, [value, style]);
 
+  // Focus once, on the render that first mounts the textarea. The first render
+  // returns null (the box geometry is measured in an effect), so a mount-only
+  // effect would run against a ref that is still empty and never fire again —
+  // leaving an unfocusable overlay that can never blur, and therefore never
+  // commit or close.
+  const focused = useRef(false);
   useEffect(() => {
     const textarea = ref.current;
-    if (!textarea) return;
+    if (!textarea || focused.current) return;
+    focused.current = true;
     textarea.focus();
     textarea.select();
-  }, []);
+  }, [style]);
 
   if (!style) return null;
 
