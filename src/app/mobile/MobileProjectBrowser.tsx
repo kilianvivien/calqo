@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileText, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { dialog } from '@/lib/adapters';
-import type { ProjectSummary } from '@/lib/adapters';
+import type { ProjectSummary, StarterRecord } from '@/lib/adapters';
 import { useProjectSummaries } from '@/lib/hooks/useProjectSummaries';
 import {
   deleteProject,
@@ -14,7 +14,9 @@ import { BottomSheet } from '@/components/mobile';
 import { GlassButton, GlassSegmentedControl } from '@/components/glass';
 import {
   createProjectFromStarter,
+  deleteUserStarter,
   fetchBundledStarterIndex,
+  listUserStarters,
   loadBundledStarterEnvelope,
   type StarterIndexEntry,
 } from '@/editor/starters/starterService';
@@ -125,6 +127,7 @@ export function MobileProjectBrowser({
   const [newOpen, setNewOpen] = useState(false);
   const [newTab, setNewTab] = useState<'blank' | 'starters'>('starters');
   const [starters, setStarters] = useState<StarterIndexEntry[] | null>(null);
+  const [userStarters, setUserStarters] = useState<StarterRecord[]>([]);
   const [category, setCategory] = useState('all');
   const [openingStarterId, setOpeningStarterId] = useState<string | null>(null);
 
@@ -139,6 +142,20 @@ export function MobileProjectBrowser({
     };
   }, [newOpen, newTab, starters]);
 
+  /* Kept out of the bundled-catalogue effect above: its `starters` dependency
+   * changes as soon as the catalogue lands, which would cancel an in-flight
+   * library read and leave saved starters invisible. */
+  useEffect(() => {
+    if (!newOpen || newTab !== 'starters') return;
+    let active = true;
+    void listUserStarters().then((list) => {
+      if (active) setUserStarters(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, [newOpen, newTab]);
+
   const starterCategories = useMemo(
     () =>
       Array.from(
@@ -149,7 +166,11 @@ export function MobileProjectBrowser({
   const visibleStarters =
     category === 'all'
       ? starters
-      : starters?.filter((starter) => starter.category === category);
+      : category === 'mine'
+        ? []
+        : starters?.filter((starter) => starter.category === category);
+  const showMine =
+    userStarters.length > 0 && (category === 'all' || category === 'mine');
 
   const openStarter = async (entry: StarterIndexEntry) => {
     setOpeningStarterId(entry.id);
@@ -162,6 +183,29 @@ export function MobileProjectBrowser({
     } finally {
       setOpeningStarterId(null);
     }
+  };
+
+  const openUserStarter = async (record: StarterRecord) => {
+    setOpeningStarterId(record.id);
+    try {
+      const id = await createProjectFromStarter(record.envelope);
+      setNewOpen(false);
+      onOpen(id);
+    } finally {
+      setOpeningStarterId(null);
+    }
+  };
+
+  const removeUserStarter = async (record: StarterRecord) => {
+    const confirmed = await dialog.confirm({
+      title: t('starters.deleteTitle'),
+      message: t('starters.deleteMessage', { name: record.name }),
+      confirmLabel: t('starters.delete'),
+      danger: true,
+    });
+    if (!confirmed) return;
+    await deleteUserStarter(record.id);
+    setUserStarters(await listUserStarters());
   };
 
   const empty = summaries !== null && summaries.length === 0;
@@ -258,7 +302,7 @@ export function MobileProjectBrowser({
         ) : (
           <div className="space-y-3">
             <div className="calqo-scroll flex gap-2 overflow-x-auto pb-1">
-              {['all', ...starterCategories].map((id) => (
+              {['all', ...starterCategories, 'mine'].map((id) => (
                 <button
                   key={id}
                   type="button"
@@ -278,35 +322,98 @@ export function MobileProjectBrowser({
               <p className="py-8 text-center text-[12px] text-[var(--calqo-text-3)]">
                 {t('starters.loading')}
               </p>
+            ) : category === 'mine' && userStarters.length === 0 ? (
+              <p className="px-2 py-8 text-center text-[12px] leading-relaxed text-[var(--calqo-text-3)]">
+                {t('starters.mineEmpty')}
+              </p>
             ) : (
-              <div className="grid grid-cols-2 gap-2.5">
-                {visibleStarters?.map((entry) => (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    disabled={openingStarterId !== null}
-                    onClick={() => void openStarter(entry)}
-                    className="glass min-w-0 overflow-hidden rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] p-2 text-left active:scale-[0.98] disabled:opacity-60"
-                  >
-                    <span className="grid h-28 place-items-center overflow-hidden rounded-[10px] bg-[var(--calqo-glass-thin)]">
-                      <img
-                        src={entry.thumbnail}
-                        alt=""
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    </span>
-                    <span className="mt-2 block truncate text-[12px] font-semibold text-[var(--calqo-text)]">
-                      {openingStarterId === entry.id
-                        ? t('starters.loading')
-                        : t(`starters.names.${entry.id}`, {
-                            defaultValue: entry.name,
-                          })}
-                    </span>
-                    <span className="mono mt-0.5 block text-[10px] text-[var(--calqo-text-3)]">
-                      {entry.width}×{entry.height}
-                    </span>
-                  </button>
-                ))}
+              <div className="space-y-3">
+                {showMine && (
+                  <div>
+                    <p className="mb-2 text-[11.5px] font-semibold text-[var(--calqo-text-2)]">
+                      {t('starters.mineTitle')}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {userStarters.map((record) => (
+                        <div
+                          key={record.id}
+                          className="glass relative min-w-0 overflow-hidden rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] p-2"
+                        >
+                          <button
+                            type="button"
+                            disabled={openingStarterId !== null}
+                            onClick={() => void openUserStarter(record)}
+                            className="block w-full text-left active:scale-[0.98] disabled:opacity-60"
+                          >
+                            <span className="grid h-28 place-items-center overflow-hidden rounded-[10px] bg-[var(--calqo-glass-thin)]">
+                              {record.thumbnail ? (
+                                <img
+                                  src={record.thumbnail}
+                                  alt=""
+                                  className="max-h-full max-w-full object-contain"
+                                />
+                              ) : (
+                                <FileText
+                                  size={18}
+                                  className="text-[var(--calqo-text-3)]"
+                                />
+                              )}
+                            </span>
+                            <span className="mt-2 block truncate text-[12px] font-semibold text-[var(--calqo-text)]">
+                              {openingStarterId === record.id
+                                ? t('starters.loading')
+                                : record.name}
+                            </span>
+                            <span className="mono mt-0.5 block text-[10px] text-[var(--calqo-text-3)]">
+                              {record.envelope.project.artboards[0]?.width ?? 0}
+                              ×
+                              {record.envelope.project.artboards[0]?.height ??
+                                0}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={t('starters.delete')}
+                            onClick={() => void removeUserStarter(record)}
+                            className="absolute right-1 top-1 grid h-9 w-9 place-items-center rounded-full bg-[var(--calqo-glass)] text-[var(--calqo-text-3)] active:bg-[var(--calqo-hover)] active:text-[var(--calqo-text)]"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  {visibleStarters?.map((entry) => (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      disabled={openingStarterId !== null}
+                      onClick={() => void openStarter(entry)}
+                      className="glass min-w-0 overflow-hidden rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] p-2 text-left active:scale-[0.98] disabled:opacity-60"
+                    >
+                      <span className="grid h-28 place-items-center overflow-hidden rounded-[10px] bg-[var(--calqo-glass-thin)]">
+                        <img
+                          src={entry.thumbnail}
+                          alt=""
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </span>
+                      <span className="mt-2 block truncate text-[12px] font-semibold text-[var(--calqo-text)]">
+                        {openingStarterId === entry.id
+                          ? t('starters.loading')
+                          : t(`starters.names.${entry.id}`, {
+                              defaultValue: entry.name,
+                            })}
+                      </span>
+                      <span className="mono mt-0.5 block text-[10px] text-[var(--calqo-text-3)]">
+                        {entry.width}×{entry.height}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

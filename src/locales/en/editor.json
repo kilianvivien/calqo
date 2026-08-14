@@ -842,6 +842,9 @@
     "saveAs": "Save as starter",
     "saved": "Saved “{{name}}” to your starters.",
     "saveFailed": "Could not save this project as a starter.",
+    "duplicate": "Duplicate starter",
+    "export": "Export starter as .calqo",
+    "mineEmpty": "You have not saved any starters yet. Open a project and choose “Save as starter” — from the project manager or the File menu — and it lands in this category.",
     "empty": "No starters could be loaded. Check your connection, or save an open project as a starter from the project manager.",
     "names": {
       "ig-announcement": "Announcement — Instagram square",
@@ -895,7 +898,8 @@
       "media": "Media",
       "lifestyle": "Lifestyle",
       "playful": "Playful",
-      "diplomacy": "Diplomacy"
+      "diplomacy": "Diplomacy",
+      "mine": "My starters"
     }
   },
   "repairAssets": {
@@ -966,9 +970,9 @@
       },
       "title": "Transform keyframes",
       "description": "Create a simple motion path for this layer.",
-    "instructions": "Move the playhead, then drag, resize, or rotate the layer on the canvas. Calqo records the pose automatically.",
-    "replacesEffects": "Keyframes replace this layer’s current effects. You can undo the change.",
-    "replacesKeyframes": "Choosing an effect replaces this layer’s keyframes. You can undo the change.",
+      "instructions": "Move the playhead, then drag, resize, or rotate the layer on the canvas. Calqo records the pose automatically.",
+      "replacesEffects": "Keyframes replace this layer’s current effects. You can undo the change.",
+      "replacesKeyframes": "Choosing an effect replaces this layer’s keyframes. You can undo the change.",
       "create": "Create keyframes",
       "count_one": "{{count}} pose across the scene",
       "count_other": "{{count}} poses across the scene",

@@ -73,6 +73,23 @@ quote cards, campaign variants, and multilingual public information.
 | **Touch & stylus**   | Responsive phone quick-edit UI, tablet gestures, coarse-pointer controls, long-press menus, and pressure-aware brush strokes    |
 | **Desktop**          | Native macOS menus, `.calqo` open/save, image drop and clipboard support, local font discovery, and secure AI-key storage       |
 
+## Calqo 0.6.3 — Your own models, findable again
+
+Models you save from your own projects now have a home of their own instead of
+disappearing into local storage.
+
+- Saved models reach the gallery again: the library was read inside the same
+  effect that loaded the bundled catalogue, so the catalogue landing cancelled
+  the read and your own models never rendered.
+- **My starters** is a permanent category in the model gallery, with a count of
+  what it holds and guidance on how to fill it while it is still empty.
+- Each saved model can be renamed, duplicated, exported as a portable `.calqo`
+  file, or deleted from the gallery card.
+- Phones list saved models too, alongside the bundled catalogue, with the same
+  category filter and a delete action.
+- Project backups now carry the saved-model library and restore it additively,
+  so moving to another machine keeps your own models.
+
 ## Calqo 0.6.2 — Smoother text reveals
 
 Long-form animated text is now practical, and its canvas preview stays stable
@@ -154,7 +171,7 @@ See the complete history on the
 
 ## Download
 
-Download **Calqo 0.6.2 for macOS on Apple Silicon** from the
+Download **Calqo 0.6.3 for macOS on Apple Silicon** from the
 [latest GitHub release](https://github.com/kilianvivien/calqo/releases/latest).
 
 The current desktop build is ad-hoc signed, not Developer ID signed or

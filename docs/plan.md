@@ -314,6 +314,17 @@ predictable.
     snapshots the current `.calqo` envelope plus a rendered thumbnail into a
     local `starters` Dexie table (`starterLibrary` adapter); starters remain
     normal Calqo projects, no new schema or marketplace.
+  - Saved starters have their own pinned gallery category on desktop and phone.
+    The library loads in its own effect, separate from the bundled catalogue:
+    reading both in one effect tied the library to a `bundled` dependency that
+    changed the moment the catalogue landed, cancelling the in-flight read so
+    saved starters never appeared (`src/tests/unit/customStarters.test.tsx`
+    pins the ordering).
+  - Each saved starter can be renamed, duplicated, exported as a portable
+    `.calqo` file, or deleted from its gallery card; phones offer open and
+    delete.
+  - App backups carry the starter library and restore it additively under fresh
+    ids, alongside projects and brand profiles.
 - [x] Keep the local project library usable as it grows.
   - The desktop project manager supports localized search plus ascending and
     descending name/date sorting, with a viewport-capped modal and an

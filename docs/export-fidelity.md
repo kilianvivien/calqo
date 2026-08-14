@@ -1,29 +1,39 @@
 # Export fidelity notes
 
-Calqo renders the live editor with Konva (Canvas 2D). PNG/JPG/WebP exports are
-rasterized from that same scene graph, so **raster exports are the highest-
+Calqo renders the live editor with Konva (Canvas 2D). PNG/JPG/WebP exports
+rebuild that scene offscreen from the same project document, with the same Konva
+primitives and the same geometry helpers, so **raster exports are the highest-
 fidelity output** — what you see on the canvas is what you get. SVG and HTML
 exports are reconstructed from the project schema and intentionally trade some
 fidelity for editability and small file size.
 
+The raster builder (`rasterExport.ts` `buildNode`) is a _parallel_
+implementation of the live renderer (`LayerRenderer.tsx`), not a reuse of the
+live node tree — the editor's tree is bound to React, selection, and the visible
+viewport. Anything the canvas renders therefore has to be mirrored in both
+places, and a gap is invisible until an export is compared against the canvas.
+`src/tests/unit/rasterFidelity.test.ts` pins the effects that are easiest to
+drop (layer blur, image adjustments, blend modes, list shadow). Add a case there
+when you add a rendered property.
+
 Use this table when an export looks different from the canvas.
 
-| Feature | PNG / JPG / WebP | SVG | HTML (image wrapper) | HTML (editable) |
-| --- | --- | --- | --- | --- |
-| Layout, fills, strokes, text | Exact | Exact (flat fills) | Exact (it embeds a PNG) | Exact (real text/CSS nodes) |
-| Gradient / pattern / image fills | Exact | Flattened to a solid colour | Exact | Gradients exact (CSS); patterns rasterized per layer |
-| Image filters / background removal | Baked in | Not applied | Baked in | Rasterized per layer (warned) |
-| Image masks (rounded, circle, ellipse, triangle, star, hexagon) | Exact | Not applied (full image shown) | Exact | Rounded/circle/ellipse exact (CSS); others rasterized (warned) |
-| Layer blur | Exact | Omitted | Exact | Approximated via CSS `filter: blur()` (warned) |
-| Drop shadow | Exact | Omitted | Exact | Approximated via CSS `filter: drop-shadow()` (warned) |
-| Blend modes (multiply, screen, overlay, …) | Exact | Omitted (normal compositing) | Exact | Exact (`mix-blend-mode` — same keywords) |
-| Text stroke / text shadow | Exact | May differ | Exact | Exact (`-webkit-text-stroke` / `text-shadow`) |
-| Image frames | Exact | Approximated | Exact | Rasterized per layer (warned) |
-| Sticker outline | Exact | Approximated | Exact | Rasterized per layer (warned) |
-| Freehand brush strokes | Exact | Approximated | Exact | Rasterized per layer (warned) |
-| Pressure-sensitive strokes (per-point widths) | Exact | Exact (filled ribbon polygon) | Exact | Rasterized per layer (warned) |
-| Fonts | Exact (baked in) | Used Google Font faces embedded when available; system fonts fall back (warned) | Exact (baked in) | Used Google Font faces embedded when available; system fonts fall back (warned) |
-| Editable after export | No (flat pixels) | Yes (vector shapes/text) | No (embedded PNG) | Yes (real text nodes; rasterized-fallback layers stay images) |
+| Feature                                                         | PNG / JPG / WebP | SVG                                                                             | HTML (image wrapper)    | HTML (editable)                                                                 |
+| --------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------- |
+| Layout, fills, strokes, text                                    | Exact            | Exact (flat fills)                                                              | Exact (it embeds a PNG) | Exact (real text/CSS nodes)                                                     |
+| Gradient / pattern / image fills                                | Exact            | Flattened to a solid colour                                                     | Exact                   | Gradients exact (CSS); patterns rasterized per layer                            |
+| Image filters / background removal                              | Baked in         | Not applied                                                                     | Baked in                | Rasterized per layer (warned)                                                   |
+| Image masks (rounded, circle, ellipse, triangle, star, hexagon) | Exact            | Not applied (full image shown)                                                  | Exact                   | Rounded/circle/ellipse exact (CSS); others rasterized (warned)                  |
+| Layer blur                                                      | Exact            | Omitted                                                                         | Exact                   | Approximated via CSS `filter: blur()` (warned)                                  |
+| Drop shadow                                                     | Exact            | Omitted                                                                         | Exact                   | Approximated via CSS `filter: drop-shadow()` (warned)                           |
+| Blend modes (multiply, screen, overlay, …)                      | Exact            | Omitted (normal compositing)                                                    | Exact                   | Exact (`mix-blend-mode` — same keywords)                                        |
+| Text stroke / text shadow                                       | Exact            | May differ                                                                      | Exact                   | Exact (`-webkit-text-stroke` / `text-shadow`)                                   |
+| Image frames                                                    | Exact            | Approximated                                                                    | Exact                   | Rasterized per layer (warned)                                                   |
+| Sticker outline                                                 | Exact            | Approximated                                                                    | Exact                   | Rasterized per layer (warned)                                                   |
+| Freehand brush strokes                                          | Exact            | Approximated                                                                    | Exact                   | Rasterized per layer (warned)                                                   |
+| Pressure-sensitive strokes (per-point widths)                   | Exact            | Exact (filled ribbon polygon)                                                   | Exact                   | Rasterized per layer (warned)                                                   |
+| Fonts                                                           | Exact (baked in) | Used Google Font faces embedded when available; system fonts fall back (warned) | Exact (baked in)        | Used Google Font faces embedded when available; system fonts fall back (warned) |
+| Editable after export                                           | No (flat pixels) | Yes (vector shapes/text)                                                        | No (embedded PNG)       | Yes (real text nodes; rasterized-fallback layers stay images)                   |
 
 ## Editable HTML fidelity tiers
 
@@ -99,6 +109,25 @@ The editor surfaces the relevant subset of these warnings in two places:
 - The **Export notes** section of the inspector, per selected layer.
 - The **Before you export** panel in the export dialog, per artboard, alongside
   layout-overflow, missing-asset, large-raster, and large-batch warnings.
+
+## How layer blur is cached
+
+Konva runs a filter over a node's cache canvas, which defaults to the size of the
+node itself. A shape whose fill covers its whole box therefore blurred to the
+same solid box — the blur had nowhere to fall off, so the effect vanished on
+canvas and in every export. Blurred nodes now cache with padding on all sides
+(`blurCachePadding`, twice the radius), which is also why a blur spills slightly
+past its layer box, as a blur should.
+
+`layerBlur.ts` owns the filter setup and the padded cache for both the live
+canvas and raster export, so the two cannot drift apart.
+
+Drop shadow (`effects.shadow`) is a **shape-level** effect: Konva paints shadows
+for shapes, not containers. The inspector reflects this — text and list layers
+do not offer it, and instead carry their shadow through Typography
+(`style.shadow`), which renders per text node in both renderers. A list's
+`effects.shadow` (reachable only from an imported file or an agent) stays inert
+in both, so exports still match the canvas.
 
 ## Performance notes
 

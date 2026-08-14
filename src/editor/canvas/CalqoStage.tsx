@@ -429,6 +429,17 @@ export function CalqoStage({ project, artboard }: CalqoStageProps) {
   const editingLayer = editingTextId
     ? (findLayerInArtboard(artboard, editingTextId) as TextLayer | ListLayer | null)
     : null;
+  // Backstop for the paths that never blur the overlay: a selection made
+  // elsewhere (layers panel, shortcut, agent), a deleted layer, or a switch to
+  // another artboard. Without this the id survives and edit mode reappears the
+  // next time that layer is on screen. Pointer edits still commit first — the
+  // canvas mousedown blurs the overlay before the click changes the selection.
+  useEffect(() => {
+    if (!editingTextId) return;
+    if (!editingLayer || !selectedLayerIds.includes(editingTextId)) {
+      setEditingTextId(null);
+    }
+  }, [editingTextId, editingLayer, selectedLayerIds]);
   const lineLikeSelection = useMemo(() => isLineLikeSelection(selectedLayers), [selectedLayers]);
   // Group when ≥2 top-level layers are selected; ungroup when a single group is.
   const topLevelSelectedCount = useMemo(

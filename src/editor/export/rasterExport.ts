@@ -11,6 +11,8 @@ import { Line } from 'konva/lib/shapes/Line';
 import { Arrow } from 'konva/lib/shapes/Arrow';
 import { Circle } from 'konva/lib/shapes/Circle';
 import { Path } from 'konva/lib/shapes/Path';
+import type { Node as KonvaNode } from 'konva/lib/Node';
+import type { Container } from 'konva/lib/Container';
 import type { Shape } from 'konva/lib/Shape';
 import type { ShapeConfig } from 'konva/lib/Shape';
 import type { Context } from 'konva/lib/Context';
@@ -23,7 +25,15 @@ import { pressureOutlinePoints } from '@/editor/canvas/freehandGeometry';
 import { stickerStrokeConfig } from '@/editor/canvas/stickerOutline';
 import { frameRender, type FrameNodeSpec } from '@/editor/canvas/frameNodes';
 import { drawMaskPath } from '@/editor/canvas/maskClip';
-import { coverCropRect, fitImageConfig } from '@/editor/canvas/imageFilters';
+import {
+  applyLayerBlurAttrs,
+  cacheBlurredNode,
+} from '@/editor/canvas/layerBlur';
+import {
+  buildImageFilterPipeline,
+  coverCropRect,
+  fitImageConfig,
+} from '@/editor/canvas/imageFilters';
 import type {
   CalqoArtboard,
   CalqoLayer,
@@ -142,6 +152,36 @@ function shadowAttrs(layer: CalqoLayer): ShapeConfig {
 function blendAttrs(layer: CalqoLayer): ShapeConfig {
   if (!layer.blendMode || layer.blendMode === 'normal') return {};
   return { globalCompositeOperation: layer.blendMode };
+}
+
+/** Stage an image layer's adjustment filters on its Image node, mirroring the
+ * pipeline `ImageLayerNode` applies on the live canvas. */
+function applyImageFilters(node: KonvaImage, layer: ImageLayer): void {
+  const pipeline = buildImageFilterPipeline(layer.filters);
+  if (pipeline.filters.length === 0) return;
+  node.setAttr('brightness', pipeline.attrs.brightness);
+  node.setAttr('contrast', pipeline.attrs.contrast);
+  node.setAttr('saturation', pipeline.attrs.saturation);
+  node.setAttr('blurRadius', pipeline.attrs.blurRadius);
+  node.filters(pipeline.filters);
+}
+
+/**
+ * Cache every node carrying filters so Konva actually runs them — a filter list
+ * without a cache renders nothing. Deferred until the scene is assembled so each
+ * node measures itself with its children in place, and walked depth-first so an
+ * inner cache (an image's adjustments) is baked before an outer one (a group's
+ * blur) samples it.
+ */
+export function cacheFilteredNodes(root: Container | KonvaNode): void {
+  const container = root as Container;
+  if (typeof container.getChildren === 'function') {
+    container.getChildren().forEach((child) => cacheFilteredNodes(child));
+  }
+  const node = root as Shape;
+  if (typeof node.filters !== 'function') return;
+  if ((node.filters()?.length ?? 0) === 0) return;
+  cacheBlurredNode(node);
 }
 
 /** Build a Konva node for a declarative frame spec (shared geometry with the
@@ -278,8 +318,20 @@ function arrowHeadShapes(points: number[], arrow: ArrowStyle | undefined, color:
   return heads;
 }
 
-/** Build the Konva node for a layer, mirroring the on-canvas LayerRenderer. */
+/** Build the Konva node for a layer, mirroring the on-canvas LayerRenderer.
+ * Layer blur is staged here and baked by `cacheFilteredNodes` once the scene is
+ * assembled. */
 export function buildNode(
+  layer: CalqoLayer,
+  images: Map<string, HTMLImageElement>,
+  locale: string,
+): Group | Shape | null {
+  const node = buildLayerNode(layer, images, locale);
+  if (node) applyLayerBlurAttrs(node, layer);
+  return node;
+}
+
+function buildLayerNode(
   layer: CalqoLayer,
   images: Map<string, HTMLImageElement>,
   locale: string,
@@ -288,7 +340,7 @@ export function buildNode(
   const base = commonAttrs(layer);
 
   if (isGroupLayer(layer)) {
-    const group = new Group(base);
+    const group = new Group({ ...base, ...blendAttrs(layer) });
     layer.children.forEach((child) => {
       const node = buildNode(child, images, locale);
       if (node) group.add(node);
@@ -482,7 +534,7 @@ export function buildNode(
     const effects = { ...shadowAttrs(layer), ...blendAttrs(layer) };
     if (!layer.sticker) return new KonvaImage({ ...base, ...effects, image });
     const group = new Group({ ...base, ...blendAttrs(layer) });
-    group.add(stickerHaloRect(layer.sticker, layer.w, layer.h));
+    group.add(stickerHaloRect(layer.sticker, layer.w, layer.h, false));
     group.add(new KonvaImage({ width: layer.w, height: layer.h, ...shadowAttrs(layer), image }));
     return group;
   }
@@ -499,8 +551,14 @@ export function buildNode(
 }
 
 /** A rounded sticker halo rect, sized to wrap a layer's box (mirrors the live
- * renderer's image/svg sticker approximation). */
-function stickerHaloRect(sticker: NonNullable<CalqoLayer['sticker']>, w: number, h: number): Rect {
+ * renderer's image/svg sticker approximation). Only the image renderer paints
+ * the halo's own shadow — `withShadow` keeps the SVG variant in step. */
+function stickerHaloRect(
+  sticker: NonNullable<CalqoLayer['sticker']>,
+  w: number,
+  h: number,
+  withShadow: boolean,
+): Rect {
   return new Rect({
     x: -sticker.width,
     y: -sticker.width,
@@ -508,7 +566,7 @@ function stickerHaloRect(sticker: NonNullable<CalqoLayer['sticker']>, w: number,
     height: h + sticker.width * 2,
     fill: sticker.color,
     cornerRadius: sticker.width,
-    ...(sticker.shadow
+    ...(withShadow && sticker.shadow
       ? {
           shadowColor: sticker.shadow.color,
           shadowBlur: sticker.shadow.blur,
@@ -573,7 +631,7 @@ function buildImageNode(
 
   // Fast path: no frame, no sticker, no mask — a single positioned Image.
   if (!frame && !layer.sticker && !clipFunc) {
-    return new KonvaImage({
+    const node = new KonvaImage({
       ...imgCfg,
       x: layer.x + (imgCfg.x ?? 0),
       y: layer.y + (imgCfg.y ?? 0),
@@ -581,13 +639,17 @@ function buildImageNode(
       opacity: layer.opacity,
       ...effects,
     });
+    applyImageFilters(node, layer);
+    return node;
   }
 
   const group = new Group({ ...base, ...effects });
-  if (layer.sticker) group.add(stickerHaloRect(layer.sticker, layer.w, layer.h));
+  if (layer.sticker) group.add(stickerHaloRect(layer.sticker, layer.w, layer.h, true));
   frame?.behind.forEach((spec) => group.add(buildFrameNode(spec)));
   const inner = new Group({ x: inset.left, y: inset.top, ...(clipFunc ? { clipFunc } : {}) });
-  inner.add(new KonvaImage(imgCfg));
+  const imageNode = new KonvaImage(imgCfg);
+  applyImageFilters(imageNode, layer);
+  inner.add(imageNode);
   group.add(inner);
   frame?.front.forEach((spec) => group.add(buildFrameNode(spec)));
   return group;
@@ -611,6 +673,8 @@ function buildListNode(
 
   const group = new Group({
     ...commonAttrs(layer),
+    ...shadowAttrs(layer),
+    ...blendAttrs(layer),
     clipX: 0,
     clipY: 0,
     clipWidth: layer.w,
@@ -658,6 +722,7 @@ function buildListNode(
             align: 'left',
             verticalAlign: 'top',
             lineHeight: style.lineHeight,
+            wrap: 'none',
           }),
         );
       }
@@ -765,6 +830,9 @@ export async function exportArtboardRaster(
     if (node) content.add(node);
   });
   layer.add(content);
+  // Filters only render through a cache, and a cache only measures correctly
+  // once the node is attached with its children in place.
+  cacheFilteredNodes(content);
   layer.draw();
 
   try {

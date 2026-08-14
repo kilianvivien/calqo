@@ -7,6 +7,7 @@ import type { CalqoArtboard, CalqoLayer, LocaleCode } from '@/lib/schema';
 import {
   buildBackgroundNodes,
   buildNode,
+  cacheFilteredNodes,
   loadImages,
 } from '@/editor/export/rasterExport';
 import {
@@ -199,6 +200,10 @@ export const createOffscreenScene: CreateOffscreenScene = async (input) => {
     wrappers.set(l.id, wrapper);
     content.add(wrapper);
   }
+
+  // Bake layer blur / image adjustments now that the tree is attached. Per-frame
+  // overrides only touch transform attrs, so these caches stay valid.
+  cacheFilteredNodes(content);
 
   let disposed = false;
 
