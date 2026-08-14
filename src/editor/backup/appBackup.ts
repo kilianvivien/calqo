@@ -3,10 +3,15 @@ import {
   assetStorage,
   brandProfiles,
   files,
+  starterLibrary,
   storage,
   BRAND_ASSET_SCOPE,
 } from '@/lib/adapters';
-import type { BrandProfileRecord, CalqoFile } from '@/lib/adapters';
+import type {
+  BrandProfileRecord,
+  CalqoFile,
+  StarterRecord,
+} from '@/lib/adapters';
 import { safeImportProject, type CalqoProject } from '@/lib/schema';
 import { createId } from '@/lib/utils/ids';
 import { APP_VERSION } from '@/lib/appInfo';
@@ -38,6 +43,9 @@ export interface CalqoBackup {
   localStorage: Record<string, string>;
   /** Brand Lite profiles with their logo blobs inlined (never API keys). */
   brandProfiles?: BackupBrandProfile[];
+  /** The user's own saved starters. Their envelopes already inline every asset
+   * as a data URL, so the records travel as-is. */
+  starters?: StarterRecord[];
 }
 
 export interface BackupBrandProfile {
@@ -132,6 +140,7 @@ export async function buildAppBackup(): Promise<CalqoBackup> {
     settings,
     localStorage: localPrefs,
     brandProfiles: profiles,
+    starters: await starterLibrary.listStarters(),
   };
 }
 
@@ -219,6 +228,7 @@ async function restoreProject(file: CalqoFile): Promise<void> {
 
 export interface RestoreResult {
   projects: number;
+  starters: number;
 }
 
 /**
@@ -258,6 +268,19 @@ export async function restoreAppBackup(backup: CalqoBackup): Promise<RestoreResu
     await restoreBrandProfile(entry);
   }
 
+  // Additive like everything else: fresh ids so a restore never overwrites a
+  // starter the user already has.
+  const starters = backup.starters ?? [];
+  for (const record of starters) {
+    const now = new Date().toISOString();
+    await starterLibrary.saveStarter({
+      ...record,
+      id: createId('starter'),
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
   for (const [key, value] of Object.entries(backup.settings ?? {})) {
     await appSettings.set(key, value);
   }
@@ -266,5 +289,5 @@ export async function restoreAppBackup(backup: CalqoBackup): Promise<RestoreResu
     safeLocalSet(key, value);
   }
 
-  return { projects: backup.projects.length };
+  return { projects: backup.projects.length, starters: starters.length };
 }

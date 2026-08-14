@@ -1,10 +1,14 @@
-import { assetStorage, starterLibrary, storage } from '@/lib/adapters';
+import { assetStorage, files, starterLibrary, storage } from '@/lib/adapters';
 import type { CalqoFile, StarterRecord } from '@/lib/adapters';
 import { safeImportProject, type CalqoProject } from '@/lib/schema';
 import { createId } from '@/lib/utils/ids';
 import { projectStore } from '@/lib/state/projectStore';
 import { remapProjectAssetIds } from '@/editor/assets/assetRemap';
-import { buildCalqoFile, dataUrlToBlob } from '@/editor/export/calqoFile';
+import {
+  buildCalqoFile,
+  dataUrlToBlob,
+  slugifyFileName,
+} from '@/editor/export/calqoFile';
 import { adoptProject } from '@/editor/commands/projectCommands';
 import { exportArtboardRaster } from '@/editor/export/rasterExport';
 import { downscaleImageBlob } from '@/editor/assets/assetHealth';
@@ -175,4 +179,32 @@ export async function renameUserStarter(
 
 export async function deleteUserStarter(id: string): Promise<void> {
   await starterLibrary.deleteStarter(id);
+}
+
+/** Copy a saved starter under a fresh id so a variant can be edited without
+ * losing the original. Assets stay inlined in the envelope, so the copy shares
+ * nothing with its source. */
+export async function duplicateUserStarter(
+  id: string,
+): Promise<StarterRecord | null> {
+  const source = await starterLibrary.getStarter(id);
+  if (!source) return null;
+  const now = new Date().toISOString();
+  const copy: StarterRecord = {
+    ...structuredClone(source),
+    id: createId('starter'),
+    createdAt: now,
+    updatedAt: now,
+  };
+  await starterLibrary.saveStarter(copy);
+  return copy;
+}
+
+/** Download a saved starter as a portable `.calqo` file, so the library can be
+ * backed up or shared outside the browser's local storage. */
+export async function exportUserStarter(record: StarterRecord): Promise<void> {
+  const blob = new Blob([JSON.stringify(record.envelope, null, 2)], {
+    type: 'application/json',
+  });
+  await files.downloadBlob(blob, `${slugifyFileName(record.name)}.calqo`);
 }

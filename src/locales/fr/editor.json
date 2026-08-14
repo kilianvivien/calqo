@@ -842,6 +842,9 @@
     "saveAs": "Enregistrer comme modèle",
     "saved": "« {{name}} » ajouté à vos modèles.",
     "saveFailed": "Impossible d'enregistrer ce projet comme modèle.",
+    "duplicate": "Dupliquer le modèle",
+    "export": "Exporter le modèle en .calqo",
+    "mineEmpty": "Vous n'avez encore enregistré aucun modèle. Ouvrez un projet puis choisissez « Enregistrer comme modèle » — depuis le gestionnaire de projets ou le menu Fichier — et il apparaîtra dans cette catégorie.",
     "empty": "Aucun modèle n'a pu être chargé. Vérifiez votre connexion, ou enregistrez un projet ouvert comme modèle depuis le gestionnaire de projets.",
     "names": {
       "ig-announcement": "Annonce — carré Instagram",
@@ -895,7 +898,8 @@
       "media": "Médias",
       "lifestyle": "Lifestyle",
       "playful": "Ludique",
-      "diplomacy": "Diplomatie"
+      "diplomacy": "Diplomatie",
+      "mine": "Mes modèles"
     }
   },
   "repairAssets": {
@@ -966,9 +970,9 @@
       },
       "title": "Images clés de transformation",
       "description": "Créez un mouvement simple pour ce calque.",
-    "instructions": "Déplacez la tête de lecture, puis déplacez, redimensionnez ou faites pivoter le calque sur le canevas. Calqo enregistre automatiquement la pose.",
-    "replacesEffects": "Les images clés remplacent les effets actuels de ce calque. Vous pouvez annuler la modification.",
-    "replacesKeyframes": "Choisir un effet remplace les images clés de ce calque. Vous pouvez annuler la modification.",
+      "instructions": "Déplacez la tête de lecture, puis déplacez, redimensionnez ou faites pivoter le calque sur le canevas. Calqo enregistre automatiquement la pose.",
+      "replacesEffects": "Les images clés remplacent les effets actuels de ce calque. Vous pouvez annuler la modification.",
+      "replacesKeyframes": "Choisir un effet remplace les images clés de ce calque. Vous pouvez annuler la modification.",
       "create": "Créer des images clés",
       "count_one": "{{count}} pose dans la scène",
       "count_other": "{{count}} poses dans la scène",

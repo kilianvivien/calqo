@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Pencil, Trash2, X } from 'lucide-react';
+import { Copy, Download, FileText, Pencil, Trash2, X } from 'lucide-react';
 import {
   GlassIconButton,
   GlassSegmentedControl,
@@ -20,6 +20,8 @@ import { ArtboardThumbnail } from '@/editor/canvas/ArtboardThumbnail';
 import {
   createProjectFromStarter,
   deleteUserStarter,
+  duplicateUserStarter,
+  exportUserStarter,
   fetchBundledStarterIndex,
   listUserStarters,
   loadBundledStarterEnvelope,
@@ -191,13 +193,30 @@ export function NewProjectModal({
         }),
       );
       if (alive) setBundled(loaded.filter((starter) => starter.project));
-      const users = await listUserStarters();
-      if (alive) setUserStarters(users);
     })();
     return () => {
       alive = false;
     };
   }, [open, tab, bundled]);
+
+  /* The user library loads in its own effect: reading it alongside the bundled
+   * catalogue would tie it to a `bundled` dependency that changes the moment
+   * the catalogue lands, cancelling the in-flight library read before it can
+   * be stored — saved starters would then never reach the gallery. */
+  const refreshUserStarters = useCallback(async () => {
+    setUserStarters(await listUserStarters());
+  }, []);
+
+  useEffect(() => {
+    if (!open || tab !== 'starters') return undefined;
+    let alive = true;
+    void listUserStarters().then((list) => {
+      if (alive) setUserStarters(list);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [open, tab]);
 
   const applyProfileIfSelected = (projectId: string) => {
     const profile = profiles.find((candidate) => candidate.id === profileId);
@@ -228,19 +247,27 @@ export function NewProjectModal({
     const confirmed = await dialog.confirm({
       title: t('starters.deleteTitle'),
       message: t('starters.deleteMessage', { name: starter.name }),
+      confirmLabel: t('starters.delete'),
+      danger: true,
     });
     if (!confirmed) return;
     await deleteUserStarter(starter.id);
-    setUserStarters(await listUserStarters());
+    await refreshUserStarters();
   };
 
   const commitRename = async (starter: StarterRecord, name: string) => {
     setRenamingId(null);
     await renameUserStarter(starter.id, name);
-    setUserStarters(await listUserStarters());
+    await refreshUserStarters();
   };
 
-  const hasMine = (userStarters?.length ?? 0) > 0;
+  const copyUserStarter = async (starter: StarterRecord) => {
+    await duplicateUserStarter(starter.id);
+    await refreshUserStarters();
+  };
+
+  const mine = userStarters ?? [];
+  const hasMine = mine.length > 0;
   const categories = bundled
     ? STARTER_CATEGORY_ORDER.filter((id) =>
         bundled.some((starter) => starter.entry.category === id),
@@ -255,6 +282,9 @@ export function NewProjectModal({
           : starter.entry.category === category,
     ) ?? [];
   const showMine = hasMine && (category === 'all' || category === 'mine');
+  /* The custom category is always offered, so saved starters have a permanent
+   * home even before the first one exists. */
+  const showMineEmptyHint = category === 'mine' && !hasMine;
 
   const categoryChip = (id: string, label: string) => (
     <button
@@ -325,17 +355,20 @@ export function NewProjectModal({
         )}
       </div>
 
-      {tab === 'starters' &&
-        bundled !== null &&
-        (categories.length > 0 || hasMine) && (
-          <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            {categoryChip('all', t('starters.categories.all'))}
-            {categories.map((id) =>
-              categoryChip(id, t(`starters.categories.${id}`)),
-            )}
-            {hasMine && categoryChip('mine', t('starters.mineTitle'))}
-          </div>
-        )}
+      {tab === 'starters' && bundled !== null && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {categoryChip('all', t('starters.categories.all'))}
+          {categories.map((id) =>
+            categoryChip(id, t(`starters.categories.${id}`)),
+          )}
+          {categoryChip(
+            'mine',
+            hasMine
+              ? `${t('starters.categories.mine')} (${mine.length})`
+              : t('starters.categories.mine'),
+          )}
+        </div>
+      )}
 
       {/* Negative margin + matching padding gives the cards' hover ring and
        * lift room to render without being clipped by the scroll container. */}
@@ -346,7 +379,11 @@ export function NewProjectModal({
           <p className="px-1 py-10 text-center text-[13px] text-[var(--calqo-text-3)]">
             {t('starters.loading')}
           </p>
-        ) : bundled.length === 0 && (userStarters?.length ?? 0) === 0 ? (
+        ) : showMineEmptyHint ? (
+          <p className="px-6 py-10 text-center text-[13px] leading-relaxed text-[var(--calqo-text-3)]">
+            {t('starters.mineEmpty')}
+          </p>
+        ) : bundled.length === 0 && !hasMine ? (
           <p className="px-1 py-10 text-center text-[13px] text-[var(--calqo-text-3)]">
             {t('starters.empty')}
           </p>
@@ -392,13 +429,13 @@ export function NewProjectModal({
               </div>
             )}
 
-            {showMine && userStarters && (
+            {showMine && (
               <div>
                 <p className="mb-2 text-[11.5px] font-semibold text-[var(--calqo-text-2)]">
                   {t('starters.mineTitle')}
                 </p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {userStarters.map((starter) => (
+                  {mine.map((starter) => (
                     <div
                       key={starter.id}
                       className="group relative min-w-0 rounded-[12px] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-2.5"
@@ -456,6 +493,22 @@ export function NewProjectModal({
                           onClick={() => setRenamingId(starter.id)}
                         >
                           <Pencil size={12} />
+                        </GlassIconButton>
+                        <GlassIconButton
+                          label={t('starters.duplicate')}
+                          showTitle={false}
+                          size={22}
+                          onClick={() => void copyUserStarter(starter)}
+                        >
+                          <Copy size={12} />
+                        </GlassIconButton>
+                        <GlassIconButton
+                          label={t('starters.export')}
+                          showTitle={false}
+                          size={22}
+                          onClick={() => void exportUserStarter(starter)}
+                        >
+                          <Download size={12} />
                         </GlassIconButton>
                         <GlassIconButton
                           label={t('starters.delete')}

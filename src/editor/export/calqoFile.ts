@@ -11,7 +11,8 @@ import { projectStore } from '@/lib/state/projectStore';
 import { desktopFileStore } from '@/lib/state/desktopFileStore';
 import { adoptProject } from '@/editor/commands/projectCommands';
 
-function slug(value: string): string {
+/** Filename-safe slug for downloaded `.calqo` files. */
+export function slugifyFileName(value: string): string {
   return (
     value
       .trim()
@@ -95,7 +96,7 @@ export async function exportProjectFile(projectId: string): Promise<void> {
   const blob = new Blob([await buildCalqoFileText(project)], {
     type: 'application/json',
   });
-  await files.downloadBlob(blob, `${slug(project.name)}.calqo`);
+  await files.downloadBlob(blob, `${slugifyFileName(project.name)}.calqo`);
 }
 
 export async function importProjectText(
@@ -183,7 +184,7 @@ export async function saveNativeProjectFile(
       return meta.path;
     }
     const path = await files.saveTextFileToDisk?.(text, {
-      defaultPath: `${slug(project.name)}.calqo`,
+      defaultPath: `${slugifyFileName(project.name)}.calqo`,
       title: 'Save Calqo Project',
       filters: [{ name: 'Calqo Project', extensions: ['calqo'] }],
     });
