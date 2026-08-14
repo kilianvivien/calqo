@@ -279,13 +279,16 @@ pnpm test
 pnpm lint
 pnpm build
 pnpm e2e
-pnpm tauri:build     # macOS .app and .dmg, WebCodecs encoding only
-pnpm tauri:build:mac # release build: adds the native VideoToolbox encoder
+pnpm tauri:build     # macOS .app and .dmg, with the native VideoToolbox encoder
+pnpm tauri:build:mac # alias of the same release build
 ```
 
-Release builds use `pnpm tauri:build:mac`, which passes
-`--features video-toolbox`. That Cargo feature is off by default so the crate
-still builds on non-macOS hosts, where the AVFoundation FFI cannot compile.
+Both build scripts pass `--features video-toolbox`, so a plain `pnpm tauri:build`
+now produces a release-quality macOS bundle with the native encoder compiled in.
+The Cargo feature itself stays off by default: its AVFoundation FFI is
+`#[cfg(target_os = "macos")]` and its dependencies are target-gated, so the crate
+still builds on non-macOS hosts, where that FFI cannot compile. Use
+`pnpm tauri -- build` if you ever want a bundle without the native encoder.
 
 ## Architecture
 

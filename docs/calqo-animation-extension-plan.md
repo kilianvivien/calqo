@@ -1387,9 +1387,10 @@ package renders without Calqo or secret state.
 > inside a JSON args object (so every ~8 MB frame went through `JSON.stringify`,
 > making "hardware" export slower than WebCodecs), and offscreen scenes inherited
 > a `devicePixelRatio` backing store, so encoders received the top-left quadrant
-> of a 2× canvas. Release builds must use `pnpm tauri:build:mac`, which passes
-> `--features video-toolbox`; a plain `pnpm tauri:build` ships without the native
-> encoder. The encoder backend is now user-selectable (Settings → Video encoder).
+> of a 2× canvas. Release builds need `--features video-toolbox`; as of 0.6.3 both
+> `pnpm tauri:build` and `pnpm tauri:build:mac` pass it, so a plain build no
+> longer ships without the native encoder. The encoder backend is now
+> user-selectable (Settings → Video encoder).
 
 **Goal:** extend the proven single-scene model only after v1 usage and export
 performance are understood.
