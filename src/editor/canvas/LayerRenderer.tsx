@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Arrow, Circle, Ellipse, Group, Image, Line, Path, Rect, Text } from 'react-konva';
 import { CalqoText } from './CalqoText';
 import type Konva from 'konva';
-import { Blur } from 'konva/lib/filters/Blur';
 import type { ArrowStyle, CalqoLayer, ImageLayer, ListLayer } from '@/lib/schema';
+import { applyLayerBlurAttrs, cacheBlurredNode } from './layerBlur';
 import { listRowLayout, markerGlyph } from '@/editor/i18n-content/translationPipeline';
 import { fillProps, imageFillProps } from './shapeStyle';
 import { strokeLookConfig } from './strokeStyle';
@@ -334,7 +334,8 @@ function FrameNodesView({ nodes }: { nodes: FrameNodeSpec[] }) {
 }
 
 /** Apply / clear a cached Blur filter on a node so schema-backed `effects.blur`
- * renders on the live canvas. Images manage their own filter pipeline. */
+ * renders on the live canvas. Images manage their own filter pipeline. The
+ * filter setup is shared with the raster export so both renderers blur alike. */
 function useLayerBlur(
   nodeRefs: React.MutableRefObject<NodeRegistry>,
   layer: CalqoLayer,
@@ -343,20 +344,17 @@ function useLayerBlur(
   useEffect(() => {
     const node = nodeRefs.current.get(layer.id);
     if (!node || layer.type === 'image') return;
-    const blur = layer.effects?.blur ?? 0;
-    try {
-      if (blur > 0) {
-        node.setAttr('blurRadius', blur);
-        node.filters([Blur]);
-        node.cache();
-      } else {
+    if (applyLayerBlurAttrs(node, layer)) {
+      cacheBlurredNode(node);
+    } else {
+      try {
         node.filters([]);
         node.clearCache();
+      } catch {
+        /* no canvas (jsdom) — nothing cached to clear */
       }
-      node.getLayer()?.batchDraw();
-    } catch {
-      /* no canvas (jsdom) — skip caching */
     }
+    node.getLayer()?.batchDraw();
     // Re-cache whenever the layer or its rendered text changes.
   }, [nodeRefs, layer, activeLocale]);
 }

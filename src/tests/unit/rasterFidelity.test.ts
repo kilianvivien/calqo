@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Group } from 'konva/lib/Group';
 import type { Shape } from 'konva/lib/Shape';
 import { buildNode } from '@/editor/export/rasterExport';
+import { blurCachePadding } from '@/editor/canvas/layerBlur';
 import type {
   CalqoLayer,
   ImageLayer,
@@ -75,6 +76,17 @@ const imageLayer = (extra: Partial<ImageLayer> = {}): CalqoLayer =>
     ...extra,
   }) as CalqoLayer;
 
+const shapeLayer = (extra: Record<string, unknown> = {}): CalqoLayer =>
+  ({
+    id: 's1',
+    name: 'Shape',
+    type: 'shape',
+    shape: 'rect',
+    ...BOX,
+    fill: { type: 'solid', color: '#3366ff' },
+    ...extra,
+  }) as CalqoLayer;
+
 const groupLayer = (extra: Record<string, unknown> = {}): CalqoLayer =>
   ({
     id: 'g1',
@@ -107,13 +119,28 @@ describe('raster export mirrors the canvas renderer', () => {
     expect(blurred?.getAttr('blurRadius')).toBe(9);
   });
 
-  it('applies layer blur to lists and groups', () => {
+  it('applies layer blur to shapes, lists and groups', () => {
+    const shape = build(shapeLayer({ effects: { blur: 12 } }));
+    expect(filterNames(shape)).toEqual(['Blur']);
+    expect(shape?.getAttr('blurRadius')).toBe(12);
+
     const list = build(listLayer({ effects: { blur: 5 } }));
     expect(filterNames(list)).toEqual(['Blur']);
     expect(list?.getAttr('blurRadius')).toBe(5);
 
     const group = build(groupLayer({ effects: { blur: 4 } }));
     expect(filterNames(group)).toEqual(['Blur']);
+  });
+
+  it('pads the cache of every blurred node so the blur can fall off', () => {
+    // A cache sized to the node clips the blur away entirely for a shape whose
+    // fill covers its own box — it blurs to the same solid box.
+    expect(blurCachePadding(12)).toBeGreaterThan(12);
+    expect(blurCachePadding(0)).toBe(0);
+
+    const shape = build(shapeLayer({ effects: { blur: 12 } }));
+    expect(shape?.getAttr('calqoBlurPad')).toBe(blurCachePadding(12));
+    expect(build(shapeLayer())?.getAttr('calqoBlurPad')).toBeUndefined();
   });
 
   it('leaves image layers to their own filter pipeline', () => {

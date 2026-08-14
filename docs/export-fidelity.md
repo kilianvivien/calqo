@@ -110,21 +110,24 @@ The editor surfaces the relevant subset of these warnings in two places:
 - The **Before you export** panel in the export dialog, per artboard, alongside
   layout-overflow, missing-asset, large-raster, and large-batch warnings.
 
-## Effects that render nowhere (canvas and export agree)
+## How layer blur is cached
 
-Two schema-backed effects are inert in **both** the editor canvas and raster
-export, so exports still match what you see — but the control appears to do
-nothing. Both are Konva limitations rather than export gaps:
+Konva runs a filter over a node's cache canvas, which defaults to the size of the
+node itself. A shape whose fill covers its whole box therefore blurred to the
+same solid box — the blur had nowhere to fall off, so the effect vanished on
+canvas and in every export. Blurred nodes now cache with padding on all sides
+(`blurCachePadding`, twice the radius), which is also why a blur spills slightly
+past its layer box, as a blur should.
 
-- **Blur on a shape whose fill covers its own box.** Blur runs through a node
-  cache, and the cache is sized to the node with no padding, so a uniformly
-  filled rectangle blurs to the same uniform rectangle. Blur on text, lists, and
-  groups works because the glyphs sit inside a larger transparent box. Giving
-  the cache padding (`cache({ offset })`) would fix it in both renderers at once.
-- **Drop shadow on a list layer.** The shadow lands on the list's `Group`, and
-  Konva only paints shadows for shapes — an uncached group ignores them. (A list
-  that also carries blur _is_ cached, and then the shadow does render, in both
-  renderers alike.)
+`layerBlur.ts` owns the filter setup and the padded cache for both the live
+canvas and raster export, so the two cannot drift apart.
+
+Drop shadow (`effects.shadow`) is a **shape-level** effect: Konva paints shadows
+for shapes, not containers. The inspector reflects this — text and list layers
+do not offer it, and instead carry their shadow through Typography
+(`style.shadow`), which renders per text node in both renderers. A list's
+`effects.shadow` (reachable only from an imported file or an agent) stays inert
+in both, so exports still match the canvas.
 
 ## Performance notes
 

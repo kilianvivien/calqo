@@ -11,7 +11,6 @@ import { Line } from 'konva/lib/shapes/Line';
 import { Arrow } from 'konva/lib/shapes/Arrow';
 import { Circle } from 'konva/lib/shapes/Circle';
 import { Path } from 'konva/lib/shapes/Path';
-import { Blur } from 'konva/lib/filters/Blur';
 import type { Node as KonvaNode } from 'konva/lib/Node';
 import type { Container } from 'konva/lib/Container';
 import type { Shape } from 'konva/lib/Shape';
@@ -26,6 +25,10 @@ import { pressureOutlinePoints } from '@/editor/canvas/freehandGeometry';
 import { stickerStrokeConfig } from '@/editor/canvas/stickerOutline';
 import { frameRender, type FrameNodeSpec } from '@/editor/canvas/frameNodes';
 import { drawMaskPath } from '@/editor/canvas/maskClip';
+import {
+  applyLayerBlurAttrs,
+  cacheBlurredNode,
+} from '@/editor/canvas/layerBlur';
 import {
   buildImageFilterPipeline,
   coverCropRect,
@@ -151,18 +154,6 @@ function blendAttrs(layer: CalqoLayer): ShapeConfig {
   return { globalCompositeOperation: layer.blendMode };
 }
 
-/** Stage a layer's `effects.blur` on its outermost node, mirroring the live
- * canvas's `useLayerBlur`: same filter, same attribute, same skip for image
- * layers (those run their own pipeline). The node is cached later, once the
- * tree is assembled — see `cacheFilteredNodes`. */
-function applyLayerBlur(node: Group | Shape, layer: CalqoLayer): void {
-  if (layer.type === 'image') return;
-  const blur = layer.effects?.blur ?? 0;
-  if (blur <= 0) return;
-  node.setAttr('blurRadius', blur);
-  node.filters([Blur]);
-}
-
 /** Stage an image layer's adjustment filters on its Image node, mirroring the
  * pipeline `ImageLayerNode` applies on the live canvas. */
 function applyImageFilters(node: KonvaImage, layer: ImageLayer): void {
@@ -190,11 +181,7 @@ export function cacheFilteredNodes(root: Container | KonvaNode): void {
   const node = root as Shape;
   if (typeof node.filters !== 'function') return;
   if ((node.filters()?.length ?? 0) === 0) return;
-  try {
-    node.cache();
-  } catch {
-    /* no canvas (jsdom) — the filter is simply not baked */
-  }
+  cacheBlurredNode(node);
 }
 
 /** Build a Konva node for a declarative frame spec (shared geometry with the
@@ -340,7 +327,7 @@ export function buildNode(
   locale: string,
 ): Group | Shape | null {
   const node = buildLayerNode(layer, images, locale);
-  if (node) applyLayerBlur(node, layer);
+  if (node) applyLayerBlurAttrs(node, layer);
   return node;
 }
 
