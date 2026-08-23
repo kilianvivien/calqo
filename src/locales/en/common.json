@@ -218,6 +218,30 @@
       "removeTerm": "Remove term"
     }
   },
+  "updates": {
+    "title": "Updates",
+    "check": "Check for Updates…",
+    "checking": "Checking for updates…",
+    "upToDate": "Calqo is up to date.",
+    "available": "Calqo {{version}} is available.",
+    "install": "Update",
+    "installVersion": "Install {{version}}",
+    "downloading": "Downloading update…",
+    "downloadingPercent": "Downloading update… {{percent}}%",
+    "ready": "Calqo {{version}} is installed — restart to use it.",
+    "restart": "Restart now",
+    "later": "Later",
+    "skip": "Skip this version",
+    "notes": "What's new",
+    "autoCheck": "Check for updates automatically",
+    "autoCheckHint": "Looks for a new release shortly after launch and every few hours. Nothing is installed without your confirmation.",
+    "lastChecked": "Last checked {{at}}.",
+    "browserHint": "The web app updates itself when you reload. In-app updates apply to the Calqo desktop app.",
+    "errorNotConfigured": "This build was packaged without update signing, so it cannot update itself. Download the latest release from GitHub.",
+    "errorNetwork": "Could not reach the update server. Check your connection and try again.",
+    "errorSignature": "The update could not be verified and was not installed. Download the latest release from GitHub instead.",
+    "errorInstall": "The update could not be installed. Download the latest release from GitHub."
+  },
   "theme": {
     "toggle": "Toggle theme",
     "light": "Light",

@@ -64,6 +64,9 @@ Dexie, Zod, react-i18next, lucide-react. Package manager: pnpm.
 - Project copies and backup restores must clone asset blobs, assign fresh ids,
   and rewrite references with `remapProjectAssetIds`.
 - Backups must not include secrets or API keys.
+- Bump the app version in `package.json`, `src-tauri/tauri.conf.json`, and
+  `src-tauri/Cargo.toml` together; `pnpm version:check` verifies it. Releases go
+  through the Release workflow — see `docs/releasing.md`.
 
 ## Status
 

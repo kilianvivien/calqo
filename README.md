@@ -73,6 +73,25 @@ quote cards, campaign variants, and multilingual public information.
 | **Touch & stylus**   | Responsive phone quick-edit UI, tablet gestures, coarse-pointer controls, long-press menus, and pressure-aware brush strokes    |
 | **Desktop**          | Native macOS menus, `.calqo` open/save, image drop and clipboard support, local font discovery, and secure AI-key storage       |
 
+## Calqo 0.6.4 — Updates that come to you
+
+The desktop app now keeps itself current instead of asking you to notice a new
+release on GitHub.
+
+- Calqo checks for a signed release shortly after launch and every few hours,
+  and offers the update in a small prompt rather than interrupting your work.
+- **Calqo ▸ Check for Updates…** runs the check on demand, and
+  **Settings ▸ Updates** shows the running version, the release notes, the last
+  check, and a switch for automatic checking.
+- Updates download with a progress readout and install on your confirmation —
+  nothing is replaced silently, and you choose when to restart.
+- Every update is verified against a signing key baked into the app before it is
+  installed, so a tampered download is rejected.
+- `Skip this version` keeps a release you do not want out of the way without
+  turning update checks off.
+
+The browser app is unaffected: it still refreshes through its service worker.
+
 ## Calqo 0.6.3 — Your own models, findable again
 
 Models you save from your own projects now have a home of their own instead of
@@ -171,8 +190,12 @@ See the complete history on the
 
 ## Download
 
-Download **Calqo 0.6.3 for macOS on Apple Silicon** from the
+Download **Calqo 0.6.4 for macOS on Apple Silicon** from the
 [latest GitHub release](https://github.com/kilianvivien/calqo/releases/latest).
+
+From 0.6.4 the app updates itself: it checks for a new signed release in the
+background and offers it under **Calqo ▸ Check for Updates…** and
+**Settings ▸ Updates**. Nothing installs without your confirmation.
 
 The current desktop build is ad-hoc signed, not Developer ID signed or
 notarized. On first launch, macOS Gatekeeper may require you to approve Calqo
@@ -281,6 +304,8 @@ pnpm build
 pnpm e2e
 pnpm tauri:build     # macOS .app and .dmg, with the native VideoToolbox encoder
 pnpm tauri:build:mac # alias of the same release build
+pnpm version:check   # package.json, tauri.conf.json, and Cargo.toml agree
+pnpm release:check   # the pre-tag gate: version + typecheck + lint + test
 ```
 
 Both build scripts pass `--features video-toolbox`, so a plain `pnpm tauri:build`
@@ -289,6 +314,16 @@ The Cargo feature itself stays off by default: its AVFoundation FFI is
 `#[cfg(target_os = "macos")]` and its dependencies are target-gated, so the crate
 still builds on non-macOS hosts, where that FFI cannot compile. Use
 `pnpm tauri -- build` if you ever want a bundle without the native encoder.
+
+Releases are cut by the **Release** GitHub Actions workflow on an Apple Silicon
+runner: it builds, signs the updater artifacts, publishes a draft release, and
+refuses to finish if the native encoder or the update signature is missing. The
+test suite deliberately stays out of CI — run `pnpm release:check` before
+tagging instead.
+`pnpm tauri:build:release` does the same signed build locally (it needs the
+signing key in the environment). See
+[docs/releasing.md](docs/releasing.md) for the signing-key setup and the
+release routine.
 
 ## Architecture
 

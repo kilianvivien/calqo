@@ -11,6 +11,8 @@
     "opener:default",
     "store:default",
     "stronghold:default",
+    "updater:default",
+    "process:allow-restart",
     "clipboard-manager:allow-read-image",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-image",

@@ -1,0 +1,138 @@
+name: Release
+
+# Calqo ships macOS on Apple Silicon only, so one arm64 runner produces every
+# artifact: the DMG people download and the signed `.app.tar.gz` + `latest.json`
+# the in-app updater reads.
+#
+# The release is created as a DRAFT. Publishing it is the deliberate act that
+# makes the update live, because the updater endpoint resolves through
+# `releases/latest/download/latest.json` and a draft's assets are not served.
+#
+# Deliberately NOT here: typecheck, lint, and the unit suite. macOS runners bill
+# at 10x the Linux rate, and those checks run in seconds locally — `pnpm
+# release:check` before tagging. What remains are the checks that can only be
+# made against the built artifact, plus two cheap guards on release metadata.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build (e.g. v0.6.4)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # macos-14 and later are Apple Silicon; the native VideoToolbox encoder
+    # needs an arm64 host.
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check release metadata matches the tag
+        run: node scripts/check-version.mjs "${{ github.event.inputs.tag || github.ref_name }}"
+
+      # The bundler rejects an empty pubkey too, but only after a full release
+      # compile. Failing here costs a second instead of several runner minutes.
+      - name: Check the updater public key is set
+        run: |
+          set -euo pipefail
+          KEY=$(node -p "require('./src-tauri/tauri.conf.json').plugins?.updater?.pubkey ?? ''")
+          if [ -z "$KEY" ]; then
+            echo "::error::plugins.updater.pubkey is empty in src-tauri/tauri.conf.json. See docs/releasing.md."
+            exit 1
+          fi
+
+      - name: Build, sign, and draft the release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Generated once with `pnpm tauri signer generate`. Without these the
+          # build fails rather than shipping an unsigned, un-updatable bundle.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          releaseName: 'Calqo __VERSION__'
+          releaseBody: |
+            Calqo __VERSION__ for macOS on Apple Silicon.
+
+            Installed copies of 0.6.4 and later update themselves — Calqo ▸ Check
+            for Updates…, or automatically shortly after launch.
+
+            This build is ad-hoc signed, not Developer ID signed or notarized. On
+            first launch macOS Gatekeeper may ask you to approve Calqo in
+            System Settings.
+          releaseDraft: true
+          prerelease: false
+          # Writes `latest.json` (the updater manifest) alongside the bundles.
+          includeUpdaterJson: true
+          args: --target aarch64-apple-darwin --features video-toolbox --config src-tauri/tauri.updater.conf.json
+
+      # A DMG missing the native encoder is indistinguishable from a good one:
+      # same name, same version, similar size, and MP4 export still works via
+      # the WebCodecs fallback. Fail loudly before the draft gets published.
+      #
+      # The bundle path is spelled out rather than searched for: a `find` would
+      # happily match a stale bundle from an earlier build and verify the wrong
+      # binary. It must stay in step with the `--target` passed above.
+      - name: Verify the native VideoToolbox encoder is linked
+        env:
+          BUNDLE: src-tauri/target/aarch64-apple-darwin/release/bundle
+        run: |
+          set -euo pipefail
+          BIN="$BUNDLE/macos/Calqo.app/Contents/MacOS/calqo"
+          if [ ! -f "$BIN" ]; then
+            echo "::error::No Calqo.app was produced at $BUNDLE."
+            exit 1
+          fi
+          echo "Checking $BIN"
+          if ! otool -L "$BIN" | grep -qi avfoundation; then
+            echo "::error::AVFoundation is not linked — this build has no native VideoToolbox encoder. Do not publish the draft release."
+            exit 1
+          fi
+          COUNT=$(strings -a "$BIN" | grep -icE 'avassetwriter|videotoolbox' || true)
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::No VideoToolbox symbols found in the binary. Do not publish the draft release."
+            exit 1
+          fi
+          echo "AVFoundation linked, $COUNT VideoToolbox symbols found."
+
+      - name: Confirm the updater artifacts were produced
+        env:
+          BUNDLE: src-tauri/target/aarch64-apple-darwin/release/bundle
+        run: |
+          set -euo pipefail
+          ls -la "$BUNDLE/macos" "$BUNDLE/dmg"
+          test -f "$BUNDLE/macos/Calqo.app.tar.gz" \
+            || { echo "::error::Missing Calqo.app.tar.gz — the updater has nothing to download."; exit 1; }
+          test -f "$BUNDLE/macos/Calqo.app.tar.gz.sig" \
+            || { echo "::error::Missing update signature — check TAURI_SIGNING_PRIVATE_KEY."; exit 1; }
+          echo "Updater artifacts present."
