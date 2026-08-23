@@ -22,6 +22,7 @@ use tauri::{
 /// here. Keep this list in sync with the submenus built in `build_menu`.
 const APP_COMMAND_IDS: &[&str] = &[
     "app.settings",
+    "app.checkUpdates",
     "file.new",
     "file.open",
     "file.save",
@@ -122,6 +123,13 @@ fn build_menu<R: Runtime>(app: &AppHandle<R>, lang: &str) -> tauri::Result<Menu<
             app,
             Some(tr(lang, "About Calqo", "À propos de Calqo")),
             Some(about_metadata(lang)),
+        )?)
+        .separator()
+        .item(&item(
+            app,
+            "app.checkUpdates",
+            tr(lang, "Check for Updates…", "Rechercher les mises à jour…"),
+            None,
         )?)
         .separator()
         .item(&item(
@@ -523,6 +531,8 @@ fn list_font_variants(family: String) -> Result<Vec<FontVariant>, String> {
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_clipboard_manager::init())

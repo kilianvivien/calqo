@@ -34,10 +34,12 @@ import { exportArtboardRaster } from '@/editor/export/rasterExport';
 import { shareArtboardPng } from '@/editor/export/share';
 import { saveImageBlobAsset } from '@/lib/utils/imageAsset';
 import { mcpStore } from '@/lib/state/mcpStore';
+import { useUpdaterStore } from '@/lib/state/updaterStore';
 
 export type AppCommandId =
   | 'app.about'
   | 'app.settings'
+  | 'app.checkUpdates'
   | 'app.quit'
   | 'file.new'
   | 'file.open'
@@ -88,6 +90,7 @@ interface CommandContext {
   openSettings: () => void;
   openShortcuts: () => void;
   openDiagnostics: () => void;
+  openUpdates: () => void;
 }
 
 export interface CommandDefinition {
@@ -98,6 +101,7 @@ export interface CommandDefinition {
 
 export const appCommandDefinitions: CommandDefinition[] = [
   { id: 'app.about', labelKey: 'common:menu.app.about' },
+  { id: 'app.checkUpdates', labelKey: 'common:updates.check' },
   {
     id: 'app.settings',
     labelKey: 'common:settings.open',
@@ -509,6 +513,12 @@ export async function invokeAppCommand(id: AppCommandId): Promise<void> {
   switch (id) {
     case 'app.about':
       window.alert(i18n.t('common:app.versionLabel', { version: APP_VERSION }));
+      return;
+    case 'app.checkUpdates':
+      // Show the result where it can be read: the Updates section reports
+      // "up to date" and any failure, while the banner handles the hit.
+      context?.openUpdates();
+      await useUpdaterStore.getState().check();
       return;
     case 'app.settings':
       context?.openSettings();

@@ -7,6 +7,7 @@ import {
   Download,
   Gem,
   Palette,
+  RefreshCw,
   Settings2,
   Sparkles,
   Upload,
@@ -44,6 +45,7 @@ import { dialog } from '@/lib/adapters';
 import { platformRuntime } from '@/lib/platform/runtime';
 import { DiagnosticsPane } from './inspector/DiagnosticsPane';
 import { AgentDrawingPane } from './AgentDrawingPane';
+import { UpdatesPane } from './UpdatesPane';
 import { BrandSettingsPane } from './BrandSettingsPane';
 import {
   resetAssetHealthThresholds,
@@ -58,6 +60,7 @@ export type SettingsTab =
   | 'ai'
   | 'agent'
   | 'data'
+  | 'updates'
   | 'diagnostics';
 
 const LANGUAGE_KEY = 'calqo-language';
@@ -192,6 +195,11 @@ export function AppSettingsModal({
       { id: 'ai' as const, label: t('settings.ai.title'), icon: Sparkles },
       { id: 'agent' as const, label: t('settings.agentDrawing.title'), icon: Bot },
       { id: 'data' as const, label: t('settings.data.title'), icon: DatabaseBackup },
+      // In-app updates are a desktop concern: the browser build refreshes
+      // through the service worker instead.
+      ...(isTauri
+        ? [{ id: 'updates' as const, label: t('updates.title'), icon: RefreshCw }]
+        : []),
       { id: 'diagnostics' as const, label: t('settings.diagnostics'), icon: Activity },
     ],
     [t],
@@ -372,6 +380,8 @@ export function AppSettingsModal({
             )}
 
             {activeTab === 'brand' && <BrandSettingsPane />}
+
+            {activeTab === 'updates' && <UpdatesPane />}
 
             {activeTab === 'ai' && (
               <section className="space-y-5">

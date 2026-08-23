@@ -12,6 +12,7 @@ import {
 import { invokeAppCommandSync } from './commands/appCommands';
 import { installNativeFileDrops } from './commands/nativeFileDrops';
 import { initAgentDrawing } from '@/editor/mcp/bridge';
+import { initAutoUpdate } from '@/lib/updates/autoUpdate';
 import {
   isEditableKeyboardTarget,
   isKeyboardEventInsideModal,
@@ -25,6 +26,7 @@ import { AppShell } from './shell/AppShell';
 import { ConfirmHost } from './shell/ConfirmHost';
 import { MobileShell } from './mobile/MobileShell';
 import { PwaUpdatePrompt } from './PwaUpdatePrompt';
+import { UpdateBanner } from './shell/UpdateBanner';
 import { PwaInstallPrompt } from './PwaInstallPrompt';
 import { usePhoneLayout } from '@/lib/hooks/useResponsiveMode';
 
@@ -44,6 +46,10 @@ export function App() {
   // Agent drawing (desktop only): listen for forwarded MCP requests and
   // auto-start the embedded server when the settings toggle is enabled.
   useEffect(() => initAgentDrawing(), []);
+
+  // Auto-update (desktop only): check for a signed release shortly after
+  // launch, then on a slow interval.
+  useEffect(() => initAutoUpdate(), []);
 
   // Reopen last session's tabs from IndexedDB, and flush saves before unload.
   useEffect(() => {
@@ -184,6 +190,7 @@ export function App() {
     <ErrorBoundary>
       {phone ? <MobileShell /> : <AppShell />}
       <ConfirmHost />
+      <UpdateBanner />
       <PwaUpdatePrompt />
       <PwaInstallPrompt />
       {/* Vercel Web Analytics — browser deploy only, not the Tauri shell. */}

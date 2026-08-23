@@ -13,6 +13,8 @@ import { dexieSettingsAdapter } from './settings/dexieSettingsAdapter';
 import { tauriSettingsAdapter } from './settings/tauriSettingsAdapter';
 import { browserDialogAdapter } from './dialog/browserDialogAdapter';
 import { tauriDialogAdapter } from './dialog/tauriDialogAdapter';
+import { browserUpdaterAdapter } from './updater/browserUpdaterAdapter';
+import { tauriUpdaterAdapter } from './updater/tauriUpdaterAdapter';
 import { dexieStarterLibraryAdapter } from './starters/dexieStarterLibraryAdapter';
 import { dexieBrandProfileAdapter } from './brand/dexieBrandProfileAdapter';
 import { webCodecsVideoExportAdapter } from './video/webCodecsVideoExportAdapter';
@@ -28,6 +30,7 @@ import type { ClipboardAdapter } from './clipboard/ClipboardAdapter';
 import type { FontAdapter } from './fonts/FontAdapter';
 import type { SettingsAdapter } from './settings/SettingsAdapter';
 import type { DialogAdapter } from './dialog/DialogAdapter';
+import type { UpdaterAdapter } from './updater/UpdaterAdapter';
 import type { StarterLibraryAdapter } from './starters/StarterLibraryAdapter';
 import type { BrandProfileAdapter } from './brand/BrandProfileAdapter';
 import type { VideoExportAdapter } from './video/VideoExportAdapter';
@@ -47,6 +50,11 @@ export const appSettings: SettingsAdapter = isTauri
 export const dialog: DialogAdapter = isTauri
   ? tauriDialogAdapter
   : browserDialogAdapter;
+// Auto-update is a desktop concern: the browser build refreshes through the
+// service worker instead (`PwaUpdatePrompt`).
+export const appUpdater: UpdaterAdapter = isTauri
+  ? tauriUpdaterAdapter
+  : browserUpdaterAdapter;
 export const starterLibrary: StarterLibraryAdapter = dexieStarterLibraryAdapter;
 export const brandProfiles: BrandProfileAdapter = dexieBrandProfileAdapter;
 // On Tauri, prefer the native VideoToolbox (M-series hardware) encoder and fall
@@ -67,6 +75,13 @@ export type { ClipboardAdapter } from './clipboard/ClipboardAdapter';
 export type { FontAdapter, FontDef, FontVariant } from './fonts/FontAdapter';
 export type { SettingsAdapter } from './settings/SettingsAdapter';
 export type { DialogAdapter } from './dialog/DialogAdapter';
+export type {
+  UpdaterAdapter,
+  AvailableUpdate,
+  UpdateDownloadProgress,
+  UpdaterUnavailableReason,
+} from './updater/UpdaterAdapter';
+export { UpdaterUnavailableError } from './updater/UpdaterAdapter';
 export type { StarterLibraryAdapter, StarterRecord } from './starters/StarterLibraryAdapter';
 export type { BrandProfileAdapter, BrandProfileRecord } from './brand/BrandProfileAdapter';
 export { BRAND_ASSET_SCOPE } from './brand/BrandProfileAdapter';

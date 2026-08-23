@@ -218,6 +218,30 @@
       "removeTerm": "Retirer le terme"
     }
   },
+  "updates": {
+    "title": "Mises à jour",
+    "check": "Rechercher les mises à jour…",
+    "checking": "Recherche de mises à jour…",
+    "upToDate": "Calqo est à jour.",
+    "available": "Calqo {{version}} est disponible.",
+    "install": "Mettre à jour",
+    "installVersion": "Installer {{version}}",
+    "downloading": "Téléchargement de la mise à jour…",
+    "downloadingPercent": "Téléchargement de la mise à jour… {{percent}} %",
+    "ready": "Calqo {{version}} est installé — redémarrez pour l’utiliser.",
+    "restart": "Redémarrer maintenant",
+    "later": "Plus tard",
+    "skip": "Ignorer cette version",
+    "notes": "Nouveautés",
+    "autoCheck": "Rechercher les mises à jour automatiquement",
+    "autoCheckHint": "Vérifie peu après le lancement, puis toutes les quelques heures. Rien n’est installé sans votre confirmation.",
+    "lastChecked": "Dernière vérification : {{at}}.",
+    "browserHint": "L’application web se met à jour au rechargement. Les mises à jour intégrées concernent l’application de bureau Calqo.",
+    "errorNotConfigured": "Cette version a été empaquetée sans signature de mise à jour : elle ne peut pas se mettre à jour. Téléchargez la dernière version sur GitHub.",
+    "errorNetwork": "Impossible de joindre le serveur de mises à jour. Vérifiez votre connexion et réessayez.",
+    "errorSignature": "La mise à jour n’a pas pu être vérifiée et n’a pas été installée. Téléchargez plutôt la dernière version sur GitHub.",
+    "errorInstall": "La mise à jour n’a pas pu être installée. Téléchargez la dernière version sur GitHub."
+  },
   "theme": {
     "toggle": "Changer de thème",
     "light": "Clair",

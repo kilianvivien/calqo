@@ -84,6 +84,10 @@ export function AppShell() {
         setSettingsTab('diagnostics');
         setSettingsOpen(true);
       },
+      openUpdates: () => {
+        setSettingsTab('updates');
+        setSettingsOpen(true);
+      },
     });
     return unregister;
   }, []);
