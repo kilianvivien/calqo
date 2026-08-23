@@ -35,7 +35,7 @@
       "endpoints": [
         "https://github.com/kilianvivien/calqo/releases/latest/download/latest.json"
       ],
-      "pubkey": ""
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZENjY4QTUwNEZDQTgwMTkKUldRWmdNcFBVSXBtL1hGbndvK0F4bysxc3BBVWpDNFNPR1JiQm1zVnA2S09FZDlCREVnMFo5MTEK"
     }
   },
   "bundle": {
