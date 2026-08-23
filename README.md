@@ -71,7 +71,7 @@ quote cards, campaign variants, and multilingual public information.
 | **AI templates**     | Prompt-to-template generation that produces validated, editable Calqo project JSON instead of a flat picture                    |
 | **Agent drawing**    | A local MCP server lets Codex, Claude Code, Antigravity, OpenCode, and other agents draw directly in the live desktop app       |
 | **Touch & stylus**   | Responsive phone quick-edit UI, tablet gestures, coarse-pointer controls, long-press menus, and pressure-aware brush strokes    |
-| **Desktop**          | Native macOS menus, `.calqo` open/save, image drop and clipboard support, local font discovery, and secure AI-key storage       |
+| **Desktop**          | Native macOS menus, `.calqo` open/save, image drop and clipboard support, local font discovery, secure AI-key storage, and signed in-app updates |
 
 ## Calqo 0.6.4 — Updates that come to you
 

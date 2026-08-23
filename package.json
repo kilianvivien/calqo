@@ -13,7 +13,7 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build --features video-toolbox",
     "tauri:build:mac": "tauri build --features video-toolbox",
-    "tauri:build:release": "tauri build --features video-toolbox --config src-tauri/tauri.updater.conf.json",
+    "tauri:build:release": "tauri build --target aarch64-apple-darwin --features video-toolbox --config src-tauri/tauri.updater.conf.json",
     "version:check": "node scripts/check-version.mjs",
     "release:check": "pnpm version:check && pnpm typecheck && pnpm lint && pnpm test",
     "typecheck": "tsc --noEmit",

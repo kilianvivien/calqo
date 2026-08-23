@@ -13,10 +13,11 @@ name: Release
 # release:check` before tagging. What remains are the checks that can only be
 # made against the built artifact, plus two cheap guards on release metadata.
 
+# Manual only. Releases are normally built locally with `pnpm tauri:build:release`
+# and uploaded with `gh release`, which costs nothing; a tag push must not start
+# a macOS runner by accident. Use this when you want the build reproduced on
+# clean hardware instead.
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       tag:
@@ -35,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ inputs.tag }}
 
       - uses: pnpm/action-setup@v4
         with:
@@ -57,7 +58,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Check release metadata matches the tag
-        run: node scripts/check-version.mjs "${{ github.event.inputs.tag || github.ref_name }}"
+        run: node scripts/check-version.mjs "${{ inputs.tag }}"
 
       # The bundler rejects an empty pubkey too, but only after a full release
       # compile. Failing here costs a second instead of several runner minutes.
@@ -79,7 +80,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          tagName: ${{ inputs.tag }}
           releaseName: 'Calqo __VERSION__'
           releaseBody: |
             Calqo __VERSION__ for macOS on Apple Silicon.
