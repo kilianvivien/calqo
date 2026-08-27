@@ -73,6 +73,21 @@ quote cards, campaign variants, and multilingual public information.
 | **Touch & stylus**   | Responsive phone quick-edit UI, tablet gestures, coarse-pointer controls, long-press menus, and pressure-aware brush strokes    |
 | **Desktop**          | Native macOS menus, `.calqo` open/save, image drop and clipboard support, local font discovery, secure AI-key storage, and signed in-app updates |
 
+## Calqo 0.6.5 — Faster, calmer agent drawing
+
+Agent drawing now gets to the canvas sooner and wraps up more decisively.
+
+- The first status check includes the active canvas context and points directly
+  to the next useful action, avoiding routine discovery steps.
+- Calqo applies each validated edit batch once and renders previews directly at
+  their final bounded size, reducing duplicate work without changing undo,
+  autosave, selection, or editability.
+- Basic work uses a compact quick start while the complete advanced MCP guide
+  remains available for animation, multilingual content, images, and effects.
+- Agents are asked to describe visible progress in plain language, keep
+  protocol details in the background, and stop when the requested design is
+  complete instead of polishing indefinitely.
+
 ## Calqo 0.6.4 — Updates that come to you
 
 The desktop app now keeps itself current instead of asking you to notice a new
@@ -190,7 +205,7 @@ See the complete history on the
 
 ## Download
 
-Download **Calqo 0.6.4 for macOS on Apple Silicon** from the
+Download **Calqo 0.6.5 for macOS on Apple Silicon** from the
 [latest GitHub release](https://github.com/kilianvivien/calqo/releases/latest).
 
 From 0.6.4 the app updates itself: it checks for a new signed release in the

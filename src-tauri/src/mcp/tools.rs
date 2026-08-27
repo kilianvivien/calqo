@@ -275,7 +275,7 @@ impl CalqoMcpServer {
 
     #[tool(
         name = "calqo_get_status",
-        description = "Get live Calqo state: active project and artboard, selection, current revision, and whether writes are allowed. Call this first."
+        description = "Required first call. Returns live project/artboard state, the current revision, write access, and the exact next action so you can begin editing immediately."
     )]
     pub async fn get_status(
         &self,
@@ -290,7 +290,7 @@ impl CalqoMcpServer {
 
     #[tool(
         name = "calqo_get_guide",
-        description = "Get the Calqo drawing guide: operation shapes, layer schemas, examples, and design rules. Read this before your first calqo_apply_operations call."
+        description = "Get a compact workflow and communication guide. Optional for ordinary text-and-shape work because tool schemas are complete; read calqo://schema/operations only for advanced features or troubleshooting."
     )]
     pub async fn get_guide(
         &self,
@@ -342,7 +342,7 @@ impl CalqoMcpServer {
 
     #[tool(
         name = "calqo_apply_operations",
-        description = "Apply a batch of drawing operations to a Calqo artboard. The batch validates fully before anything is applied, commits atomically as ONE undo step, and returns changed layer ids plus warnings."
+        description = "Fast edit path when no image is needed: apply a substantial batch atomically as one undo step. Validation is included, so do not dry-run ordinary edits."
     )]
     pub async fn apply_operations(
         &self,
@@ -359,7 +359,7 @@ impl CalqoMcpServer {
 
     #[tool(
         name = "calqo_apply_and_preview",
-        description = "Preferred drawing loop: validate and apply one atomic operation batch, then return the updated revision, warnings, and a PNG preview in the SAME call. Inspect the image and call again with small updateLayer refinements."
+        description = "Preferred drawing path: apply one complete atomic edit batch and return its PNG in the same call. Start with the full composition, then make only meaningful refinements; one or two preview passes are normally enough."
     )]
     pub async fn apply_and_preview(
         &self,
@@ -526,15 +526,24 @@ impl ServerHandler for CalqoMcpServer {
         info.server_info.title = Some("Calqo".into());
         info.server_info.version = env!("CARGO_PKG_VERSION").into();
         info.instructions = Some(
-            "Draw editable social graphics in the live Calqo app. First call calqo_get_status. \
-             Prefer calqo_apply_and_preview: it validates, applies one atomic undo step, and \
-             returns the PNG plus the new revision in one call. Inspect the image, then refine \
-             with small updateLayer batches using that revision. Tool input schemas describe \
-             operations and layers; call calqo_get_guide only for advanced fields/design advice. \
+            "Draw editable social graphics in the live Calqo app. Call calqo_get_status once, \
+             follow its next action, and begin editing immediately. For ordinary text-and-shape \
+             work, do not read resources, inspect source code, or call the guide: tool schemas \
+             are sufficient. Prefer calqo_apply_and_preview and build the complete first draft \
+             in one substantial atomic batch. Validation is included; do not dry-run ordinary \
+             edits. Inspect the PNG and make only meaningful corrections, normally no more than \
+             one or two refinement calls, then finish when the user's brief is satisfied. \
+             Use calqo_get_guide or calqo://schema/operations only for advanced features or \
+             troubleshooting. \
              If the user asks for generated imagery, or wants an image found on the web, use your \
              own image/search capability, save the result locally, and pass its absolute filePath \
              to calqo_insert_image. Use dataUrl only when no local file is available. \
-             Never erase existing work unless asked. Writes require one in-app approval per session."
+             Never erase existing work unless asked. Writes require one in-app approval per session. \
+             While working, give brief plain-language updates about visible design changes. Keep \
+             MCP calls, JSON, schemas, operation batches, ids, revisions, and validation mechanics \
+             out of user-facing messages unless the user needs them to solve a problem. Do not \
+             narrate every internal step. At completion, describe the visible result and confirm \
+             that its text and design elements remain editable."
                 .into(),
         );
         info
@@ -580,7 +589,16 @@ impl ServerHandler for CalqoMcpServer {
         };
         let outcome = self
             .bridge
-            .call(method, Value::Null, client_of(&context), READ_TIMEOUT)
+            .call(
+                method,
+                if method == "get_guide" {
+                    json!({ "full": true })
+                } else {
+                    Value::Null
+                },
+                client_of(&context),
+                READ_TIMEOUT,
+            )
             .await;
         match outcome {
             Ok(value) => {

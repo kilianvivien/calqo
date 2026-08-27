@@ -204,6 +204,12 @@ export function serializeAppStatus() {
     ? projectStore.getState().projects[activeProjectId]
     : null;
   const mcp = mcpStore.getState();
+  const activeArtboard = project
+    ? (project.artboards.find(
+        (artboard) =>
+          artboard.id === selectionStore.getState().activeArtboardId,
+      ) ?? project.artboards[0])
+    : null;
   return {
     app: 'Calqo',
     version: APP_VERSION,
@@ -221,13 +227,17 @@ export function serializeAppStatus() {
           name: project.name,
           revision: projectRevision(project),
           activeContentLocale: project.activeContentLocale,
-          activeArtboardId:
-            selectionStore.getState().activeArtboardId ??
-            project.artboards[0]?.id ??
-            null,
+          activeArtboardId: activeArtboard?.id ?? null,
           selectedLayerIds: selectionStore.getState().selectedLayerIds,
+          palette: project.palette,
           clipFps: project.clipSettings?.fps ?? null,
           sceneCount: project.clipSettings?.scenes?.length ?? 0,
+          // Include the active canvas in the required first call. Most agents
+          // can now preserve/refine existing work without a second resource
+          // read; the full-project resource remains available for other boards.
+          activeArtboard: activeArtboard
+            ? summarizeArtboard(activeArtboard, project.activeContentLocale)
+            : null,
           artboards: project.artboards.map((artboard) => ({
             id: artboard.id,
             name: artboard.name,
@@ -239,12 +249,19 @@ export function serializeAppStatus() {
           })),
         }
       : null,
-    next: {
-      tool: 'calqo_apply_and_preview',
-      why: 'Preferred fast path: validates, applies one undo step, and returns a PNG plus the new revision.',
-      baseRevision: project ? projectRevision(project) : null,
-    },
-    hint: 'Tool schemas describe operations and layers. Call calqo_get_guide only for advanced fields or design advice.',
+    next: project
+      ? {
+          tool: 'calqo_apply_and_preview',
+          why: 'Start the first complete edit now; validation and preview are included.',
+          baseRevision: projectRevision(project),
+        }
+      : {
+          tool: 'calqo_create_project',
+          why: 'No project is open. Create one, then start the first complete edit.',
+        },
+    workingStyle:
+      'Move quickly in substantial batches and usually stop after one or two visual refinements. Describe visible design progress to the user in plain language; keep tool, schema, id, and revision details internal unless troubleshooting.',
+    hint: 'The tool schemas are enough for ordinary text-and-shape work. Use calqo_get_guide only for advanced features or after an error.',
   };
 }
 

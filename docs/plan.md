@@ -465,6 +465,21 @@ is complete, disabled by default, and well tested.
     into Codex, Antigravity, and OpenCode user config (or uses Claude Code's
     own CLI); retain native copy/paste fallbacks, explicit restart guidance,
     and a starter request.
+- [x] Reduce time-to-first-edit and completion latency (0.6.5).
+  - Include the active artboard's editable layer context in the required status
+    call and point empty sessions directly to project creation, eliminating
+    routine discovery/resource round trips.
+  - Return a compact quick-start from `calqo_get_guide`; keep the complete
+    animation, multilingual, image, and effects reference at
+    `calqo://schema/operations` so no authoring capability is removed.
+  - Commit the already validated/simulated document instead of interpreting
+    every operation batch twice, while retaining atomicity, one-step undo,
+    autosave, selection, and revision behavior.
+  - Render bounded MCP previews directly at their final scale instead of
+    producing, decoding, resampling, and re-encoding a full-size PNG.
+  - Guide agents to start with a substantial first draft, avoid redundant dry
+    runs, stop after the brief is met, and report visible progress in concise,
+    user-friendly language rather than MCP/schema internals.
 - [x] Let capable agents add generated or web-sourced raster assets.
   - `calqo_insert_image` prefers an absolute same-machine `filePath`, so
     generated binaries never pass through model context. The Rust gateway
