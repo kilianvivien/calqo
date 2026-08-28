@@ -22,7 +22,7 @@ import {
   serializeArtboardPresets,
   serializeProjectSummary,
 } from './contextSerializers';
-import { MCP_AGENT_GUIDE } from './guide';
+import { MCP_AGENT_GUIDE, MCP_AGENT_QUICK_GUIDE } from './guide';
 import { currentWriteAccess, ensureWritePermission } from './permissions';
 import { renderMcpPreview } from './preview';
 import { executeInsertAgentImage } from './agentImage';
@@ -151,7 +151,15 @@ async function dispatch(request: McpBridgeRequest): Promise<unknown> {
     case 'get_status':
       return serializeAppStatus();
     case 'get_guide':
-      return { guide: MCP_AGENT_GUIDE };
+      return {
+        guide:
+          request.args &&
+          typeof request.args === 'object' &&
+          'full' in request.args &&
+          (request.args as { full?: unknown }).full === true
+            ? MCP_AGENT_GUIDE
+            : MCP_AGENT_QUICK_GUIDE,
+      };
     case 'get_presets':
       return { presets: serializeArtboardPresets() };
     case 'get_project_summary':
@@ -334,8 +342,13 @@ export function initAgentDrawing(): () => void {
   const unlisteners: Array<() => void> = [];
 
   void (async () => {
-    await mcpStore.getState().load();
-    const { listen } = await import('@tauri-apps/api/event');
+    // Settings I/O and loading Tauri's event module are independent. Doing
+    // both together shortens the persisted auto-start path without changing
+    // when the server becomes reachable (listeners still attach first).
+    const [, { listen }] = await Promise.all([
+      mcpStore.getState().load(),
+      import('@tauri-apps/api/event'),
+    ]);
     const unlistenRequest = await listen<McpBridgeRequest>(
       'calqo-mcp-request',
       (event) => {

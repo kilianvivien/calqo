@@ -50,7 +50,8 @@ export interface RasterExportOptions {
   /** Active content locale, for rendering text variants. */
   locale: string;
   format: RasterFormat;
-  pixelRatio: 1 | 2 | 3;
+  /** Output scale. User exports use 1–3; bounded previews may render below 1. */
+  pixelRatio: number;
   /** Omit the background fill (PNG/WebP only — JPEG always gets a fill). */
   transparent: boolean;
   /** 0–1, used for JPEG/WebP. */

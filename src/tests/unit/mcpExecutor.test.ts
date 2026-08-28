@@ -14,6 +14,7 @@ import {
   serializeAppStatus,
   serializeProjectSummary,
 } from '@/editor/mcp/contextSerializers';
+import { MCP_AGENT_GUIDE, MCP_AGENT_QUICK_GUIDE } from '@/editor/mcp/guide';
 import { undoProject } from '@/editor/commands/projectCommands';
 import { createDefaultProject, type CalqoProject } from '@/lib/schema';
 import { historyStore } from '@/lib/state/historyStore';
@@ -268,7 +269,7 @@ describe('mcp executor', () => {
 
   it('groups and ungroups top-level layers', () => {
     const project = openProject();
-    executeApplyOperations({
+    const grouped = executeApplyOperations({
       operations: [
         { type: 'addLayer', layer: textLayer('layer_a') },
         { type: 'addLayer', layer: shapeLayer('layer_b') },
@@ -283,6 +284,9 @@ describe('mcp executor', () => {
     expect(layers).toHaveLength(1);
     expect(layers[0].type).toBe('group');
     expect(layers[0].name).toBe('Header');
+    // The validated simulation is now the committed document, so generated
+    // ids reported to the agent cannot drift during a second apply pass.
+    expect(grouped.changedLayerIds).toContain(layers[0].id);
 
     executeApplyOperations({
       operations: [{ type: 'ungroupLayer', layerId: layers[0].id }],
@@ -608,6 +612,12 @@ describe('mcp permissions', () => {
 });
 
 describe('mcp context serializers', () => {
+  it('points directly to project creation when no project is open', () => {
+    const status = serializeAppStatus();
+    expect(status.activeProject).toBeNull();
+    expect(status.next.tool).toBe('calqo_create_project');
+  });
+
   it('summarizes the active project without asset payloads or secrets', () => {
     const project = openProject();
     executeApplyOperations({
@@ -624,7 +634,20 @@ describe('mcp context serializers', () => {
 
     const status = serializeAppStatus();
     expect(status.activeProject?.id).toBe(project.id);
+    expect(status.activeProject?.activeArtboard?.layers[0]).toMatchObject({
+      id: 'layer_head',
+      type: 'text',
+    });
     expect(status.writeAccess).toBe('requires-approval');
+    expect(status.next.tool).toBe('calqo_apply_and_preview');
+  });
+
+  it('keeps first-edit guidance compact and user-friendly', () => {
+    expect(MCP_AGENT_QUICK_GUIDE.length).toBeLessThan(
+      MCP_AGENT_GUIDE.length / 4,
+    );
+    expect(MCP_AGENT_QUICK_GUIDE).toContain('plain and visual');
+    expect(MCP_AGENT_QUICK_GUIDE).toContain('one or two refinement');
   });
 
   it('reports animation so an agent can refine motion instead of overwriting it', () => {

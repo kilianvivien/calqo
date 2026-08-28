@@ -4,9 +4,35 @@ import {
   MAX_OPERATIONS_PER_BATCH,
 } from './operationSchemas';
 
-/** The drawing guide returned by `calqo_get_guide` and the
- * `calqo://schema/operations` resource. Many MCP hosts never read resources,
- * so the guide is a tool too and `calqo_get_status` points at it. */
+/** Small enough to read without delaying the first edit. The complete guide
+ * remains available through the operations resource for advanced features. */
+export const MCP_AGENT_QUICK_GUIDE = `# Calqo MCP quick start
+
+Start with one \`calqo_get_status\` call. If there is no active project, create
+one. Otherwise make the first edit immediately with \`calqo_apply_and_preview\`.
+Its operation schema is the source of truth and it already validates atomically,
+so do not dry-run ordinary batches.
+
+For a new composition, send the complete first draft as one substantial batch:
+background/panels first, then editable text, lists, shapes, SVGs, and images.
+Use stable descriptive layer ids. Inspect the returned preview, make only
+meaningful refinements, and finish once the brief is met; one or two refinement
+passes are normally enough. Use \`calqo_apply_operations\` when no preview is
+needed. Preserve existing work unless the user asked to replace it.
+
+Keep all user-facing progress plain and visual. Say what is changing on the
+canvas, such as “I’ve set the layout and am tightening the spacing.” Do not
+mention MCP calls, JSON, schemas, operation batches, layer ids, revisions, or
+validation details unless the user needs them to resolve a problem. Avoid
+narrating every internal step. At completion, briefly describe the visible
+result and confirm that its text and design elements remain editable.
+
+Read \`calqo://schema/operations\` only when you need animation, keyframes,
+multilingual content, generated/web images, advanced effects, or help after a
+validation error.`;
+
+/** Complete advanced guide returned by `calqo://schema/operations`. The guide
+ * tool intentionally returns the quick version so it cannot delay first edit. */
 export const MCP_AGENT_GUIDE = `# Drawing in Calqo over MCP
 
 You are connected to a live Calqo document. Everything you create stays fully
@@ -14,12 +40,14 @@ editable for the user: real text, shape, SVG, and list layers on artboards.
 
 ## Workflow
 
-1. \`calqo_get_status\` — see the active project, artboard, and current \`revision\`.
+1. \`calqo_get_status\` — make this the only required setup call. It tells you
+   whether to create a project or begin editing.
 2. \`calqo_create_project\` — only when no project is open or the user wants a new one.
 3. \`calqo_apply_and_preview\` — preferred fast path: validate and apply a batch
    atomically as ONE undo step, then receive the updated \`revision\`, warnings,
-   and PNG in the same call. Look at it and refine with small \`updateLayer\`
-   batches.
+   and PNG in the same call. Build a complete first draft in one substantial
+   batch, then make only meaningful refinements; one or two passes are normally
+   enough.
 4. \`calqo_apply_operations\` / \`calqo_get_preview\` — use separately only when
    you do not need an image on every edit.
 5. \`calqo_validate_operations\` — optional dry run when diagnosing a payload;
@@ -31,6 +59,19 @@ editable for the user: real text, shape, SVG, and list layers on artboards.
 The first write asks the user for approval in Calqo; if a write fails with
 PERMISSION_DENIED, tell the user to approve agent drawing (or call
 \`calqo_request_control\` to trigger the prompt).
+
+Do not read this full guide before ordinary text-and-shape work: the tool schema
+is enough. Do not dry-run normal batches, inspect Calqo's source code, or keep
+iterating after the requested result is visibly complete.
+
+## Talking to the user
+
+Use short, non-technical progress updates about visible outcomes. For example:
+“I’ve built the main composition and am refining contrast and spacing.” Keep
+MCP calls, JSON, schemas, operation batches, ids, revisions, and validation
+mechanics internal unless the user must act on a problem. Do not narrate every
+tool call. Finish with a brief description of the design and what remains
+editable.
 
 ## Operations (calqo_apply_operations)
 

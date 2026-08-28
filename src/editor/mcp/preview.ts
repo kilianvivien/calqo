@@ -30,28 +30,6 @@ async function blobToBase64(blob: Blob): Promise<string> {
   return btoa(binary);
 }
 
-async function downscale(blob: Blob, width: number, height: number): Promise<Blob> {
-  const scale = PREVIEW_MAX_EDGE / Math.max(width, height);
-  if (scale >= 1) return blob;
-  const bitmap = await createImageBitmap(blob);
-  try {
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(width * scale));
-    canvas.height = Math.max(1, Math.round(height * scale));
-    const context = canvas.getContext('2d');
-    if (!context) return blob;
-    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (scaled) => (scaled ? resolve(scaled) : reject(new Error('preview encode failed'))),
-        'image/png',
-      );
-    });
-  } finally {
-    bitmap.close();
-  }
-}
-
 /** Render an artboard to a bounded PNG for the agent's look-and-refine loop.
  * Uses the same offscreen Konva pipeline as user exports. */
 export async function renderMcpPreview(raw: unknown): Promise<McpPreviewResult> {
@@ -92,15 +70,16 @@ export async function renderMcpPreview(raw: unknown): Promise<McpPreviewResult> 
   }
 
   try {
-    const fullSize = await exportArtboardRaster({
+    const scale = Math.min(1, PREVIEW_MAX_EDGE / Math.max(artboard.width, artboard.height));
+    // Konva accepts fractional output scales. Render once at the final bounded
+    // size instead of decoding, resampling, and re-encoding a full-size PNG.
+    const preview = await exportArtboardRaster({
       artboard,
       locale: project.activeContentLocale,
       format: 'png',
-      pixelRatio: 1,
+      pixelRatio: scale,
       transparent: false,
     });
-    const scale = Math.min(1, PREVIEW_MAX_EDGE / Math.max(artboard.width, artboard.height));
-    const scaled = await downscale(fullSize, artboard.width, artboard.height);
     return {
       ok: true,
       projectId: project.id,
@@ -108,7 +87,7 @@ export async function renderMcpPreview(raw: unknown): Promise<McpPreviewResult> 
       mimeType: 'image/png',
       width: Math.max(1, Math.round(artboard.width * scale)),
       height: Math.max(1, Math.round(artboard.height * scale)),
-      data: await blobToBase64(scaled),
+      data: await blobToBase64(preview),
     };
   } catch (error) {
     if (error instanceof McpOperationError) throw error;

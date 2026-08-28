@@ -1,4 +1,4 @@
-import type { Draft } from 'immer';
+import { produce, type Draft } from 'immer';
 import {
   createArtboard,
   layerAnimationSchema,
@@ -832,6 +832,9 @@ interface PreparedBatch {
   project: CalqoProject;
   artboard: CalqoArtboard;
   batch: NormalizedBatch;
+  /** Fully simulated next document. Committing this result avoids interpreting
+   * every operation a second time while retaining all-or-nothing validation. */
+  simulatedProject: CalqoProject;
   /** Outcome of the simulation pass (same ops, cloned project). */
   simulated: ApplyOutcome;
 }
@@ -853,22 +856,25 @@ export function prepareApplyOperations(raw: unknown): PreparedBatch {
     );
   }
   const batch = normalizeBatch(project, input.operations);
-  const simulated = applyBatchToProject(
-    structuredClone(project),
-    artboard.id,
-    batch,
-  );
-  return { project, artboard, batch, simulated };
+  let simulated!: ApplyOutcome;
+  const simulatedProject = produce(project, (draft) => {
+    simulated = applyBatchToProject(draft, artboard.id, batch);
+  });
+  return { project, artboard, batch, simulatedProject, simulated };
 }
 
 /** Validate, simulate, then commit a batch as one undoable step. */
 export function executeApplyOperations(raw: unknown): ApplyOperationsResult {
-  const { project, artboard, batch, simulated } = prepareApplyOperations(raw);
+  const { project, artboard, batch, simulatedProject, simulated } =
+    prepareApplyOperations(raw);
 
   editProject(
     project.id,
     (draft) => {
-      applyBatchToProject(draft, artboard.id, batch);
+      // The structurally shared simulation already passed complete validation.
+      // Commit it through the normal command path so history, autosave, dirty
+      // state, selection, and the final revision stamp behave exactly as before.
+      Object.assign(draft, simulatedProject);
     },
     { undoable: true },
   );
