@@ -14,6 +14,7 @@ import { frameRender, type FrameNodeSpec } from './frameNodes';
 import { buildImageFilterPipeline, coverCropRect } from './imageFilters';
 import { drawMaskPath } from './maskClip';
 import { useAssetImage } from './useAssetImage';
+import { layerListensForCanvasEvents } from './canvasHitTesting';
 
 export type NodeRegistry = Map<string, Konva.Node>;
 
@@ -87,6 +88,7 @@ function commonProps(
     rotation: layer.rotation,
     opacity: layer.opacity,
     visible: layer.visible,
+    listening: layerListensForCanvasEvents(layer),
     draggable: interactive && !layer.locked,
     ...handlers,
   };

@@ -167,6 +167,25 @@ describe('mcp operation schemas', () => {
     });
     expect(parsed.success).toBe(true);
   });
+
+  it('accepts native artboard background operations', () => {
+    const parsed = applyOperationsInputSchema.safeParse({
+      operations: [
+        {
+          type: 'setArtboardBackground',
+          background: {
+            type: 'linear',
+            angle: 135,
+            stops: [
+              { offset: 0, color: '#111827' },
+              { offset: 1, color: '#0A2540' },
+            ],
+          },
+        },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+  });
 });
 
 describe('mcp executor', () => {
@@ -311,6 +330,46 @@ describe('mcp executor', () => {
       operations: [{ type: 'setActiveArtboard', artboardId: added.id }],
     });
     expect(selectionStore.getState().activeArtboardId).toBe(added.id);
+  });
+
+  it('sets a native artboard background as one undoable edit', () => {
+    const project = openProject();
+    const original = structuredClone(project.artboards[0].background);
+
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'setArtboardBackground',
+          background: { type: 'solid', color: '#0A2540' },
+        },
+      ],
+    });
+
+    expect(currentProject(project.id).artboards[0].background).toEqual({
+      type: 'solid',
+      color: '#0A2540',
+    });
+    expect(currentProject(project.id).artboards[0].layers).toHaveLength(0);
+
+    undoProject(project.id);
+    expect(currentProject(project.id).artboards[0].background).toEqual(original);
+  });
+
+  it('rejects a native background operation for an unknown artboard', () => {
+    openProject();
+    expectMcpError(
+      () =>
+        executeApplyOperations({
+          operations: [
+            {
+              type: 'setArtboardBackground',
+              artboardId: 'ab_missing',
+              background: { type: 'solid', color: '#0A2540' },
+            },
+          ],
+        }),
+      'ARTBOARD_NOT_FOUND',
+    );
   });
 
   it('registers, seeds, and switches content locales atomically', () => {

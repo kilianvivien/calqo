@@ -480,6 +480,11 @@ is complete, disabled by default, and well tested.
   - Guide agents to start with a substantial first draft, avoid redundant dry
     runs, stop after the brief is met, and report visible progress in concise,
     user-friendly language rather than MCP/schema internals.
+- [x] Use native artboard backgrounds in agent-authored projects (0.7.0).
+  - Expose a validated `setArtboardBackground` operation for solid, gradient,
+    and image backgrounds instead of requiring a full-artboard shape layer.
+  - Make locked canvas layers transparent to hit testing so existing AI-made
+    background layers no longer swallow deselection or tool clicks.
 - [x] Let capable agents add generated or web-sourced raster assets.
   - `calqo_insert_image` prefers an absolute same-machine `filePath`, so
     generated binaries never pass through model context. The Rust gateway

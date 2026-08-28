@@ -495,6 +495,15 @@ export function applyBatchToProject(
         outcome.focusArtboardId = operation.artboardId;
         break;
       }
+      case 'setArtboardBackground': {
+        const abId = operation.artboardId ?? artboard.id;
+        const target = project.artboards.find((candidate) => candidate.id === abId);
+        if (!target) {
+          opFail('ARTBOARD_NOT_FOUND', `Artboard "${abId}" does not exist.`);
+        }
+        target.background = structuredClone(operation.background);
+        break;
+      }
       case 'addContentLocale': {
         applyAddContentLocale(project, operation.locale, {
           copyFrom: operation.copyFrom,

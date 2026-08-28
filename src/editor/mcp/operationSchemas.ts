@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   ARTBOARD_PRESETS,
+  backgroundFillSchema,
   layerSchema,
   listItemSchema,
   listMarkerSchema,
@@ -143,6 +144,17 @@ export const setActiveArtboardOperationSchema = z
   .object({
     type: z.literal('setActiveArtboard'),
     artboardId: z.string().min(1),
+  })
+  .strict();
+
+/** Replace an artboard's native background. Agents should use this instead of
+ * adding a locked, full-artboard shape that obscures normal canvas gestures. */
+export const setArtboardBackgroundOperationSchema = z
+  .object({
+    type: z.literal('setArtboardBackground'),
+    background: backgroundFillSchema,
+    /** Defaults to the batch artboard. */
+    artboardId: z.string().min(1).optional(),
   })
   .strict();
 
@@ -302,6 +314,7 @@ export const mcpOperationSchema = z.discriminatedUnion('type', [
   ungroupLayerOperationSchema,
   addArtboardOperationSchema,
   setActiveArtboardOperationSchema,
+  setArtboardBackgroundOperationSchema,
   addContentLocaleOperationSchema,
   setActiveContentLocaleOperationSchema,
   setLayerPresetOperationSchema,

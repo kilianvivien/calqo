@@ -573,7 +573,7 @@ dependencies = [
 
 [[package]]
 name = "calqo"
-version = "0.6.5"
+version = "0.7.0"
 dependencies = [
  "axum",
  "base64 0.22.1",

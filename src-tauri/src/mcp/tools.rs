@@ -644,6 +644,7 @@ mod tests {
         let json = serde_json::to_string(&schema).expect("schema serializes");
         assert!(json.contains("addLayer"));
         assert!(json.contains("updateLayer"));
+        assert!(json.contains("setArtboardBackground"));
         assert!(json.contains("layerId"));
         assert!(json.contains("fontSize"));
         assert!(json.contains("assetId"));

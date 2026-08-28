@@ -80,6 +80,29 @@ pub enum FillParam {
 }
 
 #[derive(Deserialize, Serialize, JsonSchema)]
+#[serde(
+    tag = "type",
+    rename_all = "lowercase",
+    rename_all_fields = "camelCase"
+)]
+pub enum BackgroundFillParam {
+    Solid {
+        color: String,
+    },
+    Linear {
+        angle: f64,
+        stops: Vec<GradientStop>,
+    },
+    Radial {
+        stops: Vec<GradientStop>,
+    },
+    Image {
+        asset_id: String,
+        fit: ImageFit,
+    },
+}
+
+#[derive(Deserialize, Serialize, JsonSchema)]
 pub struct GradientStop {
     /// Position from 0 to 1.
     pub offset: f64,
@@ -424,6 +447,12 @@ pub enum McpOperationParam {
     },
     #[serde(rename = "setActiveArtboard")]
     SetActiveArtboard { artboard_id: String },
+    #[serde(rename = "setArtboardBackground")]
+    SetArtboardBackground {
+        background: BackgroundFillParam,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        artboard_id: Option<String>,
+    },
     #[serde(rename = "addContentLocale")]
     AddContentLocale {
         locale: String,

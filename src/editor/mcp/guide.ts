@@ -14,7 +14,9 @@ Its operation schema is the source of truth and it already validates atomically,
 so do not dry-run ordinary batches.
 
 For a new composition, send the complete first draft as one substantial batch:
-background/panels first, then editable text, lists, shapes, SVGs, and images.
+set the native artboard background first, then add panels, editable text, lists,
+shapes, SVGs, and images. Do not simulate the artboard background with a locked
+full-size layer.
 Use stable descriptive layer ids. Inspect the returned preview, make only
 meaningful refinements, and finish once the brief is met; one or two refinement
 passes are normally enough. Use \`calqo_apply_operations\` when no preview is
@@ -87,6 +89,7 @@ editable.
     { "type": "ungroupLayer", "layerId": "…" },
     { "type": "addArtboard", "preset": "story", "name": "Story variant" },
     { "type": "setActiveArtboard", "artboardId": "…" },
+    { "type": "setArtboardBackground", "background": { "type": "solid", "color": "#0A2540" } },
     { "type": "addContentLocale", "locale": "fr", "copyFrom": "en" },
     { "type": "setActiveContentLocale", "locale": "fr" }
   ]
@@ -97,6 +100,11 @@ Limits: at most ${MAX_OPERATIONS_PER_BATCH} operations per batch and
 ${MAX_LAYERS_PER_ARTBOARD} layers per artboard. You may provide your own layer
 ids; if one collides, Calqo mints a replacement and returns it in \`idMap\`.
 Later operations in the same batch may reference layers added earlier in it.
+
+Use \`setArtboardBackground\` for the artboard itself. It accepts solid, linear
+gradient, radial gradient, and image backgrounds and defaults to the batch's
+artboard; pass \`artboardId\` to target another artboard. Keep full-size shape
+layers for intentional editable panels, not for the page background.
 
 ## Layer shapes
 
