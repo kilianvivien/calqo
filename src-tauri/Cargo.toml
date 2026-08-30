@@ -56,6 +56,7 @@ toml_edit = "0.25"
 # feature (macOS-only path). Kept optional so the default build graph is
 # unchanged. The encoder itself is additionally `#[cfg(target_os = "macos")]`.
 [target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "3.7"
 objc2 = { version = "0.6", optional = true }
 objc2-foundation = { version = "0.3", optional = true, features = [
     "NSString",

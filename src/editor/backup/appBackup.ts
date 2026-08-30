@@ -1,3 +1,4 @@
+import { DOCUMENT_LIMITS } from '@/lib/schema/budgets';
 import {
   appSettings,
   assetStorage,
@@ -184,6 +185,8 @@ function isBackup(value: unknown): value is CalqoBackup {
 
 /** Parse and validate a backup file's text, throwing a readable error. */
 export function parseBackup(text: string): CalqoBackup {
+  if (new Blob([text]).size > DOCUMENT_LIMITS.fileBytes)
+    throw new Error('Backup exceeds the 128 MB import limit.');
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);

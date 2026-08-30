@@ -1,6 +1,10 @@
-import type { CalqoArtboard, CalqoProject } from '@/lib/schema';
+import type { CalqoArtboard, CalqoLayer, CalqoProject } from '@/lib/schema';
 import { artboardOverflowLayerIds } from '@/editor/commands/projectCommands';
 import { collectAssetUsage } from '@/editor/assets/missingAssets';
+import {
+  detectListOverflow,
+  detectTextOverflow,
+} from '@/editor/i18n-content/translationPipeline';
 
 /** Pixel area above which a raster asset is flagged as heavy for the browser
  * canvas (≈ 16 MP, e.g. a 4000×4000 image). */
@@ -36,12 +40,83 @@ export interface ExportWarningInput {
   targets: CalqoArtboard[];
   /** Whether this run exports every artboard (drives the "many artboards" hint). */
   exportingAll: boolean;
+  locales?: string[];
+  includeLayerIssues?: boolean;
+}
+
+export interface LayerExportIssue {
+  key: string;
+  params: Record<string, string>;
+  artboardId: string;
+  layerId: string;
+  locale?: string;
+}
+
+/** Keep decorative clipping informational, distinct from text that cannot fit.
+ * The same records drive export and diagnostics; navigation uses ids, not names. */
+export function collectLayerExportIssues(
+  targets: CalqoArtboard[],
+  locales: string[],
+  svg = false,
+): LayerExportIssue[] {
+  const issues: LayerExportIssue[] = [];
+  for (const artboard of targets) {
+    const clipped = new Set(artboardOverflowLayerIds(artboard));
+    const visit = (layers: CalqoLayer[], topLevel: boolean) => {
+      for (const layer of layers) {
+        if (!layer.visible) continue;
+        const base = {
+          artboardId: artboard.id,
+          layerId: layer.id,
+          params: { name: artboard.name, layer: layer.name },
+        };
+        if (topLevel && clipped.has(layer.id))
+          issues.push({ ...base, key: 'export.warnOverflow' });
+        if (layer.type === 'text' || layer.type === 'list') {
+          for (const locale of locales) {
+            const overflow =
+              layer.type === 'text'
+                ? detectTextOverflow(layer, locale)
+                : detectListOverflow(layer, locale);
+            if (overflow?.hasOverflow)
+              issues.push({
+                ...base,
+                key: 'export.warnTextFit',
+                locale,
+                params: { ...base.params, locale },
+              });
+          }
+        }
+        if (
+          svg &&
+          (layer.effects?.blur ||
+            layer.effects?.shadow ||
+            layer.sticker ||
+            (layer.type === 'shape' &&
+              (layer.fill.type !== 'solid' || layer.stroke?.look)) ||
+            (layer.type === 'image' &&
+              (layer.mask || layer.filters || layer.frame)))
+        ) {
+          issues.push({ ...base, key: 'export.warnSvgLayer' });
+        }
+        if (layer.type === 'group') visit(layer.children, false);
+      }
+    };
+    visit(artboard.layers, true);
+  }
+  return issues;
 }
 
 /** Collect export-readiness warnings: layout overflow, missing assets, heavy
  * raster assets, and large batch sizes. Returns localized strings via `t`. */
 export function collectExportWarnings(
-  { project, targets, exportingAll }: ExportWarningInput,
+  {
+    project,
+    targets,
+    exportingAll,
+    locales,
+    includeLayerIssues = true,
+  }: ExportWarningInput,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): string[] {
   if (!project) return [];
@@ -49,11 +124,13 @@ export function collectExportWarnings(
   const assets = new Map(project.assets.map((a) => [a.id, a]));
   const targetIds = new Set(targets.map((target) => target.id));
 
-  for (const artboard of targets) {
-    if (artboardOverflowLayerIds(artboard).length > 0) {
-      messages.push(t('export.warnOverflow', { name: artboard.name }));
-    }
-  }
+  if (includeLayerIssues)
+    messages.push(
+      ...collectLayerExportIssues(
+        targets,
+        locales ?? [project.activeContentLocale],
+      ).map((issue) => t(issue.key, issue.params)),
+    );
 
   // Walk every rendered asset reference — nested group layers, shape image
   // fills, list markers, and artboard backgrounds — so the warnings match

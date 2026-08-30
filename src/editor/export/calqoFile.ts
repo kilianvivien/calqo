@@ -1,3 +1,6 @@
+import { DOCUMENT_LIMITS } from '@/lib/schema/budgets';
+import { remapProjectAssetIds } from '@/editor/assets/assetRemap';
+import { collectAssetUsage } from '@/editor/assets/missingAssets';
 import { assetStorage, files, storage } from '@/lib/adapters';
 import type { CalqoFile } from '@/lib/adapters';
 import {
@@ -32,8 +35,22 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  if (
+    typeof dataUrl !== 'string' ||
+    dataUrl.length > Math.ceil((DOCUMENT_LIMITS.assetBytes * 4) / 3) + 256 ||
+    !/^data:image\/(png|jpeg|webp|svg\+xml)(?:;charset=utf-8)?(?:;base64)?,/i.test(
+      dataUrl,
+    )
+  ) {
+    throw new Error(
+      'Asset must be a bounded, embedded PNG, JPEG, WebP, or SVG.',
+    );
+  }
   const response = await fetch(dataUrl);
-  return response.blob();
+  const blob = await response.blob();
+  if (blob.size > DOCUMENT_LIMITS.assetBytes)
+    throw new Error('Asset exceeds the 32 MB limit.');
+  return blob;
 }
 
 async function collectEnvelopeAssets(project: CalqoProject) {
@@ -103,6 +120,8 @@ export async function importProjectText(
   text: string,
   options: { sourcePath?: string; preserveId?: boolean } = {},
 ): Promise<string> {
+  if (new Blob([text]).size > DOCUMENT_LIMITS.fileBytes)
+    throw new Error('Project file exceeds the 128 MB limit.');
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -114,6 +133,14 @@ export async function importProjectText(
     parsed && typeof parsed === 'object' && (parsed as CalqoFile).kind === 'calqo.project'
       ? (parsed as CalqoFile)
       : null;
+  if (
+    envelope &&
+    (envelope.formatVersion !== 1 ||
+      !Array.isArray(envelope.assets) ||
+      envelope.assets.length > DOCUMENT_LIMITS.assets)
+  ) {
+    throw new Error('Unsupported or malformed project envelope.');
+  }
   const rawProject = envelope ? envelope.project : parsed;
 
   const result = safeImportProject(rawProject);
@@ -122,24 +149,60 @@ export async function importProjectText(
   }
 
   const now = new Date().toISOString();
-  const project: CalqoProject = {
+  let project: CalqoProject = {
     ...result.project,
     id: options.preserveId ? result.project.id : createId('proj'),
     createdAt: options.preserveId ? result.project.createdAt : now,
     updatedAt: options.preserveId ? result.project.updatedAt : now,
   };
 
-  // Restore inlined assets (if any) under their original ref ids.
-  if (envelope?.assets?.length) {
-    await Promise.all(
-      envelope.assets.map(async (asset) => {
+  // Validate/decode every inline asset before writes, then assign independent
+  // ownership. Importing the same file twice must not overwrite another project.
+  const prepared: { oldId: string; blob: Blob }[] = [];
+  const seen = new Set<string>();
+  let totalBytes = 0;
+  for (const asset of envelope?.assets ?? []) {
+    if (!asset || typeof asset.id !== 'string' || seen.has(asset.id))
+      throw new Error('Malformed or duplicate asset entry.');
+    seen.add(asset.id);
+    const blob = await dataUrlToBlob(asset.dataUrl);
+    totalBytes += blob.size;
+    if (totalBytes > DOCUMENT_LIMITS.fileBytes)
+      throw new Error('Project assets exceed the import budget.');
         const ref = project.assets.find((candidate) => candidate.id === asset.id);
-        if (!ref) return;
+    if (
+      ref &&
+      (blob.type !== ref.mimeType ||
+        (ref.kind === 'svg') !== (blob.type === 'image/svg+xml'))
+    )
+      throw new Error('Embedded asset type does not match its manifest.');
+    prepared.push({ oldId: asset.id, blob });
+  }
+  const idMap = new Map(
+    [
+      ...new Set([
+        ...project.assets.map((asset) => asset.id),
+        ...collectAssetUsage(project).keys(),
+      ]),
+    ].map((id) => [id, createId('asset')]),
+  );
+  project = remapProjectAssetIds(project, idMap);
+  const restored: string[] = [];
+  try {
+    for (const { oldId, blob } of prepared) {
+      const ref = project.assets.find(
+        (candidate) => candidate.id === idMap.get(oldId),
+      );
+      if (!ref) continue;
         noticeIfOversized(ref.name, ref.kind, ref.width, ref.height);
-        const blob = await dataUrlToBlob(asset.dataUrl);
         await assetStorage.restoreAsset(project.id, ref, blob);
-      }),
+      restored.push(ref.id);
+    }
+  } catch (error) {
+    await Promise.allSettled(
+      restored.map((id) => assetStorage.deleteAsset(id)),
     );
+    throw error;
   }
 
   const id = await adoptProject(project);
@@ -153,6 +216,8 @@ export async function importProjectText(
  * restored to storage and the project is opened under a fresh id so an import
  * never clobbers an open document. */
 export async function importProjectFile(file: File): Promise<string> {
+  if (file.size > DOCUMENT_LIMITS.fileBytes)
+    throw new Error('Project file exceeds the 128 MB limit.');
   return importProjectText(await file.text());
 }
 
@@ -167,20 +232,26 @@ export async function openNativeProjectFile(): Promise<string | null> {
   });
 }
 
-export async function saveNativeProjectFile(
+async function saveNativeProjectFileOnce(
   projectId: string,
   mode: 'save' | 'saveAs' = 'save',
 ): Promise<string | null> {
   const project = projectStore.getState().projects[projectId];
   if (!project) return null;
-  const text = await buildCalqoFileText(project);
   const meta = desktopFileStore.getState().files[projectId];
   const store = desktopFileStore.getState();
   try {
     store.setDiskState(projectId, 'saving');
+    const text = await buildCalqoFileText(project);
     if (mode === 'save' && meta?.path && files.writeTextFileToDisk) {
       await files.writeTextFileToDisk(meta.path, text);
-      store.linkFile(projectId, meta.path, 'saved');
+      store.linkFile(
+        projectId,
+        meta.path,
+        projectStore.getState().projects[projectId] === project
+          ? 'saved'
+          : 'unsaved',
+      );
       return meta.path;
     }
     const path = await files.saveTextFileToDisk?.(text, {
@@ -188,12 +259,45 @@ export async function saveNativeProjectFile(
       title: 'Save Calqo Project',
       filters: [{ name: 'Calqo Project', extensions: ['calqo'] }],
     });
-    if (path) store.linkFile(projectId, path, 'saved');
-    else store.setDiskState(projectId, meta?.path ? meta.diskState : 'unlinked');
+    if (path)
+      store.linkFile(
+        projectId,
+        path,
+        projectStore.getState().projects[projectId] === project
+          ? 'saved'
+          : 'unsaved',
+      );
+    else
+      store.setDiskState(
+        projectId,
+        meta?.path
+          ? projectStore.getState().projects[projectId] === project
+            ? meta.diskState
+            : 'unsaved'
+          : 'unlinked',
+      );
     return path ?? null;
   } catch (error) {
     console.error('[Calqo] native project save failed', error);
     store.setDiskState(projectId, 'error');
     return null;
   }
+}
+
+const nativeSaves = new Map<string, Promise<string | null>>();
+
+/** Disk writes and Save As dialogs run sequentially for each document. */
+export function saveNativeProjectFile(
+  projectId: string,
+  mode: 'save' | 'saveAs' = 'save',
+): Promise<string | null> {
+  const previous = nativeSaves.get(projectId) ?? Promise.resolve(null);
+  const task = previous
+    .catch(() => null)
+    .then(() => saveNativeProjectFileOnce(projectId, mode))
+    .finally(() => {
+      if (nativeSaves.get(projectId) === task) nativeSaves.delete(projectId);
+    });
+  nativeSaves.set(projectId, task);
+  return task;
 }

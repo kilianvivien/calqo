@@ -5,7 +5,7 @@ Concise guidance for working in Calqo.
 ## Product
 
 Calqo is an open-source, local-first social visual maker: the focused 20% of
-Canva for static social posts. Browser React app first; Tauri shell later.
+Canva for static social posts. React browser editor and macOS Tauri shell, with mobile quick edit.
 
 Core AI bets:
 
@@ -14,10 +14,10 @@ Core AI bets:
 
 Source of truth:
 
-- `docs/PRD-calqo-v0.5.md` - product spec.
-- `docs/calqo-browser-prototype-implementation-plan.md` - phased plan; keep
-  status banners current.
-- `docs/GeoCarto-design.md` - Liquid Glass design system.
+- `docs/Old/PRD-calqo-v0.5.md` - product spec.
+- `docs/plan.md` - active roadmap; keep status banners current.
+- `docs/Old/calqo-browser-prototype-implementation-plan.md` - archived phase history.
+- `docs/Old/GeoCarto-design.md` - Liquid Glass design system.
 
 ## Commands
 
@@ -70,9 +70,10 @@ Dexie, Zod, react-i18next, lucide-react. Package manager: pnpm.
 
 ## Status
 
-Phase A is complete. Phase B is next: Konva canvas editor, layer renderers,
-selection/transform, tools, text overlay, undo/redo. Update the implementation
-plan when steps land.
+The 0.7.0 editor includes browser/native/mobile flows, animation, editable HTML,
+starters, Brand Lite and agent drawing. Active work is reliability and release
+verification in `docs/plan.md`; old phase-letter plans are historical. Update the
+active roadmap when steps land.
 
 ## House Rules
 

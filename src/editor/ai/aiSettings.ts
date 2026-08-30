@@ -9,6 +9,7 @@ const SETTINGS_KEY = 'ai.settings';
  * completions by varying base URL / model / key. */
 export type AiProviderId =
   | 'off'
+  | 'demo'
   | 'local'
   | 'gemini'
   | 'mistral'
@@ -30,6 +31,16 @@ export interface ProviderPreset {
 }
 
 export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
+  demo: {
+    id: 'demo',
+    label: 'Offline demo',
+    baseUrl: '',
+    defaultModel: '',
+    needsKey: false,
+    editableBaseUrl: false,
+    remote: false,
+    adapterKind: 'off',
+  },
   off: {
     id: 'off',
     label: 'Off',
@@ -160,7 +171,7 @@ export function toPersistedAiSettings(
 }
 
 function isProviderId(value: unknown): value is AiProviderId {
-  return typeof value === 'string' && value in PROVIDER_PRESETS;
+  return typeof value === 'string' && Object.hasOwn(PROVIDER_PRESETS, value);
 }
 
 export function normalizeAiSettings(stored?: Partial<AiSettings> | null): AiSettings {
@@ -191,6 +202,7 @@ export function normalizeAiSettings(stored?: Partial<AiSettings> | null): AiSett
 interface AiSettingsState {
   settings: AiSettings;
   loaded: boolean;
+  persistenceError: boolean;
   load: () => Promise<void>;
   setProvider: (id: AiProviderId) => void;
   setStoreKey: (storeKey: boolean) => void;
@@ -219,14 +231,16 @@ function persist(settings: AiSettings): void {
   persistChain = persistChain
     .catch(() => undefined)
     .then(() => persistOnce(snapshot))
-    .catch((err) => {
-      console.error('[Calqo] failed to persist AI settings', err);
+    .then(() => useAiSettingsStore.setState({ persistenceError: false }))
+    .catch(() => {
+      useAiSettingsStore.setState({ persistenceError: true });
     });
 }
 
 export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
   settings: DEFAULT_AI_SETTINGS,
   loaded: false,
+  persistenceError: false,
 
   load: async () => {
     if (get().loaded) return;
@@ -243,8 +257,8 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
         });
         return;
       }
-    } catch (err) {
-      console.error('[Calqo] failed to load AI settings', err);
+    } catch {
+      set({ persistenceError: true });
     }
     set({ loaded: true });
   },

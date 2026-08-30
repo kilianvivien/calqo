@@ -1,3 +1,10 @@
+import { rasterBudgetError } from '@/lib/schema/budgets';
+import {
+  collectCanvasFontFaces,
+  loadCanvasFontFaces,
+} from '@/editor/canvas/canvasFonts';
+import { useSelectionStore } from '@/lib/state/selectionStore';
+import { setActiveContentLocale } from '@/editor/commands/projectCommands';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Check, Copy, Download, X } from 'lucide-react';
@@ -21,6 +28,7 @@ import { warningIdentity, type HtmlExportWarning } from '@/editor/export/exportW
 import { blobToBytes, createZip } from '@/editor/export/zip';
 import {
   collectExportWarnings,
+  collectLayerExportIssues,
   uniqueArtboardStems,
 } from '@/editor/export/exportReadiness';
 import {
@@ -102,7 +110,10 @@ export function ExportDialog({
   const [status, setStatus] = useState<string | null>(null);
   // Live render counter so a long multi-artboard/multi-locale export shows
   // progress rather than an indefinite spinner.
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   // Fidelity notes returned by the last editable-HTML export.
   const [runtimeFidelityNotes, setRuntimeFidelityNotes] = useState<HtmlExportWarning[]>([]);
   // Estimated `.calqo` envelope size (project JSON + base64 assets), plus the
@@ -129,8 +140,13 @@ export function ExportDialog({
   const abortRef = useRef<AbortController | null>(null);
   // Per-frame progress for the current animated export, plus its structured
   // warnings (localized at render time).
-  const [animProgress, setAnimProgress] = useState<{ done: number; total: number } | null>(null);
-  const [animExportWarnings, setAnimExportWarnings] = useState<AnimExportWarning[]>([]);
+  const [animProgress, setAnimProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
+  const [animExportWarnings, setAnimExportWarnings] = useState<
+    AnimExportWarning[]
+  >([]);
 
   const targets = useMemo<CalqoArtboard[]>(() => {
     if (!project || !artboard) return [];
@@ -142,11 +158,46 @@ export function ExportDialog({
     return localeScope === 'all' ? project.contentLocales : [project.activeContentLocale];
   }, [project, localeScope]);
 
-  const warnings = useMemo(
-    () =>
-      collectExportWarnings({ project, targets, exportingAll: scope === 'all' }, t),
-    [project, targets, scope, t],
+  const [fontRevision, setFontRevision] = useState(0);
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    void loadCanvasFontFaces(targets.flatMap(collectCanvasFontFaces)).then(
+      () => {
+        if (alive) setFontRevision((revision) => revision + 1);
+      },
   );
+    return () => {
+      alive = false;
+    };
+  }, [open, targets]);
+  const warnings = useMemo(() => {
+    // Read the font revision to invalidate cached measurements when faces load.
+    void fontRevision;
+    const issues = collectLayerExportIssues(
+      targets,
+      localeTargets,
+      format === 'svg',
+    );
+    const base = collectExportWarnings(
+      {
+        project,
+        targets,
+        exportingAll: scope === 'all',
+        locales: localeTargets,
+        includeLayerIssues: false,
+      },
+      t,
+    );
+    return [
+      ...issues.map((issue) => ({
+        key: `${issue.artboardId}:${issue.layerId}:${issue.key}:${issue.locale ?? ''}`,
+        message: t(issue.key, issue.params),
+        issue,
+      })),
+      ...base.map((message) => ({ key: message, message, issue: undefined })),
+    ];
+  }, [project, targets, scope, localeTargets, format, t, fontRevision]);
   const fidelityNotes = useMemo(() => {
     if (format !== 'html' || htmlKind !== 'editable') return [];
     const combined = [...analyzeHtmlFidelity(targets), ...runtimeFidelityNotes];
@@ -239,13 +290,36 @@ export function ExportDialog({
   const animWidth = hasClip && clipSequence ? clipSequence.width : artboard.width;
   const animHeight = hasClip && clipSequence ? clipSequence.height : artboard.height;
   const sceneDurationMs =
-    hasClip && clipSequence ? clipSequence.totalMs : artboard.timing?.duration ?? 5000;
+    hasClip && clipSequence
+      ? clipSequence.totalMs
+      : (artboard.timing?.duration ?? 5000);
   const videoDims = evenDimensions(animWidth, animHeight);
   const videoFrameCount = Math.max(
     1,
     Math.round((sceneDurationMs / 1000) * clipFps),
   );
-  const gifPlan = planGifOutput(animWidth, animHeight, clipFps, sceneDurationMs);
+  const gifPlan = planGifOutput(
+    animWidth,
+    animHeight,
+    clipFps,
+    sceneDurationMs,
+  );
+  const unsafeSize = isAnimation(format)
+    ? rasterBudgetError(animWidth, animHeight, 1)
+    : (isRaster(format) || format === 'html') &&
+      targets.some((target) =>
+        rasterBudgetError(target.width, target.height, pixelRatio),
+      );
+  const showIssue = (
+    issue: NonNullable<(typeof warnings)[number]['issue']>,
+  ) => {
+    if (issue.locale) setActiveContentLocale(project.id, issue.locale);
+    useSelectionStore.getState().setActiveArtboard(issue.artboardId);
+    useSelectionStore.getState().selectOne(issue.layerId);
+    useUiStore.getState().setOverviewMode(false);
+    window.dispatchEvent(new CustomEvent('calqo:inspect-layer'));
+    onClose();
+  };
   const h264Usable = videoCaps ? isCodecUsable(videoCaps, 'h264') : false;
   // A batch spanning multiple artboards and/or content locales is bundled into a
   // single .zip so the browser never suppresses the follow-up downloads.
@@ -357,7 +431,10 @@ export function ExportDialog({
       const outputs: { name: string; blob: Blob }[] = [];
       for (const locale of animLocaleTargets) {
         const dir = animLocaleTargets.length > 1 ? `${locale}/` : '';
-        const onProgress = (p: { completedFrames: number; totalFrames: number }) =>
+        const onProgress = (p: {
+          completedFrames: number;
+          totalFrames: number;
+        }) =>
           setAnimProgress({ done: p.completedFrames, total: p.totalFrames });
         if (format === 'mp4') {
           const result = hasClip
@@ -458,9 +535,15 @@ export function ExportDialog({
         await files.downloadBlob(outputs[0].blob, outputs[0].name);
       } else {
         const entries = await Promise.all(
-          outputs.map(async (o) => ({ name: o.name, data: await blobToBytes(o.blob) })),
+          outputs.map(async (o) => ({
+            name: o.name,
+            data: await blobToBytes(o.blob),
+          })),
         );
-        await files.downloadBlob(createZip(entries), `${projectSlug}-animation.zip`);
+        await files.downloadBlob(
+          createZip(entries),
+          `${projectSlug}-animation.zip`,
+        );
       }
       setStatus(t('export.done'));
     } catch (error) {
@@ -511,9 +594,15 @@ export function ExportDialog({
         // Bundle every artboard into one ZIP — a single download the browser
         // won't block, unlike a burst of per-file downloads.
         const entries = await Promise.all(
-          outputs.map(async (o) => ({ name: o.name, data: await blobToBytes(o.blob) })),
+          outputs.map(async (o) => ({
+            name: o.name,
+            data: await blobToBytes(o.blob),
+          })),
         );
-        await files.downloadBlob(createZip(entries), `${slug(project.name)}.zip`);
+        await files.downloadBlob(
+          createZip(entries),
+          `${slug(project.name)}.zip`,
+        );
       }
       setStatus(t('export.done'));
     } catch (error) {
@@ -566,7 +655,7 @@ export function ExportDialog({
       open={open}
       onClose={onClose}
       labelledBy="export-title"
-      className="glass glass-strong w-[min(540px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
+      className="glass glass-strong max-h-[88vh] overflow-y-auto calqo-scroll w-[min(540px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
     >
       <header className="mb-5 flex items-start justify-between gap-4">
           <div>
@@ -799,6 +888,21 @@ export function ExportDialog({
             <p className="mono mt-0.5 truncate text-[12px] text-[var(--calqo-text-2)]">{filename}</p>
           </div>
 
+        {unsafeSize && (
+          <p role="alert" className="text-[12px] text-[var(--calqo-text)]">
+            {t('export.unsafeSize')}
+          </p>
+        )}
+        {isRaster(format) && (
+          <p className="mono text-[11px] text-[var(--calqo-text-2)]">
+            {targets
+              .map(
+                (target) =>
+                  `${target.name}: ${Math.ceil(target.width * pixelRatio)} × ${Math.ceil(target.height * pixelRatio)} px`,
+              )
+              .join(' · ')}
+          </p>
+        )}
           {(warnings.length > 0 || envelopeTooBig || missingAssetCount > 0) && (
             <div className="rounded-[var(--calqo-radius-sm)] border border-[#E8B339]/40 bg-[#E8B339]/10 px-3 py-2">
               <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-[#B7791F]">
@@ -807,8 +911,20 @@ export function ExportDialog({
               </p>
               <ul className="space-y-0.5">
                 {warnings.map((w) => (
-                  <li key={w} className="text-[11px] text-[var(--calqo-text-2)]">
-                    {w}
+                <li
+                  key={w.key}
+                  className="text-[11px] text-[var(--calqo-text-2)]"
+                >
+                  {w.message}
+                  {w.issue && (
+                    <button
+                      type="button"
+                      onClick={() => showIssue(w.issue!)}
+                      className="ml-2 text-[var(--calqo-accent)] hover:underline"
+                    >
+                      {t('export.showLayer')}
+                    </button>
+                  )}
                   </li>
                 ))}
                 {envelopeTooBig && envelopeEstimate !== null && (
@@ -887,13 +1003,16 @@ export function ExportDialog({
           </span>
           <div className="flex items-center gap-2">
             {isRaster(format) && (
-              <GlassButton onClick={handleCopyImage} disabled={busy}>
+            <GlassButton
+              onClick={handleCopyImage}
+              disabled={busy || unsafeSize}
+            >
                 <Copy size={14} />
                 {t('export.copyImage')}
               </GlassButton>
             )}
             {format === 'html' && htmlKind === 'wrapper' && (
-              <GlassButton onClick={handleCopyHtml} disabled={busy}>
+            <GlassButton onClick={handleCopyHtml} disabled={busy || unsafeSize}>
                 <Copy size={14} />
                 {t('export.copySnippet')}
               </GlassButton>
@@ -908,6 +1027,7 @@ export function ExportDialog({
               onClick={handleExport}
               disabled={
                 busy ||
+              unsafeSize ||
                 (isAnimation(format) && !animatable) ||
                 (format === 'mp4' && videoCaps !== null && !h264Usable)
               }
@@ -922,7 +1042,13 @@ export function ExportDialog({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="grid grid-cols-[110px_1fr] items-center gap-3">
       <span className="text-[12px] font-medium text-[var(--calqo-text-2)]">{label}</span>

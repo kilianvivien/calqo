@@ -56,22 +56,35 @@ quote cards, campaign variants, and multilingual public information.
 
 ## What Calqo can do
 
-| Area                 | Capabilities                                                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| **Canvas**           | Multi-select, resize, rotate, snap, align, distribute, stack, group, lock, hide, reorder, crop, and undo/redo                   |
-| **Content**          | Text, images, rectangles, ellipses, lines, arrows, polygons, pressure-sensitive brushes, lists, emoji, and reusable SVGs        |
-| **Styling**          | Gradients, patterns, masks, filters, image frames, typography presets, shadows, blend modes, stroke looks, and sticker outlines |
-| **Formats**          | Square and portrait posts, stories, thumbnails, banners, custom sizes, and multi-artboard projects                              |
-| **Starters & brand** | 42 categorized starter models, saved personal models, palettes, fonts, logos, and glossary-aware brand profiles                 |
-| **Languages**        | Per-locale text variants inside one design, in-place AI translation, and locale-grouped exports                                 |
-| **Animation**        | Animate mode with effects or simple transform keyframes, text reveals, multi-scene clips, transitions, and live playback        |
-| **Export**           | PNG, JPEG, WebP, SVG, editable HTML, raster fallback, clipboard/share paths, batch export, and ZIP bundles                      |
-| **Video export**     | Local MP4 (H.264/H.265) and capped GIF, hardware-encoded on Apple Silicon, plus self-contained animated HTML                    |
-| **Asset safety**     | Missing-asset detection and repair, oversized-image notices, one-step downscale/relink, project backup and restore              |
-| **AI templates**     | Prompt-to-template generation that produces validated, editable Calqo project JSON instead of a flat picture                    |
-| **Agent drawing**    | A local MCP server lets Codex, Claude Code, Antigravity, OpenCode, and other agents draw directly in the live desktop app       |
-| **Touch & stylus**   | Responsive phone quick-edit UI, tablet gestures, coarse-pointer controls, long-press menus, and pressure-aware brush strokes    |
+| Area                 | Capabilities                                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Canvas**           | Multi-select, resize, rotate, snap, align, distribute, stack, group, lock, hide, reorder, crop, and undo/redo                                    |
+| **Content**          | Text, images, rectangles, ellipses, lines, arrows, polygons, pressure-sensitive brushes, lists, emoji, and reusable SVGs                         |
+| **Styling**          | Gradients, patterns, masks, filters, image frames, typography presets, shadows, blend modes, stroke looks, and sticker outlines                  |
+| **Formats**          | Square and portrait posts, stories, thumbnails, banners, custom sizes, and multi-artboard projects                                               |
+| **Starters & brand** | 42 categorized starter models, saved personal models, palettes, fonts, logos, and glossary-aware brand profiles                                  |
+| **Languages**        | Per-locale text variants inside one design, in-place AI translation, and locale-grouped exports                                                  |
+| **Animation**        | Animate mode with effects or simple transform keyframes, text reveals, multi-scene clips, transitions, and live playback                         |
+| **Export**           | PNG, JPEG, WebP, SVG, editable HTML, raster fallback, clipboard/share paths, batch export, and ZIP bundles                                       |
+| **Video export**     | Local MP4 (H.264/H.265) and capped GIF, hardware-encoded on Apple Silicon, plus self-contained animated HTML                                     |
+| **Asset safety**     | Missing-asset detection and repair, oversized-image notices, one-step downscale/relink, project backup and restore                               |
+| **AI templates**     | Prompt-to-template generation that produces validated, editable Calqo project JSON instead of a flat picture                                     |
+| **Agent drawing**    | A local MCP server lets Codex, Claude Code, Antigravity, OpenCode, and other agents draw directly in the live desktop app                        |
+| **Touch & stylus**   | Responsive phone quick-edit UI, tablet gestures, coarse-pointer controls, long-press menus, and pressure-aware brush strokes                     |
 | **Desktop**          | Native macOS menus, `.calqo` open/save, image drop and clipboard support, local font discovery, secure AI-key storage, and signed in-app updates |
+
+## Current development status
+
+The working tree is **0.7.0**. Reliability refinements are documented in
+[refinement verification](docs/refinement-verification.md): safer save recovery,
+portable imports, clearer export/AI checks and focused starter discovery. These
+unreleased changes do not rename or replace an existing download. The GitHub
+release page identifies the version available to install.
+
+Run `pnpm verify` for the browser gate. Native packaging, Keychain prompts,
+Safari and installed-PWA checks remain separate release requirements.
+The active roadmap is [docs/plan.md](docs/plan.md); older phase plans live in
+`docs/Old/`.
 
 ## Calqo 0.6.5 — Faster, calmer agent drawing
 
@@ -205,7 +218,7 @@ See the complete history on the
 
 ## Download
 
-Download **Calqo 0.6.5 for macOS on Apple Silicon** from the
+Download **Calqo for macOS on Apple Silicon** from the
 [latest GitHub release](https://github.com/kilianvivien/calqo/releases/latest).
 
 From 0.6.4 the app updates itself: it checks for a new signed release in the

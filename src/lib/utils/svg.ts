@@ -1,29 +1,65 @@
-/** Minimal SVG hardening for AI- or user-supplied markup before it is stored as
- * an asset and rendered. Strips scripts, event handlers, external references,
- * and foreignObject so a generated icon can never execute code. This is a
- * string-level pass (works without a DOM), deliberately conservative. */
+import createDOMPurify from 'dompurify';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const MAX_SVG_LENGTH = 2 * 1024 * 1024;
+let purifier: ReturnType<typeof createDOMPurify> | undefined;
+
+/** Parsed SVG sanitation is shared by upload, AI, restored and saved assets.
+ * Only same-document fragment references are allowed; SVGs never fetch URLs. */
 export function sanitizeSvg(raw: string): string {
-  let svg = raw.trim();
-
-  // Pull the <svg>…</svg> span out of any surrounding prose / fences.
-  const open = svg.search(/<svg[\s>]/i);
-  const close = svg.toLowerCase().lastIndexOf('</svg>');
-  if (open >= 0 && close > open) {
-    svg = svg.slice(open, close + '</svg>'.length);
+  if (raw.length > MAX_SVG_LENGTH || typeof window === 'undefined') return '';
+  if (!purifier) {
+    purifier = createDOMPurify(window);
+    purifier.addHook('uponSanitizeAttribute', (_node, data) => {
+      const name = data.attrName.toLowerCase();
+      const value = data.attrValue.trim();
+      if (name === 'href' || name === 'xlink:href') {
+        data.keepAttr = /^#[a-zA-Z0-9_.:-]+$/.test(value);
   }
-
-  svg = svg
-    // Drop <script>, <foreignObject>, <iframe> blocks entirely.
-    .replace(/<\s*(script|foreignObject|iframe)[\s\S]*?<\/\s*\1\s*>/gi, '')
-    .replace(/<\s*(script|foreignObject|iframe)[^>]*\/>/gi, '')
-    // Remove inline event handlers (onload, onclick, …).
-    .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
-    // Neutralise javascript: URLs and external entity references.
-    .replace(/javascript:/gi, '')
-    .replace(/(href|xlink:href)\s*=\s*"(?!#)[^"]*"/gi, '$1="#"');
-
-  return svg.trim();
+      // CSS escapes/comments can hide URL tokens. Keep ordinary inline styling,
+      // but reject obfuscation and every non-fragment resource reference.
+      if (
+        /^(style|fill|stroke|filter|clip-path|mask|marker.*|cursor)$/.test(
+          name,
+        ) ||
+        /url\s*\(/i.test(value)
+      ) {
+        const withoutFragments = value.replace(
+          /url\(\s*['"]?#[a-zA-Z0-9_.:-]+['"]?\s*\)/gi,
+          '',
+        );
+        if (
+          /[\\@]|\/\*|url\s*\(|expression\s*\(|(?:https?|data|javascript):/i.test(
+            withoutFragments,
+          )
+        )
+          data.keepAttr = false;
+      }
+    });
+  }
+  const open = raw.search(/<svg[\s>]/i);
+  const close = raw.toLowerCase().lastIndexOf('</svg>');
+  if (open < 0 || close < open) return '';
+  const clean = purifier.sanitize(raw.slice(open, close + 6), {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    ADD_TAGS: ['use'],
+    FORBID_TAGS: [
+      'style',
+      'foreignObject',
+      'script',
+      'iframe',
+      'animate',
+      'animateMotion',
+      'animateTransform',
+      'set',
+    ],
+    ALLOW_DATA_ATTR: false,
+  });
+  const doc = new DOMParser().parseFromString(clean, 'image/svg+xml');
+  const root = doc.documentElement;
+  if (root.localName !== 'svg' || doc.querySelector('parsererror')) return '';
+  root.setAttribute('xmlns', SVG_NS);
+  return new XMLSerializer().serializeToString(root);
 }
 
 /** Re-tint an SVG to a single colour: every concrete `fill`/`stroke` value (and

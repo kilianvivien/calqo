@@ -9,6 +9,14 @@ setup, then the per-release routine.
 
 ---
 
+## Verification before packaging
+
+Run `pnpm verify` before packaging. The Linux Verify workflow covers browser
+checks without starting a macOS build. Complete the platform checks in
+[refinement verification](refinement-verification.md), especially Keychain and
+scoped file access, before publishing a native artifact. Passing browser tests
+does not certify an installed PWA or native package.
+
 ## How auto-update works here
 
 1. `tauri build --config src-tauri/tauri.updater.conf.json` produces, next to
@@ -83,12 +91,12 @@ it was packaged without update signing.
 
 ### 3. Add the two GitHub secrets
 
-Repository ▸ Settings ▸ Secrets and variables ▸ Actions ▸ *New repository
-secret*:
+Repository ▸ Settings ▸ Secrets and variables ▸ Actions ▸ _New repository
+secret_:
 
-| Secret name | Value |
-| --- | --- |
-| `TAURI_SIGNING_PRIVATE_KEY` | the **entire contents** of `~/.tauri/calqo.key` |
+| Secret name                          | Value                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------ |
+| `TAURI_SIGNING_PRIVATE_KEY`          | the **entire contents** of `~/.tauri/calqo.key`                          |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | the password from step 1 (skip this secret entirely if the key has none) |
 
 ```bash
@@ -138,7 +146,7 @@ That is the entire manual setup. Steps 1–3 happen once, ever.
 7. Open the draft release, check the notes, and **Publish**. Existing installs
    pick the update up on their next check.
 
-To rebuild a tag that already exists, use the workflow's *Run workflow* button
+To rebuild a tag that already exists, use the workflow's _Run workflow_ button
 and pass the tag name.
 
 ### Why the test suite is not in CI
@@ -198,10 +206,10 @@ Notes:
 
 ## Troubleshooting
 
-| Symptom | Cause |
-| --- | --- |
-| "packaged without update signing" in Settings ▸ Updates | `pubkey` is still empty in `tauri.conf.json`, or `endpoints` is unreachable |
-| Workflow fails at the signature check | `TAURI_SIGNING_PRIVATE_KEY` secret missing or malformed (must be the full file contents) |
-| Workflow fails on AVFoundation | the build did not include `--features video-toolbox`, or a stale artifact was picked up |
-| App never sees the update | the release is still a draft, or the tag/version metadata disagree |
-| Signature verification fails on the client | the public key in the shipped app does not match the private key used by CI — rotating the key only affects builds made *after* the rotation |
+| Symptom                                                 | Cause                                                                                                                                        |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| "packaged without update signing" in Settings ▸ Updates | `pubkey` is still empty in `tauri.conf.json`, or `endpoints` is unreachable                                                                  |
+| Workflow fails at the signature check                   | `TAURI_SIGNING_PRIVATE_KEY` secret missing or malformed (must be the full file contents)                                                     |
+| Workflow fails on AVFoundation                          | the build did not include `--features video-toolbox`, or a stale artifact was picked up                                                      |
+| App never sees the update                               | the release is still a draft, or the tag/version metadata disagree                                                                           |
+| Signature verification fails on the client              | the public key in the shipped app does not match the private key used by CI — rotating the key only affects builds made _after_ the rotation |

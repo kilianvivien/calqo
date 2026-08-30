@@ -41,6 +41,7 @@ function normalize(stored: unknown): SavedSvg[] {
   if (!Array.isArray(stored)) return [];
   return stored
     .filter(isSavedSvg)
+    .map((item) => ({ ...item, svg: sanitizeSvg(item.svg) }))
     .filter((item) => looksLikeSvg(item.svg))
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, MAX_SAVED);

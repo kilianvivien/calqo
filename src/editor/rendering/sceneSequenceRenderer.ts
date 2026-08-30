@@ -1,3 +1,4 @@
+import { assertRasterBudget } from '@/lib/schema/budgets';
 import type { CalqoProject, LocaleCode } from '@/lib/schema';
 import { compileClipCached } from '@/editor/animation/compiler';
 import { evaluateClipInto, evaluateFragmentsInto } from '@/editor/animation/evaluator';
@@ -73,6 +74,7 @@ interface LoadedScene {
 
 /** Default compositor backed by a real 2D canvas. */
 function defaultCompositor(width: number, height: number): SceneCompositor {
+  assertRasterBudget(width, height, 1);
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;

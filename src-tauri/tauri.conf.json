@@ -11,7 +11,34 @@
   },
   "app": {
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src": "'self' data: https://fonts.gstatic.com",
+        "img-src": "'self' blob: data:",
+        "media-src": "'self' blob: data:",
+        "worker-src": "'self' blob:",
+        "connect-src": "'self' data: ipc: http://ipc.localhost https: http:",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "frame-src": "'none'",
+        "form-action": "'none'"
+      },
+      "devCsp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src": "'self' data: https://fonts.gstatic.com",
+        "img-src": "'self' blob: data:",
+        "media-src": "'self' blob: data:",
+        "worker-src": "'self' blob:",
+        "connect-src": "'self' data: ipc: http://ipc.localhost https: http: ws: wss:",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "frame-src": "'none'",
+        "form-action": "'none'"
+      }
     },
     "windows": [
       {
@@ -25,7 +52,10 @@
         "decorations": true,
         "hiddenTitle": true,
         "titleBarStyle": "Overlay",
-        "trafficLightPosition": { "x": 18, "y": 25 },
+        "trafficLightPosition": {
+          "x": 18,
+          "y": 25
+        },
         "dragDropEnabled": true
       }
     ]
@@ -44,12 +74,9 @@
     "category": "GraphicsAndDesign",
     "shortDescription": "A simple, glass-native social visual maker",
     "longDescription": "Calqo is a local-first maker for static social posts, thumbnails, stories, and banners.",
-    "copyright": "Copyright © 2026 Calqo contributors",
+    "copyright": "Copyright \u00a9 2026 Calqo contributors",
     "createUpdaterArtifacts": false,
-    "icon": [
-      "../public/calqo-icon.png",
-      "../public/calqo-icon@2x.png"
-    ],
+    "icon": ["../public/calqo-icon.png", "../public/calqo-icon@2x.png"],
     "macOS": {
       "minimumSystemVersion": "11.0",
       "signingIdentity": "-"

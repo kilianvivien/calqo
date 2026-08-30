@@ -18,7 +18,8 @@
     "delete": "Supprimer",
     "duplicate": "Dupliquer",
     "rename": "Renommer",
-    "close": "Fermer"
+    "close": "Fermer",
+    "back": "Retour"
   },
   "menu": {
     "groups": {
@@ -138,7 +139,10 @@
       "agentSkill": "Skill d'agent IA",
       "agentSkillHint": "Téléchargez un guide SKILL.md pour les agents de code qui génèrent des fichiers .calqo modifiables depuis des prompts.",
       "downloadSkill": "Télécharger SKILL.md",
-      "downloadClaudeSkill": "Télécharger .skill Claude"
+      "downloadClaudeSkill": "Télécharger .skill Claude",
+      "demo": "Démonstration hors ligne",
+      "demoHint": "Essayez les modèles et la traduction avec des exemples déterministes, sans fournisseur ni clé API.",
+      "keychainNote": "Les clés sont enregistrées dans le trousseau macOS. Les échecs sont signalés ci-dessus ; aucun stockage non sécurisé n’est utilisé."
     },
     "agentDrawing": {
       "title": "Dessin par agent",

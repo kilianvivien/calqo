@@ -102,25 +102,45 @@ import type { BrushStyle } from '@/lib/state/uiStore';
 
 const AUTOSAVE_DELAY = 700;
 const pendingSaves = new Map<string, ReturnType<typeof setTimeout>>();
+const activeSaves = new Map<string, Promise<boolean>>();
 
-/** Persist a project now, updating its save-state through the lifecycle. */
-export async function saveProject(id: string): Promise<void> {
+/** Serialize writes per project and drain edits made while a write is pending.
+ * A failed save remains in memory; callers must not close it as if it succeeded. */
+export function saveProject(id: string): Promise<boolean> {
   const timer = pendingSaves.get(id);
   if (timer) {
     clearTimeout(timer);
     pendingSaves.delete(id);
   }
+  const active = activeSaves.get(id);
+  if (active) return active;
+  const task = (async () => {
+    // Start after registering the task so synchronous adapter failures cannot
+    // leave a completed promise registered as an active save.
+    await Promise.resolve();
+    while (true) {
   const project = projectStore.getState().projects[id];
-  if (!project) return;
-
+      if (!project) return true;
   projectStore.getState().setSaveState(id, 'saving');
   try {
     await storage.saveProject(project);
-    projectStore.getState().setSaveState(id, 'saved');
-  } catch (err) {
-    console.error('[Calqo] save failed', err);
+      } catch {
+        if (projectStore.getState().projects[id]) {
     projectStore.getState().setSaveState(id, 'error');
   }
+        return false;
+      }
+      if (projectStore.getState().projects[id] === project) {
+        projectStore.getState().setSaveState(id, 'saved');
+        const pending = pendingSaves.get(id);
+        if (pending) clearTimeout(pending);
+        pendingSaves.delete(id);
+        return true;
+      }
+    }
+  })().finally(() => activeSaves.delete(id));
+  activeSaves.set(id, task);
+  return task;
 }
 
 /** Debounced autosave; coalesces rapid edits into one write. */
@@ -140,7 +160,11 @@ interface EditOptions {
 }
 
 function activeArtboardId(project: CalqoProject): string | null {
-  return selectionStore.getState().activeArtboardId ?? project.artboards[0]?.id ?? null;
+  return (
+    selectionStore.getState().activeArtboardId ??
+    project.artboards[0]?.id ??
+    null
+  );
 }
 
 function getArtboard(
@@ -369,7 +393,7 @@ export async function openProject(id: string): Promise<void> {
 /** Whether a project has edits that have not yet been persisted. */
 export function isProjectDirty(id: string): boolean {
   const state = projectStore.getState().saveState[id];
-  return state === 'unsaved' || state === 'saving';
+  return state === 'unsaved' || state === 'saving' || state === 'error';
 }
 
 /** Close a tab, but warn via a native dialog first when the project has unsaved
@@ -383,13 +407,20 @@ export async function requestCloseProject(
     const confirmed = await dialog.confirm(prompt);
     if (!confirmed) return false;
   }
-  await closeProject(id);
-  return true;
+  return closeProject(id);
 }
 
 /** Close a tab, flushing any pending save first so nothing is lost. */
-export async function closeProject(id: string): Promise<void> {
-  await saveProject(id);
+export async function closeProject(id: string): Promise<boolean> {
+  if (!(await saveProject(id))) return false;
+  const disk = desktopFileStore.getState().files[id];
+  if (disk?.path && disk.diskState !== 'saved') {
+    const { saveNativeProjectFile } = await import('@/editor/export/calqoFile');
+    if (!(await saveNativeProjectFile(id))) return false;
+    if (desktopFileStore.getState().files[id]?.diskState !== 'saved')
+      return false;
+  }
+  if (isProjectDirty(id)) return false;
   animationPlaybackStore.getState().stopAndReset();
   invalidateProjectClips(id);
   workspaceStore.getState().closeTab(id);
@@ -397,10 +428,15 @@ export async function closeProject(id: string): Promise<void> {
   desktopFileStore.getState().clearFile(id);
   historyStore.getState().clear(id);
   selectionStore.getState().clearSelection();
+  return true;
 }
 
 /** Permanently delete a project from storage and the workspace. */
 export async function deleteProject(id: string): Promise<void> {
+  const pending = pendingSaves.get(id);
+  if (pending) clearTimeout(pending);
+  pendingSaves.delete(id);
+  await activeSaves.get(id);
   await storage.deleteProject(id);
   workspaceStore.getState().closeTab(id);
   projectStore.getState().removeProject(id);
@@ -410,7 +446,12 @@ export async function deleteProject(id: string): Promise<void> {
 
 /** Flush all pending autosaves immediately (e.g. on page unload). */
 export async function flushPendingSaves(): Promise<void> {
-  await Promise.all([...pendingSaves.keys()].map((id) => saveProject(id)));
+  const ids = new Set([
+    ...pendingSaves.keys(),
+    ...activeSaves.keys(),
+    ...Object.keys(projectStore.getState().projects).filter(isProjectDirty),
+  ]);
+  await Promise.all([...ids].map((id) => saveProject(id)));
 }
 
 /** On startup, reopen the tabs that were open last session by loading their
@@ -621,8 +662,17 @@ export function createFreehandLayer(
     minY = Math.min(minY, absolutePoints[i + 1]);
     maxY = Math.max(maxY, absolutePoints[i + 1]);
   }
-  const relative = absolutePoints.map((value, i) => (i % 2 === 0 ? value - minX : value - minY));
-  const layer = createShapeLayer('freehand', minX, minY, Math.max(1, maxX - minX), Math.max(1, maxY - minY), defaults);
+  const relative = absolutePoints.map((value, i) =>
+    i % 2 === 0 ? value - minX : value - minY,
+  );
+  const layer = createShapeLayer(
+    'freehand',
+    minX,
+    minY,
+    Math.max(1, maxX - minX),
+    Math.max(1, maxY - minY),
+    defaults,
+  );
   if (layer.type === 'shape') {
     const style = defaults?.brushStyle ?? 'smooth';
     const brush = BRUSH_STYLES[style];
@@ -753,8 +803,17 @@ export function createCustomPolygonLayer(
     minY = Math.min(minY, absolutePoints[i + 1]);
     maxY = Math.max(maxY, absolutePoints[i + 1]);
   }
-  const relative = absolutePoints.map((value, i) => (i % 2 === 0 ? value - minX : value - minY));
-  const layer = createShapeLayer('polygon', minX, minY, Math.max(1, maxX - minX), Math.max(1, maxY - minY), defaults);
+  const relative = absolutePoints.map((value, i) =>
+    i % 2 === 0 ? value - minX : value - minY,
+  );
+  const layer = createShapeLayer(
+    'polygon',
+    minX,
+    minY,
+    Math.max(1, maxX - minX),
+    Math.max(1, maxY - minY),
+    defaults,
+  );
   if (layer.type === 'shape') {
     layer.name = 'Polygon';
     layer.points = relative;

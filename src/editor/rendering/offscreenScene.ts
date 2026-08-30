@@ -1,3 +1,4 @@
+import { assertRasterBudget } from '@/lib/schema/budgets';
 // Import from Konva's browser-safe modules (matches rasterExport.ts), which
 // avoids pulling the Node `canvas` build that breaks jsdom/tests.
 import { Stage } from 'konva/lib/Stage';
@@ -143,6 +144,7 @@ export const createOffscreenScene: CreateOffscreenScene = async (input) => {
   const width = toEven(input.outputWidth ?? artboard.width);
   const height = toEven(input.outputHeight ?? artboard.height);
   const opaque = input.opaqueBackground ?? true;
+  assertRasterBudget(width, height, 1);
 
   const { images, revoke } = await loadImages(artboard);
 

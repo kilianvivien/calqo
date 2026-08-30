@@ -92,6 +92,7 @@ export function TitleBar() {
 
       {activeProjectId && (
         <GlassSegmentedControl<WorkspaceMode>
+          showLabels
           /* Under Tauri the picker is the first control after the native traffic
              lights, so it needs extra breathing room. */
           className={isTauri ? 'ml-3 shrink-0' : 'shrink-0'}
@@ -223,17 +224,27 @@ export function TitleBar() {
         </GlassIconButton>
         <span className="mx-1 h-5 w-px bg-[var(--calqo-divider)]" />
         <GlassIconButton
-          label={aiEnabled ? t('editor:ai.promptTemplate') : t('editor:ai.disabledHint')}
-          softDisabled={!aiEnabled}
-          onClick={() => invokeAppCommandSync('ai.promptTemplate')}
+          label={
+            aiEnabled ? t('editor:ai.promptTemplate') : t('editor:ai.setup')
+          }
+          onClick={() =>
+            aiEnabled
+              ? invokeAppCommandSync('ai.promptTemplate')
+              : window.dispatchEvent(new CustomEvent('calqo:open-ai-settings'))
+          }
         >
           <Sparkles size={16} />
         </GlassIconButton>
         <GlassIconButton
-          label={aiEnabled ? t('editor:ai.translate') : t('editor:ai.disabledHint')}
-          softDisabled={!aiEnabled}
+          label={
+            aiEnabled ? t('editor:ai.translate') : t('editor:ai.setupTranslate')
+          }
           disabled={aiEnabled && !activeProjectId}
-          onClick={() => invokeAppCommandSync('ai.translate')}
+          onClick={() =>
+            aiEnabled
+              ? invokeAppCommandSync('ai.translate')
+              : window.dispatchEvent(new CustomEvent('calqo:open-ai-settings'))
+          }
         >
           <Languages size={16} />
         </GlassIconButton>

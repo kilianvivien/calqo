@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, Download, FileText, Pencil, Trash2, X } from 'lucide-react';
 import {
+  GlassButton,
   GlassIconButton,
   GlassSegmentedControl,
   ModalOverlay,
@@ -144,6 +145,10 @@ export function NewProjectModal({
   const { t } = useTranslation('editor');
   const [tab, setTab] = useState<NewProjectTab>(initialTab);
   const [category, setCategory] = useState<string>('all');
+  const [query, setQuery] = useState('');
+  const [format, setFormat] = useState('all');
+  const [preview, setPreview] = useState<CalqoFile | null>(null);
+  const [error, setError] = useState(false);
   const [bundled, setBundled] = useState<BundledStarter[] | null>(null);
   const [userStarters, setUserStarters] = useState<StarterRecord[] | null>(
     null,
@@ -173,6 +178,10 @@ export function NewProjectModal({
     setBundled(null);
     setUserStarters(null);
     setCategory('all');
+    setQuery('');
+    setFormat('all');
+    setPreview(null);
+    setError(false);
     setRenamingId(null);
   }, [open]);
 
@@ -232,12 +241,14 @@ export function NewProjectModal({
 
   const instantiate = async (envelope: CalqoFile) => {
     setBusy(true);
+    setError(false);
     try {
       const projectId = await createProjectFromStarter(envelope);
       applyProfileIfSelected(projectId);
       onClose();
     } catch (error) {
       console.error('[Calqo] starter instantiation failed', error);
+      setError(true);
     } finally {
       setBusy(false);
     }
@@ -266,25 +277,55 @@ export function NewProjectModal({
     await refreshUserStarters();
   };
 
-  const mine = userStarters ?? [];
-  const hasMine = mine.length > 0;
+  const matches = (name: string, presets: string[], tags: string[] = []) => {
+    const text = [
+      name,
+      ...presets.map((id) => t(`presets.${id}`, { defaultValue: id })),
+      ...tags,
+    ]
+      .join(' ')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase();
+    const search = query
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase();
+    return (
+      (format === 'all' || presets.includes(format)) && text.includes(search)
+    );
+  };
+  const mine = (userStarters ?? []).filter((starter) =>
+    matches(
+      starter.name,
+      starter.envelope.project.artboards.map((ab) => ab.preset),
+    ),
+  );
+  const hasMine = (userStarters?.length ?? 0) > 0;
   const categories = bundled
     ? STARTER_CATEGORY_ORDER.filter((id) =>
         bundled.some((starter) => starter.entry.category === id),
       )
     : [];
   const visibleBundled =
-    bundled?.filter((starter) =>
-      category === 'all'
-        ? true
-        : category === 'mine'
-          ? false
-          : starter.entry.category === category,
+    bundled?.filter(
+      (starter) =>
+        (category === 'all' || starter.entry.category === category) &&
+        matches(
+          t(`starters.names.${starter.entry.id}`, {
+            defaultValue: starter.entry.name,
+          }),
+          starter.entry.presets,
+          starter.entry.tags,
+        ),
     ) ?? [];
-  const showMine = hasMine && (category === 'all' || category === 'mine');
+  const showMine =
+    mine.length > 0 && (category === 'all' || category === 'mine');
   /* The custom category is always offered, so saved starters have a permanent
    * home even before the first one exists. */
-  const showMineEmptyHint = category === 'mine' && !hasMine;
+  const showMineEmptyHint =
+    category === 'mine' && (userStarters?.length ?? 0) === 0;
 
   const categoryChip = (id: string, label: string) => (
     <button
@@ -315,10 +356,12 @@ export function NewProjectModal({
             id="new-project-title"
             className="text-[16px] font-semibold text-[var(--calqo-text)]"
           >
-            {t('newProject.title')}
+            {t(tab === 'starters' ? 'starters.title' : 'newProject.title')}
           </h2>
           <p className="mt-0.5 text-[12px] text-[var(--calqo-text-3)]">
-            {t('newProject.subtitle')}
+            {t(
+              tab === 'starters' ? 'starters.subtitle' : 'newProject.subtitle',
+            )}
           </p>
         </div>
         <GlassIconButton label={t('export.close')} onClick={onClose}>
@@ -355,7 +398,32 @@ export function NewProjectModal({
         )}
       </div>
 
-      {tab === 'starters' && bundled !== null && (
+      {tab === 'starters' && !preview && (
+        <div className="mb-3 flex gap-2">
+          <input
+            type="search"
+            aria-label={t('starters.search')}
+            placeholder={t('starters.search')}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="h-9 min-w-0 flex-1 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[12px] text-[var(--calqo-text)]"
+          />
+          <select
+            aria-label={t('starters.format')}
+            value={format}
+            onChange={(event) => setFormat(event.target.value)}
+            className="h-9 max-w-[45%] rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 text-[12px] text-[var(--calqo-text)]"
+          >
+            <option value="all">{t('starters.allFormats')}</option>
+            {ARTBOARD_PRESET_LIST.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {t(`presets.${preset.id}`, { defaultValue: preset.name })}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {tab === 'starters' && !preview && bundled !== null && (
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           {categoryChip('all', t('starters.categories.all'))}
           {categories.map((id) =>
@@ -373,7 +441,41 @@ export function NewProjectModal({
       {/* Negative margin + matching padding gives the cards' hover ring and
        * lift room to render without being clipped by the scroll container. */}
       <div className="calqo-scroll -m-1 min-h-0 flex-1 overflow-y-auto p-1">
-        {tab === 'blank' ? (
+        {tab === 'starters' && preview ? (
+          <div className="space-y-3">
+            <div className="grid place-items-center rounded-[var(--calqo-radius-md)] bg-[var(--calqo-workspace)] p-3">
+              <ArtboardThumbnail
+                project={preview.project}
+                artboard={preview.project.artboards[0]}
+                maxWidth={520}
+                maxHeight={300}
+              />
+            </div>
+            <p className="text-[12px] text-[var(--calqo-text-2)]">
+              {t('starters.previewHint', {
+                count: preview.project.artboards.length,
+              })}
+            </p>
+            {error && (
+              <p role="alert" className="text-[12px] text-[var(--calqo-text)]">
+                {t('starters.openFailed')}
+              </p>
+            )}
+            <div className="flex justify-between gap-2">
+              <GlassButton disabled={busy} onClick={() => setPreview(null)}>
+                {t('starters.back')}
+              </GlassButton>
+              <GlassButton
+                variant="primary"
+                disabled={busy}
+                loading={busy}
+                onClick={() => void instantiate(preview)}
+              >
+                {t('starters.use')}
+              </GlassButton>
+            </div>
+          </div>
+        ) : tab === 'blank' ? (
           <FormatGrid onSelect={(preset) => void createBlank(preset)} />
         ) : bundled === null ? (
           <p className="px-1 py-10 text-center text-[13px] text-[var(--calqo-text-3)]">
@@ -383,9 +485,9 @@ export function NewProjectModal({
           <p className="px-6 py-10 text-center text-[13px] leading-relaxed text-[var(--calqo-text-3)]">
             {t('starters.mineEmpty')}
           </p>
-        ) : bundled.length === 0 && !hasMine ? (
+        ) : visibleBundled.length === 0 && !showMine ? (
           <p className="px-1 py-10 text-center text-[13px] text-[var(--calqo-text-3)]">
-            {t('starters.empty')}
+            {t('starters.noMatches')}
           </p>
         ) : (
           <div className="space-y-4">
@@ -396,7 +498,7 @@ export function NewProjectModal({
                     key={entry.id}
                     type="button"
                     disabled={busy || !envelope}
-                    onClick={() => envelope && void instantiate(envelope)}
+                    onClick={() => envelope && setPreview(envelope)}
                     className="min-w-0 rounded-[12px] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-2.5 text-left transition-[border-color,background,box-shadow,transform] duration-[var(--calqo-t-fast)] ease-[var(--calqo-ease-out)] hover:-translate-y-0.5 hover:border-[var(--calqo-accent)] hover:bg-[var(--calqo-accent-soft)]"
                   >
                     <StarterPreview
@@ -409,20 +511,15 @@ export function NewProjectModal({
                       })}
                     </span>
                     <span className="mono mt-0.5 block text-[9.5px] text-[var(--calqo-text-3)]">
-                      {entry.width}×{entry.height} · {entry.presets.join(', ')}
+                      {entry.width}×{entry.height} ·{' '}
+                      {entry.presets
+                        .map((id) => t(`presets.${id}`, { defaultValue: id }))
+                        .join(', ')}
                     </span>
                     <span className="mt-0.5 flex items-center gap-1">
                       <span className="rounded-full bg-[var(--calqo-accent-soft)] px-1.5 py-0.5 text-[9.5px] font-medium text-[var(--calqo-accent)]">
                         {t('starters.badgeBundled')}
                       </span>
-                      {entry.tags.slice(0, 2).map((tag) => (
-                        <span
-                          key={tag}
-                          className="mono truncate text-[9.5px] text-[var(--calqo-text-3)]"
-                        >
-                          {tag}
-                        </span>
-                      ))}
                     </span>
                   </button>
                 ))}
@@ -443,7 +540,7 @@ export function NewProjectModal({
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => void instantiate(starter.envelope)}
+                        onClick={() => setPreview(starter.envelope)}
                         className="block w-full text-left"
                       >
                         <StarterPreview

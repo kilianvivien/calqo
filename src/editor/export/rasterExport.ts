@@ -1,6 +1,7 @@
 // Import from Konva's browser-safe modules rather than the package root, which
 // pulls the Node `canvas` build (breaks jsdom/tests).
 import { Stage } from 'konva/lib/Stage';
+import { assertRasterBudget, documentBudgetError } from '@/lib/schema/budgets';
 import { Layer } from 'konva/lib/Layer';
 import { Group } from 'konva/lib/Group';
 import { Rect } from 'konva/lib/shapes/Rect';
@@ -684,7 +685,7 @@ function buildListNode(
 
   const markerImage =
     layer.marker.kind === 'asset' && layer.marker.assetId
-      ? images.get(layer.marker.assetId) ?? null
+      ? (images.get(layer.marker.assetId) ?? null)
       : null;
 
   let cursorY = startY;
@@ -798,7 +799,11 @@ export function buildBackgroundNodes(
 export async function exportArtboardRaster(
   options: RasterExportOptions,
 ): Promise<Blob> {
-  const { artboard, locale, format, pixelRatio, transparent, quality } = options;
+  const { artboard, locale, format, pixelRatio, transparent, quality } =
+    options;
+  assertRasterBudget(artboard.width, artboard.height, pixelRatio);
+  const budgetError = documentBudgetError(artboard);
+  if (budgetError) throw new Error(budgetError);
   const { images, revoke } = await loadImages(artboard);
 
   const container = document.createElement('div');

@@ -6,6 +6,7 @@ import { useWorkspaceStore } from '@/lib/state/workspaceStore';
 import {
   hydrateWorkspace,
   flushPendingSaves,
+  isProjectDirty,
   nudgeSelectedLayers,
   shiftSelectionZOrder,
 } from '@/editor/commands/projectCommands';
@@ -29,6 +30,7 @@ import { PwaUpdatePrompt } from './PwaUpdatePrompt';
 import { UpdateBanner } from './shell/UpdateBanner';
 import { PwaInstallPrompt } from './PwaInstallPrompt';
 import { usePhoneLayout } from '@/lib/hooks/useResponsiveMode';
+import { SaveRecoveryBanner } from './shell/SaveRecoveryBanner';
 
 export function App() {
   const theme = useUiStore((s) => s.theme);
@@ -55,10 +57,22 @@ export function App() {
   useEffect(() => {
     void hydrateWorkspace();
 
-    const onBeforeUnload = () => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (useWorkspaceStore.getState().openTabIds.some(isProjectDirty)) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+      void flushPendingSaves();
+    };
+    const onBackground = () => {
+      if (document.visibilityState === 'hidden') void flushPendingSaves();
+    };
+    const onPageHide = () => {
       void flushPendingSaves();
     };
     window.addEventListener('beforeunload', onBeforeUnload);
+    window.addEventListener('pagehide', onPageHide);
+    document.addEventListener('visibilitychange', onBackground);
 
     const onKeyDown = (e: KeyboardEvent) => {
       const typing = isEditableKeyboardTarget(e.target);
@@ -182,6 +196,8 @@ export function App() {
 
     return () => {
       window.removeEventListener('beforeunload', onBeforeUnload);
+      window.removeEventListener('pagehide', onPageHide);
+      document.removeEventListener('visibilitychange', onBackground);
       window.removeEventListener('keydown', onKeyDown);
     };
   }, []);
@@ -190,6 +206,7 @@ export function App() {
     <ErrorBoundary>
       {phone ? <MobileShell /> : <AppShell />}
       <ConfirmHost />
+      <SaveRecoveryBanner />
       <UpdateBanner />
       <PwaUpdatePrompt />
       <PwaInstallPrompt />

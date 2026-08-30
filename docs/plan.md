@@ -1,10 +1,13 @@
 # Calqo Beta And 1.0 Roadmap
 
 **Planning date:** 2026-06-27  
-**Current app version observed:** `0.2.6` in `package.json` and Tauri metadata
-**Planning inputs:** `docs/calqo-post-phase-m-implementation-plan.md`,
-`docs/calqo-mcp-live-drawing-implementation-plan.md`,
-`docs/PRD-calqo-v0.5.md`, README, package scripts, schema/export/adapter code,
+**Status refreshed:** 2026-08-30
+**Current working-tree version:** `0.7.0` in package and Tauri metadata
+**Release status:** refinements are unreleased; beta gates remain open. See
+[refinement verification](refinement-verification.md) for changes and checks.
+**Planning inputs:** `docs/Old/calqo-post-phase-m-implementation-plan.md`,
+`docs/Old/calqo-mcp-live-drawing-implementation-plan.md`,
+`docs/Old/PRD-calqo-v0.5.md`, README, package scripts, schema/export/adapter code,
 and current test files.
 
 This roadmap replaces the old phase-letter backlog as the practical plan for
@@ -33,14 +36,15 @@ Implemented and worth protecting:
   inlined asset data URLs. Portability exists; it now needs compatibility,
   repair UX, and release testing.
 - Export pipeline: PNG/JPG/WebP, SVG with documented caveats, HTML raster
-  wrapper, batch export, export warnings.
-- AI: mock mode, Gemini-specific path, OpenAI-compatible providers, local
+  wrapper and editable HTML, batch export, layer-specific export warnings.
+- Animation: scene timing, transitions, GIF/video export, and native VideoToolbox.
+- AI: explicit offline demo mode, Gemini-specific path, OpenAI-compatible providers, local
   provider options, prompt-a-template, translation, provider diagnostics, secure
   desktop settings.
 - Multilingual content: per-project locales, per-layer content variants,
   glossary support, translation pipeline.
 - Tauri foundation: macOS desktop shell, native menus, native open/save,
-  Stronghold-backed secure key handling, local fonts, native clipboard/image
+  macOS Keychain-backed key handling with legacy migration, local fonts, native clipboard/image
   flows, Apple Silicon DMG packaging.
 - Responsive phone browser surface: project browser, active-artboard editor,
   bottom sheets, text/image/color/layer/arrange/translate/export/share flows.
@@ -53,14 +57,16 @@ Implemented and worth protecting:
 - Creative tools: image frames, masks, filters, sticker outlines, stroke looks,
   editable raster background removal, freehand brush presets, SVG library,
   mobile styling parity.
-- Tests: unit suites by phase plus one public-alpha Playwright smoke file.
+- Tests: unit suites by phase and targeted safety regressions, plus Chromium
+  smoke coverage for editor, starters, HTML, brand and asset workflows.
 
 Clear gaps observed:
 
 - Release metadata should be checked before every package: README, package
   metadata, Tauri config, and Cargo package version all need to name the same
   release.
-- No `.github` CI workflow is present.
+- Browser CI is defined in `.github/workflows/verify.yml`; the existing macOS
+  Release workflow remains manual. A successful hosted run is still required.
 - Desktop release is unsigned/not notarized and Apple Silicon only.
 - PWA install/update exists, but is not yet a release gate.
 - Existing E2E coverage is useful but narrow; it does not yet act as a full
@@ -129,12 +135,13 @@ Milestone E can run after beta foundations are stable, but it should not block
     release tags.
   - Add a short changelog or release notes file.
   - Document which platforms are official beta targets.
-- [ ] Add CI for every pull request.
+- [x] Add browser CI for every pull request (unreleased refinement).
   - Install with pnpm.
   - Run `pnpm typecheck`, `pnpm test`, `pnpm lint`, and `pnpm build`.
   - Run Playwright Chromium smoke at minimum.
   - Cache pnpm and Playwright browsers appropriately.
-- [ ] Define a local release gate script or checklist.
+- [x] Define a local release gate script and checklist (`pnpm verify`,
+      `docs/refinement-verification.md`; native/manual checks remain explicit).
   - Browser clean install.
   - Browser build.
   - Unit tests.
@@ -148,7 +155,8 @@ Milestone E can run after beta foundations are stable, but it should not block
   - Translate with mock provider and verify layout warnings.
   - Prompt-a-template mock path and validated adoption.
   - Mobile viewport open/edit/export path.
-- [ ] Add focused regression coverage for save/reopen trust.
+- [x] Add focused regression coverage for save/reopen trust (failed close,
+      overlapping browser/native writes, independent imported assets).
   - Browser autosave coalescing and reload restore.
   - Native save/save-as dirty-state transitions.
   - Failed save/import messages.
@@ -218,7 +226,8 @@ predictable.
     inline text style, SVG uses semantic text anchors instead of exporter-side
     font-width offsets, and both formats embed used Google Font faces when
     available (`portableFonts.ts`).
-- [ ] Improve SVG/export warning specificity.
+- [x] Improve SVG/export warning specificity (layer/locale IDs, text fit versus
+      decorative clipping, and navigation to the affected layer).
   - Group warnings by artboard and affected layer where practical.
   - Keep the inspector's export notes and export dialog warnings in sync.
 - [ ] Add browser capability fallbacks.
@@ -397,7 +406,8 @@ predictable.
 - Template slot constraints and campaign-set generation.
 - Hosted template/gallery infrastructure.
 - Full blank-canvas phone authoring.
-- Animation/video.
+- Animation/video has shipped through the animation plan; further animation
+  scope is tracked there rather than deferred wholesale.
 - Real-time collaboration.
 
 ---

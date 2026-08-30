@@ -1,7 +1,5 @@
-import {
-  INSECURE_SECRET_FALLBACK_PREFIX,
-  type SettingsAdapter,
-} from './SettingsAdapter';
+import type { SettingsAdapter } from './SettingsAdapter';
+import { splitAiSecrets, mergeAiSecrets } from './aiSecretPayload';
 import { dexieSettingsAdapter } from './dexieSettingsAdapter';
 
 type StoreModule = typeof import('@tauri-apps/plugin-store');
@@ -9,7 +7,8 @@ type StrongholdModule = typeof import('@tauri-apps/plugin-stronghold');
 
 const STORE_FILE = 'calqo.settings.json';
 const STRONGHOLD_FILE = 'calqo-secrets.stronghold';
-const STRONGHOLD_PASSWORD = 'calqo-local-secret-store-v1';
+// Read-only migration of pre-Keychain vaults; never used for new secrets.
+const LEGACY_PASSWORD = 'calqo-local-secret-store-v1';
 const CLIENT = 'calqo';
 const SECRET_PREFIX = 'secure:';
 const FALLBACK_SECRET_PREFIX = 'tauri-stronghold-fallback:';
@@ -19,7 +18,6 @@ let storePromise: Promise<Awaited<ReturnType<StoreModule['Store']['load']>>> | n
 let strongholdPromise: Promise<Awaited<ReturnType<StrongholdModule['Stronghold']['load']>>> | null =
   null;
 
-const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 async function settingsStore() {
@@ -37,7 +35,10 @@ async function stronghold() {
       import('@tauri-apps/api/path'),
       import('@tauri-apps/plugin-stronghold'),
     ]).then(async ([{ appDataDir, join }, { Stronghold }]) =>
-      Stronghold.load(await join(await appDataDir(), STRONGHOLD_FILE), STRONGHOLD_PASSWORD),
+      Stronghold.load(
+        await join(await appDataDir(), STRONGHOLD_FILE),
+        LEGACY_PASSWORD,
+      ),
     );
   }
   return strongholdPromise;
@@ -58,80 +59,95 @@ function isSecretKey(key: string): boolean {
   return key.startsWith(SECRET_PREFIX);
 }
 
-function fallbackSecretKey(key: string): string {
-  return `${FALLBACK_SECRET_PREFIX}${key}`;
+async function invokeSecret<T>(
+  command: string,
+  key: string,
+  value?: string,
+): Promise<T> {
+  const { invoke } = await import('@tauri-apps/api/core');
+  return invoke<T>(command, { key, ...(value === undefined ? {} : { value }) });
 }
 
-function fallbackMarkerKey(key: string): string {
-  return `${INSECURE_SECRET_FALLBACK_PREFIX}${key}`;
+async function removeLegacySecret(key: string): Promise<void> {
+  const { appDataDir, join } = await import('@tauri-apps/api/path');
+  const { exists } = await import('@tauri-apps/plugin-fs');
+  if (await exists(await join(await appDataDir(), STRONGHOLD_FILE))) {
+    const { hold, store } = await secretStore();
+    await store.remove(key);
+    await hold.save();
+  }
+  await dexieSettingsAdapter.remove(`${FALLBACK_SECRET_PREFIX}${key}`);
 }
 
-async function setFallbackMarker(key: string, enabled: boolean): Promise<void> {
-  try {
-    const store = await settingsStore();
-    if (enabled) await store.set(fallbackMarkerKey(key), true);
-    else await store.delete(fallbackMarkerKey(key));
-    await store.save();
-  } catch (error) {
-    console.warn('[Calqo] failed to update insecure-key fallback marker', error);
+async function readSecret<T>(key: string): Promise<T | null> {
+  const current = await invokeSecret<string | null>('read_secret', key);
+  if (current !== null) return JSON.parse(current) as T;
+  // Only consult weaker storage when Keychain is available, and erase it only
+  // after the replacement was durably written. A locked keychain fails closed.
+  let legacy: T | null = await dexieSettingsAdapter.get<T>(
+    `${FALLBACK_SECRET_PREFIX}${key}`,
+  );
+  if (legacy === null) {
+    const { appDataDir, join } = await import('@tauri-apps/api/path');
+    const { exists } = await import('@tauri-apps/plugin-fs');
+    if (await exists(await join(await appDataDir(), STRONGHOLD_FILE))) {
+      const { store } = await secretStore();
+      const bytes = await store.get(key);
+      if (bytes) legacy = JSON.parse(decoder.decode(bytes)) as T;
   }
 }
-
-async function getFallbackSecret<T>(key: string): Promise<T | null> {
-  const value = await dexieSettingsAdapter.get<T>(fallbackSecretKey(key));
-  if (value !== null) await setFallbackMarker(key, true);
-  return value;
+  if (legacy !== null) {
+    await invokeSecret('write_secret', key, JSON.stringify(legacy));
+    await removeLegacySecret(key);
+  }
+  return legacy;
 }
+
+const AI_KEYS = 'secure:ai.keys';
 
 export const tauriSettingsAdapter: SettingsAdapter = {
   async get<T>(key: string): Promise<T | null> {
-    if (isSecretKey(key)) {
-      try {
-        const { store } = await secretStore();
-        const bytes = await store.get(key);
-        if (bytes) return JSON.parse(decoder.decode(bytes)) as T;
-      } catch (error) {
-        console.warn('[Calqo] Stronghold read failed; checking IndexedDB fallback', error);
-      }
-      return getFallbackSecret<T>(key);
-    }
+    if (isSecretKey(key)) return readSecret<T>(key);
     const store = await settingsStore();
-    return (await store.get<T>(key)) ?? null;
+    const value = (await store.get<unknown>(key)) ?? null;
+    if (key !== 'ai.settings' || value === null) return value as T | null;
+    const split = splitAiSecrets(value);
+    const saved = await readSecret<Record<string, string>>(AI_KEYS);
+    const keys = { ...split.keys, ...saved };
+    if (Object.keys(split.keys).length) {
+      await invokeSecret('write_secret', AI_KEYS, JSON.stringify(keys));
+      await store.set(key, split.settings);
+      await store.save();
+      }
+    return mergeAiSecrets(split.settings, keys) as T;
   },
 
   async set<T>(key: string, value: T): Promise<void> {
     if (isSecretKey(key)) {
-      try {
-        const { hold, store } = await secretStore();
-        await store.insert(key, [...encoder.encode(JSON.stringify(value))]);
-        await hold.save();
-        await dexieSettingsAdapter.remove(fallbackSecretKey(key));
-        await setFallbackMarker(key, false);
-        return;
-      } catch (error) {
-        console.warn('[Calqo] Stronghold write failed; using IndexedDB fallback', error);
-        await dexieSettingsAdapter.set(fallbackSecretKey(key), value);
-        await setFallbackMarker(key, true);
-      }
+      await invokeSecret('write_secret', key, JSON.stringify(value));
+      await removeLegacySecret(key);
       return;
     }
     const store = await settingsStore();
-    await store.set(key, value);
+    if (key === 'ai.settings') {
+      const split = splitAiSecrets(value);
+      // Persist keys first. If this fails the UI retains its in-memory config,
+      // reports the error, and never writes a plaintext credential fallback.
+      await invokeSecret('write_secret', AI_KEYS, JSON.stringify(split.keys));
+      await store.set(key, split.settings);
+    } else await store.set(key, value);
     await store.save();
   },
 
   async remove(key: string): Promise<void> {
     if (isSecretKey(key)) {
-      try {
-        const { hold, store } = await secretStore();
-        await store.remove(key);
-        await hold.save();
-      } catch (error) {
-        console.warn('[Calqo] Stronghold remove failed; clearing IndexedDB fallback', error);
-      }
-      await dexieSettingsAdapter.remove(fallbackSecretKey(key));
-      await setFallbackMarker(key, false);
+      await removeLegacySecret(key);
+      await invokeSecret('remove_secret', key);
       return;
+      }
+    if (key === 'ai.settings') {
+      await removeLegacySecret(AI_KEYS);
+      await invokeSecret('remove_secret', AI_KEYS);
     }
     const store = await settingsStore();
     await store.delete(key);

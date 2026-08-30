@@ -20,6 +20,8 @@ interface GlassSegmentedControlProps<T extends string> {
   onChange: (value: T) => void;
   ariaLabel?: string;
   className?: string;
+  /** Keep the compact icon at narrow widths and reveal its label on desktop. */
+  showLabels?: boolean;
 }
 
 /** One-of-N segmented control. The active segment uses the solid accent fill —
@@ -30,6 +32,7 @@ export function GlassSegmentedControl<T extends string>({
   onChange,
   ariaLabel,
   className,
+  showLabels = false,
 }: GlassSegmentedControlProps<T>) {
   return (
     <div
@@ -54,13 +57,63 @@ export function GlassSegmentedControl<T extends string>({
             type="button"
             role="radio"
             aria-checked={active}
+            tabIndex={
+              !opt.disabled &&
+              (active ||
+                (!options.some(
+                  (option) => option.value === value && !option.disabled,
+                ) &&
+                  options.find((option) => !option.disabled)?.value ===
+                    opt.value))
+                ? 0
+                : -1
+            }
             disabled={opt.disabled}
             aria-label={iconOnly ? opt.label : undefined}
             title={opt.disabledReason ?? tooltip}
             onClick={() => onChange(opt.value)}
+            onKeyDown={(event) => {
+              const keys = [
+                'ArrowLeft',
+                'ArrowRight',
+                'ArrowUp',
+                'ArrowDown',
+                'Home',
+                'End',
+              ];
+              if (!keys.includes(event.key)) return;
+              event.preventDefault();
+              const enabled = options.filter((option) => !option.disabled);
+              const index = enabled.findIndex(
+                (option) => option.value === opt.value,
+              );
+              const next =
+                event.key === 'Home'
+                  ? 0
+                  : event.key === 'End'
+                    ? enabled.length - 1
+                    : (index +
+                        (event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                          ? -1
+                          : 1) +
+                        enabled.length) %
+                      enabled.length;
+              const option = enabled[next];
+              if (!option) return;
+              onChange(option.value);
+              const buttons =
+                event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                  'button:not(:disabled)',
+                );
+              buttons?.[next]?.focus();
+            }}
             className={cn(
               'flex items-center justify-center rounded-[6px] h-6 text-[11.5px] font-medium',
-              iconOnly ? 'w-7' : 'px-2.5',
+              iconOnly
+                ? showLabels
+                  ? 'w-7 min-[1180px]:w-auto min-[1180px]:gap-1.5 min-[1180px]:px-2.5'
+                  : 'w-7'
+                : 'px-2.5',
               'transition-colors duration-[var(--calqo-t-fast)]',
               opt.disabled && 'cursor-not-allowed opacity-45',
               active
@@ -69,6 +122,9 @@ export function GlassSegmentedControl<T extends string>({
             )}
           >
             {opt.icon ?? opt.label}
+            {iconOnly && showLabels && (
+              <span className="hidden min-[1180px]:inline">{opt.label}</span>
+            )}
           </button>
         );
       })}

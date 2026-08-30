@@ -1,3 +1,4 @@
+import { DOCUMENT_LIMITS } from '@/lib/schema/budgets';
 import { safeImportProject, type CalqoProject } from '@/lib/schema';
 import type {
   CalqoFile,
@@ -20,6 +21,8 @@ function downloadBlob(blob: Blob, filename: string): Promise<void> {
 
 export const browserFileAdapter: FileImportExportAdapter = {
   async importProjectFromFile(file): Promise<CalqoProject> {
+    if (file.size > DOCUMENT_LIMITS.fileBytes)
+      throw new Error('Project file exceeds the 128 MB limit.');
     const text = await file.text();
     let parsed: unknown;
     try {

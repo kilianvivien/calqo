@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -17,9 +18,10 @@ export function MobileTopBar({
   title,
   subtitle,
   onBack,
-  backLabel = 'Back',
+  backLabel,
   actions,
 }: MobileTopBarProps) {
+  const { t } = useTranslation('common');
   return (
     <header
       className={cn(
@@ -32,9 +34,9 @@ export function MobileTopBar({
       {onBack && (
         <button
           type="button"
-          aria-label={backLabel}
+          aria-label={backLabel ?? t('actions.back')}
           onClick={onBack}
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[var(--calqo-text-2)] transition-colors active:bg-[var(--calqo-hover)]"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--calqo-text-2)] transition-colors active:bg-[var(--calqo-hover)]"
         >
           <ChevronLeft size={20} />
         </button>
@@ -49,7 +51,9 @@ export function MobileTopBar({
           </p>
         )}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
+      {actions && (
+        <div className="flex shrink-0 items-center gap-1">{actions}</div>
+      )}
     </header>
   );
 }

@@ -1,10 +1,22 @@
+import { sanitizeSvg } from '@/lib/utils/svg';
+import { DOCUMENT_LIMITS } from '@/lib/schema/budgets';
 import { db } from '@/lib/db/dexie';
 import { createId } from '@/lib/utils/ids';
 import type { CalqoAssetRef } from '@/lib/schema';
 import type { AssetStorageAdapter } from './AssetStorageAdapter';
 
+async function safeBlob(blob: Blob, kind: string): Promise<Blob> {
+  if (blob.size > DOCUMENT_LIMITS.assetBytes)
+    throw new Error('Asset exceeds the 32 MB limit.');
+  if (kind !== 'svg') return blob;
+  const svg = sanitizeSvg(await blob.text());
+  if (!svg) throw new Error('SVG could not be safely imported.');
+  return new Blob([svg], { type: 'image/svg+xml' });
+}
+
 export const dexieAssetStorageAdapter: AssetStorageAdapter = {
   async saveAsset(projectId, blob, meta): Promise<CalqoAssetRef> {
+    blob = await safeBlob(blob, meta.kind);
     const id = createId('asset');
     const createdAt = new Date().toISOString();
     await db.assets.put({
@@ -33,7 +45,13 @@ export const dexieAssetStorageAdapter: AssetStorageAdapter = {
 
   async getAssetBlob(assetId): Promise<Blob | null> {
     const record = await db.assets.get(assetId);
-    return record?.blob ?? null;
+    if (!record) return null;
+    if (record.kind !== 'svg') return record.blob;
+    try {
+      return await safeBlob(record.blob, record.kind);
+    } catch {
+      return null;
+    }
   },
 
   async getAssetMeta(assetId) {
@@ -53,6 +71,7 @@ export const dexieAssetStorageAdapter: AssetStorageAdapter = {
   },
 
   async restoreAsset(projectId, asset, blob): Promise<void> {
+    blob = await safeBlob(blob, asset.kind);
     await db.assets.put({
       id: asset.id,
       projectId,

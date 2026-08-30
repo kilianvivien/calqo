@@ -1,3 +1,5 @@
+import { AiReadinessNote } from '@/app/shell/AiReadinessNote';
+import { aiReadiness } from '@/editor/ai/readiness';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bot, Copy, ImagePlus, Sparkles, X } from 'lucide-react';
@@ -27,6 +29,8 @@ import type { LocaleCode } from '@/lib/schema';
 import type { AIProviderDiagnostics } from '@/editor/ai/AIProvider';
 import { isTauri } from '@/lib/platform/runtime';
 
+let templateDraft = '';
+
 export function PromptTemplateDialog({
   onOpenAgentSettings,
 }: {
@@ -55,9 +59,19 @@ function PromptTemplateDialogInner({
   const project = useActiveProject();
   const setAiDialog = useUiStore((s) => s.setAiDialog);
   const settings = useAiSettingsStore((s) => s.settings);
-  const close = () => setAiDialog('none');
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  const close = () => {
+    alive.current = false;
+    setAiDialog('none');
+  };
 
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(templateDraft);
   const [preset, setPreset] = useState<ArtboardPresetId>('ig-square');
   const [locale, setLocale] = useState<LocaleCode>(
     project?.activeContentLocale ?? 'en',
@@ -136,6 +150,7 @@ function PromptTemplateDialogInner({
             }
           : undefined,
       });
+      if (!alive.current) return;
       if (validation.ok) {
         const newProjectId = await adoptProject(validation.project);
         if (brandProfile) applyBrandProfile(newProjectId, brandProfile);
@@ -161,7 +176,7 @@ function PromptTemplateDialogInner({
       open
       onClose={close}
       labelledBy="prompt-template-title"
-      className="glass glass-strong w-[min(560px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
+      className="glass glass-strong max-h-[88vh] overflow-y-auto calqo-scroll w-[min(560px,100%)] rounded-[28px] border border-[var(--calqo-divider)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
     >
       <header className="mb-4 flex items-start justify-between gap-4">
         <div>
@@ -182,11 +197,15 @@ function PromptTemplateDialogInner({
       </header>
 
       <div className="space-y-4">
+        <AiReadinessNote />
         <textarea
           autoFocus
           value={prompt}
           placeholder={t('promptTemplate.placeholder')}
-          onChange={(event) => setPrompt(event.target.value)}
+          onChange={(event) => {
+            templateDraft = event.target.value;
+            setPrompt(templateDraft);
+          }}
           className="min-h-24 w-full resize-y rounded-[var(--calqo-radius-md)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 py-2.5 text-[13px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-2 focus:ring-[var(--calqo-accent-ring)]"
         />
 
@@ -394,7 +413,7 @@ function PromptTemplateDialogInner({
           <GlassButton
             variant="primary"
             onClick={generate}
-            disabled={busy || !prompt.trim()}
+            disabled={busy || !prompt.trim() || !aiReadiness(settings).ready}
             loading={busy}
           >
             {!busy && <Sparkles size={14} />}

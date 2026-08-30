@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '@/app/shell/useFocusTrap';
 import { cn } from '@/lib/utils/cn';
@@ -33,6 +34,7 @@ export function BottomSheet({
   bodyClassName,
   children,
 }: BottomSheetProps) {
+  const { t } = useTranslation('common');
   const sheetRef = useRef<HTMLElement>(null);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
@@ -107,9 +109,9 @@ export function BottomSheet({
           </div>
           <button
             type="button"
-            aria-label="Close"
+            aria-label={t('actions.close')}
             onClick={onClose}
-            className="-mr-1 -mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-[var(--calqo-text-3)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
+            className="-mr-1 -mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--calqo-text-3)] transition-colors hover:bg-[var(--calqo-hover)] hover:text-[var(--calqo-text)]"
           >
             <X size={18} />
           </button>

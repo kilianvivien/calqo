@@ -35,7 +35,10 @@ export function TabBar() {
         const project = projects[id];
         if (!project) return null;
         const active = id === activeId;
-        const dirty = saveState[id] === 'unsaved' || saveState[id] === 'saving';
+        const dirty =
+          saveState[id] === 'unsaved' ||
+          saveState[id] === 'saving' ||
+          saveState[id] === 'error';
 
         return (
           <div
@@ -69,15 +72,17 @@ export function TabBar() {
             ) : (
               <span className="max-w-[10rem] truncate">{project.name}</span>
             )}
-            {dirty && <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />}
+            {dirty && (
+              <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />
+            )}
             <button
               type="button"
-              aria-label={`${t('actions.delete')} ${project.name}`}
+              aria-label={`${t('actions.close')} ${project.name}`}
               onClick={(e) => {
                 e.stopPropagation();
                 requestClose(id, project.name);
               }}
-              className="touch-hitarea flex h-4 w-4 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 any-pointer-coarse:opacity-100 hover:bg-[var(--calqo-hover)]"
+              className="touch-hitarea flex h-4 w-4 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 any-pointer-coarse:opacity-100 hover:bg-[var(--calqo-hover)]"
             >
               <X size={12} />
             </button>

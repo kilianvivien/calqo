@@ -304,7 +304,8 @@
     "framePreset_postage-stamp": "Timbre-poste",
     "framePreset_scalloped-edges": "Festonné",
     "framePreset_torn-paper": "Papier déchiré",
-    "framePreset_photo-booth-strip": "Photomaton"
+    "framePreset_photo-booth-strip": "Photomaton",
+    "artboardSettings": "Réglages du plan de travail"
   },
   "crop": {
     "hint": "Glissez pour repositionner · molette pour zoomer · poignées pour recadrer",
@@ -350,7 +351,7 @@
   },
   "export": {
     "title": "Exporter",
-    "subtitle": "Exportez le plan de travail en image, SVG ou wrapper HTML.",
+    "subtitle": "Exportez une image, un SVG ou du HTML avec des calques modifiables ou une image intégrée.",
     "animationSubtitle": "Exportez le plan de travail animé actif en MP4 ou GIF.",
     "close": "Fermer",
     "import": "Importer .calqo",
@@ -372,7 +373,7 @@
     "allLocales": "Toutes ({{count}})",
     "filename": "Nom du fichier",
     "warnings": "Avant d'exporter",
-    "warnOverflow": "{{name}} : certains calques dépassent du plan de travail.",
+    "warnOverflow": "{{name}} — {{layer}} : dépasse du plan de travail et sera rogné. Cela peut être intentionnel.",
     "warnMissingAsset": "{{name}} : une ressource image est manquante.",
     "warnLargeAsset": "{{name}} est volumineuse ({{width}}×{{height}} px) et peut ralentir l'édition et l'export.",
     "warnManyArtboards": "Exporter {{count}} plans de travail à la fois peut prendre du temps.",
@@ -444,7 +445,11 @@
         "markerAsset": "puce illustrée",
         "group": "calque imbriqué de secours"
       }
-    }
+    },
+    "warnTextFit": "{{name}} — {{layer}} ({{locale}}) : le texte risque de déborder. Vérifiez avant d’exporter.",
+    "warnSvgLayer": "{{name}} — {{layer}} : le SVG peut simplifier ce style. Préférez le PNG pour un rendu fidèle.",
+    "showLayer": "Voir le calque",
+    "unsafeSize": "Cette sortie dépasse les limites du canevas. Choisissez une échelle inférieure ou un plan de travail plus petit."
   },
   "recovery": {
     "title": "Récupération d'import",
@@ -480,7 +485,20 @@
   "ai": {
     "promptTemplate": "Générer un modèle",
     "translate": "Traduire",
-    "disabledHint": "L'IA est désactivée — activez un fournisseur dans Réglages ▸ Fournisseur IA"
+    "disabledHint": "L'IA est désactivée — activez un fournisseur dans Réglages ▸ Fournisseur IA",
+    "setup": "Configurer les modèles IA",
+    "setupTranslate": "Configurer la traduction IA",
+    "readiness": {
+      "demo": "Démonstration hors ligne",
+      "demoHint": "Résultats d’exemple uniquement. Aucun appel à un fournisseur ni connexion réseau.",
+      "localHint": "Le contenu est envoyé à votre serveur IA local. Celui-ci doit être démarré.",
+      "remoteHint": "Le contenu est envoyé au fournisseur choisi lorsque vous lancez cette action. Une connexion réseau est nécessaire.",
+      "off": "L’IA est désactivée. Choisissez un fournisseur dans Réglages → Fournisseur IA.",
+      "endpoint": "Configurez une adresse HTTP(S) valide, sans identifiants intégrés, dans Réglages → Fournisseur IA.",
+      "model": "Choisissez un modèle dans Réglages → Fournisseur IA.",
+      "key": "Ajoutez une clé API dans Réglages → Fournisseur IA.",
+      "storageError": "Les réglages n’ont pas pu être enregistrés de façon sécurisée. Les clés saisies restent disponibles pour cette session ; réessayez avant de redémarrer."
+    }
   },
   "content": {
     "locales": "Langues de contenu",
@@ -900,7 +918,17 @@
       "playful": "Ludique",
       "diplomacy": "Diplomatie",
       "mine": "Mes modèles"
-    }
+    },
+    "title": "Choisissez un modèle",
+    "subtitle": "Trouvez un point de départ modifiable, prévisualisez-le, puis adaptez-le.",
+    "search": "Rechercher des modèles",
+    "format": "Filtrer par format",
+    "allFormats": "Tous les formats",
+    "noMatches": "Aucun modèle ne correspond. Essayez une autre recherche ou un autre format.",
+    "previewHint": "{{count}} plan(s) de travail. La création d’un projet conserve le modèle intact.",
+    "back": "Retour aux modèles",
+    "use": "Utiliser ce modèle",
+    "openFailed": "Le modèle n’a pas pu être ouvert. Réessayez ; l’original est inchangé."
   },
   "repairAssets": {
     "title": "Réparer les ressources",
@@ -1064,5 +1092,11 @@
     "facebook-link": "Lien Facebook",
     "youtube-thumbnail": "Miniature YouTube",
     "pinterest-pin": "Épingle Pinterest"
+  },
+  "saveRecovery": {
+    "message": "« {{name}} » n’a pas pu être enregistré. Vos modifications restent ouvertes. Réessayez ou enregistrez une copie portable avant de quitter.",
+    "retry": "Réessayer",
+    "copy": "Enregistrer une copie portable",
+    "copyFailed": "La copie portable n’a pas pu être enregistrée. Gardez ce projet ouvert et réessayez."
   }
 }

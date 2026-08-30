@@ -18,7 +18,8 @@
     "delete": "Delete",
     "duplicate": "Duplicate",
     "rename": "Rename",
-    "close": "Close"
+    "close": "Close",
+    "back": "Back"
   },
   "menu": {
     "groups": {
@@ -138,7 +139,10 @@
       "agentSkill": "AI agent skill",
       "agentSkillHint": "Download a SKILL.md guide for coding agents that generate editable .calqo files from prompts.",
       "downloadSkill": "Download SKILL.md",
-      "downloadClaudeSkill": "Download Claude .skill"
+      "downloadClaudeSkill": "Download Claude .skill",
+      "demo": "Offline demo",
+      "demoHint": "Use deterministic sample output to try templates and translation without a provider or API key.",
+      "keychainNote": "Keys are saved in the macOS Keychain. Storage failures are shown above; no insecure fallback is used."
     },
     "agentDrawing": {
       "title": "Agent drawing",

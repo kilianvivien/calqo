@@ -1,3 +1,4 @@
+import { AiReadinessNote } from './AiReadinessNote';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
@@ -385,6 +386,7 @@ export function AppSettingsModal({
 
             {activeTab === 'ai' && (
               <section className="space-y-5">
+                <AiReadinessNote />
                 <SettingsRow label={t('settings.ai.provider')}>
                   <select
                     aria-label={t('settings.ai.provider')}
@@ -400,7 +402,9 @@ export function AppSettingsModal({
                       <option key={preset.id} value={preset.id}>
                         {preset.id === 'off'
                           ? t('settings.ai.off')
-                          : preset.label}
+                          : preset.id === 'demo'
+                            ? t('settings.ai.demo')
+                            : preset.label}
                       </option>
                     ))}
                   </select>
@@ -412,7 +416,13 @@ export function AppSettingsModal({
                     PROVIDER_PRESETS.off;
                   if (!preset.remote) {
                     return (
-                      <SettingsNote>{t('settings.ai.offHint')}</SettingsNote>
+                      <SettingsNote>
+                        {t(
+                          preset.id === 'demo'
+                            ? 'settings.ai.demoHint'
+                            : 'settings.ai.offHint',
+                        )}
+                      </SettingsNote>
                     );
                   }
                   const providerId = preset.id;
@@ -470,7 +480,7 @@ export function AppSettingsModal({
                             {secureSettings ? (
                               <span className="flex items-start gap-2 rounded-[var(--calqo-radius-sm)] bg-[#E8B339]/10 px-3 py-2.5 text-[12px] text-[#B7791F]">
                                 {config.apiKey.trim().length > 0
-                                  ? t('settings.ai.keySavedNote')
+                                  ? t('settings.ai.keychainNote')
                                   : t('settings.ai.desktopKeyWarning')}
                               </span>
                             ) : (

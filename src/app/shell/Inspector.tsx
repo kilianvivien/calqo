@@ -36,6 +36,12 @@ export function Inspector() {
     });
   }, [animate]);
 
+  useEffect(() => {
+    const inspect = () => setPane(animate ? 'layers' : 'properties');
+    window.addEventListener('calqo:inspect-layer', inspect);
+    return () => window.removeEventListener('calqo:inspect-layer', inspect);
+  }, [animate]);
+
   const tabs: { id: PaneId; icon: LucideIcon; label: string }[] = animate
     ? [
         { id: 'animate', icon: Clapperboard, label: t('animate.inspector.title') },
@@ -78,7 +84,9 @@ export function Inspector() {
       </div>
 
       <div role="tabpanel" className="flex-1 overflow-y-auto calqo-scroll p-4">
-        {pane === 'properties' && <PropertiesPane />}
+        {pane === 'properties' && (
+          <PropertiesPane onOpenArtboardSettings={() => setPane('style')} />
+        )}
         {pane === 'layers' && <LayersPane />}
         {pane === 'style' && <StylePane />}
         {pane === 'animate' && <AnimationInspector />}

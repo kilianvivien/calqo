@@ -1,3 +1,4 @@
+mod secrets;
 // The desktop shell is intentionally thin: the .calqo document is the source of
 // truth and all rendering/export happens in the web frontend. The Rust side wires
 // up the native macOS menu bar (so it has the standard App/Edit/Window submenus,
@@ -553,6 +554,9 @@ pub fn run() {
         )
         .manage(video::VideoState::default())
         .invoke_handler(tauri::generate_handler![
+            secrets::read_secret,
+            secrets::write_secret,
+            secrets::remove_secret,
             list_system_fonts,
             list_font_variants,
             set_menu_locale,

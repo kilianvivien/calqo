@@ -10,8 +10,16 @@ import {
   editProject,
   flushPendingSaves,
   saveProject,
+  isProjectDirty,
+  requestCloseProject,
 } from '@/editor/commands/projectCommands';
-import { importProjectFile } from '@/editor/export/calqoFile';
+import {
+  importProjectFile,
+  importProjectText,
+  dataUrlToBlob,
+  saveNativeProjectFile,
+} from '@/editor/export/calqoFile';
+import { desktopFileStore } from '@/lib/state/desktopFileStore';
 import { AppSettingsModal } from '@/app/shell/AppSettingsModal';
 import { createDefaultProject } from '@/lib/schema';
 import { projectStore } from '@/lib/state/projectStore';
@@ -36,6 +44,8 @@ const adapterMocks = vi.hoisted(() => ({
     openCalqoFile: vi.fn(),
     downloadBlob: vi.fn(),
     downloadMany: vi.fn(),
+    writeTextFileToDisk: vi.fn(),
+    saveTextFileToDisk: vi.fn(),
   },
   clipboard: {
     writePng: vi.fn(),
@@ -61,6 +71,7 @@ function resetState() {
   projectStore.setState({ projects: {}, saveState: {} });
   workspaceStore.setState({ openTabIds: [], activeProjectId: null });
   historyStore.setState({ histories: {} });
+  desktopFileStore.setState({ files: {} });
   selectionStore.setState({
     activeArtboardId: null,
     selectedLayerIds: [],
@@ -87,6 +98,100 @@ describe('phase F — persistence hardening', () => {
     resetState();
   });
 
+  it('keeps native disk state dirty when edits arrive during a write', async () => {
+    const project = createDefaultProject();
+    projectStore.getState().upsertProject(project);
+    desktopFileStore.getState().linkFile(project.id, '/test.calqo');
+    let finish!: () => void;
+    adapterMocks.files.writeTextFileToDisk.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const save = saveNativeProjectFile(project.id);
+    await vi.waitFor(() => expect(finish).toBeDefined());
+    editProject(project.id, (draft) => {
+      draft.name = 'Later edit';
+    });
+    finish();
+    expect(await save).toBe('/test.calqo');
+    expect(desktopFileStore.getState().files[project.id].diskState).toBe(
+      'unsaved',
+    );
+    await saveNativeProjectFile(project.id);
+    expect(desktopFileStore.getState().files[project.id].diskState).toBe(
+      'saved',
+    );
+    expect(
+      JSON.parse(adapterMocks.files.writeTextFileToDisk.mock.lastCall![1])
+        .project.name,
+    ).toBe('Later edit');
+  });
+
+  it('retains the tab when a linked native file cannot be written', async () => {
+    const project = createDefaultProject();
+    projectStore.getState().upsertProject(project);
+    workspaceStore.getState().openTab(project.id, true);
+    desktopFileStore.getState().linkFile(project.id, '/test.calqo', 'unsaved');
+    adapterMocks.files.writeTextFileToDisk.mockRejectedValueOnce(
+      new Error('Disk unavailable'),
+    );
+    expect(await closeProject(project.id)).toBe(false);
+    expect(workspaceStore.getState().openTabIds).toContain(project.id);
+    expect(desktopFileStore.getState().files[project.id].diskState).toBe(
+      'error',
+    );
+  });
+
+  it('imports repeated envelopes with independent asset ownership and references', async () => {
+    const project = createDefaultProject();
+    project.assets = [
+      {
+        id: 'original',
+        kind: 'raster',
+        mimeType: 'image/png',
+        name: 'pixel.png',
+        storageKey: 'original',
+        createdAt: project.createdAt,
+      },
+    ];
+    project.artboards[0].background = {
+      type: 'image',
+      assetId: 'original',
+      fit: 'cover',
+    };
+    const text = JSON.stringify({
+      kind: 'calqo.project',
+      formatVersion: 1,
+      project,
+      assets: [{ id: 'original', dataUrl: 'data:image/png;base64,aGVsbG8=' }],
+    });
+    const first = await importProjectText(text);
+    const second = await importProjectText(text);
+    const one = projectStore.getState().projects[first];
+    const two = projectStore.getState().projects[second];
+    expect(first).not.toBe(second);
+    expect(one.assets[0].id).not.toBe(two.assets[0].id);
+    expect(one.assets[0].id).not.toBe('original');
+    expect(one.artboards[0].background).toMatchObject({
+      assetId: one.assets[0].id,
+    });
+    expect(two.artboards[0].background).toMatchObject({
+      assetId: two.assets[0].id,
+    });
+    expect(adapterMocks.assetStorage.restoreAsset).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects remote asset URLs without issuing a network request', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    await expect(
+      dataUrlToBlob('https://example.com/asset.png'),
+    ).rejects.toThrow(/embedded/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
   it('coalesces autosave stress edits into one adapter write', async () => {
     const project = createDefaultProject();
     projectStore.getState().upsertProject(project);
@@ -108,6 +213,74 @@ describe('phase F — persistence hardening', () => {
     expect(adapterMocks.storage.saveProject.mock.calls[0][0].name).toBe(
       'Three',
     );
+    expect(projectStore.getState().saveState[project.id]).toBe('saved');
+  });
+
+  it('keeps a failed close recoverable, including the latest document and history', async () => {
+    const project = createDefaultProject();
+    projectStore.getState().upsertProject(project);
+    workspaceStore.getState().openTab(project.id, true);
+    editProject(
+      project.id,
+      (draft) => {
+        draft.name = 'Keep this edit';
+      },
+      { undoable: true },
+    );
+    adapterMocks.storage.saveProject.mockRejectedValue(
+      new Error('Quota exceeded'),
+    );
+    expect(await requestCloseProject(project.id)).toBe(false);
+    expect(projectStore.getState().projects[project.id].name).toBe(
+      'Keep this edit',
+    );
+    expect(workspaceStore.getState().openTabIds).toContain(project.id);
+    expect(
+      historyStore.getState().histories[project.id].past.length,
+    ).toBeGreaterThan(0);
+    expect(isProjectDirty(project.id)).toBe(true);
+    adapterMocks.storage.saveProject.mockResolvedValue(undefined);
+    expect(await closeProject(project.id)).toBe(true);
+    expect(projectStore.getState().projects[project.id]).toBeUndefined();
+  });
+
+  it('serializes overlapping saves and does not report an older edit as saved', async () => {
+    const project = createDefaultProject();
+    projectStore.getState().upsertProject(project);
+    let finishFirst!: () => void;
+    let finishSecond!: () => void;
+    adapterMocks.storage.saveProject
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishFirst = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishSecond = resolve;
+          }),
+      );
+    editProject(project.id, (draft) => {
+      draft.name = 'First';
+    });
+    const first = saveProject(project.id);
+    await Promise.resolve();
+    editProject(project.id, (draft) => {
+      draft.name = 'Latest';
+    });
+    const second = saveProject(project.id);
+    expect(adapterMocks.storage.saveProject).toHaveBeenCalledTimes(1);
+    finishFirst();
+    await Promise.resolve();
+    expect(projectStore.getState().saveState[project.id]).not.toBe('saved');
+    expect(adapterMocks.storage.saveProject.mock.calls[1][0].name).toBe(
+      'Latest',
+    );
+    finishSecond();
+    expect(await first).toBe(true);
+    expect(await second).toBe(true);
     expect(projectStore.getState().saveState[project.id]).toBe('saved');
   });
 

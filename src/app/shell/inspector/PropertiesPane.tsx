@@ -77,7 +77,7 @@ import {
   setArtboardBackground,
 } from '@/editor/commands/projectCommands';
 import { findLayerInArtboard } from '@/editor/utils/layers';
-import { GlassSegmentedControl } from '@/components/glass';
+import { GlassButton, GlassSegmentedControl } from '@/components/glass';
 import { useActiveProject, useActiveArtboard } from '@/lib/state/selectors';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import {
@@ -1099,7 +1099,9 @@ function measureImage(
   });
 }
 
-export function PropertiesPane() {
+export function PropertiesPane({
+  onOpenArtboardSettings,
+}: { onOpenArtboardSettings?: () => void } = {}) {
   const { t } = useTranslation('editor');
   const project = useActiveProject();
   const artboard = useActiveArtboard();
@@ -1141,7 +1143,12 @@ export function PropertiesPane() {
     return <MultiControls projectId={project.id} layers={selected} />;
   }
 
-  return <ToolDefaults activeTool={activeTool} />;
+  return (
+    <ToolDefaults
+      activeTool={activeTool}
+      onOpenArtboardSettings={onOpenArtboardSettings}
+    />
+  );
 }
 
 /** Localized one-line descriptor under an object's name in the identity card. */
@@ -1207,7 +1214,13 @@ function IdentityCard({
 
 /** Shown when nothing is selected. For a draw tool, mirrors GeoCarto's
  * "Réglages {outil}" — the style that lands on the next placed object. */
-function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
+function ToolDefaults({
+  activeTool,
+  onOpenArtboardSettings,
+}: {
+  activeTool: EditorTool;
+  onOpenArtboardSettings?: () => void;
+}) {
   const { t } = useTranslation('editor');
   const shapeDefaults = useUiStore((s) => s.shapeDefaults);
   const setShapeDefaults = useUiStore((s) => s.setShapeDefaults);
@@ -1222,12 +1235,14 @@ function ToolDefaults({ activeTool }: { activeTool: EditorTool }) {
           <p className="text-[13px] font-semibold text-[var(--calqo-text-2)]">
             {t('properties.emptyTitle')}
           </p>
-          <p className="text-[12px] leading-relaxed text-[var(--calqo-text-3)]">
+          <p className="text-[12px] leading-relaxed text-[var(--calqo-text-2)]">
             {t('properties.emptyHint')}
           </p>
-          <p className="text-[11.5px] leading-relaxed text-[var(--calqo-text-3)]">
-            {t('properties.noLayerSelected')}
-          </p>
+          {onOpenArtboardSettings && (
+            <GlassButton className="mt-2" onClick={onOpenArtboardSettings}>
+              {t('properties.artboardSettings')}
+            </GlassButton>
+          )}
         </div>
       </div>
     );

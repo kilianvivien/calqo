@@ -131,9 +131,15 @@ export function AppShell() {
       setNewProjectTab('starters');
       setNewProjectOpen(true);
     };
+    const openAiSettings = () => {
+      setSettingsTab('ai');
+      setSettingsOpen(true);
+    };
+    window.addEventListener('calqo:open-ai-settings', openAiSettings);
     window.addEventListener('calqo:open-shortcuts', openShortcuts);
     window.addEventListener('calqo:open-starters', openStarters);
     return () => {
+      window.removeEventListener('calqo:open-ai-settings', openAiSettings);
       window.removeEventListener('calqo:open-shortcuts', openShortcuts);
       window.removeEventListener('calqo:open-starters', openStarters);
     };

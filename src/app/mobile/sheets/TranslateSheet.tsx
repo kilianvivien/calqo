@@ -1,3 +1,5 @@
+import { AiReadinessNote } from '@/app/shell/AiReadinessNote';
+import { aiReadiness } from '@/editor/ai/readiness';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight } from 'lucide-react';
@@ -97,9 +99,16 @@ export function TranslateSheet({ open, onClose, project }: TranslateSheetProps) 
       const { job, result, unchanged, missingLayerIds } = await runTranslation(
         provider,
         project,
-        { sourceLocale: source, targetLocale: target, scope: 'active', activeArtboardId },
+        {
+          sourceLocale: source,
+          targetLocale: target,
+          scope: 'active',
+          activeArtboardId,
+        },
       );
-      const sourceById = new Map(job.items.map((i) => [i.layerId, i.sourceText]));
+      const sourceById = new Map(
+        job.items.map((i) => [i.layerId, i.sourceText]),
+      );
       const rows = result.items.map((item) => ({
         layerId: item.layerId,
         source: sourceById.get(item.layerId) ?? '',
@@ -133,7 +142,7 @@ export function TranslateSheet({ open, onClose, project }: TranslateSheetProps) 
           <GlassButton
             className="flex-1"
             onClick={run}
-            disabled={busy || source === target}
+            disabled={busy || source === target || !aiReadiness(settings).ready}
             loading={busy}
           >
             {busy ? t('translate.running') : t('translate.run')}
@@ -149,7 +158,8 @@ export function TranslateSheet({ open, onClose, project }: TranslateSheetProps) 
         </>
       }
     >
-      <div className="flex items-end gap-2">
+      <AiReadinessNote />
+      <div className="mt-3 flex items-end gap-2">
         <LocaleSelect
           label={t('translate.from')}
           value={source}

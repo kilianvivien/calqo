@@ -4,6 +4,7 @@ import {
   type CalqoLayer,
   type CalqoProject,
 } from './schema';
+import { documentBudgetError } from './budgets';
 
 /** A migration lifts a raw document from version N to N+1. */
 type Migration = (raw: Record<string, unknown>) => Record<string, unknown>;
@@ -78,6 +79,8 @@ export function validateProject(raw: unknown) {
  * A future-version file (missing migration) fails as a readable error, not a
  * thrown exception, so callers can surface it in the UI. */
 export function safeImportProject(raw: unknown): ImportResult {
+  const budgetError = documentBudgetError(raw);
+  if (budgetError) return { ok: false, error: budgetError };
   let migrated: unknown;
   try {
     migrated = migrateToCurrent(raw);

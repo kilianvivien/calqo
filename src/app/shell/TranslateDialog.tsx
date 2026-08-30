@@ -1,3 +1,5 @@
+import { AiReadinessNote } from '@/app/shell/AiReadinessNote';
+import { aiReadiness } from '@/editor/ai/readiness';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Check, Languages, Plus, Trash2, X } from 'lucide-react';
@@ -151,6 +153,7 @@ function TranslateDialogInner() {
         </header>
 
         <div className="flex-1 space-y-4 overflow-y-auto calqo-scroll pr-1">
+        <AiReadinessNote />
           <div className="flex items-center gap-2">
             <LocaleSelect
               label={t('translate.from')}
@@ -229,7 +232,11 @@ function TranslateDialogInner() {
             {status}
           </span>
           <div className="flex items-center gap-2">
-            <GlassButton onClick={runJob} disabled={busy || source === target} loading={busy}>
+          <GlassButton
+            onClick={runJob}
+            disabled={busy || source === target || !aiReadiness(settings).ready}
+            loading={busy}
+          >
               {busy ? t('translate.running') : t('translate.run')}
             </GlassButton>
             <GlassButton variant="primary" onClick={apply} disabled={!preview || preview.rows.length === 0}>
@@ -352,7 +359,13 @@ function GlossaryEditor({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="grid grid-cols-[110px_1fr] items-center gap-3">
       <span className="text-[12px] font-medium text-[var(--calqo-text-2)]">{label}</span>

@@ -34,9 +34,7 @@ async function enableMockAi(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Open settings' }).click();
   const settings = page.getByRole('dialog', { name: 'Settings' });
   await settings.getByRole('tab', { name: 'AI provider' }).click();
-  await settings.getByLabel('Provider').selectOption('custom');
-  await settings.getByLabel('Base URL').fill('');
-  await settings.getByLabel('Model').fill('');
+  await settings.getByLabel('Provider').selectOption('demo');
   await settings.getByRole('button', { name: 'Close' }).click();
 }
 
@@ -47,8 +45,15 @@ test('starter gallery: instantiate a bundled starter and edit it', async ({ page
   await page.getByRole('button', { name: 'New', exact: true }).click();
   await page.getByRole('radio', { name: 'Starters' }).click();
 
-  // Pick the announcement starter; it opens as an editable project.
-  await page.getByRole('button', { name: /Announcement — Instagram square/i }).click();
+  await page.getByRole('searchbox', { name: 'Search starters' }).fill('announcement');
+  await page.getByRole('combobox', { name: 'Filter by format' }).selectOption('ig-square');
+
+  // Previewing does not create a project until the user confirms.
+  await page
+    .getByRole('button', { name: /Announcement — Instagram square/i })
+    .click();
+  await expect(page.getByRole('dialog', { name: 'Choose a starter' })).toBeVisible();
+  await page.getByRole('button', { name: 'Use this starter' }).click();
   await expect(
     page.getByRole('button', { name: 'Announcement (IG square)' }),
   ).toBeVisible();
@@ -62,8 +67,13 @@ test('starter gallery: instantiate a bundled starter and edit it', async ({ page
   await page.locator('.konvajs-content canvas').first().click({ position: { x: 240, y: 180 }, force: true });
   await page.getByRole('button', { name: 'New', exact: true }).click();
   await page.getByRole('radio', { name: 'Starters' }).click();
-  await page.getByRole('button', { name: /Announcement — Instagram square/i }).click();
-  await expect(page.getByRole('button', { name: 'Announcement (IG square)' })).toHaveCount(3);
+  await page
+    .getByRole('button', { name: /Announcement — Instagram square/i })
+    .click();
+  await page.getByRole('button', { name: 'Use this starter' }).click();
+  await expect(
+    page.getByRole('button', { name: 'Announcement (IG square)' }),
+  ).toHaveCount(3);
 
   // Save the active copy as a user starter and round-trip it through the gallery.
   await page.waitForTimeout(700);
@@ -74,7 +84,7 @@ test('starter gallery: instantiate a bundled starter and edit it', async ({ page
   await manager.getByRole('button', { name: 'Close' }).click();
   await page.getByRole('button', { name: 'New', exact: true }).click();
   await page.getByRole('radio', { name: 'Starters' }).click();
-  await expect(page.getByText('My starters')).toBeVisible();
+  await expect(page.getByText('My starters', { exact: true })).toBeVisible();
 });
 
 test('editable HTML export mode is offered and produces a .html download', async ({ page }) => {

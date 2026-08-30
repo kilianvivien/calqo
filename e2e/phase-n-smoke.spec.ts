@@ -27,9 +27,7 @@ async function enableMockAi(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Open settings' }).click();
   const settings = page.getByRole('dialog', { name: 'Settings' });
   await settings.getByRole('tab', { name: 'AI provider' }).click();
-  await settings.getByLabel('Provider').selectOption('custom');
-  await settings.getByLabel('Base URL').fill('');
-  await settings.getByLabel('Model').fill('');
+  await settings.getByLabel('Provider').selectOption('demo');
   await settings.getByRole('button', { name: 'Close' }).click();
   await expect(page.getByRole('button', { name: 'Prompt a template' })).toBeVisible();
 }
@@ -112,10 +110,17 @@ test('visual smoke checkpoints', async ({ page }) => {
   await expect(page.getByText('Choose a format')).toBeVisible();
   await page.screenshot({ path: 'test-results/empty-workspace.png', fullPage: true });
 
-  await page.getByRole('button', { name: 'Open sample project' }).click();
+  await page.getByRole('button', { name: 'Browse the models' }).click();
+  await page
+    .getByRole('button', { name: /Announcement — Instagram square/i })
+    .click();
+  await page.getByRole('button', { name: 'Use this starter' }).click();
   await page.getByRole('tab', { name: 'Layers' }).click();
-  await page.getByRole('button', { name: 'Headline' }).click();
-  await page.screenshot({ path: 'test-results/sample-selected-light.png', fullPage: true });
+  await page.getByRole('button', { name: 'Headline', exact: true }).click();
+  await page.screenshot({
+    path: 'test-results/sample-selected-light.png',
+    fullPage: true,
+  });
 
   await page.getByRole('button', { name: 'Toggle theme' }).click();
   await page.screenshot({ path: 'test-results/sample-selected-dark.png', fullPage: true });

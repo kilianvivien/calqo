@@ -1,3 +1,4 @@
+import { DOCUMENT_LIMITS } from '@/lib/schema/budgets';
 import { safeImportProject, type CalqoProject } from '@/lib/schema';
 import type {
   FileImportExportAdapter,
@@ -98,7 +99,9 @@ export const tauriFileAdapter: FileImportExportAdapter = {
   },
 
   async readTextFileFromDisk(path) {
-    const { readTextFile } = await fs();
+    const { readTextFile, stat } = await fs();
+    if ((await stat(path)).size > DOCUMENT_LIMITS.fileBytes)
+      throw new Error('Project file exceeds the 128 MB limit.');
     return readTextFile(path);
   },
 
@@ -108,7 +111,9 @@ export const tauriFileAdapter: FileImportExportAdapter = {
   },
 
   async readBinaryFileFromDisk(path) {
-    const { readFile } = await fs();
+    const { readFile, stat } = await fs();
+    if ((await stat(path)).size > DOCUMENT_LIMITS.assetBytes)
+      throw new Error('Image exceeds the 32 MB limit.');
     return readFile(path);
   },
 
@@ -120,13 +125,16 @@ export const tauriFileAdapter: FileImportExportAdapter = {
       multiple: true,
       fileAccessMode: 'scoped',
     });
-    const paths = Array.isArray(selected) ? selected : selected ? [selected] : [];
-    const { readFile } = await fs();
+    const paths = Array.isArray(selected)
+      ? selected
+      : selected
+        ? [selected]
+        : [];
     return Promise.all(
       paths.map(async (path) => ({
         path,
         name: filename(path),
-        bytes: await readFile(path),
+        bytes: await this.readBinaryFileFromDisk!(path),
         mimeType: mimeFromPath(path),
       })),
     );

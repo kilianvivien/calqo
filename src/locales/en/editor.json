@@ -304,7 +304,8 @@
     "framePreset_postage-stamp": "Postage stamp",
     "framePreset_scalloped-edges": "Scalloped",
     "framePreset_torn-paper": "Torn paper",
-    "framePreset_photo-booth-strip": "Photo booth"
+    "framePreset_photo-booth-strip": "Photo booth",
+    "artboardSettings": "Artboard settings"
   },
   "crop": {
     "hint": "Drag to reposition · scroll to zoom · drag handles to reframe",
@@ -350,7 +351,7 @@
   },
   "export": {
     "title": "Export",
-    "subtitle": "Render the artboard to an image, SVG, or HTML wrapper.",
+    "subtitle": "Export an image, SVG, or HTML with editable layers or an image wrapper.",
     "animationSubtitle": "Export the active animated artboard as MP4 or GIF.",
     "close": "Close",
     "import": "Import .calqo",
@@ -372,7 +373,7 @@
     "allLocales": "All ({{count}})",
     "filename": "Filename",
     "warnings": "Before you export",
-    "warnOverflow": "{{name}}: some layers fall outside the artboard.",
+    "warnOverflow": "{{name}} — {{layer}}: extends beyond the artboard and will be clipped. This may be intentional.",
     "warnMissingAsset": "{{name}}: an image asset is missing.",
     "warnLargeAsset": "{{name}} is large ({{width}}×{{height}}px) and may slow editing and export.",
     "warnManyArtboards": "Exporting {{count}} artboards at once may take a while.",
@@ -444,7 +445,11 @@
         "markerAsset": "icon list marker",
         "group": "nested fallback layer"
       }
-    }
+    },
+    "warnTextFit": "{{name}} — {{layer}} ({{locale}}): text may not fit. Review before exporting.",
+    "warnSvgLayer": "{{name}} — {{layer}}: SVG may simplify this styling. Use PNG for the closest visual match.",
+    "showLayer": "Show layer",
+    "unsafeSize": "This output exceeds the canvas limit. Choose a lower scale or smaller artboard."
   },
   "recovery": {
     "title": "Import recovery",
@@ -480,7 +485,20 @@
   "ai": {
     "promptTemplate": "Prompt a template",
     "translate": "Translate",
-    "disabledHint": "AI is off — turn on a provider in Settings ▸ AI provider"
+    "disabledHint": "AI is off — turn on a provider in Settings ▸ AI provider",
+    "setup": "Set up AI templates",
+    "setupTranslate": "Set up AI translation",
+    "readiness": {
+      "demo": "Offline demo",
+      "demoHint": "Sample output only. No provider request or network connection.",
+      "localHint": "Content is sent to your local AI server. It must be running.",
+      "remoteHint": "Content is sent to the selected provider when you run this action. A network connection is required.",
+      "off": "AI is off. Select a provider in Settings → AI provider.",
+      "endpoint": "Set a valid HTTP(S) endpoint without embedded credentials in Settings → AI provider.",
+      "model": "Choose a model in Settings → AI provider.",
+      "key": "Add an API key in Settings → AI provider.",
+      "storageError": "Settings could not be saved securely. Keys entered now remain available for this session; retry setup before restarting."
+    }
   },
   "content": {
     "locales": "Content locales",
@@ -900,7 +918,17 @@
       "playful": "Playful",
       "diplomacy": "Diplomacy",
       "mine": "My starters"
-    }
+    },
+    "title": "Choose a starter",
+    "subtitle": "Find an editable starting point, preview it, then make it your own.",
+    "search": "Search starters",
+    "format": "Filter by format",
+    "allFormats": "All formats",
+    "noMatches": "No starters match. Try a different search or format.",
+    "previewHint": "{{count}} artboard(s). Creating a project keeps the starter unchanged.",
+    "back": "Back to starters",
+    "use": "Use this starter",
+    "openFailed": "The starter could not be opened. Try again; the original is unchanged."
   },
   "repairAssets": {
     "title": "Repair assets",
@@ -1064,5 +1092,11 @@
     "facebook-link": "Facebook link",
     "youtube-thumbnail": "YouTube thumbnail",
     "pinterest-pin": "Pinterest pin"
+  },
+  "saveRecovery": {
+    "message": "“{{name}}” could not be saved. Your edits are still open. Retry or save a portable copy before leaving.",
+    "retry": "Retry save",
+    "copy": "Save a portable copy",
+    "copyFailed": "The portable copy could not be saved. Keep this project open and try again."
   }
 }
