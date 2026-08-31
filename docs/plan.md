@@ -2,10 +2,12 @@
 
 **Planning date:** 2026-06-27  
 **Status refreshed:** 2026-08-31
-**Current working-tree version:** `0.7.0` in package and Tauri metadata
-**Release status:** `v0.7.0` has a signed GitHub draft; the Release workflow and
-downloaded-artifact checks passed on 2026-08-31. Publication awaits the outstanding
-native smoke checks or explicit acceptance of that gap. Beta gates remain open. See
+**Current working-tree version:** `0.7.1` in package and Tauri metadata
+**Release status:** `0.7.1` is being prepared for GitHub publication with macOS
+titlebar alignment and AI provider cleanup. The complete local browser gate passes
+(649 unit tests and 8 Chromium tests). `v0.7.0` is published. Hands-on native
+checks remain outstanding and will be disclosed in the release notes; beta gates
+remain open. See
 [refinement verification](refinement-verification.md) for changes and checks.
 **Planning inputs:** `docs/Old/calqo-post-phase-m-implementation-plan.md`,
 `docs/Old/calqo-mcp-live-drawing-implementation-plan.md`,
@@ -29,6 +31,14 @@ repeatable.
 
 Implemented and worth protecting:
 
+- macOS titlebar alignment (0.7.1): use native traffic-light inset `(18, 24)`
+  for the 44px toolbar. The initial `y: 20` correction was 4 logical pixels too
+  high in the user's dev-app screenshot; lower it by that measured amount.
+- AI provider cleanup (0.7.1): remove the offline demo option. Saved demo
+  selections fall back to AI off, preserving configured real providers.
+  - Validation: `pnpm release:check` passes (649 tests), and the macOS debug
+    app bundle builds. Native visual verification remains pending because the
+    accessibility inspection tool timed out.
 - Core browser editor: projects, tabs, artboards, layers, Konva canvas,
   selection, transform, grouping, undo/redo, alignment, snapping, arrange tools.
 - Local-first storage and portability boundaries: Dexie-backed browser storage,
@@ -40,7 +50,7 @@ Implemented and worth protecting:
 - Export pipeline: PNG/JPG/WebP, SVG with documented caveats, HTML raster
   wrapper and editable HTML, batch export, layer-specific export warnings.
 - Animation: scene timing, transitions, GIF/video export, and native VideoToolbox.
-- AI: explicit offline demo mode, Gemini-specific path, OpenAI-compatible providers, local
+- AI: Gemini-specific path, OpenAI-compatible providers, local
   provider options, prompt-a-template, translation, provider diagnostics, secure
   desktop settings.
 - Multilingual content: per-project locales, per-layer content variants,
@@ -377,7 +387,7 @@ predictable.
     provider-specific caveats.
   - Clear validation failures with repair guidance.
   - Ensure diagnostics and logs redact secrets.
-  - Keep mock mode deterministic for tests and demos.
+  - Keep mock output deterministic for automated tests only.
 - [ ] Polish mobile quick edit.
   - Finish touch target and reduced-transparency audit.
   - Ensure bottom sheets trap focus correctly and do not expose desktop-only

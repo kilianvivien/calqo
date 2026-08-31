@@ -489,8 +489,6 @@
     "setup": "Configurer les modèles IA",
     "setupTranslate": "Configurer la traduction IA",
     "readiness": {
-      "demo": "Démonstration hors ligne",
-      "demoHint": "Résultats d’exemple uniquement. Aucun appel à un fournisseur ni connexion réseau.",
       "localHint": "Le contenu est envoyé à votre serveur IA local. Celui-ci doit être démarré.",
       "remoteHint": "Le contenu est envoyé au fournisseur choisi lorsque vous lancez cette action. Une connexion réseau est nécessaire.",
       "off": "L’IA est désactivée. Choisissez un fournisseur dans Réglages → Fournisseur IA.",

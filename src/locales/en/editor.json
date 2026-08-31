@@ -489,8 +489,6 @@
     "setup": "Set up AI templates",
     "setupTranslate": "Set up AI translation",
     "readiness": {
-      "demo": "Offline demo",
-      "demoHint": "Sample output only. No provider request or network connection.",
       "localHint": "Content is sent to your local AI server. It must be running.",
       "remoteHint": "Content is sent to the selected provider when you run this action. A network connection is required.",
       "off": "AI is off. Select a provider in Settings → AI provider.",

@@ -1,5 +1,4 @@
 import type { AIProvider } from './AIProvider';
-import { mockProvider } from './mockProvider';
 import { aiReadiness } from './readiness';
 import { createGeminiProvider } from './geminiProvider';
 import { createOpenAICompatibleProvider } from './openAICompatibleProvider';
@@ -12,7 +11,6 @@ import {
 /** Resolve the active provider from settings, or `null` when AI is turned off.
  * Incomplete setup never silently substitutes demo output for a real provider. */
 export function getProvider(settings: AiSettings): AIProvider | null {
-  if (settings.providerId === 'demo') return mockProvider;
   if (!aiReadiness(settings).ready) return null;
 
   const preset = PROVIDER_PRESETS[settings.providerId];

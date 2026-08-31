@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { enableTestAi } from './helpers/ai';
 
 async function downloadBuffer(download: import('@playwright/test').Download): Promise<Buffer> {
   const stream = await download.createReadStream();
@@ -28,14 +29,6 @@ async function openFreshApp(page: import('@playwright/test').Page) {
     );
   });
   await page.reload();
-}
-
-async function enableMockAi(page: import('@playwright/test').Page) {
-  await page.getByRole('button', { name: 'Open settings' }).click();
-  const settings = page.getByRole('dialog', { name: 'Settings' });
-  await settings.getByRole('tab', { name: 'AI provider' }).click();
-  await settings.getByLabel('Provider').selectOption('demo');
-  await settings.getByRole('button', { name: 'Close' }).click();
 }
 
 test('starter gallery: instantiate a bundled starter and edit it', async ({ page }) => {
@@ -298,7 +291,7 @@ test('asset health: oversized import previews and applies an undoable optimizati
 
 test('Brand Lite applies a profile to projects, prompt generation, and logo insertion', async ({ page }) => {
   await openFreshApp(page);
-  await enableMockAi(page);
+  await enableTestAi(page);
 
   await page.getByRole('button', { name: 'Open settings' }).click();
   let settings = page.getByRole('dialog', { name: 'Settings' });

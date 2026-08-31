@@ -125,7 +125,6 @@
       "provider": "Provider",
       "off": "Off",
       "offHint": "AI is turned off. Prompt-a-template, translation, and AI graphics are disabled — pick a provider above to enable them.",
-      "mockHint": "Works offline with deterministic output — no setup required.",
       "officialHint": "Official provider adapter with structured-output requests where supported.",
       "compatibleHint": "OpenAI-compatible endpoint. Availability of JSON mode and retries depends on that provider.",
       "baseUrl": "Base URL",
@@ -140,8 +139,6 @@
       "agentSkillHint": "Download a SKILL.md guide for coding agents that generate editable .calqo files from prompts.",
       "downloadSkill": "Download SKILL.md",
       "downloadClaudeSkill": "Download Claude .skill",
-      "demo": "Offline demo",
-      "demoHint": "Use deterministic sample output to try templates and translation without a provider or API key.",
       "keychainNote": "Keys are saved in the macOS Keychain. Storage failures are shown above; no insecure fallback is used."
     },
     "agentDrawing": {

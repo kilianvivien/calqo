@@ -13,9 +13,7 @@ export function AiReadinessNote() {
       role="status"
     >
       <p>
-        {state.destination === 'demo'
-          ? t('ai.readiness.demo')
-          : `${state.provider}${state.model ? ` · ${state.model}` : ''}`}
+        {`${state.provider}${state.model ? ` · ${state.model}` : ''}`}
       </p>
       {!state.issues.includes('off') && (
         <p>{t(`ai.readiness.${state.destination}Hint`)}</p>

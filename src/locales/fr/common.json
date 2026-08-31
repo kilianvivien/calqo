@@ -125,7 +125,6 @@
       "provider": "Fournisseur",
       "off": "Désactivé",
       "offHint": "L'IA est désactivée. La génération de modèles, la traduction et les visuels IA sont indisponibles — choisissez un fournisseur ci-dessus pour les activer.",
-      "mockHint": "Fonctionne hors ligne avec une sortie déterministe — aucune configuration requise.",
       "officialHint": "Adaptateur fournisseur officiel avec requêtes structurées lorsque le modèle les prend en charge.",
       "compatibleHint": "Point de terminaison compatible OpenAI. La disponibilité du mode JSON et des reprises dépend de ce fournisseur.",
       "baseUrl": "URL de base",
@@ -140,8 +139,6 @@
       "agentSkillHint": "Téléchargez un guide SKILL.md pour les agents de code qui génèrent des fichiers .calqo modifiables depuis des prompts.",
       "downloadSkill": "Télécharger SKILL.md",
       "downloadClaudeSkill": "Télécharger .skill Claude",
-      "demo": "Démonstration hors ligne",
-      "demoHint": "Essayez les modèles et la traduction avec des exemples déterministes, sans fournisseur ni clé API.",
       "keychainNote": "Les clés sont enregistrées dans le trousseau macOS. Les échecs sont signalés ci-dessus ; aucun stockage non sécurisé n’est utilisé."
     },
     "agentDrawing": {

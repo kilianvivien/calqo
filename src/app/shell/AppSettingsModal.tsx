@@ -402,9 +402,7 @@ export function AppSettingsModal({
                       <option key={preset.id} value={preset.id}>
                         {preset.id === 'off'
                           ? t('settings.ai.off')
-                          : preset.id === 'demo'
-                            ? t('settings.ai.demo')
-                            : preset.label}
+                          : preset.label}
                       </option>
                     ))}
                   </select>
@@ -417,11 +415,7 @@ export function AppSettingsModal({
                   if (!preset.remote) {
                     return (
                       <SettingsNote>
-                        {t(
-                          preset.id === 'demo'
-                            ? 'settings.ai.demoHint'
-                            : 'settings.ai.offHint',
-                        )}
+                        {t('settings.ai.offHint')}
                       </SettingsNote>
                     );
                   }

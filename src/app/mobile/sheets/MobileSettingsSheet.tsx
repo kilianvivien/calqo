@@ -87,9 +87,7 @@ export function MobileSettingsSheet({ open, onClose }: MobileSettingsSheetProps)
             <option key={option.id} value={option.id}>
               {option.id === 'off'
                 ? t('settings.ai.off')
-                : option.id === 'demo'
-                  ? t('settings.ai.demo')
-                  : option.label}
+                : option.label}
             </option>
           ))}
         </select>
@@ -97,11 +95,7 @@ export function MobileSettingsSheet({ open, onClose }: MobileSettingsSheetProps)
 
       {!preset.remote ? (
         <p className="mt-1 text-[12px] text-[var(--calqo-text-3)]">
-          {t(
-            preset.id === 'demo'
-              ? 'settings.ai.demoHint'
-              : 'settings.ai.offHint',
-          )}
+          {t('settings.ai.offHint')}
         </p>
       ) : (
         <>

@@ -6,7 +6,7 @@ import { sanitizeSvg } from '@/lib/utils/svg';
 import { documentBudgetError, rasterBudgetError } from '@/lib/schema/budgets';
 import { safeImportProject } from '@/lib/schema';
 import { fixtureProject } from '@/lib/schema/fixture';
-import { normalizeAiSettings } from '@/editor/ai/aiSettings';
+import { isAiEnabled, normalizeAiSettings } from '@/editor/ai/aiSettings';
 import { aiReadiness } from '@/editor/ai/readiness';
 import { getProvider } from '@/editor/ai/providerRegistry';
 import {
@@ -73,7 +73,7 @@ describe('refinement safety boundaries', () => {
     );
   });
 
-  it('requires explicit demo mode and never substitutes it for incomplete setup', () => {
+  it('never substitutes sample output for incomplete provider setup', () => {
     const settings = normalizeAiSettings();
     expect(getProvider(settings)).toBeNull();
     settings.providerId = 'custom';
@@ -87,12 +87,34 @@ describe('refinement safety boundaries', () => {
     expect(aiReadiness(settings).issues).toEqual(['endpoint']);
     settings.providerId = 'local';
     expect(aiReadiness(settings).destination).toBe('local');
-    settings.providerId = 'demo';
     expect(aiReadiness(settings).ready).toBe(true);
     expect(getProvider(settings)).not.toBeNull();
     expect(
       normalizeAiSettings({ providerId: 'constructor' as never }).providerId,
     ).toBe('off');
+  });
+
+  it('disables a saved demo provider while preserving real provider settings', () => {
+    const stored = normalizeAiSettings();
+    stored.providers.custom = {
+      baseUrl: 'https://example.com/v1',
+      model: 'saved-model',
+      apiKey: 'saved-key',
+    };
+    const settings = normalizeAiSettings({
+      ...stored,
+      providerId: 'demo' as never,
+      providers: {
+        ...stored.providers,
+        demo: { baseUrl: '', model: '', apiKey: '' },
+      } as typeof stored.providers,
+    });
+    expect(settings.providerId).toBe('off');
+    expect(isAiEnabled(settings)).toBe(false);
+    expect(aiReadiness(settings).issues).toEqual(['off']);
+    expect(getProvider(settings)).toBeNull();
+    expect(settings.providers).not.toHaveProperty('demo');
+    expect(settings.providers.custom).toEqual(stored.providers.custom);
   });
 
   it('separates keys without mutating preferences and merges only own secrets', () => {

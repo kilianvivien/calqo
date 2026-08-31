@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kilianvivien/calqo/releases/latest"><strong>Download for macOS</strong></a>
+  <a href="https://github.com/kilianvivien/calqo/releases/tag/v0.7.1"><strong>Download 0.7.1 for macOS</strong></a>
   ·
   <a href="#animate-mode">Animate mode</a>
   ·
@@ -84,6 +84,12 @@ Run `pnpm verify` for the browser gate. Native packaging, Keychain prompts,
 Safari and installed-PWA checks remain separate release requirements.
 The active roadmap is [docs/plan.md](docs/plan.md); older phase plans live in
 `docs/Old/`.
+
+## Calqo 0.7.1 — Titlebar alignment and AI provider cleanup
+
+- Center the macOS window traffic lights with the toolbar icons.
+- Remove the offline demo AI provider; saved demo selections fall back to AI off
+  without losing other provider settings.
 
 ## Calqo 0.7.0 — Safer saves and portable projects
 

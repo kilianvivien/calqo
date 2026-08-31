@@ -9,7 +9,6 @@ const SETTINGS_KEY = 'ai.settings';
  * completions by varying base URL / model / key. */
 export type AiProviderId =
   | 'off'
-  | 'demo'
   | 'local'
   | 'gemini'
   | 'mistral'
@@ -31,16 +30,6 @@ export interface ProviderPreset {
 }
 
 export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
-  demo: {
-    id: 'demo',
-    label: 'Offline demo',
-    baseUrl: '',
-    defaultModel: '',
-    needsKey: false,
-    editableBaseUrl: false,
-    remote: false,
-    adapterKind: 'off',
-  },
   off: {
     id: 'off',
     label: 'Off',

@@ -1,5 +1,26 @@
 # Reliability refinements (0.7.0)
 
+The 0.7.1 follow-up aligns the macOS traffic lights with the toolbar and removes
+the offline demo AI provider. Saved demo selections fall back to AI off; mock
+output remains available only to automated tests. The notes below describe 0.7.0.
+
+0.7.1 validation (2026-08-31): `pnpm release:check` passes (version metadata,
+TypeScript, lint, 649 tests). `pnpm tauri build --debug --bundles app` passes.
+The user's 08:40 dev-app screenshot showed traffic-light centers at image y=111.5
+and toolbar button centers at y=119.5 (2× scale). Adjusted the native inset from
+20 to 24 to lower the lights by 4 logical pixels. Final native visual verification
+remains pending: accessibility inspection of the rebuilt app timed out. No release
+was published at that point.
+
+Release preparation reran `pnpm verify` successfully: version consistency,
+TypeScript, lint, 649 unit tests, production/PWA build and all 8 Chromium smoke
+tests passed. The browser tests now select the real local provider and intercept
+its chat-completion requests with deterministic test responses, rather than
+selecting the removed demo option. Native hands-on checks listed below remain
+outstanding and will be disclosed in the GitHub release notes.
+`cargo test --manifest-path src-tauri/Cargo.toml --lib` passed all 9 tests;
+`cargo check --manifest-path src-tauri/Cargo.toml --features video-toolbox` passed.
+
 The shell, tool placement, inspector tabs, typography, colors, and Liquid Glass
 tokens are unchanged. UI additions address specific workflow gaps: starter
 search/format filtering and preview, links to existing artboard settings and

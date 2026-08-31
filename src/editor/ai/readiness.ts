@@ -12,9 +12,8 @@ export function aiReadiness(settings: AiSettings) {
   };
   const model = (config.model || preset.defaultModel).trim();
   const issues: AiReadinessIssue[] = [];
-  let destination: 'demo' | 'local' | 'remote' = 'remote';
+  let destination: 'local' | 'remote' = 'remote';
   if (preset.id === 'off') issues.push('off');
-  else if (preset.id === 'demo') destination = 'demo';
   else {
     try {
       const url = new URL(
