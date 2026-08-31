@@ -78,6 +78,16 @@ release/signing instructions.
 
 ## Verification recorded for this change
 
+Release preparation on 2026-08-31 reran the browser gate and native checks
+successfully. GitHub [Release run 33363858834](https://github.com/kilianvivien/calqo/actions/runs/33363858834)
+built the `v0.7.0` draft and passed native encoder linkage and updater artifact
+gates. Downloaded artifacts matched GitHub SHA-256 digests; DMG checksums,
+arm64/version metadata, app code signature, and updater signature against the
+configured public key were verified. The updater manifest points to `v0.7.0`.
+Hands-on platform checks below remain outstanding. GitHub reported 12 open
+dependency alerts (10 high, 2 moderate); runtime impact was not assessed for this
+release.
+
 - Version consistency, TypeScript, ESLint and production/PWA build: passed.
 - Vitest: 648 tests across 71 files passed.
 - Chromium: all 8 smoke tests passed, including starter search/preview and

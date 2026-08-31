@@ -3,8 +3,9 @@
 **Planning date:** 2026-06-27  
 **Status refreshed:** 2026-08-31
 **Current working-tree version:** `0.7.0` in package and Tauri metadata
-**Release status:** `0.7.0` is prepared for the GitHub Release workflow; publication
-awaits artifact verification and native smoke checks. Beta gates remain open. See
+**Release status:** `v0.7.0` has a signed GitHub draft; the Release workflow and
+downloaded-artifact checks passed on 2026-08-31. Publication awaits the outstanding
+native smoke checks or explicit acceptance of that gap. Beta gates remain open. See
 [refinement verification](refinement-verification.md) for changes and checks.
 **Planning inputs:** `docs/Old/calqo-post-phase-m-implementation-plan.md`,
 `docs/Old/calqo-mcp-live-drawing-implementation-plan.md`,
