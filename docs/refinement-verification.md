@@ -1,4 +1,4 @@
-# Reliability refinements (unreleased, 0.7.0 working tree)
+# Reliability refinements (0.7.0)
 
 The shell, tool placement, inspector tabs, typography, colors, and Liquid Glass
 tokens are unchanged. UI additions address specific workflow gaps: starter

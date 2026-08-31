@@ -75,16 +75,33 @@ quote cards, campaign variants, and multilingual public information.
 
 ## Current development status
 
-The working tree is **0.7.0**. Reliability refinements are documented in
+The **0.7.0** release includes reliability refinements documented in
 [refinement verification](docs/refinement-verification.md): safer save recovery,
-portable imports, clearer export/AI checks and focused starter discovery. These
-unreleased changes do not rename or replace an existing download. The GitHub
-release page identifies the version available to install.
+portable imports, clearer export/AI checks and focused starter discovery. The
+GitHub release page identifies the version currently available to install.
 
 Run `pnpm verify` for the browser gate. Native packaging, Keychain prompts,
 Safari and installed-PWA checks remain separate release requirements.
 The active roadmap is [docs/plan.md](docs/plan.md); older phase plans live in
 `docs/Old/`.
+
+## Calqo 0.7.0 — Safer saves and portable projects
+
+- Serialized browser and native saves protect newer edits; failed saves keep
+  the project open with retry and portable-copy recovery.
+- Portable imports validate asset types, reject remote references, clone asset
+  identities, and enforce document limits. SVG imports share a hardened sanitizer.
+- Export checks distinguish clipping from text overflow, inspect content locales,
+  link to problem layers, and enforce safe raster dimensions.
+- AI setup makes offline demo mode explicit and explains incomplete provider
+  configuration. Desktop credentials move to macOS Keychain.
+- Starter search, format filters, previews, keyboard navigation, and localized
+  mobile controls make existing workflows easier to use.
+- Agents can set native artboard backgrounds on their generated projects.
+
+macOS distribution remains Apple Silicon only and ad-hoc signed, without
+notarization. Outstanding platform checks and beta gates remain documented in
+[the roadmap](docs/plan.md).
 
 ## Calqo 0.6.5 — Faster, calmer agent drawing
 

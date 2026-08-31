@@ -126,11 +126,18 @@ That is the entire manual setup. Steps 1–3 happen once, ever.
 4. Commit, then tag and push:
 
    ```bash
-   git tag v0.6.4
-   git push origin main --tags
+   git tag v0.7.0
+   git push origin main
+   git push origin v0.7.0
    ```
 
-5. The **Release** workflow runs on a `macos-14` (arm64) runner and does only
+5. Dispatch the manual **Release** workflow (pushing a tag does not start it):
+
+   ```bash
+   gh workflow run release.yml --ref main -f tag=v0.7.0
+   ```
+
+   The workflow runs on a `macos-14` (arm64) runner and does only
    what a laptop cannot: build with `--features video-toolbox`, sign, and
    create a **draft** release with the DMG, `.app.tar.gz`, `.sig`, and
    `latest.json`.
