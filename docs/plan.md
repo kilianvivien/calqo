@@ -3,11 +3,13 @@
 **Planning date:** 2026-06-27  
 **Status refreshed:** 2026-08-31
 **Current working-tree version:** `0.7.1` in package and Tauri metadata
-**Release status:** `0.7.1` is being prepared for GitHub publication with macOS
-titlebar alignment and AI provider cleanup. The complete local browser gate passes
-(649 unit tests and 8 Chromium tests). `v0.7.0` is published. Hands-on native
-checks remain outstanding and will be disclosed in the release notes; beta gates
-remain open. See
+**Release status:** [`v0.7.1`](https://github.com/kilianvivien/calqo/releases/tag/v0.7.1)
+is published as the latest GitHub release (2026-08-31), with macOS titlebar
+alignment and AI provider cleanup. The local browser gate passes (649 unit tests
+and 8 Chromium tests), as do 9 Rust tests and the VideoToolbox compile check.
+Release workflow, downloaded artifact signatures/checksums, and the public
+updater manifest are verified. Hands-on native checks remain outstanding and
+are disclosed in the release notes; beta gates remain open. See
 [refinement verification](refinement-verification.md) for changes and checks.
 **Planning inputs:** `docs/Old/calqo-post-phase-m-implementation-plan.md`,
 `docs/Old/calqo-mcp-live-drawing-implementation-plan.md`,

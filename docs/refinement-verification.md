@@ -17,9 +17,17 @@ TypeScript, lint, 649 unit tests, production/PWA build and all 8 Chromium smoke
 tests passed. The browser tests now select the real local provider and intercept
 its chat-completion requests with deterministic test responses, rather than
 selecting the removed demo option. Native hands-on checks listed below remain
-outstanding and will be disclosed in the GitHub release notes.
+outstanding and are disclosed in the GitHub release notes.
 `cargo test --manifest-path src-tauri/Cargo.toml --lib` passed all 9 tests;
 `cargo check --manifest-path src-tauri/Cargo.toml --features video-toolbox` passed.
+
+[`v0.7.1`](https://github.com/kilianvivien/calqo/releases/tag/v0.7.1) was published
+as the latest release on 2026-08-31. [Release run 33366137698](https://github.com/kilianvivien/calqo/actions/runs/33366137698)
+passed all gates. All four downloaded asset SHA-256 digests match GitHub;
+the DMG checksum, arm64/0.7.1 metadata, app code signature, AVFoundation linkage,
+updater archive and trusted-comment signatures against the configured public
+key, and manifest references passed verification. The public
+`releases/latest/download/latest.json` endpoint serves version `0.7.1`.
 
 The shell, tool placement, inspector tabs, typography, colors, and Liquid Glass
 tokens are unchanged. UI additions address specific workflow gaps: starter
