@@ -29,9 +29,8 @@ permissions:
 
 jobs:
   release:
-    # macos-14 and later are Apple Silicon; the native VideoToolbox encoder
-    # needs an arm64 host.
-    runs-on: macos-14
+    # Xcode 27 preview image supplies SDK 27; the standard image is arm64.
+    runs-on: xcode-27
 
     steps:
       - uses: actions/checkout@v4
@@ -51,9 +50,13 @@ jobs:
         with:
           targets: aarch64-apple-darwin
 
+      - name: Select the macOS SDK and preserve the deployment target
+        run: node scripts/macos-sdk.mjs --github-env
+
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          key: macos-sdk-27
 
       - run: pnpm install --frozen-lockfile
 
@@ -115,6 +118,7 @@ jobs:
             exit 1
           fi
           echo "Checking $BIN"
+          node scripts/macos-sdk.mjs --verify "$BIN"
           if ! otool -L "$BIN" | grep -qi avfoundation; then
             echo "::error::AVFoundation is not linked — this build has no native VideoToolbox encoder. Do not publish the draft release."
             exit 1

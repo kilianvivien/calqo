@@ -137,14 +137,16 @@ That is the entire manual setup. Steps 1–3 happen once, ever.
    gh workflow run release.yml --ref main -f tag=v0.7.0
    ```
 
-   The workflow runs on a `macos-14` (arm64) runner and does only
+   The workflow runs on an `xcode-27` (arm64) runner and does only
    what a laptop cannot: build with `--features video-toolbox`, sign, and
    create a **draft** release with the DMG, `.app.tar.gz`, `.sig`, and
    `latest.json`.
 
-6. The workflow hard-gates on four things and fails the run if any is wrong:
+6. The workflow hard-gates on five things and fails the run if any is wrong:
    - the tag matches all three version files;
    - `plugins.updater.pubkey` is not empty;
+   - the binary links the selected macOS SDK (27 or newer) and retains the
+     configured minimum macOS version (11.0);
    - the binary actually links **AVFoundation** and contains VideoToolbox
      symbols (a build without the native encoder is otherwise
      indistinguishable from a good one);
@@ -171,10 +173,34 @@ unit suite do not run there at all.
 
 ### Building locally
 
+Install the latest Xcode and select it with `xcode-select` or set
+`DEVELOPER_DIR` for the build. The package build scripts resolve the selected
+Xcode's SDK using `xcrun --sdk macosx`, require SDK 27 or newer, and explicitly
+set `SDKROOT`. They read `MACOSX_DEPLOYMENT_TARGET` from
+`bundle.macOS.minimumSystemVersion` (11.0); a newer build SDK does not require
+raising the minimum supported OS. Native traffic lights remain enabled.
+
+The Release workflow uses GitHub's
+[`xcode-27` preview image](https://github.com/actions/runner-images/issues/14404)
+because the older `macos-14` image cannot supply this SDK. The hosted workflow
+must still be validated on a release run; local verification does not test it.
+
 ```bash
 pnpm tauri:build          # normal local build — no signing key needed
 pnpm tauri:build:release  # also emits the signed updater artifacts
 ```
+
+For an app-only release-profile build without updater signing:
+
+```bash
+pnpm tauri:build:mac --target aarch64-apple-darwin --bundles app
+node scripts/macos-sdk.mjs --verify src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Calqo.app/Contents/MacOS/calqo
+```
+
+Run the same verification after a local signed release. It checks the Mach-O
+`LC_BUILD_VERSION`, not just the toolchain version. If a build cache retained
+an older SDK, clean the relevant Cargo target directory and rebuild. CI uses
+a separate SDK 27 cache key and runs this check before a draft is published.
 
 `tauri:build:release` requires the signing key in the environment:
 

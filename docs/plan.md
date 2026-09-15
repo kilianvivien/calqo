@@ -1,8 +1,8 @@
 # Calqo Beta And 1.0 Roadmap
 
 **Planning date:** 2026-06-27  
-**Status refreshed:** 2026-08-31
-**Current working-tree version:** `0.7.1` in package and Tauri metadata
+**Status refreshed:** 2026-09-15
+**Current working-tree version:** `0.7.2` in package and Tauri metadata (unreleased)
 **Release status:** [`v0.7.1`](https://github.com/kilianvivien/calqo/releases/tag/v0.7.1)
 is published as the latest GitHub release (2026-08-31), with macOS titlebar
 alignment and AI provider cleanup. The local browser gate passes (649 unit tests
@@ -33,6 +33,15 @@ repeatable.
 
 Implemented and worth protecting:
 
+- macOS SDK refresh (0.7.2): local build scripts explicitly select the active
+  Xcode SDK (27 or newer), retain minimum macOS 11.0 and native traffic lights,
+  and provide a Mach-O SDK verification command. The manual Release workflow
+  uses the Xcode 27 preview runner and verifies SDK/deployment metadata.
+  - Validation: release checks pass (649 unit tests); the arm64 0.7.2 release
+    app builds with VideoToolbox enabled. Mach-O reports SDK 27.0 / minimum
+    11.0; bundle version/minimum, ad-hoc signature and AVFoundation linkage
+    are verified. Hosted workflow and visual comparison of traffic lights
+    remain unverified; SDK-dependent appearance is a hypothesis.
 - macOS titlebar alignment (0.7.1): use native traffic-light inset `(18, 24)`
   for the 44px toolbar. The initial `y: 20` correction was 4 logical pixels too
   high in the user's dev-app screenshot; lower it by that measured amount.
