@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kilianvivien/calqo/releases/tag/v0.7.1"><strong>Download 0.7.1 for macOS</strong></a>
+  <a href="https://github.com/kilianvivien/calqo/releases/tag/v0.7.2"><strong>Download 0.7.2 for macOS</strong></a>
   ·
   <a href="#animate-mode">Animate mode</a>
   ·
@@ -85,7 +85,7 @@ Safari and installed-PWA checks remain separate release requirements.
 The active roadmap is [docs/plan.md](docs/plan.md); older phase plans live in
 `docs/Old/`.
 
-## Calqo 0.7.2 — macOS SDK refresh (unreleased)
+## Calqo 0.7.2 — macOS SDK refresh
 
 - Build with the selected Xcode's macOS SDK, requiring SDK 27 or newer.
 - Keep minimum macOS 11.0 and the native window controls.
