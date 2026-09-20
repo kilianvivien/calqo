@@ -492,6 +492,7 @@
       "localHint": "Le contenu est envoyé à votre serveur IA local. Celui-ci doit être démarré.",
       "remoteHint": "Le contenu est envoyé au fournisseur choisi lorsque vous lancez cette action. Une connexion réseau est nécessaire.",
       "off": "L’IA est désactivée. Choisissez un fournisseur dans Réglages → Fournisseur IA.",
+      "disabled": "Apple Intelligence est sélectionné mais désactivé. Activez-le dans Réglages → Fournisseur IA.",
       "endpoint": "Configurez une adresse HTTP(S) valide, sans identifiants intégrés, dans Réglages → Fournisseur IA.",
       "model": "Choisissez un modèle dans Réglages → Fournisseur IA.",
       "key": "Ajoutez une clé API dans Réglages → Fournisseur IA.",

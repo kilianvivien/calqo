@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { GlassPanel } from '@/components/glass';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
+import { useAppleFmStore } from '@/editor/ai/appleFmStore';
 import { useSavedSvgStore } from '@/editor/assets/savedSvgStore';
 import { useMissingAssetsWatcher } from '@/editor/assets/useMissingAssetsWatcher';
 import { loadAssetHealthThresholds } from '@/editor/assets/assetHealthSettings';
@@ -61,7 +62,7 @@ export function AppShell() {
   useMissingAssetsWatcher();
 
   useEffect(() => {
-    void loadAiSettings();
+    void loadAiSettings().then(() => useAppleFmStore.getState().initialize());
     void loadSavedSvgs();
     void loadAssetHealthThresholds();
     void loadVideoEncoderPreference();

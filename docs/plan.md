@@ -1,12 +1,11 @@
 # Calqo Beta And 1.0 Roadmap
 
 **Planning date:** 2026-06-27  
-**Status refreshed:** 2026-09-15
-**Current working-tree version:** `0.7.2` in package and Tauri metadata (unreleased)
-**Release status:** [`v0.7.1`](https://github.com/kilianvivien/calqo/releases/tag/v0.7.1)
-is published as the latest GitHub release (2026-08-31), with macOS titlebar
-alignment and AI provider cleanup. The local browser gate passes (649 unit tests
-and 8 Chromium tests), as do 9 Rust tests and the VideoToolbox compile check.
+**Status refreshed:** 2026-09-20
+**Current working-tree version:** `0.8.0` in package and Tauri metadata
+**Release status:** `0.8.0` is in development. [`v0.7.2`](https://github.com/kilianvivien/calqo/releases/tag/v0.7.2)
+is the latest published release. The local browser gate passes 653 unit tests;
+the native crate builds and passes its Rust checks.
 Release workflow, downloaded artifact signatures/checksums, and the public
 updater manifest are verified. Hands-on native checks remain outstanding and
 are disclosed in the release notes; beta gates remain open. See
@@ -50,6 +49,10 @@ Implemented and worth protecting:
   - Validation: `pnpm release:check` passes (649 tests), and the macOS debug
     app bundle builds. Native visual verification remains pending because the
     accessibility inspection tool timed out.
+- Apple Intelligence (0.8.0): add the on-device AFM 3 provider for the macOS
+  app, with native preflight, managed `fm serve` lifecycle, loopback-only chat
+  proxying, cancellation, a persisted on/off switch, bilingual setup guidance,
+  and exit cleanup.
 - Core browser editor: projects, tabs, artboards, layers, Konva canvas,
   selection, transform, grouping, undo/redo, alignment, snapping, arrange tools.
 - Local-first storage and portability boundaries: Dexie-backed browser storage,

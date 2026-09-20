@@ -53,8 +53,8 @@ export function MobileSettingsSheet({ open, onClose }: MobileSettingsSheetProps)
   const setProvider = useAiSettingsStore((s) => s.setProvider);
   const updateProviderConfig = useAiSettingsStore((s) => s.updateProviderConfig);
 
-  // A phone may inherit a desktop "Local (Ollama)" selection that it can't
-  // reach — fall back to turning AI off rather than calling an unreachable host.
+  // A phone may inherit a desktop-only Apple/Ollama selection that it can't
+  // reach — fall back to turning AI off rather than calling an unavailable host.
   useEffect(() => {
     if (MOBILE_HIDDEN_PROVIDERS.includes(settings.providerId)) {
       setProvider('off');

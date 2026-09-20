@@ -21,6 +21,8 @@ import { webCodecsVideoExportAdapter } from './video/webCodecsVideoExportAdapter
 import { tauriVideoToolboxAdapter } from './video/tauriVideoToolboxAdapter';
 import { createSelectingVideoExportAdapter } from './video/selectingVideoExportAdapter';
 import { getVideoEncoderPreference } from './video/encoderPreference';
+import { tauriAppleFmAdapter } from './appleFm/tauriAppleFmAdapter';
+import { unavailableAppleFmAdapter } from './appleFm/unavailableAppleFmAdapter';
 import { isTauri } from '@/lib/platform/runtime';
 
 import type { StorageAdapter } from './storage/StorageAdapter';
@@ -55,6 +57,9 @@ export const dialog: DialogAdapter = isTauri
 export const appUpdater: UpdaterAdapter = isTauri
   ? tauriUpdaterAdapter
   : browserUpdaterAdapter;
+export const appleFm = isTauri
+  ? tauriAppleFmAdapter
+  : unavailableAppleFmAdapter;
 export const starterLibrary: StarterLibraryAdapter = dexieStarterLibraryAdapter;
 export const brandProfiles: BrandProfileAdapter = dexieBrandProfileAdapter;
 // On Tauri, prefer the native VideoToolbox (M-series hardware) encoder and fall
@@ -82,6 +87,14 @@ export type {
   UpdaterUnavailableReason,
 } from './updater/UpdaterAdapter';
 export { UpdaterUnavailableError } from './updater/UpdaterAdapter';
+export type {
+  AppleFmAdapter,
+  AppleFmChatRequest,
+  AppleFmChatResponse,
+  AppleFmModelState,
+  AppleFmPreflight,
+  AppleFmStatus,
+} from './appleFm/AppleFmAdapter';
 export type { StarterLibraryAdapter, StarterRecord } from './starters/StarterLibraryAdapter';
 export type { BrandProfileAdapter, BrandProfileRecord } from './brand/BrandProfileAdapter';
 export { BRAND_ASSET_SCOPE } from './brand/BrandProfileAdapter';

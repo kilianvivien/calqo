@@ -1,6 +1,6 @@
 import { PROVIDER_PRESETS, type AiSettings } from './aiSettings';
 
-export type AiReadinessIssue = 'off' | 'endpoint' | 'model' | 'key';
+export type AiReadinessIssue = 'off' | 'disabled' | 'endpoint' | 'model' | 'key';
 
 /** Pure preflight. Never include credentials or endpoint URLs in UI diagnostics. */
 export function aiReadiness(settings: AiSettings) {
@@ -15,9 +15,12 @@ export function aiReadiness(settings: AiSettings) {
   let destination: 'local' | 'remote' = 'remote';
   if (preset.id === 'off') issues.push('off');
   else {
+    if (preset.id === 'apple' && config.enabled !== true) issues.push('disabled');
     try {
       const url = new URL(
-        preset.editableBaseUrl ? config.baseUrl : preset.baseUrl,
+        preset.editableBaseUrl || preset.id === 'apple'
+          ? config.baseUrl
+          : preset.baseUrl,
       );
       if (
         !['http:', 'https:'].includes(url.protocol) ||

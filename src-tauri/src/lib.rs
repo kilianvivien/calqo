@@ -1,3 +1,4 @@
+mod apple_fm;
 mod secrets;
 // The desktop shell is intentionally thin: the .calqo document is the source of
 // truth and all rendering/export happens in the web frontend. The Rust side wires
@@ -553,10 +554,18 @@ pub fn run() {
             .build(),
         )
         .manage(video::VideoState::default())
+        .manage(apple_fm::AppleFmState::default())
         .invoke_handler(tauri::generate_handler![
             secrets::read_secret,
             secrets::write_secret,
             secrets::remove_secret,
+            apple_fm::apple_fm_preflight,
+            apple_fm::apple_fm_start,
+            apple_fm::apple_fm_stop,
+            apple_fm::apple_fm_status,
+            apple_fm::apple_fm_count_tokens,
+            apple_fm::apple_fm_chat,
+            apple_fm::apple_fm_cancel_chat,
             list_system_fonts,
             list_font_variants,
             set_menu_locale,
@@ -587,6 +596,11 @@ pub fn run() {
                 let _ = app.emit_to("main", "calqo-menu", id);
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running Calqo");
+        .build(tauri::generate_context!())
+        .expect("error while building Calqo")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                apple_fm::shutdown(app);
+            }
+        });
 }

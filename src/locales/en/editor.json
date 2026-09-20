@@ -492,6 +492,7 @@
       "localHint": "Content is sent to your local AI server. It must be running.",
       "remoteHint": "Content is sent to the selected provider when you run this action. A network connection is required.",
       "off": "AI is off. Select a provider in Settings → AI provider.",
+      "disabled": "Apple Intelligence is selected but turned off. Enable it in Settings → AI provider.",
       "endpoint": "Set a valid HTTP(S) endpoint without embedded credentials in Settings → AI provider.",
       "model": "Choose a model in Settings → AI provider.",
       "key": "Add an API key in Settings → AI provider.",

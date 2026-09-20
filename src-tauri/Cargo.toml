@@ -1,6 +1,6 @@
 [package]
 name = "calqo"
-version = "0.7.2"
+version = "0.8.0"
 description = "A simple, glass-native social visual maker"
 authors = ["Calqo contributors"]
 edition = "2021"
@@ -51,6 +51,7 @@ tokio-util = "0.7"
 rand = "0.9"
 dirs = "6"
 toml_edit = "0.25"
+reqwest = { version = "0.13", default-features = false, features = ["json"] }
 
 # Native VideoToolbox encoder deps, pulled in only by the `video-toolbox`
 # feature (macOS-only path). Kept optional so the default build graph is

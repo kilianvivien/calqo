@@ -33,9 +33,10 @@ import {
 } from '@/lib/state/uiStore';
 import {
   useAiSettingsStore,
-  PROVIDER_LIST,
+  RUNTIME_PROVIDER_LIST,
   PROVIDER_PRESETS,
 } from '@/editor/ai/aiSettings';
+import { useAppleFmStore } from '@/editor/ai/appleFmStore';
 import {
   downloadAppBackup,
   parseBackup,
@@ -121,6 +122,11 @@ export function AppSettingsModal({
   const updateProviderConfig = useAiSettingsStore(
     (s) => s.updateProviderConfig,
   );
+  const appleFmStatus = useAppleFmStore((s) => s.status);
+  const appleFmPending = useAppleFmStore((s) => s.pending);
+  const appleFmError = useAppleFmStore((s) => s.error);
+  const ensureAppleFmRunning = useAppleFmStore((s) => s.ensureRunning);
+  const stopAppleFm = useAppleFmStore((s) => s.stop);
   const [languageMode, setLanguageModeState] = useState<LanguageMode>(
     getStoredLanguageMode,
   );
@@ -129,6 +135,21 @@ export function AppSettingsModal({
   const restoreInputRef = useRef<HTMLInputElement>(null);
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
+
+  const handleProviderChange = (providerId: typeof aiSettings.providerId) => {
+    const previous = aiSettings.providerId;
+    setProvider(providerId);
+    if (providerId === 'apple' && aiSettings.providers.apple.enabled === true) {
+      void ensureAppleFmRunning(true);
+    }
+    else if (previous === 'apple') void stopAppleFm();
+  };
+
+  const handleAppleFmEnabled = (enabled: boolean) => {
+    updateProviderConfig('apple', { enabled });
+    if (enabled) void ensureAppleFmRunning(true);
+    else void stopAppleFm();
+  };
 
   const handleExportBackup = async () => {
     setBackupBusy(true);
@@ -392,13 +413,13 @@ export function AppSettingsModal({
                     aria-label={t('settings.ai.provider')}
                     value={aiSettings.providerId}
                     onChange={(event) =>
-                      setProvider(
+                      handleProviderChange(
                         event.target.value as typeof aiSettings.providerId,
                       )
                     }
                     className="h-9 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-3 text-[13px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-2 focus:ring-[var(--calqo-accent-ring)]"
                   >
-                    {PROVIDER_LIST.map((preset) => (
+                    {RUNTIME_PROVIDER_LIST.map((preset) => (
                       <option key={preset.id} value={preset.id}>
                         {preset.id === 'off'
                           ? t('settings.ai.off')
@@ -428,6 +449,49 @@ export function AppSettingsModal({
                           ? t('settings.ai.officialHint')
                           : t('settings.ai.compatibleHint')}
                       </SettingsNote>
+                      {providerId === 'apple' && (
+                        <div className="space-y-2 rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass-thin)] p-3 text-[12px] text-[var(--calqo-text-2)]">
+                          <label className="flex items-center justify-between gap-3 text-[13px] font-medium text-[var(--calqo-text)]">
+                            <span>{t('settings.ai.appleEnable')}</span>
+                            <input
+                              type="checkbox"
+                              role="switch"
+                              checked={config.enabled === true}
+                              aria-label={t('settings.ai.appleEnable')}
+                              onChange={(event) =>
+                                handleAppleFmEnabled(event.target.checked)
+                              }
+                              className="h-4 w-4 accent-[var(--calqo-accent)]"
+                            />
+                          </label>
+                          <p>
+                            {config.enabled !== true
+                              ? t('settings.ai.appleOff')
+                              : appleFmPending
+                              ? t('settings.ai.appleChecking')
+                              : appleFmStatus.running
+                                ? t('settings.ai.appleRunning', {
+                                    port: appleFmStatus.port,
+                                  })
+                                : t('settings.ai.appleRequirements')}
+                          </p>
+                          {appleFmError && (
+                            <p className="text-[var(--calqo-danger)]">
+                              {t(`settings.ai.appleErrors.${appleFmError}`, {
+                                defaultValue: appleFmError,
+                              })}
+                            </p>
+                          )}
+                          {config.enabled === true && !appleFmStatus.running && (
+                            <GlassButton
+                              onClick={() => void ensureAppleFmRunning(true)}
+                              disabled={appleFmPending}
+                            >
+                              {t('settings.ai.appleRetry')}
+                            </GlassButton>
+                          )}
+                        </div>
+                      )}
                       {preset.editableBaseUrl && (
                         <TextSetting
                           label={t('settings.ai.baseUrl')}

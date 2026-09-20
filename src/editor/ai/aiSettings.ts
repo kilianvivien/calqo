@@ -9,6 +9,7 @@ const SETTINGS_KEY = 'ai.settings';
  * completions by varying base URL / model / key. */
 export type AiProviderId =
   | 'off'
+  | 'apple'
   | 'local'
   | 'gemini'
   | 'mistral'
@@ -27,6 +28,8 @@ export interface ProviderPreset {
   remote: boolean;
   /** Settings copy can distinguish official adapters from compatible endpoints. */
   adapterKind: 'off' | 'official' | 'compatible';
+  /** Provider is supplied by the native desktop shell, not the web app. */
+  desktopOnly?: boolean;
 }
 
 export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
@@ -39,6 +42,17 @@ export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
     editableBaseUrl: false,
     remote: false,
     adapterKind: 'off',
+  },
+  apple: {
+    id: 'apple',
+    label: 'Apple Intelligence (AFM 3)',
+    baseUrl: 'http://127.0.0.1:1976/v1',
+    defaultModel: 'system',
+    needsKey: false,
+    editableBaseUrl: false,
+    remote: true,
+    adapterKind: 'official',
+    desktopOnly: true,
   },
   local: {
     id: 'local',
@@ -94,10 +108,15 @@ export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
 
 export const PROVIDER_LIST: ProviderPreset[] = Object.values(PROVIDER_PRESETS);
 
-/** Providers that don't make sense on a phone. "Local (Ollama)" points at
- * `localhost`, which is unreachable from a mobile browser, so it's hidden from
- * the phone settings sheet (a desktop selection falls back to `off` there). */
-export const MOBILE_HIDDEN_PROVIDERS: readonly AiProviderId[] = ['local'];
+/** Provider choices visible in this runtime. Native-only providers remain in
+ * the settings schema so desktop preferences can round-trip through backups. */
+export const RUNTIME_PROVIDER_LIST: ProviderPreset[] = PROVIDER_LIST.filter(
+  (preset) => !preset.desktopOnly || platformRuntime.kind === 'tauri',
+);
+
+/** Providers that don't make sense on a phone. Apple requires the macOS shell;
+ * Ollama points at `localhost`, which is unreachable from a mobile browser. */
+export const MOBILE_HIDDEN_PROVIDERS: readonly AiProviderId[] = ['apple', 'local'];
 
 /** Providers offered in the phone settings sheet. */
 export const MOBILE_PROVIDER_LIST: ProviderPreset[] = PROVIDER_LIST.filter(
@@ -114,6 +133,8 @@ export interface AiProviderConfig {
   apiKey: string;
   /** Overrides the preset base URL when the provider allows it. */
   baseUrl: string;
+  /** Native providers can be configured but explicitly stopped. */
+  enabled?: boolean;
 }
 
 export interface AiSettings {
@@ -124,7 +145,12 @@ export interface AiSettings {
 }
 
 function defaultConfig(preset: ProviderPreset): AiProviderConfig {
-  return { model: preset.defaultModel, apiKey: '', baseUrl: preset.baseUrl };
+  return {
+    model: preset.defaultModel,
+    apiKey: '',
+    baseUrl: preset.baseUrl,
+    ...(preset.id === 'apple' ? { enabled: false } : {}),
+  };
 }
 
 function defaultProviders(): Record<AiProviderId, AiProviderConfig> {
@@ -142,7 +168,10 @@ export const DEFAULT_AI_SETTINGS: AiSettings = {
 /** Whether AI features should be available. `off` disables every AI flow
  * (prompt-a-template, translation, generate-SVG) and their entry points. */
 export function isAiEnabled(settings: AiSettings): boolean {
-  return settings.providerId !== 'off';
+  return (
+    settings.providerId !== 'off' &&
+    (settings.providerId !== 'apple' || settings.providers.apple.enabled === true)
+  );
 }
 
 /** Strip API keys unless the user/app has explicitly opted into remembering
@@ -237,6 +266,12 @@ export const useAiSettingsStore = create<AiSettingsState>((set, get) => ({
       const stored = await appSettings.get<Partial<AiSettings>>(SETTINGS_KEY);
       if (stored) {
         const settings = normalizeAiSettings(stored);
+        if (
+          platformRuntime.kind !== 'tauri' &&
+          PROVIDER_PRESETS[settings.providerId].desktopOnly
+        ) {
+          settings.providerId = 'off';
+        }
         set({
           settings: {
             ...settings,
