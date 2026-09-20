@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kilianvivien/calqo/releases/tag/v0.7.2"><strong>Download 0.7.2 for macOS</strong></a>
+  <a href="https://github.com/kilianvivien/calqo/releases/tag/v0.8.0"><strong>Download 0.8.0 for macOS</strong></a>
   ·
   <a href="#animate-mode">Animate mode</a>
   ·
@@ -84,6 +84,22 @@ Run `pnpm verify` for the browser gate. Native packaging, Keychain prompts,
 Safari and installed-PWA checks remain separate release requirements.
 The active roadmap is [docs/plan.md](docs/plan.md); older phase plans live in
 `docs/Old/`.
+
+## Calqo 0.8.0 — Apple Intelligence on device
+
+- Use Apple Intelligence as an AI provider in the macOS app: prompt-a-template,
+  translation, and AI graphics run on the local AFM 3 system model, with no API
+  key and nothing leaving the Mac.
+- Calqo checks eligibility before offering it, manages the `fm serve` process
+  for you, talks to it over loopback only, and shuts it down on exit.
+- Setup guidance is bilingual and specific: it names the missing requirement —
+  macOS 27, an eligible Apple silicon Mac, Apple Intelligence turned on, or the
+  one-time `sudo fm license` — instead of failing silently.
+- The provider has its own on/off switch that is remembered between launches,
+  and requests can be cancelled mid-flight.
+
+Apple Intelligence is macOS-only; the browser build and other providers are
+unchanged.
 
 ## Calqo 0.7.2 — macOS SDK refresh
 

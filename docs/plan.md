@@ -3,9 +3,10 @@
 **Planning date:** 2026-06-27  
 **Status refreshed:** 2026-09-20
 **Current working-tree version:** `0.8.0` in package and Tauri metadata
-**Release status:** `0.8.0` is in development. [`v0.7.2`](https://github.com/kilianvivien/calqo/releases/tag/v0.7.2)
-is the latest published release. The local browser gate passes 653 unit tests;
-the native crate builds and passes its Rust checks.
+**Release status:** [`v0.8.0`](https://github.com/kilianvivien/calqo/releases/tag/v0.8.0)
+is published as the latest GitHub release (2026-09-20), adding the on-device
+Apple Intelligence provider. The local browser gate passes 653 unit tests; the
+native crate builds and passes its Rust checks.
 Release workflow, downloaded artifact signatures/checksums, and the public
 updater manifest are verified. Hands-on native checks remain outstanding and
 are disclosed in the release notes; beta gates remain open. See
