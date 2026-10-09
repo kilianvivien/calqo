@@ -69,8 +69,8 @@ importers:
         specifier: ^8.0.4
         version: 8.2.1
       immer:
-        specifier: ^10.1.1
-        version: 10.2.0
+        specifier: ^11.1.21
+        version: 11.1.21
       konva:
         specifier: ^9.3.20
         version: 9.3.22
@@ -103,7 +103,7 @@ importers:
         version: 3.25.76
       zustand:
         specifier: ^5.0.15
-        version: 5.0.15(@types/react@19.3.0)(immer@10.2.0)(react@19.3.0)
+        version: 5.0.15(@types/react@19.3.0)(immer@11.1.21)(react@19.3.0)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -2120,8 +2120,8 @@ packages:
     resolution: {integrity: sha512-/8UvqAPU9DGTI9k4mxtf49U37Isfwr8Uts96+SBHIkFxPJnHS0Ew4f00sM4Scd8V8EjM0jUNtVDdv1kPdt35lg==}
     engines: {node: '>= 4'}
 
-  immer@10.2.0:
-    resolution: {integrity: sha512-d/+XTN3zfODyjr89gM3mPq1WNX2B8pYsu7eORitdwyA2sBubnTl3laYlBk4sXY5FUa5qTZGBDPJICVbvqzjlbw==}
+  immer@11.1.21:
+    resolution: {integrity: sha512-bZSadeCPGdaY5/qRLgr6mDSH1ra21rD3rqpiWk7+QTr4ayYPTE9qZYdLh/NdPhMe0wSrTvHD/Lk8q5EwhUs0aw==}
 
   imurmurhash@0.1.4:
     resolution: {integrity: sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA==}
@@ -5282,7 +5282,7 @@ snapshots:
 
   ignore@7.0.12: {}
 
-  immer@10.2.0: {}
+  immer@11.1.21: {}
 
   imurmurhash@0.1.4: {}
 
@@ -6443,8 +6443,8 @@ snapshots:
 
   zod@3.25.76: {}
 
-  zustand@5.0.15(@types/react@19.3.0)(immer@10.2.0)(react@19.3.0):
+  zustand@5.0.15(@types/react@19.3.0)(immer@11.1.21)(react@19.3.0):
     optionalDependencies:
       '@types/react': 19.3.0
-      immer: 10.2.0
+      immer: 11.1.21
       react: 19.3.0
