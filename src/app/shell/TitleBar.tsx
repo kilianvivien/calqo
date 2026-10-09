@@ -1,3 +1,4 @@
+import { GithubIcon } from '@/components/GithubIcon';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,7 +8,6 @@ import {
   FilePlus2,
   Files,
   FolderOpen,
-  Github,
   Languages,
   Moon,
   PenTool,
@@ -285,7 +285,7 @@ export function TitleBar() {
           label={t('editor:title.github')}
           onClick={() => invokeAppCommandSync('help.github')}
         >
-          <Github size={16} />
+          <GithubIcon size={16} />
         </GlassIconButton>
       </div>
       <ImportRecoveryModal
