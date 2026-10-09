@@ -2,7 +2,8 @@
 
 **Planning date:** 2026-06-27  
 **Status refreshed:** 2026-10-09
-**Current working-tree version:** `0.8.0` in package and Tauri metadata
+**Current working-tree version:** `0.9.0` in package and Tauri metadata
+(unreleased; `v0.8.0` is the published release)
 **In progress — 0.9.0 (AI quality):** phase 1 is implemented in the working
 tree and not yet released; see "0.9.0 — AI quality" under the snapshot below.
 The local browser gate passes 690 unit tests and 9 Chromium smoke tests; the
@@ -81,7 +82,8 @@ Open before 0.9.0 ships:
 - [ ] Apple Intelligence check for the new flows (it keeps the compact prompt
   and has no image input; design edits may exceed its context).
 - [ ] Mobile: Edit with AI and copy tools are desktop-shell only.
-- [ ] Version bump and release notes.
+- [x] Version bump to 0.9.0 and draft release notes (README). The download
+  link still points at v0.8.0 until the release is published.
 
 Phase 2 — planned, not started: tooling majors (Vite 8, Vitest 5,
 plugin-react 6, vite-plugin-pwa 2, ESLint 10, jsdom 30) and runtime majors

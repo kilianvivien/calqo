@@ -85,6 +85,25 @@ Safari and installed-PWA checks remain separate release requirements.
 The active roadmap is [docs/plan.md](docs/plan.md); older phase plans live in
 `docs/Old/`.
 
+## Calqo 0.9.0 — AI that edits, not just drafts (unreleased)
+
+- **Edit with AI:** describe a change and the model adjusts the current
+  artboard. The result is one undo step, and nothing is applied if any part of
+  the answer is invalid.
+- **Copy tools:** shorten, rephrase, change tone or proofread a text layer, per
+  language.
+- **Translate several languages at once**, with a second pass that shortens
+  text that no longer fits its box.
+- **More providers and newer models:** Anthropic Claude and OpenAI join Gemini,
+  Mistral, OpenRouter, Ollama and Apple Intelligence. The Model field can load
+  the provider's live model list.
+- **Sturdier requests:** replies are streamed, slow reasoning models are no
+  longer cut off at 45 seconds, and any request can be cancelled.
+- **Better first drafts:** prompt-a-template sends your style sample as an
+  image to models that accept one, and can use gradients, groups and shadows.
+
+See [AI providers: setup and privacy](docs/ai-providers.md).
+
 ## Calqo 0.8.0 — Apple Intelligence on device
 
 - Use Apple Intelligence as an AI provider in the macOS app: prompt-a-template,
