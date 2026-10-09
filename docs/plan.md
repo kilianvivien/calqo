@@ -3,19 +3,19 @@
 **Planning date:** 2026-06-27  
 **Status refreshed:** 2026-10-09
 **Current working-tree version:** `0.9.0` in package and Tauri metadata
-(unreleased; `v0.8.0` is the published release)
-**In progress — 0.9.0 (AI quality):** phases 1 and 2 are implemented on the
-`calqo-0.9.0` branch and not yet released; see "0.9.0 — AI quality" under the snapshot below.
-Phases 1 and 2 pass 691 unit tests and 9 Chromium smoke tests; the native
-crate compiles. No provider was exercised against its live API.
-**Release status:** [`v0.8.0`](https://github.com/kilianvivien/calqo/releases/tag/v0.8.0)
-is published as the latest GitHub release (2026-09-20), adding the on-device
-Apple Intelligence provider. The local browser gate passes 653 unit tests; the
-native crate builds and passes its Rust checks.
-Release workflow, downloaded artifact signatures/checksums, and the public
-updater manifest are verified. Hands-on native checks remain outstanding and
-are disclosed in the release notes; beta gates remain open. See
-[refinement verification](refinement-verification.md) for changes and checks.
+**Release status:** [`v0.9.0`](https://github.com/kilianvivien/calqo/releases/tag/v0.9.0)
+is published as the latest GitHub release (2026-10-09): Edit with AI, copy
+tools, multi-locale translation, Anthropic and OpenAI providers, and the
+dependency refresh. See "0.9.0 — AI quality" under the snapshot below.
+Verified for this release: `pnpm release:check` (691 unit tests), 9 Chromium
+smoke tests, a local signed arm64 build with Mach-O SDK 27.0 / minimum 11.0,
+AVFoundation and VideoToolbox linkage, bundle version 0.9.0, and a signature
+key ID matching the public key in the app. The uploaded assets match their
+local SHA-256 checksums and the public `latest.json` serves 0.9.0.
+Not verified, and disclosed in the release notes: live requests to any AI
+provider, Apple Intelligence with the new flows, and an in-place update from
+an installed 0.8.0. Beta gates remain open. See
+[refinement verification](refinement-verification.md) for earlier checks.
 **Planning inputs:** `docs/Old/calqo-post-phase-m-implementation-plan.md`,
 `docs/Old/calqo-mcp-live-drawing-implementation-plan.md`,
 `docs/Old/PRD-calqo-v0.5.md`, README, package scripts, schema/export/adapter code,
@@ -36,9 +36,9 @@ repeatable.
 
 ## 1. Current Snapshot
 
-### 0.9.0 — AI quality (in progress)
+### 0.9.0 — AI quality (released 2026-10-09)
 
-Phase 1 — implemented, unreleased (2026-10-09):
+Phase 1:
 
 - [x] Low-risk dependency refresh: Tauri API/CLI/plugins, React 19.3,
   react-konva, mediabunny, Dexie, DOMPurify, Zustand, Playwright, Prettier,
@@ -74,7 +74,7 @@ Phase 1 — implemented, unreleased (2026-10-09):
 - [x] Tests: `aiRequestLayer.test.ts`, `aiDesignEdit.test.ts`,
   `e2e/ai-edit-smoke.spec.ts` (stubbed endpoint, including a streamed reply).
 
-Open before 0.9.0 ships:
+Carried past the release:
 
 - [ ] Hands-on runs against real providers. Everything above is verified
   against stubs only; model ids were checked against vendor pages on
@@ -82,10 +82,9 @@ Open before 0.9.0 ships:
 - [ ] Apple Intelligence check for the new flows (it keeps the compact prompt
   and has no image input; design edits may exceed its context).
 - [ ] Mobile: Edit with AI and copy tools are desktop-shell only.
-- [x] Version bump to 0.9.0 and draft release notes (README). The download
-  link still points at v0.8.0 until the release is published.
+- [x] Version bump to 0.9.0, release notes, and download link.
 
-Phase 2 — implemented, unreleased (2026-10-09), one commit per step:
+Phase 2, one commit per step:
 
 - [x] Build and test tooling: Vite 8, @vitejs/plugin-react 6, vite-plugin-pwa
   2, Vitest 5, jsdom 30. No config changes; the Safari 14 target still
@@ -116,9 +115,9 @@ Phase 2 — implemented, unreleased (2026-10-09), one commit per step:
   packages (tauri 2.12, plugins), Zod's no-op `.finite()` calls removed,
   ESLint config moved from the deprecated `tseslint.config` to
   `defineConfig`, lockfile deduped.
-- [ ] Native build not re-run: only `cargo check` and the web gate were
-  exercised (plus `cargo test`), so a `pnpm tauri:build` and a hands-on pass in the macOS app are
-  still owed before release.
+- [x] Native build: signed arm64 release built locally on the updated Tauri
+  crates and verified (see the release status above).
+- [ ] Open Dependabot alerts on Rust crates (`rustls`, `rmcp`) to review.
 
 The local browser gate now passes 691 unit tests and 9 Chromium smoke tests.
 
