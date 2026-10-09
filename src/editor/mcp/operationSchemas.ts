@@ -227,13 +227,13 @@ export const setLayerCustomWindowsOperationSchema = z
 export const motionPoseSchema = z
   .object({
     /** Horizontal offset from the layer's design position, px. */
-    dx: z.number().finite(),
+    dx: z.number(),
     /** Vertical offset from the layer's design position, px. */
-    dy: z.number().finite(),
-    scaleX: z.number().finite(),
-    scaleY: z.number().finite(),
+    dy: z.number(),
+    scaleX: z.number(),
+    scaleY: z.number(),
     /** Degrees, clockwise, about the layer centre. */
-    rotation: z.number().finite(),
+    rotation: z.number(),
     opacity: z.number().min(0).max(1),
   })
   .partial()
@@ -248,7 +248,7 @@ export const setLayerMotionKeyframeOperationSchema = z
     type: z.literal('setLayerMotionKeyframe'),
     layerId: z.string().min(1),
     /** ms from scene start; must fall inside the scene. */
-    timeMs: z.number().finite().nonnegative(),
+    timeMs: z.number().nonnegative(),
     /** Omit entirely to insert an inert pose at `timeMs`. */
     pose: motionPoseSchema.optional(),
     /** Easing *into* this pose (ignored at t=0). Defaults to ease-in-out. */
@@ -262,7 +262,7 @@ export const deleteLayerMotionKeyframeOperationSchema = z
   .object({
     type: z.literal('deleteLayerMotionKeyframe'),
     layerId: z.string().min(1),
-    timeMs: z.number().finite().nonnegative(),
+    timeMs: z.number().nonnegative(),
   })
   .strict();
 
@@ -280,7 +280,6 @@ export const setSceneDurationOperationSchema = z
     type: z.literal('setSceneDuration'),
     durationMs: z
       .number()
-      .finite()
       .min(MIN_SCENE_DURATION_MS)
       .max(MAX_SCENE_DURATION_MS),
     artboardId: z.string().min(1).optional(),
@@ -318,7 +317,7 @@ export const setSceneTransitionOperationSchema = z
     type: z.literal('setSceneTransition'),
     index: z.number().int().nonnegative(),
     transition: z.enum(SCENE_TRANSITION_KINDS),
-    transitionDurationMs: z.number().finite().min(0).max(MAX_TRANSITION_MS).optional(),
+    transitionDurationMs: z.number().min(0).max(MAX_TRANSITION_MS).optional(),
   })
   .strict();
 

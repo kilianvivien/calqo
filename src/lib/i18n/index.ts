@@ -23,7 +23,7 @@ void i18n
   .init({
     resources,
     fallbackLng: 'en',
-    supportedLngs: SUPPORTED_LANGUAGES as unknown as string[],
+    supportedLngs: SUPPORTED_LANGUAGES,
     ns: ['common', 'editor', 'errors'],
     defaultNS: 'common',
     interpolation: { escapeValue: false },

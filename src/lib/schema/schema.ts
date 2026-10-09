@@ -135,9 +135,9 @@ export const stickerOutlineSchema = z.object({
 // All animation fields are OPTIONAL: a static project stays a valid static
 // project. Presets are the persisted document; compiled keyframe tracks are a
 // runtime-only derivative (never persisted). Custom tracks persist because
-// there is nothing to compile them from. Numbers are `.finite()` with
-// property-specific ranges — no open numeric fields, matching the rest of the
-// schema's discipline.
+// there is nothing to compile them from. Numbers are finite (Zod rejects
+// Infinity and NaN) with property-specific ranges — no open numeric fields,
+// matching the rest of the schema's discipline.
 // ---------------------------------------------------------------------------
 
 /** Normative timing bounds. A scene (artboard) holds between 250 ms and 60 s. */
@@ -207,9 +207,9 @@ export function animPropRange(prop: AnimProp): { min: number; max: number } {
 
 export const keyframeSchema = z.object({
   /** 0–1, normalized to the owning window. */
-  t: z.number().finite().min(0).max(1),
+  t: z.number().min(0).max(1),
   /** Finite; range validated per-prop at the track level. */
-  value: z.number().finite(),
+  value: z.number(),
   /** Easing *into* this keyframe. */
   easing: easingSchema.optional(),
 });
@@ -251,9 +251,9 @@ export type Track = z.infer<typeof trackSchema>;
 export const trackWindowSchema = z
   .object({
     /** ms from scene start. */
-    start: z.number().finite().min(0).max(MAX_SCENE_DURATION_MS),
+    start: z.number().min(0).max(MAX_SCENE_DURATION_MS),
     /** ms, > 0; the window must fit inside the scene (checked at artboard level). */
-    duration: z.number().finite().positive().max(MAX_SCENE_DURATION_MS),
+    duration: z.number().positive().max(MAX_SCENE_DURATION_MS),
     tracks: z.array(trackSchema).min(1),
   })
   .superRefine((window, ctx) => {
@@ -332,14 +332,14 @@ export const presetInstanceSchema = z.object({
   kind: presetKindSchema,
   direction: z.enum(['up', 'down', 'left', 'right']).optional(),
   /** px, slide/rise travel. */
-  distance: z.number().finite().positive().max(ANIM_CAPS.distance).optional(),
+  distance: z.number().positive().max(ANIM_CAPS.distance).optional(),
   /** ms, > 0. */
-  duration: z.number().finite().positive().max(MAX_SCENE_DURATION_MS),
+  duration: z.number().positive().max(MAX_SCENE_DURATION_MS),
   /** ms from the slot anchor. */
-  delay: z.number().finite().min(0).max(MAX_SCENE_DURATION_MS),
+  delay: z.number().min(0).max(MAX_SCENE_DURATION_MS),
   easing: easingSchema.optional(),
   /** ms per child; group/list slots only. */
-  stagger: z.number().finite().min(0).max(ANIM_CAPS.stagger).optional(),
+  stagger: z.number().min(0).max(ANIM_CAPS.stagger).optional(),
 });
 export type PresetInstance = z.infer<typeof presetInstanceSchema>;
 
@@ -434,7 +434,6 @@ export type LayerAnimation = z.infer<typeof layerAnimationSchema>;
 export const sceneTimingSchema = z.object({
   duration: z
     .number()
-    .finite()
     .min(MIN_SCENE_DURATION_MS)
     .max(MAX_SCENE_DURATION_MS),
 });
@@ -457,7 +456,6 @@ export const sceneEntrySchema = z.object({
    * fade/slide and is forced to 0 for `cut`. */
   transitionDurationMs: z
     .number()
-    .finite()
     .min(0)
     .max(MAX_TRANSITION_MS)
     .optional(),

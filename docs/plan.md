@@ -112,8 +112,12 @@ Phase 2 — implemented, unreleased (2026-10-09), one commit per step:
 - [ ] TypeScript 7 stays deferred: typescript-eslint 8.71 supports
   `<6.1.0` only, and TypeScript 7 no longer ships the compiler API it is
   built on. Revisit when typescript-eslint supports it.
+- [x] Post-upgrade cleanup: Rust Tauri crates updated to match the npm
+  packages (tauri 2.12, plugins), Zod's no-op `.finite()` calls removed,
+  ESLint config moved from the deprecated `tseslint.config` to
+  `defineConfig`, lockfile deduped.
 - [ ] Native build not re-run: only `cargo check` and the web gate were
-  exercised, so a `pnpm tauri:build` and a hands-on pass in the macOS app are
+  exercised (plus `cargo test`), so a `pnpm tauri:build` and a hands-on pass in the macOS app are
   still owed before release.
 
 The local browser gate now passes 691 unit tests and 9 Chromium smoke tests.

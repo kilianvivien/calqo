@@ -12,7 +12,7 @@ type BaseProps = Omit<TextConfig, 'fontStyle'> & {
 
 /** Thin react-konva wrapper that stores `fontWeight` as a custom Konva
  * attribute so the patched `_getContextFont` can include it in the canvas
- * font string. Konva 9 has no first-class fontWeight prop, so we keep it as
+ * font string. Konva has no first-class fontWeight prop, so we keep it as
  * a side-channel and rely on the patch in `konvaTextFont.ts`.
  *
  * We pass `fontWeight` as a regular prop (cast to bypass Konva's TextConfig,
