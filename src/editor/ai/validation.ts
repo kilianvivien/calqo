@@ -8,6 +8,9 @@ import {
 import { createId } from '@/lib/utils/ids';
 import type { AIProviderDiagnostics, TemplatePromptInput } from './AIProvider';
 
+/** What layer normalization needs to know about the request. */
+export type LayerNormalizationContext = Pick<TemplatePromptInput, 'locale' | 'fonts'>;
+
 export interface JsonRepairResult {
   value?: unknown;
   error?: string;
@@ -43,7 +46,7 @@ export function repairJsonLikeResponse(raw: string): JsonRepairResult {
 
 /** Recursively mint ids for any layer (and group children) missing one, so a
  * model that omits ids still produces a valid, editable document. */
-function ensureLayerIds(layers: unknown): void {
+export function ensureLayerIds(layers: unknown): void {
   if (!Array.isArray(layers)) return;
   for (const layer of layers) {
     if (layer && typeof layer === 'object') {
@@ -72,9 +75,45 @@ function numberValue(...values: unknown[]): number | undefined {
   return undefined;
 }
 
-function solidFill(value: unknown, fallback = '#FFFFFF'): unknown {
+/** Coerce the gradient shorthand models reach for (percent offsets, `position`
+ * keys, unsorted or single stops) into valid stops, or null when unusable. */
+function normalizeStops(value: unknown): { offset: number; color: string }[] | null {
+  if (!Array.isArray(value)) return null;
+  const stops: { offset: number; color: string }[] = [];
+  value.forEach((stop, index) => {
+    if (typeof stop === 'string') {
+      stops.push({ offset: value.length > 1 ? index / (value.length - 1) : 0, color: stop });
+      return;
+    }
+    if (!isRecord(stop) || typeof stop.color !== 'string') return;
+    let offset =
+      numberValue(stop.offset, stop.position, stop.pos) ??
+      (value.length > 1 ? index / (value.length - 1) : 0);
+    if (offset > 1) offset /= 100;
+    stops.push({ offset: Math.min(1, Math.max(0, offset)), color: stop.color });
+  });
+  if (stops.length < 2) return null;
+  return stops.sort((a, b) => a.offset - b.offset);
+}
+
+/** Coerce model fill shorthand (bare colours, loose gradients) into a valid
+ * fill document. */
+export function normalizeAiFill(value: unknown, fallback = '#FFFFFF'): unknown {
   if (typeof value === 'string') return { type: 'solid', color: value };
   if (!isRecord(value)) return { type: 'solid', color: fallback };
+  const type = value.type === 'gradient' ? 'linear' : value.type;
+  if (type === 'linear' || type === 'radial') {
+    const stops = normalizeStops(value.stops ?? value.colors);
+    if (!stops) {
+      return {
+        type: 'solid',
+        color: stringValue(value.color) ?? fallback,
+      };
+    }
+    return type === 'linear'
+      ? { type, angle: numberValue(value.angle) ?? 90, stops }
+      : { type, stops };
+  }
   if (!value.type && typeof value.color === 'string') return { ...value, type: 'solid' };
   if (value.type === 'color' && typeof value.color === 'string') {
     return { ...value, type: 'solid' };
@@ -94,7 +133,7 @@ function normalizeTextRecord(value: unknown, locale: string, fallback: string): 
   return { [locale]: fallback };
 }
 
-function normalizeTextStyle(value: unknown, input: TemplatePromptInput): Record<string, unknown> {
+function normalizeTextStyle(value: unknown, input: LayerNormalizationContext): Record<string, unknown> {
   const style = isRecord(value) ? { ...value } : {};
   style.fontFamily = stringValue(style.fontFamily) ?? input.fonts[0] ?? 'Inter';
   style.fontSize = numberValue(style.fontSize, style.size) ?? 48;
@@ -131,7 +170,7 @@ function inferLayerType(layer: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
-function normalizeListItems(value: unknown, input: TemplatePromptInput): unknown[] {
+function normalizeListItems(value: unknown, input: LayerNormalizationContext): unknown[] {
   const items = Array.isArray(value) ? value : [];
   return items.map((item) => {
     if (typeof item === 'string') {
@@ -149,7 +188,13 @@ function normalizeListItems(value: unknown, input: TemplatePromptInput): unknown
   });
 }
 
-function normalizeLayer(layer: unknown, input: TemplatePromptInput, artboard: Record<string, unknown>): unknown {
+/** Expand the shorthand models use for a single layer (plain-string copy, bare
+ * colours, missing boxes) into the shape the strict layer schema expects. */
+export function normalizeLayer(
+  layer: unknown,
+  input: LayerNormalizationContext,
+  artboard: Record<string, unknown>,
+): unknown {
   if (!isRecord(layer)) return layer;
   const normalized = { ...layer };
   normalized.type = inferLayerType(normalized);
@@ -171,7 +216,7 @@ function normalizeLayer(layer: unknown, input: TemplatePromptInput, artboard: Re
   } else if (normalized.type === 'shape') {
     const shape = stringValue(normalized.shape, normalized.kind) ?? 'rect';
     normalized.shape = shape === 'circle' ? 'ellipse' : shape;
-    normalized.fill = solidFill(normalized.fill ?? normalized.color, '#E5E7EB');
+    normalized.fill = normalizeAiFill(normalized.fill ?? normalized.color, '#E5E7EB');
   } else if (normalized.type === 'group') {
     normalized.children = Array.isArray(normalized.children)
       ? normalized.children.map((child) => normalizeLayer(child, input, artboard))
@@ -221,7 +266,7 @@ export function normalizeTemplateDocument(
         if (typeof ab.width !== 'number') ab.width = input.width;
         if (typeof ab.height !== 'number') ab.height = input.height;
         if (typeof ab.name !== 'string') ab.name = 'Artboard';
-        ab.background = solidFill(ab.background, '#FFFFFF');
+        ab.background = normalizeAiFill(ab.background, '#FFFFFF');
         if (Array.isArray(ab.layers)) {
           ab.layers = ab.layers.map((layer) => normalizeLayer(layer, input, ab));
         }
@@ -302,8 +347,23 @@ function contrastRatio(foreground: string, background: string): number | null {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-function solidBackgroundColor(background: BackgroundFill): string | null {
-  return background.type === 'solid' ? background.color : null;
+/** Colours text may end up sitting on: the solid colour, or every stop of a
+ * gradient (contrast is judged against the worst one). */
+function backgroundColors(background: BackgroundFill): string[] {
+  if (background.type === 'solid') return [background.color];
+  if (background.type === 'linear' || background.type === 'radial') {
+    return background.stops.map((stop) => stop.color);
+  }
+  return [];
+}
+
+function worstContrast(foreground: string, backgrounds: string[]): number | null {
+  let worst: number | null = null;
+  for (const background of backgrounds) {
+    const ratio = contrastRatio(foreground, background);
+    if (ratio !== null && (worst === null || ratio < worst)) worst = ratio;
+  }
+  return worst;
 }
 
 /** Product-level checks for AI templates after the schema contract passes. */
@@ -330,9 +390,9 @@ export function checkTemplateQuality(
     if (artboard.background.type === 'image') {
       issues.push(`${artboard.name}: image backgrounds are not allowed in AI output.`);
     }
-    const bgColor = solidBackgroundColor(artboard.background);
-    if (!bgColor || !isHexColor(bgColor)) {
-      warnings.push(`${artboard.name}: background should be a solid hex color for reliable export.`);
+    const bgColors = backgroundColors(artboard.background);
+    if (bgColors.length === 0 || !bgColors.every(isHexColor)) {
+      warnings.push(`${artboard.name}: background should use hex colors for reliable export.`);
     }
 
     walkLayers(artboard.layers, (layer, parentX, parentY) => {
@@ -369,14 +429,14 @@ export function checkTemplateQuality(
       if (x < 0 || y < 0 || x + layer.w > artboard.width || y + layer.h > artboard.height) {
         warnings.push(`${layer.name}: layer falls outside the artboard bounds.`);
       }
-      if (layer.type === 'text' && bgColor && isHexColor(layer.style.color)) {
-        const ratio = contrastRatio(layer.style.color, bgColor);
+      if (layer.type === 'text' && isHexColor(layer.style.color)) {
+        const ratio = worstContrast(layer.style.color, bgColors);
         if (ratio !== null && ratio < 4.5) {
           warnings.push(`${layer.name}: text contrast is low against the artboard background.`);
         }
       }
-      if (layer.type === 'list' && bgColor && isHexColor(layer.style.color)) {
-        const ratio = contrastRatio(layer.style.color, bgColor);
+      if (layer.type === 'list' && isHexColor(layer.style.color)) {
+        const ratio = worstContrast(layer.style.color, bgColors);
         if (ratio !== null && ratio < 4.5) {
           warnings.push(`${layer.name}: list text contrast is low against the artboard background.`);
         }
@@ -435,18 +495,19 @@ export function validateTemplateResponse(
         ...diagnosticBase(diagnostics),
         validationFailure: error,
         rawOutput: raw,
-        warnings: quality.warnings,
+        warnings: [...(diagnostics?.warnings ?? []), ...quality.warnings],
       },
     };
   }
+  const warnings = [...(diagnostics?.warnings ?? []), ...quality.warnings];
   return {
     ok: true,
     project: result.project,
-    warnings: quality.warnings,
+    warnings,
     diagnostics: {
       ...diagnosticBase(diagnostics),
       rawOutput: raw,
-      warnings: quality.warnings,
+      warnings,
     },
   };
 }

@@ -32,7 +32,7 @@ export function decodeListRowId(
 }
 
 /** Resolve a per-locale string with the same fallback the renderer uses. */
-function resolveLocaleValue(
+export function resolveLocaleValue(
   text: Record<string, string>,
   locale: LocaleCode,
 ): string {

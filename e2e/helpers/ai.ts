@@ -8,17 +8,52 @@ export async function enableTestAi(page: Page) {
     async (route) => {
       const request = route.request().postDataJSON() as {
         model: string;
-        messages: { role: string; content: string }[];
+        // Text-only requests send a string; vision requests send parts.
+        messages: {
+          role: string;
+          content: string | { type: string; text?: string }[];
+        }[];
       };
+      const textOf = (content: (typeof request.messages)[number]['content']) =>
+        typeof content === 'string'
+          ? content
+          : content.map((part) => part.text ?? '').join('');
       expect(route.request().method()).toBe('POST');
-      expect(request.model).toBe('llama3.1');
-      const system = request.messages.find(
-        (message) => message.role === 'system',
-      )!.content;
-      const user = request.messages.find(
-        (message) => message.role === 'user',
-      )!.content;
+      expect(request.model).toBe('gemma4');
+      const system = textOf(
+        request.messages.find((message) => message.role === 'system')!.content,
+      );
+      const user = textOf(
+        request.messages.find((message) => message.role === 'user')!.content,
+      );
       let result: unknown;
+      if (system.startsWith('You are a senior graphic designer')) {
+        // Answer design edits as a real streamed reply, reasoning included, so
+        // the smoke path covers the SSE reader too.
+        const { artboard } = JSON.parse(user) as {
+          artboard: { layers: { id: string }[] };
+        };
+        const answer = JSON.stringify({
+          summary: 'Renamed the first layer.',
+          operations: [
+            {
+              type: 'updateLayer',
+              layerId: artboard.layers[0].id,
+              patch: { name: 'AI renamed layer' },
+            },
+          ],
+        });
+        const events = [
+          { choices: [{ delta: { reasoning_content: 'Planning the edit.' } }] },
+          { choices: [{ delta: { content: answer.slice(0, 20) } }] },
+          { choices: [{ delta: { content: answer.slice(20) } }] },
+        ];
+        await route.fulfill({
+          contentType: 'text/event-stream',
+          body: `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')}data: [DONE]\n\n`,
+        });
+        return;
+      }
       if (system.startsWith('You are a professional translator.')) {
         const { items } = JSON.parse(user) as {
           items: { layerId: string; sourceText: string }[];

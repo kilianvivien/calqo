@@ -342,20 +342,27 @@ it is ever exposed.
 
 ## AI without lock-in
 
-Calqo separates two useful AI jobs:
+Calqo uses AI for jobs where the result stays editable:
 
 1. **Prompt to editable template:** the provider returns Calqo project JSON,
    which is validated before it reaches the editor.
-2. **Translate content in place:** text variants change while the design,
-   geometry, and source language remain intact.
+2. **Edit with AI:** describe a change and the model proposes command-level
+   operations on the current artboard, applied as one undo step or not at all.
+3. **Rewrite copy:** shorten, rephrase or proofread a text layer in place.
+4. **Translate content in place:** one or several languages per pass, while
+   the design, geometry, and source language remain intact.
 
-AI is off until you configure a provider. Gemini has a provider-specific GenAI
-path; OpenAI-compatible endpoints, Ollama/local models, Mistral, OpenRouter,
-and custom endpoints are supported through the provider layer.
+AI is off until you configure a provider. Apple Intelligence (macOS app),
+Ollama/local models, Google Gemini, Anthropic Claude, OpenAI, Mistral,
+OpenRouter, and custom OpenAI-compatible endpoints are supported. The model
+field can load the provider's live model list, so newer models work without a
+Calqo update, and replies are streamed so slower reasoning models are not cut
+off.
 
-Browser keys are persisted only after explicit opt-in. The Tauri app stores
-provider keys separately in Stronghold-backed secure storage. Keys are never
-written into `.calqo` projects or app backups.
+Browser keys are persisted only after explicit opt-in. The macOS app stores
+provider keys in the Keychain. Keys are never written into `.calqo` projects or
+app backups. See [AI providers: setup and privacy](docs/ai-providers.md) for
+what each feature sends and where.
 
 ## Run from source
 

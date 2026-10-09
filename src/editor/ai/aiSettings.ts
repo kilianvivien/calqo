@@ -12,6 +12,8 @@ export type AiProviderId =
   | 'apple'
   | 'local'
   | 'gemini'
+  | 'anthropic'
+  | 'openai'
   | 'mistral'
   | 'openrouter'
   | 'custom';
@@ -30,6 +32,8 @@ export interface ProviderPreset {
   adapterKind: 'off' | 'official' | 'compatible';
   /** Provider is supplied by the native desktop shell, not the web app. */
   desktopOnly?: boolean;
+  /** The provider's current models reject a custom `temperature`. */
+  omitTemperature?: boolean;
 }
 
 export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
@@ -58,7 +62,7 @@ export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
     id: 'local',
     label: 'Local (Ollama)',
     baseUrl: 'http://localhost:11434/v1',
-    defaultModel: 'llama3.1',
+    defaultModel: 'gemma4',
     needsKey: false,
     editableBaseUrl: true,
     remote: true,
@@ -68,11 +72,32 @@ export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
     id: 'gemini',
     label: 'Google Gemini',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    defaultModel: 'gemini-3.5-flash',
+    defaultModel: 'gemini-3.8-flash',
     needsKey: true,
     editableBaseUrl: false,
     remote: true,
     adapterKind: 'official',
+  },
+  anthropic: {
+    id: 'anthropic',
+    label: 'Anthropic Claude',
+    baseUrl: 'https://api.anthropic.com',
+    defaultModel: 'claude-opus-5-5',
+    needsKey: true,
+    editableBaseUrl: false,
+    remote: true,
+    adapterKind: 'official',
+  },
+  openai: {
+    id: 'openai',
+    label: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    defaultModel: 'gpt-6.1-sol',
+    needsKey: true,
+    editableBaseUrl: false,
+    remote: true,
+    adapterKind: 'compatible',
+    omitTemperature: true,
   },
   mistral: {
     id: 'mistral',
@@ -88,7 +113,7 @@ export const PROVIDER_PRESETS: Record<AiProviderId, ProviderPreset> = {
     id: 'openrouter',
     label: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'google/gemini-2.0-flash-exp:free',
+    defaultModel: 'openrouter/free',
     needsKey: true,
     editableBaseUrl: false,
     remote: true,
@@ -124,8 +149,10 @@ export const MOBILE_PROVIDER_LIST: ProviderPreset[] = PROVIDER_LIST.filter(
 );
 
 const PREVIOUS_DEFAULT_MODELS: Partial<Record<AiProviderId, string[]>> = {
-  gemini: ['gemini-2.0-flash'],
+  local: ['llama3.1'],
+  gemini: ['gemini-2.0-flash', 'gemini-3.5-flash'],
   mistral: ['mistral-small-latest'],
+  openrouter: ['google/gemini-2.0-flash-exp:free'],
 };
 
 export interface AiProviderConfig {

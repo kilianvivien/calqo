@@ -1,3 +1,4 @@
+import { ModelPicker } from '@/app/shell/ModelPicker';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -107,12 +108,18 @@ export function MobileSettingsSheet({ open, onClose }: MobileSettingsSheetProps)
               onChange={(baseUrl) => updateProviderConfig(preset.id, { baseUrl })}
             />
           )}
-          <Field
-            label={t('settings.ai.model')}
-            value={config.model}
-            placeholder={preset.defaultModel}
-            onChange={(model) => updateProviderConfig(preset.id, { model })}
-          />
+          <div className="py-2">
+            <span className="mb-1 block text-[12px] font-medium text-[var(--calqo-text-2)]">
+              {t('settings.ai.model')}
+            </span>
+            <ModelPicker
+              size="mobile"
+              providerId={preset.id}
+              value={config.model}
+              placeholder={preset.defaultModel}
+              onChange={(model) => updateProviderConfig(preset.id, { model })}
+            />
+          </div>
           {preset.needsKey && (
             <>
               <Field

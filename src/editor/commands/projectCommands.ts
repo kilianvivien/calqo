@@ -2649,40 +2649,56 @@ export function applyTranslationResult(
   projectId: string,
   result: TranslationResult,
 ): void {
-  if (result.items.length === 0) return;
+  applyTranslationResults(projectId, [result]);
+}
+
+/** Apply one or more locales' translations as a single undoable step. */
+export function applyTranslationResults(
+  projectId: string,
+  results: TranslationResult[],
+): void {
+  const pending = results.filter((result) => result.items.length > 0);
+  if (pending.length === 0) return;
   editProject(
     projectId,
     (draft) => {
-      if (!draft.contentLocales.includes(result.targetLocale)) {
-        draft.contentLocales.push(result.targetLocale);
-      }
-      for (const item of result.items) {
-        const artboard = draft.artboards.find((ab) => ab.id === item.artboardId);
-        if (!artboard) continue;
-        const decoded = decodeListRowId(item.layerId);
-        if (decoded) {
-          updateLayer(artboard.layers as CalqoLayer[], decoded.layerId, (layer) => {
-            if (layer.type !== 'list') return;
-            const row = layer.items.find((r) => r.id === decoded.rowId);
-            if (!row) return;
-            row.text[result.targetLocale] = item.translatedText;
-            const overflow = detectListOverflow(layer, result.targetLocale);
-            if (overflow) layer.overflow = overflow;
-            else delete layer.overflow;
-          });
-          continue;
-        }
-        updateLayer(artboard.layers as CalqoLayer[], item.layerId, (layer) => {
-          if (layer.type !== 'text') return;
-          layer.text[result.targetLocale] = item.translatedText;
-          const overflow = detectTextOverflow(layer as TextLayer, result.targetLocale);
-          if (overflow) layer.overflow = overflow;
-          else delete layer.overflow;
-        });
-      }
+      for (const result of pending) writeTranslationResult(draft, result);
     },
     { undoable: true },
   );
+}
+
+function writeTranslationResult(
+  draft: CalqoProject,
+  result: TranslationResult,
+): void {
+  if (!draft.contentLocales.includes(result.targetLocale)) {
+    draft.contentLocales.push(result.targetLocale);
+  }
+  for (const item of result.items) {
+    const artboard = draft.artboards.find((ab) => ab.id === item.artboardId);
+    if (!artboard) continue;
+    const decoded = decodeListRowId(item.layerId);
+    if (decoded) {
+      updateLayer(artboard.layers as CalqoLayer[], decoded.layerId, (layer) => {
+        if (layer.type !== 'list') return;
+        const row = layer.items.find((r) => r.id === decoded.rowId);
+        if (!row) return;
+        row.text[result.targetLocale] = item.translatedText;
+        const overflow = detectListOverflow(layer, result.targetLocale);
+        if (overflow) layer.overflow = overflow;
+        else delete layer.overflow;
+      });
+      continue;
+    }
+    updateLayer(artboard.layers as CalqoLayer[], item.layerId, (layer) => {
+      if (layer.type !== 'text') return;
+      layer.text[result.targetLocale] = item.translatedText;
+      const overflow = detectTextOverflow(layer as TextLayer, result.targetLocale);
+      if (overflow) layer.overflow = overflow;
+      else delete layer.overflow;
+    });
+  }
 }
 
 /** Recompute overflow flags for every text layer at the active locale. */

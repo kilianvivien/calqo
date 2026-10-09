@@ -360,9 +360,9 @@ describe('phase F — settings hardening', () => {
 
   it('normalizes stale provider ids back to the disabled "off" setting', () => {
     const normalized = normalizeAiSettings({
-      providerId: 'openai' as never,
+      providerId: 'retired-provider' as never,
       providers: {
-        openai: {
+        'retired-provider': {
           model: 'gpt-4o',
           apiKey: 'old',
           baseUrl: 'https://api.openai.com/v1',
@@ -379,7 +379,7 @@ describe('phase F — settings hardening', () => {
     useAiSettingsStore.setState({
       settings: {
         ...normalizeAiSettings(),
-        providerId: 'openai' as never,
+        providerId: 'retired-provider' as never,
       },
       loaded: true,
     });

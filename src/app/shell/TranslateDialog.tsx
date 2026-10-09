@@ -1,6 +1,6 @@
 import { AiReadinessNote } from '@/app/shell/AiReadinessNote';
 import { aiReadiness } from '@/editor/ai/readiness';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Check, Languages, Plus, Trash2, X } from 'lucide-react';
 import {
@@ -14,12 +14,12 @@ import {
   localeLabel,
 } from '@/editor/i18n-content/contentLocaleService';
 import type { TranslationScope } from '@/editor/i18n-content/translationPipeline';
-import { runTranslation } from '@/editor/ai/translationService';
+import { runTranslations } from '@/editor/ai/translationService';
 import { getProvider } from '@/editor/ai/providerRegistry';
 import { useAiSettingsStore } from '@/editor/ai/aiSettings';
 import type { TranslationResult } from '@/editor/ai/AIProvider';
 import {
-  applyTranslationResult,
+  applyTranslationResults,
   updateGlossary,
 } from '@/editor/commands/projectCommands';
 import { useActiveProject } from '@/lib/state/selectors';
@@ -28,10 +28,13 @@ import { useUiStore } from '@/lib/state/uiStore';
 import type { GlossaryEntry, LocaleCode } from '@/lib/schema';
 
 type Preview = {
+  locale: LocaleCode;
   result: TranslationResult;
   rows: { layerId: string; source: string; target: string }[];
   unchanged: number;
   missing: number;
+  shortened: number;
+  overflow: Set<string>;
 };
 
 export function TranslateDialog() {
@@ -41,27 +44,42 @@ export function TranslateDialog() {
 }
 
 function TranslateDialogInner() {
-  const { t } = useTranslation('editor');
+  const { t, i18n } = useTranslation('editor');
+  const uiLanguage = i18n.language;
   const project = useActiveProject();
   const activeArtboardId = useSelectionStore((s) => s.activeArtboardId);
   const setAiDialog = useUiStore((s) => s.setAiDialog);
   const settings = useAiSettingsStore((s) => s.settings);
-  const close = () => setAiDialog('none');
+  const abortRef = useRef<AbortController | null>(null);
+  const close = () => {
+    abortRef.current?.abort();
+    setAiDialog('none');
+  };
 
   const locales = useMemo(() => project?.contentLocales ?? [], [project]);
   const [source, setSource] = useState<LocaleCode>(
     project?.activeContentLocale ?? locales[0] ?? 'en',
   );
-  const [target, setTarget] = useState<LocaleCode>(
-    locales.find((l) => l !== source) ?? 'fr',
-  );
+  const [targets, setTargets] = useState<LocaleCode[]>([
+    locales.find((l) => l !== source) ?? (source === 'fr' ? 'en' : 'fr'),
+  ]);
   const [scope, setScope] = useState<TranslationScope>('active');
   const [glossary, setGlossaryState] = useState<GlossaryEntry[]>(
     project?.glossary ?? [],
   );
   const [busy, setBusy] = useState(false);
-  const [preview, setPreview] = useState<Preview | null>(null);
+  const [previews, setPreviews] = useState<Preview[]>([]);
+  const [shownLocale, setShownLocale] = useState<LocaleCode | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const preview =
+    previews.find((p) => p.locale === shownLocale) ?? previews[0] ?? null;
+  const activeTargets = targets.filter((code) => code !== source);
+  const toggleTarget = (code: LocaleCode) =>
+    setTargets((current) =>
+      current.includes(code)
+        ? current.filter((c) => c !== code)
+        : [...current, code],
+    );
 
   // Targets: existing locales plus any common locale not yet in the project.
   const targetOptions = useMemo(() => {
@@ -77,54 +95,107 @@ function TranslateDialogInner() {
   const runJob = async () => {
     setBusy(true);
     setStatus(null);
-    setPreview(null);
+    setPreviews([]);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const provider = getProvider(settings);
-      if (!provider) {
-        setBusy(false);
-        return;
-      }
-      const { job, result, unchanged, missingLayerIds } = await runTranslation(
+      if (!provider) return;
+      const { runs, failedLocales } = await runTranslations(
         provider,
         { ...project, glossary },
-        { sourceLocale: source, targetLocale: target, scope, activeArtboardId },
+        {
+          sourceLocale: source,
+          targetLocales: activeTargets,
+          scope,
+          activeArtboardId,
+        },
+        controller.signal,
+        (done, total, locale) =>
+          setStatus(
+            total > 1
+              ? t('translate.progress', {
+                  locale: localeLabel(locale, uiLanguage),
+                  current: done + 1,
+                  total,
+                })
+              : null,
+          ),
       );
-      const sourceById = new Map(job.items.map((i) => [i.layerId, i.sourceText]));
-      const rows = result.items.map((item) => ({
-        layerId: item.layerId,
-        source: sourceById.get(item.layerId) ?? '',
-        target: item.translatedText,
-      }));
-      setPreview({ result, rows, unchanged, missing: missingLayerIds.length });
-      if (rows.length === 0) setStatus(t('translate.noText'));
+      const next = runs.map((run): Preview => {
+        const sourceById = new Map(
+          run.job.items.map((i) => [i.layerId, i.sourceText]),
+        );
+        return {
+          locale: run.result.targetLocale,
+          result: run.result,
+          rows: run.result.items.map((item) => ({
+            layerId: item.layerId,
+            source: sourceById.get(item.layerId) ?? '',
+            target: item.translatedText,
+          })),
+          unchanged: run.unchanged,
+          missing: run.missingLayerIds.length,
+          shortened: run.shortened,
+          overflow: new Set(run.overflowLayerIds),
+        };
+      });
+      setPreviews(next);
+      setShownLocale(next[0]?.locale ?? null);
+      if (failedLocales.length > 0) {
+        setStatus(
+          t('translate.failedLocales', {
+            locales: failedLocales.map((code) => localeLabel(code, uiLanguage)).join(', '),
+          }),
+        );
+      } else if (next.every((p) => p.rows.length === 0)) {
+        setStatus(t('translate.noText'));
+      } else {
+        setStatus(null);
+      }
     } catch (error) {
+      if (controller.signal.aborted) return;
       console.error('[Calqo] translation failed', error);
       setStatus(t('translate.failed'));
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setBusy(false);
     }
   };
 
   const apply = () => {
-    if (!preview) return;
+    if (previews.length === 0) return;
     updateGlossary(project.id, glossary);
-    applyTranslationResult(project.id, preview.result);
+    applyTranslationResults(
+      project.id,
+      previews.map((p) => p.result),
+    );
     setStatus(t('translate.applied'));
     close();
   };
 
   const updateRow = (layerId: string, value: string) => {
     if (!preview) return;
-    const rows = preview.rows.map((r) =>
-      r.layerId === layerId ? { ...r, target: value } : r,
-    );
-    const result: TranslationResult = {
-      ...preview.result,
-      items: preview.result.items.map((item) =>
-        item.layerId === layerId ? { ...item, translatedText: value } : item,
+    setPreviews((current) =>
+      current.map((p) =>
+        p.locale !== preview.locale
+          ? p
+          : {
+              ...p,
+              rows: p.rows.map((r) =>
+                r.layerId === layerId ? { ...r, target: value } : r,
+              ),
+              result: {
+                ...p.result,
+                items: p.result.items.map((item) =>
+                  item.layerId === layerId
+                    ? { ...item, translatedText: value }
+                    : item,
+                ),
+              },
+            },
       ),
-    };
-    setPreview({ ...preview, rows, result });
+    );
   };
 
   return (
@@ -162,13 +233,44 @@ function TranslateDialogInner() {
               onChange={(v) => setSource(v)}
             />
             <ArrowRight size={15} className="mt-5 shrink-0 text-[var(--calqo-text-3)]" />
-            <LocaleSelect
-              label={t('translate.to')}
-              value={target}
-              options={targetOptions}
-              onChange={(v) => setTarget(v)}
-            />
+            <div className="min-w-0 flex-1 self-end pb-2 text-[12.5px] text-[var(--calqo-text-2)]">
+              {activeTargets.length === 0
+                ? t('translate.pickTarget')
+                : activeTargets.map((code) => localeLabel(code, uiLanguage)).join(', ')}
+            </div>
           </div>
+
+          <fieldset>
+            <legend className="mb-1.5 text-[12px] font-medium text-[var(--calqo-text-2)]">
+              {t('translate.to')}
+            </legend>
+            <div className="flex flex-wrap gap-1.5">
+              {targetOptions
+                .filter((code) => code !== source)
+                .map((code) => {
+                  const checked = targets.includes(code);
+                  return (
+                    <label
+                      key={code}
+                      className={[
+                        'flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] transition-colors',
+                        checked
+                          ? 'border-[var(--calqo-accent)] bg-[var(--calqo-accent-soft)] text-[var(--calqo-text)]'
+                          : 'border-[var(--calqo-divider)] text-[var(--calqo-text-2)] hover:bg-[var(--calqo-hover)]',
+                      ].join(' ')}
+                    >
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={checked}
+                        onChange={() => toggleTarget(code)}
+                      />
+                      {localeLabel(code, uiLanguage)} ({code})
+                    </label>
+                  );
+                })}
+            </div>
+          </fieldset>
 
           <Field label={t('translate.scope')}>
             <GlassSegmentedControl<TranslationScope>
@@ -189,8 +291,39 @@ function TranslateDialogInner() {
 
           {preview && preview.rows.length > 0 && (
             <section>
-              <div className="mb-2 flex items-center justify-between">
+              {previews.length > 1 && (
+                <div className="mb-2 flex flex-wrap gap-1">
+                  {previews.map((p) => (
+                    <button
+                      key={p.locale}
+                      type="button"
+                      aria-pressed={p.locale === preview.locale}
+                      onClick={() => setShownLocale(p.locale)}
+                      className={[
+                        'rounded-full px-2.5 py-0.5 text-[11.5px] font-medium transition-colors',
+                        p.locale === preview.locale
+                          ? 'bg-[var(--calqo-accent-soft)] text-[var(--calqo-accent)]'
+                          : 'text-[var(--calqo-text-3)] hover:bg-[var(--calqo-hover)]',
+                      ].join(' ')}
+                    >
+                      {localeLabel(p.locale, uiLanguage)}
+                      {p.overflow.size > 0 ? ' •' : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3">
                 <span className="eyebrow">{t('translate.preview')}</span>
+                {preview.shortened > 0 && (
+                  <span className="text-[11px] text-[var(--calqo-text-3)]">
+                    {t('translate.shortened', { count: preview.shortened })}
+                  </span>
+                )}
+                {preview.overflow.size > 0 && (
+                  <span className="text-[11px] text-[#B7791F]">
+                    {t('translate.overflowing', { count: preview.overflow.size })}
+                  </span>
+                )}
                 {preview.unchanged > 0 && (
                   <span className="text-[11px] text-[#B7791F]">
                     {t('translate.unchanged', { count: preview.unchanged })}
@@ -217,7 +350,12 @@ function TranslateDialogInner() {
                     <textarea
                       value={row.target}
                       onChange={(event) => updateRow(row.layerId, event.target.value)}
-                      className="min-h-9 w-full resize-y rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2 py-1 text-[12px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
+                      className={[
+                        'min-h-9 w-full resize-y rounded-[var(--calqo-radius-sm)] border bg-[var(--calqo-glass)] px-2 py-1 text-[12px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]',
+                        preview.overflow.has(row.layerId)
+                          ? 'border-[#B7791F]'
+                          : 'border-[var(--calqo-divider)]',
+                      ].join(' ')}
                     />
                   </div>
                 ))}
@@ -228,18 +366,26 @@ function TranslateDialogInner() {
 
         <footer className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--calqo-divider)] pt-4">
           <span className="flex items-center gap-1.5 text-[12px] text-[var(--calqo-text-3)]">
-            {status && <Check size={13} className="text-[var(--calqo-accent)]" />}
+            {status && !busy && (
+              <Check size={13} className="text-[var(--calqo-accent)]" />
+            )}
             {status}
           </span>
           <div className="flex items-center gap-2">
           <GlassButton
             onClick={runJob}
-            disabled={busy || source === target || !aiReadiness(settings).ready}
+            disabled={
+              busy || activeTargets.length === 0 || !aiReadiness(settings).ready
+            }
             loading={busy}
           >
               {busy ? t('translate.running') : t('translate.run')}
             </GlassButton>
-            <GlassButton variant="primary" onClick={apply} disabled={!preview || preview.rows.length === 0}>
+            <GlassButton
+              variant="primary"
+              onClick={apply}
+              disabled={busy || !previews.some((p) => p.rows.length > 0)}
+            >
               {t('translate.apply')}
             </GlassButton>
           </div>
@@ -259,6 +405,7 @@ function LocaleSelect({
   options: string[];
   onChange: (value: LocaleCode) => void;
 }) {
+  const { i18n } = useTranslation('editor');
   return (
     <label className="min-w-0 flex-1">
       <span className="mb-1 block text-[12px] font-medium text-[var(--calqo-text-2)]">
@@ -271,7 +418,7 @@ function LocaleSelect({
       >
         {options.map((code) => (
           <option key={code} value={code}>
-            {localeLabel(code)} ({code})
+            {localeLabel(code, i18n.language)} ({code})
           </option>
         ))}
       </select>

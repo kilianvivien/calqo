@@ -153,7 +153,14 @@
       "agentSkillHint": "Download a SKILL.md guide for coding agents that generate editable .calqo files from prompts.",
       "downloadSkill": "Download SKILL.md",
       "downloadClaudeSkill": "Download Claude .skill",
-      "keychainNote": "Keys are saved in the macOS Keychain. Storage failures are shown above; no insecure fallback is used."
+      "keychainNote": "Keys are saved in the macOS Keychain. Storage failures are shown above; no insecure fallback is used.",
+      "modelRefresh": "Load available models",
+      "modelFree": "free",
+      "modelVision": "images",
+      "modelListHint": "Type a model id, or load the list from your provider.",
+      "modelListReady": "{{count}} model(s) available — start typing to filter.",
+      "modelListError": "The model list could not be loaded. You can still type a model id.",
+      "modelListUnavailable": "Complete the setup to load the model list, or type a model id."
     },
     "agentDrawing": {
       "title": "Agent drawing",

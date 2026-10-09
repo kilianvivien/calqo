@@ -33,7 +33,7 @@ export interface CanvasGuide {
 
 /** Which AI dialog is open. Held in the UI store so both the title bar and the
  * inspector can trigger them without prop drilling. */
-export type AiDialog = 'none' | 'template' | 'translate';
+export type AiDialog = 'none' | 'template' | 'translate' | 'edit';
 
 /** Brush feel for the freehand tool. */
 export type BrushStyle =

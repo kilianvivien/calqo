@@ -78,6 +78,7 @@ export type AppCommandId =
   | 'view.transparencySolid'
   | 'ai.promptTemplate'
   | 'ai.translate'
+  | 'ai.editDesign'
   | 'ai.toggleAgentDrawing'
   | 'window.shortcuts'
   | 'help.github'
@@ -248,6 +249,7 @@ export const appCommandDefinitions: CommandDefinition[] = [
   { id: 'view.transparencySolid', labelKey: 'common:transparency.solid' },
   { id: 'ai.promptTemplate', labelKey: 'editor:ai.promptTemplate' },
   { id: 'ai.translate', labelKey: 'editor:ai.translate' },
+  { id: 'ai.editDesign', labelKey: 'editor:ai.editDesign' },
   {
     id: 'ai.toggleAgentDrawing',
     labelKey: 'common:settings.agentDrawing.enable',
@@ -430,7 +432,8 @@ export function getAppCommandState(id: AppCommandId): { enabled: boolean } {
     if (id === 'file.new' || id === 'file.open' || id === 'file.manage') {
       return { enabled: true };
     }
-    if (!project) return { enabled: false };
+    // Prompt-a-template creates its own project, so it needs none open.
+    if (!project && id !== 'ai.promptTemplate') return { enabled: false };
   }
   if (id === 'object.group') return { enabled: selectedCount >= 2 };
   if (id === 'object.ungroup') return { enabled: selectedCount === 1 };
@@ -443,7 +446,9 @@ export function getAppCommandState(id: AppCommandId): { enabled: boolean } {
   ) {
     return { enabled: false };
   }
-  if (id === 'ai.translate') return { enabled: Boolean(project) };
+  if (id === 'ai.translate' || id === 'ai.editDesign') {
+    return { enabled: Boolean(project) };
+  }
   if (id === 'edit.undo') return { enabled: (history?.past.length ?? 0) > 0 };
   if (id === 'edit.redo') return { enabled: (history?.future.length ?? 0) > 0 };
   return { enabled: true };
@@ -670,6 +675,9 @@ export async function invokeAppCommand(id: AppCommandId): Promise<void> {
       return;
     case 'ai.translate':
       ui.setAiDialog('translate');
+      return;
+    case 'ai.editDesign':
+      ui.setAiDialog('edit');
       return;
     case 'ai.toggleAgentDrawing': {
       const store = mcpStore.getState();

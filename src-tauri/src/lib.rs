@@ -58,6 +58,7 @@ const APP_COMMAND_IDS: &[&str] = &[
     "view.theme",
     "ai.promptTemplate",
     "ai.translate",
+    "ai.editDesign",
     "ai.toggleAgentDrawing",
     "window.shortcuts",
     "help.github",
@@ -361,6 +362,12 @@ fn build_menu<R: Runtime>(app: &AppHandle<R>, lang: &str) -> tauri::Result<Menu<
             app,
             "ai.promptTemplate",
             tr(lang, "Prompt to Template…", "Prompt vers modèle…"),
+            None,
+        )?)
+        .item(&item(
+            app,
+            "ai.editDesign",
+            tr(lang, "Edit Design with AI…", "Modifier le design avec l’IA…"),
             None,
         )?)
         .item(&item(

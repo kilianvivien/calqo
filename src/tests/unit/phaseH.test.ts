@@ -34,7 +34,7 @@ describe('phase H — Gemini provider', () => {
     vi.restoreAllMocks();
   });
 
-  it('uses Gemini generateContent with structured JSON for templates', async () => {
+  it('uses Gemini streamGenerateContent with structured JSON for templates', async () => {
     const project = createDefaultProject();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -58,7 +58,7 @@ describe('phase H — Gemini provider', () => {
 
     expect(result.raw).toContain(project.name);
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({ 'x-goog-api-key': 'key' }),
@@ -97,7 +97,7 @@ describe('phase H — Gemini provider', () => {
     ).rejects.toThrow(/Gemini responded 400/);
   });
 
-  it('allows longer Gemini timeouts for SVG generation', async () => {
+  it('stops waiting for Gemini only after the idle timeout', async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
       const signal = init?.signal;
@@ -112,9 +112,10 @@ describe('phase H — Gemini provider', () => {
       model: 'gemini-2.0-flash',
     });
     const result = provider.generateSvg?.({ prompt: 'hungry bird' });
-    const assertion = expect(result).rejects.toThrow(/Gemini timed out after 120000ms/);
+    const assertion = expect(result).rejects.toThrow(/Gemini stopped responding for 90s/);
 
-    await vi.advanceTimersByTimeAsync(120_000);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(30_000);
 
     await assertion;
   });
@@ -346,7 +347,7 @@ describe('phase H — translation and SVG hardening', () => {
 
 describe('phase H — provider settings', () => {
   it('uses the requested hosted provider default models', () => {
-    expect(PROVIDER_PRESETS.gemini.defaultModel).toBe('gemini-3.5-flash');
+    expect(PROVIDER_PRESETS.gemini.defaultModel).toBe('gemini-3.8-flash');
     expect(PROVIDER_PRESETS.mistral.defaultModel).toBe('mistral-medium-latest');
   });
 
@@ -389,7 +390,7 @@ describe('phase H — provider settings', () => {
       } as never,
     });
 
-    expect(settings.providers.gemini.model).toBe('gemini-3.5-flash');
+    expect(settings.providers.gemini.model).toBe('gemini-3.8-flash');
     expect(settings.providers.mistral.model).toBe('mistral-medium-latest');
     expect(settings.providers.custom.model).toBe('my-custom-model');
   });

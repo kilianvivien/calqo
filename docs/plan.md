@@ -1,8 +1,12 @@
 # Calqo Beta And 1.0 Roadmap
 
 **Planning date:** 2026-06-27  
-**Status refreshed:** 2026-09-20
+**Status refreshed:** 2026-10-09
 **Current working-tree version:** `0.8.0` in package and Tauri metadata
+**In progress — 0.9.0 (AI quality):** phase 1 is implemented in the working
+tree and not yet released; see "0.9.0 — AI quality" under the snapshot below.
+The local browser gate passes 690 unit tests and 9 Chromium smoke tests; the
+native crate compiles. No provider was exercised against its live API.
 **Release status:** [`v0.8.0`](https://github.com/kilianvivien/calqo/releases/tag/v0.8.0)
 is published as the latest GitHub release (2026-09-20), adding the on-device
 Apple Intelligence provider. The local browser gate passes 653 unit tests; the
@@ -30,6 +34,59 @@ repeatable.
 ---
 
 ## 1. Current Snapshot
+
+### 0.9.0 — AI quality (in progress)
+
+Phase 1 — implemented, unreleased (2026-10-09):
+
+- [x] Low-risk dependency refresh: Tauri API/CLI/plugins, React 19.3,
+  react-konva, mediabunny, Dexie, DOMPurify, Zustand, Playwright, Prettier,
+  typescript-eslint, Tailwind, Testing Library. New runtime dependency:
+  `@anthropic-ai/sdk`, loaded lazily only when Claude is selected.
+- [x] Provider defaults: Gemini `gemini-3.8-flash`, Ollama `gemma4`,
+  OpenRouter `openrouter/free` (the previous OpenRouter default pointed at a
+  retired model). Untouched stale defaults migrate; user-chosen models do not.
+- [x] New presets: Anthropic Claude (official SDK adapter, default
+  `claude-opus-5-5`) and OpenAI.
+- [x] Shared request layer (`src/editor/ai/completion*.ts`): streaming with an
+  idle timeout instead of a fixed 45 s deadline, cancellation, JSON-schema
+  output with fallback to JSON mode, image input, inline-reasoning stripping,
+  and a downgrade ladder for endpoints that reject a schema, images, a custom
+  temperature or streaming. Downgrades surface as diagnostics warnings.
+- [x] Model picker: the Model field can load the provider's live model list.
+- [x] Prompt-a-template quality: the uploaded style reference is sent as an
+  image to vision-capable models; the prompt now describes gradients, groups,
+  shadows and layout guidance; gradient shorthand is normalized; contrast is
+  checked against gradient stops; progress and cancel in the dialog. The
+  "paste an image URL" field became a free-text style note, because models
+  cannot open links. Works with no project open.
+- [x] Edit with AI (`designEditService.ts`, `EditDesignDialog.tsx`): the model
+  returns MCP-style operations, executed by the MCP executor as one undoable,
+  all-or-nothing batch with a revision check and one repair retry. Scope is
+  deliberately static layout on the active artboard; locked layers are left
+  alone; images/SVGs cannot be created.
+- [x] Copy tools on text layers: shorten, rephrase, punchier, formal,
+  friendlier, proofread, with one tightening retry on overflow.
+- [x] Translation: several target locales per run, batches of 40 items, a
+  shortening pass for overflowing text, single-undo apply.
+- [x] User doc: [AI providers: setup and privacy](ai-providers.md).
+- [x] Tests: `aiRequestLayer.test.ts`, `aiDesignEdit.test.ts`,
+  `e2e/ai-edit-smoke.spec.ts` (stubbed endpoint, including a streamed reply).
+
+Open before 0.9.0 ships:
+
+- [ ] Hands-on runs against real providers. Everything above is verified
+  against stubs only; model ids were checked against vendor pages on
+  2026-10-09 but no live request was made.
+- [ ] Apple Intelligence check for the new flows (it keeps the compact prompt
+  and has no image input; design edits may exceed its context).
+- [ ] Mobile: Edit with AI and copy tools are desktop-shell only.
+- [ ] Version bump and release notes.
+
+Phase 2 — planned, not started: tooling majors (Vite 8, Vitest 5,
+plugin-react 6, vite-plugin-pwa 2, ESLint 10, jsdom 30) and runtime majors
+(Konva 10, Zod 4, immer 11, i18next 26 / react-i18next 17, tailwind-merge 3,
+lucide-react 1.x, nanoid 6), one change at a time. TypeScript 7 stays deferred.
 
 Implemented and worth protecting:
 
@@ -402,6 +459,9 @@ predictable.
     provider-specific caveats.
   - Clear validation failures with repair guidance.
   - Ensure diagnostics and logs redact secrets.
+  - 0.9.0 phase 1 covers timeouts, streaming, cancellation, capability
+    downgrades and model listing (see the snapshot); live-provider
+    verification is what keeps this item open.
   - Keep mock output deterministic for automated tests only.
 - [ ] Polish mobile quick edit.
   - Finish touch target and reduced-transparency audit.
@@ -410,6 +470,7 @@ predictable.
   - Keep phone scoped to quick edits, image replacement, color, layers,
     translation, export/share.
 - [ ] Update user documentation.
+  - AI provider setup and privacy is written: `docs/ai-providers.md`.
   - Getting started.
   - Browser vs desktop differences.
   - `.calqo` portability.

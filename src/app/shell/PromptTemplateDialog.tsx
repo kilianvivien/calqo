@@ -6,6 +6,8 @@ import { Bot, Copy, ImagePlus, Sparkles, X } from 'lucide-react';
 import { GlassButton, GlassIconButton, ModalOverlay } from '@/components/glass';
 import { clipboard } from '@/lib/adapters';
 import { extractPalette } from '@/lib/utils/palette';
+import { prepareReferenceImage } from '@/editor/ai/referenceImage';
+import type { CompletionImage } from '@/editor/ai/completion';
 import {
   COMMON_CONTENT_LOCALES,
   localeLabel,
@@ -66,8 +68,10 @@ function PromptTemplateDialogInner({
       alive.current = false;
     };
   }, []);
+  const abortRef = useRef<AbortController | null>(null);
   const close = () => {
     alive.current = false;
+    abortRef.current?.abort();
     setAiDialog('none');
   };
 
@@ -91,7 +95,15 @@ function PromptTemplateDialogInner({
       alive = false;
     };
   }, []);
-  const [referenceUrl, setReferenceUrl] = useState('');
+  const [referenceNote, setReferenceNote] = useState('');
+  const [referenceImage, setReferenceImage] = useState<CompletionImage | null>(
+    null,
+  );
+  const [progress, setProgress] = useState<{
+    attempt: number;
+    reasoning: boolean;
+    receivedChars: number;
+  } | null>(null);
   const [referencePalette, setReferencePalette] = useState<string[]>([]);
   const [referenceName, setReferenceName] = useState<string | null>(null);
   const referenceInputRef = useRef<HTMLInputElement>(null);
@@ -100,20 +112,29 @@ function PromptTemplateDialogInner({
 
   const onPickReference = async (file: File) => {
     setReferenceName(file.name);
-    const palette = await extractPalette(file);
+    const [palette, image] = await Promise.all([
+      extractPalette(file),
+      prepareReferenceImage(file),
+    ]);
     setReferencePalette(palette);
+    setReferenceImage(image);
   };
 
   const clearReference = () => {
     setReferenceName(null);
     setReferencePalette([]);
-    setReferenceUrl('');
+    setReferenceImage(null);
   };
+
+  const cancel = () => abortRef.current?.abort();
 
   const generate = async () => {
     if (!prompt.trim()) return;
     setBusy(true);
     setFailure(null);
+    setProgress(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const provider = getProvider(settings);
       if (!provider) {
@@ -121,7 +142,9 @@ function PromptTemplateDialogInner({
         return;
       }
       const hasReference =
-        referencePalette.length > 0 || referenceUrl.trim().length > 0;
+        referencePalette.length > 0 ||
+        referenceImage !== null ||
+        referenceNote.trim().length > 0;
       const brandProfile = profiles.find(
         (candidate) => candidate.id === profileId,
       );
@@ -135,7 +158,9 @@ function PromptTemplateDialogInner({
           : usePalette
             ? project?.palette
             : undefined;
-      const validation = await generateTemplate(provider, {
+      const validation = await generateTemplate(
+        provider,
+        {
         prompt: prompt.trim(),
         preset,
         locale,
@@ -145,11 +170,17 @@ function PromptTemplateDialogInner({
           : undefined,
         styleReference: hasReference
           ? {
-              url: referenceUrl.trim() || undefined,
+              note: referenceNote.trim() || undefined,
               palette: referencePalette.length ? referencePalette : undefined,
+              image: referenceImage ?? undefined,
             }
           : undefined,
-      });
+        },
+        controller.signal,
+        (next) => {
+          if (alive.current) setProgress(next);
+        },
+      );
       if (!alive.current) return;
       if (validation.ok) {
         const newProjectId = await adoptProject(validation.project);
@@ -164,10 +195,15 @@ function PromptTemplateDialogInner({
         });
       }
     } catch (error) {
+      if (controller.signal.aborted) return;
       console.error('[Calqo] template generation failed', error);
       setFailure({ error: t('promptTemplate.failed'), raw: String(error) });
     } finally {
-      setBusy(false);
+      if (abortRef.current === controller) abortRef.current = null;
+      if (alive.current) {
+        setBusy(false);
+        setProgress(null);
+      }
     }
   };
 
@@ -328,11 +364,15 @@ function PromptTemplateDialogInner({
               </span>
             )}
           </div>
+          <p className="text-[11px] text-[var(--calqo-text-3)]">
+            {t('promptTemplate.referenceHint')}
+          </p>
           <input
-            type="url"
-            value={referenceUrl}
-            placeholder={t('promptTemplate.referenceUrl')}
-            onChange={(event) => setReferenceUrl(event.target.value)}
+            type="text"
+            value={referenceNote}
+            aria-label={t('promptTemplate.referenceNote')}
+            placeholder={t('promptTemplate.referenceNote')}
+            onChange={(event) => setReferenceNote(event.target.value)}
             className="h-8 w-full rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2.5 text-[12px] text-[var(--calqo-text)] outline-none focus:border-[var(--calqo-accent)]"
           />
         </div>
@@ -409,7 +449,25 @@ function PromptTemplateDialogInner({
           </GlassButton>
         )}
         <div className="ml-auto flex items-center gap-2">
-          <GlassButton onClick={close}>{t('export.close')}</GlassButton>
+          {busy && (
+            <span
+              role="status"
+              className="max-w-[180px] truncate text-[11.5px] text-[var(--calqo-text-3)]"
+            >
+              {progress
+                ? progress.attempt > 1
+                  ? t('promptTemplate.progressRepair')
+                  : progress.reasoning
+                    ? t('promptTemplate.progressThinking')
+                    : t('promptTemplate.progressDrafting')
+                : t('promptTemplate.progressWaiting')}
+            </span>
+          )}
+          {busy ? (
+            <GlassButton onClick={cancel}>{t('promptTemplate.cancel')}</GlassButton>
+          ) : (
+            <GlassButton onClick={close}>{t('export.close')}</GlassButton>
+          )}
           <GlassButton
             variant="primary"
             onClick={generate}

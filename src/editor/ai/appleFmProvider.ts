@@ -1,20 +1,7 @@
 import { appleFm } from '@/lib/adapters';
-import type {
-  AIProvider,
-  AIProviderDiagnostics,
-  SvgPromptInput,
-  SvgPromptResult,
-  TemplatePromptInput,
-  TemplatePromptResult,
-  TranslationJob,
-  TranslationResult,
-} from './AIProvider';
-import { parseTranslationResponse } from './openAICompatibleProvider';
-import {
-  buildSvgPrompt,
-  buildTemplatePrompt,
-  buildTranslationPrompt,
-} from './prompts';
+import type { AIProvider } from './AIProvider';
+import { stripReasoning } from './completion';
+import { createCompletionProvider } from './completionProvider';
 
 export interface AppleFmProviderConfig {
   baseUrl: string;
@@ -68,13 +55,6 @@ export function createAppleFmProvider(
   const model = config.model ?? 'system';
   const label = config.label ?? 'Apple Intelligence (AFM 3)';
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT;
-  const diagnostics: AIProviderDiagnostics = {
-    providerId: 'apple',
-    providerLabel: label,
-    modelId: model,
-    timeoutMs,
-  };
-
   async function chat(
     messages: ChatMessage[],
     signal?: AbortSignal,
@@ -121,54 +101,27 @@ export function createAppleFmProvider(
     }
   }
 
-  return {
+  return createCompletionProvider({
     id: 'apple',
     label,
-    capabilities: { structuredJson: true, translation: true },
-
-    async generateTemplate(
-      input: TemplatePromptInput,
-      signal?: AbortSignal,
-    ): Promise<TemplatePromptResult> {
-      const { system, user } = buildTemplatePrompt(input);
-      const raw = await chat(
-        [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-        signal,
-      );
-      return { raw, diagnostics: { ...diagnostics, rawOutput: raw } };
+    modelId: model,
+    // The on-device model has a small context window and no image input, so it
+    // gets the compact schema summary.
+    capabilities: {
+      structuredJson: true,
+      translation: true,
+      vision: false,
+      promptProfile: 'compact',
     },
-
-    async generateSvg(
-      input: SvgPromptInput,
-      signal?: AbortSignal,
-    ): Promise<SvgPromptResult> {
-      const { system, user } = buildSvgPrompt(input);
-      const raw = await chat(
+    async complete(request) {
+      const text = await chat(
         [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
+          { role: 'system', content: request.system },
+          { role: 'user', content: request.user },
         ],
-        signal,
+        request.signal,
       );
-      return { raw, diagnostics: { ...diagnostics, rawOutput: raw } };
+      return { text: stripReasoning(text) || text, downgrades: [] };
     },
-
-    async translate(
-      job: TranslationJob,
-      signal?: AbortSignal,
-    ): Promise<TranslationResult> {
-      const { system, user } = buildTranslationPrompt(job);
-      const raw = await chat(
-        [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-        signal,
-      );
-      return parseTranslationResponse(raw, job, diagnostics);
-    },
-  };
+  });
 }

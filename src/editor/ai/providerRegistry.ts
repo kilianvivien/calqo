@@ -1,5 +1,6 @@
 import type { AIProvider } from './AIProvider';
 import { aiReadiness } from './readiness';
+import { createAnthropicProvider } from './anthropicProvider';
 import { createGeminiProvider } from './geminiProvider';
 import { createOpenAICompatibleProvider } from './openAICompatibleProvider';
 import { createAppleFmProvider } from './appleFmProvider';
@@ -33,6 +34,14 @@ export function getProvider(settings: AiSettings): AIProvider | null {
     });
   }
 
+  if (settings.providerId === 'anthropic') {
+    return createAnthropicProvider({
+      model,
+      apiKey: config.apiKey || undefined,
+      label: preset.label,
+    });
+  }
+
   if (settings.providerId === 'apple') {
     if (config.enabled !== true) return null;
     const status = appleFmStore.getState().status;
@@ -46,6 +55,7 @@ export function getProvider(settings: AiSettings): AIProvider | null {
     apiKey: config.apiKey || undefined,
     label: preset.label,
     providerId: preset.id,
+    omitTemperature: preset.omitTemperature,
   });
 }
 

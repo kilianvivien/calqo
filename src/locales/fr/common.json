@@ -153,7 +153,14 @@
       "agentSkillHint": "Téléchargez un guide SKILL.md pour les agents de code qui génèrent des fichiers .calqo modifiables depuis des prompts.",
       "downloadSkill": "Télécharger SKILL.md",
       "downloadClaudeSkill": "Télécharger .skill Claude",
-      "keychainNote": "Les clés sont enregistrées dans le trousseau macOS. Les échecs sont signalés ci-dessus ; aucun stockage non sécurisé n’est utilisé."
+      "keychainNote": "Les clés sont enregistrées dans le trousseau macOS. Les échecs sont signalés ci-dessus ; aucun stockage non sécurisé n’est utilisé.",
+      "modelRefresh": "Charger les modèles disponibles",
+      "modelFree": "gratuit",
+      "modelVision": "images",
+      "modelListHint": "Saisissez un identifiant de modèle ou chargez la liste du fournisseur.",
+      "modelListReady": "{{count}} modèle(s) disponible(s) — commencez à saisir pour filtrer.",
+      "modelListError": "Impossible de charger la liste des modèles. Vous pouvez toujours saisir un identifiant.",
+      "modelListUnavailable": "Terminez la configuration pour charger la liste, ou saisissez un identifiant de modèle."
     },
     "agentDrawing": {
       "title": "Dessin par agent",

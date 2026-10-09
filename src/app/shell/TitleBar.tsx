@@ -15,6 +15,7 @@ import {
   Save,
   Share,
   Sparkles,
+  Wand2,
   Sun,
   Undo2,
 } from 'lucide-react';
@@ -235,6 +236,15 @@ export function TitleBar() {
         >
           <Sparkles size={16} />
         </GlassIconButton>
+        {aiEnabled && (
+          <GlassIconButton
+            label={t('editor:ai.editDesign')}
+            disabled={!activeProjectId}
+            onClick={() => invokeAppCommandSync('ai.editDesign')}
+          >
+            <Wand2 size={16} />
+          </GlassIconButton>
+        )}
         <GlassIconButton
           label={
             aiEnabled ? t('editor:ai.translate') : t('editor:ai.setupTranslate')

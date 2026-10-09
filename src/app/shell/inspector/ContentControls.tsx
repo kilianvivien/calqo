@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Languages, Plus, X } from 'lucide-react';
+import { AlertTriangle, Languages, Plus, Wand2, X } from 'lucide-react';
 import {
   addContentLocale,
   removeContentLocale,
@@ -14,6 +14,10 @@ import {
 import { useActiveProject } from '@/lib/state/selectors';
 import { useUiStore } from '@/lib/state/uiStore';
 import { isAiEnabled, useAiSettingsStore } from '@/editor/ai/aiSettings';
+import { COPY_ACTIONS, rewriteLayerCopy } from '@/editor/ai/copyService';
+import type { CopyAction } from '@/editor/ai/prompts';
+import { getProvider } from '@/editor/ai/providerRegistry';
+import { aiReadiness } from '@/editor/ai/readiness';
 import type { TextLayer } from '@/lib/schema';
 
 /** Project-level content-locale management (plan §13, E1). Lives in the Style
@@ -159,6 +163,51 @@ export function TextVariants({
   activeLocale: string;
 }) {
   const { t } = useTranslation('editor');
+  const settings = useAiSettingsStore((s) => s.settings);
+  const aiReady = isAiEnabled(settings) && aiReadiness(settings).ready;
+  const [copyState, setCopyState] = useState<{
+    locale: string;
+    status: 'busy' | 'error' | 'overflow';
+  } | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  // A pending rewrite belongs to the layer it was started on.
+  useEffect(() => {
+    setCopyState(null);
+    return () => abortRef.current?.abort();
+  }, [layer.id]);
+
+  const rewrite = async (locale: string, action: CopyAction) => {
+    const provider = getProvider(settings);
+    if (!provider) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setCopyState({ locale, status: 'busy' });
+    try {
+      const result = await rewriteLayerCopy(
+        provider,
+        layer,
+        locale,
+        action,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      if (!result.ok) {
+        setCopyState({ locale, status: 'error' });
+        return;
+      }
+      updateTextForLocale(projectId, layer.id, locale, result.text);
+      setCopyState(result.overflows ? { locale, status: 'overflow' } : null);
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      console.error(
+        '[Calqo] copy rewrite failed',
+        error instanceof Error ? error.message : error,
+      );
+      setCopyState({ locale, status: 'error' });
+    }
+  };
+
   return (
     <div className="flex flex-col gap-2">
       {locales.map((locale) => {
@@ -182,6 +231,35 @@ export function TextVariants({
                   {t('content.missingVariant')}
                 </span>
               )}
+              {aiReady && (value ?? '').trim() && (
+                <label className="ml-auto flex items-center gap-1 text-[10.5px] text-[var(--calqo-accent)]">
+                  <Wand2 size={11} />
+                  <select
+                    value=""
+                    disabled={copyState?.status === 'busy'}
+                    aria-label={t('content.copy.label', {
+                      locale: locale.toUpperCase(),
+                    })}
+                    onChange={(event) => {
+                      const action = event.target.value as CopyAction | '';
+                      if (action) void rewrite(locale, action);
+                    }}
+                    className="max-w-[112px] cursor-pointer bg-transparent text-[10.5px] font-medium text-[var(--calqo-accent)] outline-none disabled:opacity-50"
+                  >
+                    <option value="">
+                      {copyState?.locale === locale &&
+                      copyState.status === 'busy'
+                        ? t('content.copy.working')
+                        : t('content.copy.menu')}
+                    </option>
+                    {COPY_ACTIONS.map((action) => (
+                      <option key={action} value={action}>
+                        {t(`content.copy.actions.${action}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
             <textarea
               value={value ?? ''}
@@ -191,6 +269,11 @@ export function TextVariants({
               }
               className="min-h-12 w-full resize-y rounded-[var(--calqo-radius-sm)] border border-[var(--calqo-divider)] bg-[var(--calqo-glass)] px-2.5 py-1.5 text-[12px] text-[var(--calqo-text)] outline-none transition-colors focus:border-[var(--calqo-accent)] focus:ring-2 focus:ring-[var(--calqo-accent-ring)]"
             />
+            {copyState?.locale === locale && copyState.status !== 'busy' && (
+              <p role="status" className="mt-1 text-[10.5px] text-[#B7791F]">
+                {t(`content.copy.${copyState.status}`)}
+              </p>
+            )}
           </div>
         );
       })}

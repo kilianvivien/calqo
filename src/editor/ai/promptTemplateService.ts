@@ -4,6 +4,7 @@ import type { LocaleCode } from '@/lib/schema';
 import { STROKE_LOOK_IDS } from '@/editor/canvas/strokePresets';
 import { FRAME_PRESET_IDS } from '@/editor/images/framePresets';
 import type { AIProvider, StyleReference, TemplatePromptInput } from './AIProvider';
+import type { CompletionProgress } from './completion';
 import { validateTemplateResponse, type TemplateValidation } from './validation';
 
 /** Prototype cap on generated layers (plan §14.6). */
@@ -46,9 +47,14 @@ export async function generateTemplate(
   provider: AIProvider,
   request: TemplateRequest,
   signal?: AbortSignal,
+  onProgress?: (progress: CompletionProgress & { attempt: number }) => void,
 ): Promise<TemplateValidation> {
   const input = buildTemplateInput(request);
-  const result = await provider.generateTemplate(input, signal);
+  const result = await provider.generateTemplate(
+    input,
+    signal,
+    onProgress && ((progress) => onProgress({ ...progress, attempt: 1 })),
+  );
   const validation = validateTemplateResponse(result.raw, input, result.diagnostics);
   if (validation.ok) return validation;
 
@@ -60,7 +66,11 @@ export async function generateTemplate(
       raw: result.raw,
     },
   };
-  const retry = await provider.generateTemplate(retryInput, signal);
+  const retry = await provider.generateTemplate(
+    retryInput,
+    signal,
+    onProgress && ((progress) => onProgress({ ...progress, attempt: 2 })),
+  );
   const retryValidation = validateTemplateResponse(retry.raw, retryInput, {
     providerId: provider.id,
     ...retry.diagnostics,

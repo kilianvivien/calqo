@@ -497,7 +497,8 @@
       "model": "Choose a model in Settings → AI provider.",
       "key": "Add an API key in Settings → AI provider.",
       "storageError": "Settings could not be saved securely. Keys entered now remain available for this session; retry setup before restarting."
-    }
+    },
+    "editDesign": "Edit with AI"
   },
   "content": {
     "locales": "Content locales",
@@ -514,6 +515,21 @@
       "reduce-font": "Text overflows its box — reduce the font size or enlarge the box.",
       "increase-box": "Text is wider than its box — widen the box.",
       "manual-check": "Text may not fit — check this layer."
+    },
+    "copy": {
+      "label": "Rewrite {{locale}} text with AI",
+      "menu": "AI rewrite",
+      "working": "Rewriting…",
+      "error": "The rewrite failed. Your text was not changed.",
+      "overflow": "The new text may not fit its box.",
+      "actions": {
+        "shorten": "Shorten",
+        "rewrite": "Rephrase",
+        "punchier": "Punchier",
+        "formal": "More formal",
+        "friendly": "Friendlier",
+        "proofread": "Fix spelling"
+      }
     }
   },
   "translate": {
@@ -538,7 +554,12 @@
     "apply": "Apply",
     "applied": "Translation applied.",
     "noText": "No text found to translate.",
-    "failed": "Translation failed. Check your AI provider settings."
+    "failed": "Translation failed. Check your AI provider settings.",
+    "progress": "Translating to {{locale}} ({{current}}/{{total}})…",
+    "failedLocales": "Could not translate: {{locales}}. The other languages are ready.",
+    "pickTarget": "Pick at least one language",
+    "shortened": "{{count}} shortened to fit",
+    "overflowing": "{{count}} may not fit the box"
   },
   "promptTemplate": {
     "title": "Prompt a template",
@@ -558,10 +579,44 @@
     "retries": "Retries",
     "styleReference": "Style reference (optional)",
     "referenceImage": "Sample image",
-    "referenceUrl": "…or paste an image URL to mimic",
     "removeReference": "Remove reference",
     "brandProfile": "Brand",
-    "noBrandProfile": "No brand profile"
+    "noBrandProfile": "No brand profile",
+    "referenceHint": "With a model that accepts images, the sample is sent so the AI can echo its layout and mood. Otherwise only its colours are used.",
+    "referenceNote": "Describe the style to aim for (optional)",
+    "progressWaiting": "Waiting for the model…",
+    "progressThinking": "The model is thinking…",
+    "progressDrafting": "Drafting the design…",
+    "progressRepair": "Fixing the first draft…",
+    "cancel": "Cancel"
+  },
+  "editDesign": {
+    "title": "Edit with AI",
+    "subtitle": "Describe a change and the AI adjusts the current artboard. Everything stays editable.",
+    "placeholder": "e.g. Make the headline bigger and move the badge to the top right.",
+    "suggestions": {
+      "contrast": "Improve text contrast",
+      "spacing": "Tidy spacing and alignment",
+      "hierarchy": "Make the headline stand out",
+      "palette": "Try a warmer colour palette"
+    },
+    "scopeSelection": "Applies to the {{count}} selected layer(s) on “{{artboard}}”.",
+    "scopeArtboard": "Applies to the whole artboard “{{artboard}}”. Select layers first to target them.",
+    "apply": "Apply",
+    "working": "Working…",
+    "applied": "The change was applied.",
+    "noChange": "The AI did not change anything.",
+    "undo": "Undo this change",
+    "undone": "The change was undone.",
+    "stale": "The design changed while the AI was working, so nothing was applied. Try again.",
+    "invalid": "The AI proposed changes that could not be applied",
+    "failed": "The edit failed. Check your AI provider settings.",
+    "progress": {
+      "waiting": "Waiting for the model…",
+      "thinking": "The model is thinking…",
+      "drafting": "Preparing the changes…",
+      "repair": "Correcting the first attempt…"
+    }
   },
   "svgLibrary": {
     "title": "Insert SVG",

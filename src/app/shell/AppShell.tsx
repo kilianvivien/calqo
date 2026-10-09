@@ -28,6 +28,7 @@ import { SvgLibraryDialog } from './SvgLibraryDialog';
 import { EmojiPickerDialog } from './EmojiPickerDialog';
 import { ShortcutHelpModal } from './ShortcutHelpModal';
 import { TranslateDialog } from './TranslateDialog';
+import { EditDesignDialog } from './EditDesignDialog';
 import { TitleBar } from './TitleBar';
 import { TabBar } from './TabBar';
 import { ToolRail } from './ToolRail';
@@ -195,6 +196,7 @@ export function AppShell() {
         onClose={() => setShortcutsOpen(false)}
       />
       <TranslateDialog />
+      <EditDesignDialog />
       <NewProjectModal
         open={newProjectOpen}
         initialTab={newProjectTab}

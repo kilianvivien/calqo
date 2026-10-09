@@ -1,4 +1,10 @@
 import type { GlossaryEntry, LocaleCode } from '@/lib/schema';
+import type {
+  CompletionImage,
+  CompletionProgress,
+  CompletionRequest,
+  CompletionResult,
+} from './completion';
 
 /** A style reference the model should mimic: a sample image URL and/or a palette
  * extracted from an uploaded sample, plus a free-text note. */
@@ -9,6 +15,9 @@ export interface StyleReference {
   palette?: string[];
   /** Free-text style note (e.g. "match this brand's mood"). */
   note?: string;
+  /** The uploaded sample itself, sent to providers that accept image input so
+   * the model can actually see the composition it should echo. */
+  image?: CompletionImage;
 }
 
 /** Input for prompt-a-template generation (plan §14.5). */
@@ -36,6 +45,9 @@ export interface TemplatePromptInput {
   strokeLooks?: string[];
   /** Supported image frame-kind names the model may request (Phase R). */
   frameKinds?: string[];
+  /** How much of the schema to describe. Small on-device models get the
+   * compact summary; everything else gets gradients, groups and effects. */
+  detail?: 'full' | 'compact';
   /** Optional second-pass repair context after parse/schema/quality failure. */
   repair?: {
     error: string;
@@ -74,6 +86,8 @@ export interface TranslationItem {
   sourceText: string;
   context?: string;
   maxCharsHint?: number;
+  /** A previous translation that overflowed its box and must be shortened. */
+  previousTranslation?: string;
 }
 
 /** A translation request bundle (plan §13.3). */
@@ -122,10 +136,17 @@ export interface AIProvider {
   capabilities: {
     structuredJson: boolean;
     translation: boolean;
+    /** Accepts image input (style references, artboard previews). */
+    vision?: boolean;
+    /** Prompt size the backend copes with; defaults to `full`. */
+    promptProfile?: 'full' | 'compact';
   };
+  /** Model id requests are sent to, for diagnostics. */
+  modelId?: string;
   generateTemplate(
     input: TemplatePromptInput,
     signal?: AbortSignal,
+    onProgress?: (progress: CompletionProgress) => void,
   ): Promise<TemplatePromptResult>;
   translate(
     input: TranslationJob,
@@ -137,4 +158,19 @@ export interface AIProvider {
     input: SvgPromptInput,
     signal?: AbortSignal,
   ): Promise<SvgPromptResult>;
+  /** Generic completion primitive behind the newer AI features (design edits,
+   * copy tools). Optional so minimal test doubles stay valid. */
+  complete?(request: CompletionRequest): Promise<CompletionResult>;
+  /** List the models the configured endpoint/key can use. */
+  listModels?(signal?: AbortSignal): Promise<AiModelInfo[]>;
+}
+
+/** A model offered by a provider's catalog endpoint. */
+export interface AiModelInfo {
+  id: string;
+  label?: string;
+  /** Known to accept image input, when the catalog says so. */
+  vision?: boolean;
+  /** Listed at zero cost, when the catalog says so. */
+  free?: boolean;
 }

@@ -497,7 +497,8 @@
       "model": "Choisissez un modèle dans Réglages → Fournisseur IA.",
       "key": "Ajoutez une clé API dans Réglages → Fournisseur IA.",
       "storageError": "Les réglages n’ont pas pu être enregistrés de façon sécurisée. Les clés saisies restent disponibles pour cette session ; réessayez avant de redémarrer."
-    }
+    },
+    "editDesign": "Modifier avec l’IA"
   },
   "content": {
     "locales": "Langues de contenu",
@@ -514,6 +515,21 @@
       "reduce-font": "Le texte dépasse de son cadre — réduisez la taille de police ou agrandissez le cadre.",
       "increase-box": "Le texte est plus large que son cadre — élargissez le cadre.",
       "manual-check": "Le texte risque de ne pas tenir — vérifiez ce calque."
+    },
+    "copy": {
+      "label": "Réécrire le texte {{locale}} avec l’IA",
+      "menu": "Réécrire (IA)",
+      "working": "Réécriture…",
+      "error": "La réécriture a échoué. Votre texte n’a pas été modifié.",
+      "overflow": "Le nouveau texte risque de dépasser de son cadre.",
+      "actions": {
+        "shorten": "Raccourcir",
+        "rewrite": "Reformuler",
+        "punchier": "Plus percutant",
+        "formal": "Plus formel",
+        "friendly": "Plus chaleureux",
+        "proofread": "Corriger l’orthographe"
+      }
     }
   },
   "translate": {
@@ -538,7 +554,12 @@
     "apply": "Appliquer",
     "applied": "Traduction appliquée.",
     "noText": "Aucun texte à traduire.",
-    "failed": "Échec de la traduction. Vérifiez les réglages du fournisseur IA."
+    "failed": "Échec de la traduction. Vérifiez les réglages du fournisseur IA.",
+    "progress": "Traduction en {{locale}} ({{current}}/{{total}})…",
+    "failedLocales": "Traduction impossible : {{locales}}. Les autres langues sont prêtes.",
+    "pickTarget": "Choisissez au moins une langue",
+    "shortened": "{{count}} raccourci(s) pour tenir",
+    "overflowing": "{{count}} risque(nt) de dépasser du cadre"
   },
   "promptTemplate": {
     "title": "Générer un modèle",
@@ -558,10 +579,44 @@
     "retries": "Reprises",
     "styleReference": "Référence de style (facultatif)",
     "referenceImage": "Image d'exemple",
-    "referenceUrl": "…ou collez l'URL d'une image à imiter",
     "removeReference": "Retirer la référence",
     "brandProfile": "Marque",
-    "noBrandProfile": "Aucun profil de marque"
+    "noBrandProfile": "Aucun profil de marque",
+    "referenceHint": "Avec un modèle qui accepte les images, l’exemple est envoyé pour que l’IA s’inspire de sa mise en page et de son ambiance. Sinon, seules ses couleurs sont utilisées.",
+    "referenceNote": "Décrivez le style visé (facultatif)",
+    "progressWaiting": "En attente du modèle…",
+    "progressThinking": "Le modèle réfléchit…",
+    "progressDrafting": "Création du design…",
+    "progressRepair": "Correction du premier jet…",
+    "cancel": "Annuler"
+  },
+  "editDesign": {
+    "title": "Modifier avec l’IA",
+    "subtitle": "Décrivez un changement et l’IA ajuste le plan de travail actuel. Tout reste modifiable.",
+    "placeholder": "ex. Agrandis le titre et place le badge en haut à droite.",
+    "suggestions": {
+      "contrast": "Améliorer le contraste du texte",
+      "spacing": "Harmoniser les espacements et l’alignement",
+      "hierarchy": "Faire ressortir le titre",
+      "palette": "Essayer une palette plus chaude"
+    },
+    "scopeSelection": "S’applique aux {{count}} calque(s) sélectionné(s) sur « {{artboard}} ».",
+    "scopeArtboard": "S’applique à tout le plan de travail « {{artboard}} ». Sélectionnez d’abord des calques pour les cibler.",
+    "apply": "Appliquer",
+    "working": "En cours…",
+    "applied": "La modification a été appliquée.",
+    "noChange": "L’IA n’a rien modifié.",
+    "undo": "Annuler cette modification",
+    "undone": "La modification a été annulée.",
+    "stale": "Le design a changé pendant le travail de l’IA : rien n’a été appliqué. Réessayez.",
+    "invalid": "L’IA a proposé des modifications impossibles à appliquer",
+    "failed": "La modification a échoué. Vérifiez les réglages du fournisseur d’IA.",
+    "progress": {
+      "waiting": "En attente du modèle…",
+      "thinking": "Le modèle réfléchit…",
+      "drafting": "Préparation des modifications…",
+      "repair": "Correction de la première tentative…"
+    }
   },
   "svgLibrary": {
     "title": "Insérer un SVG",

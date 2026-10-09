@@ -1,3 +1,4 @@
+import { ModelPicker } from '@/app/shell/ModelPicker';
 import { AiReadinessNote } from './AiReadinessNote';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -502,14 +503,16 @@ export function AppSettingsModal({
                           }
                         />
                       )}
-                      <TextSetting
-                        label={t('settings.ai.model')}
-                        value={config.model}
-                        placeholder={preset.defaultModel}
-                        onChange={(model) =>
-                          updateProviderConfig(providerId, { model })
-                        }
-                      />
+                      <SettingsRow label={t('settings.ai.model')}>
+                        <ModelPicker
+                          providerId={providerId}
+                          value={config.model}
+                          placeholder={preset.defaultModel}
+                          onChange={(model) =>
+                            updateProviderConfig(providerId, { model })
+                          }
+                        />
+                      </SettingsRow>
                       {preset.needsKey && (
                         <>
                           <TextSetting
