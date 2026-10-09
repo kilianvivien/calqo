@@ -107,7 +107,11 @@ Phase 2 — implemented, unreleased (2026-10-09), one commit per step:
   byte-identical between Konva 9.3.22 and 10.7.1 with the flag on. Adopting the
   new baseline would need the text overlay and HTML/SVG exports recalibrated
   and a migration story for existing designs.
-- [ ] TypeScript 7 stays deferred.
+- [x] TypeScript 6.0 (pinned `~6.0.3`). Dropped the deprecated `baseUrl`
+  from `tsconfig.json`, so the config is ready for 7.
+- [ ] TypeScript 7 stays deferred: typescript-eslint 8.71 supports
+  `<6.1.0` only, and TypeScript 7 no longer ships the compiler API it is
+  built on. Revisit when typescript-eslint supports it.
 - [ ] Native build not re-run: only `cargo check` and the web gate were
   exercised, so a `pnpm tauri:build` and a hands-on pass in the macOS app are
   still owed before release.

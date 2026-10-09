@@ -102,7 +102,7 @@ export function resolveMcpArtboard(
   const id =
     artboardId ??
     (workspaceStore.getState().activeProjectId === project.id
-      ? (selectionStore.getState().activeArtboardId ?? undefined)
+      ? selectionStore.getState().activeArtboardId
       : undefined) ??
     project.artboards[0]?.id;
   const artboard = project.artboards.find((candidate) => candidate.id === id);
