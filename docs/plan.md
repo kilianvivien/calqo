@@ -4,10 +4,10 @@
 **Status refreshed:** 2026-10-09
 **Current working-tree version:** `0.9.0` in package and Tauri metadata
 (unreleased; `v0.8.0` is the published release)
-**In progress — 0.9.0 (AI quality):** phase 1 is implemented in the working
-tree and not yet released; see "0.9.0 — AI quality" under the snapshot below.
-The local browser gate passes 690 unit tests and 9 Chromium smoke tests; the
-native crate compiles. No provider was exercised against its live API.
+**In progress — 0.9.0 (AI quality):** phases 1 and 2 are implemented on the
+`calqo-0.9.0` branch and not yet released; see "0.9.0 — AI quality" under the snapshot below.
+Phases 1 and 2 pass 691 unit tests and 9 Chromium smoke tests; the native
+crate compiles. No provider was exercised against its live API.
 **Release status:** [`v0.8.0`](https://github.com/kilianvivien/calqo/releases/tag/v0.8.0)
 is published as the latest GitHub release (2026-09-20), adding the on-device
 Apple Intelligence provider. The local browser gate passes 653 unit tests; the
@@ -85,10 +85,34 @@ Open before 0.9.0 ships:
 - [x] Version bump to 0.9.0 and draft release notes (README). The download
   link still points at v0.8.0 until the release is published.
 
-Phase 2 — planned, not started: tooling majors (Vite 8, Vitest 5,
-plugin-react 6, vite-plugin-pwa 2, ESLint 10, jsdom 30) and runtime majors
-(Konva 10, Zod 4, immer 11, i18next 26 / react-i18next 17, tailwind-merge 3,
-lucide-react 1.x, nanoid 6), one change at a time. TypeScript 7 stays deferred.
+Phase 2 — implemented, unreleased (2026-10-09), one commit per step:
+
+- [x] Build and test tooling: Vite 8, @vitejs/plugin-react 6, vite-plugin-pwa
+  2, Vitest 5, jsdom 30. No config changes; the Safari 14 target still
+  down-levels the bundle.
+- [x] Lint tooling: ESLint 10, eslint-plugin-react-hooks 7, jest-dom 7. The
+  React Compiler rules that react-hooks 7 adds to `recommended`
+  (`set-state-in-effect`, `refs`, `immutability`) are switched off in
+  `eslint.config.js`: 57 pre-existing findings, deferred to their own change.
+- [x] nanoid 6, tailwind-merge 3, lucide-react 1 (brand icons removed
+  upstream; the GitHub link uses `src/components/GithubIcon.tsx`).
+- [x] immer 11; i18next 26 and react-i18next 17.
+- [x] Zod 4. Two behaviour changes needed code: `.partial()` now applies field
+  defaults, which would have reset untouched style/marker properties on every
+  `updateLayer` patch (fixed with a default-free `patchOf`, regression test in
+  `mcpExecutor.test.ts`); and union errors moved to `errors` with
+  branch-relative paths.
+- [x] Konva 10 with `Konva.legacyTextRendering = true`. Konva 10's default
+  alphabetic baseline shifts all text; a PNG export of a text-heavy fixture is
+  byte-identical between Konva 9.3.22 and 10.7.1 with the flag on. Adopting the
+  new baseline would need the text overlay and HTML/SVG exports recalibrated
+  and a migration story for existing designs.
+- [ ] TypeScript 7 stays deferred.
+- [ ] Native build not re-run: only `cargo check` and the web gate were
+  exercised, so a `pnpm tauri:build` and a hands-on pass in the macOS app are
+  still owed before release.
+
+The local browser gate now passes 691 unit tests and 9 Chromium smoke tests.
 
 Implemented and worth protecting:
 
