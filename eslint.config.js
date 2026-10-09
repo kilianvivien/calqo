@@ -28,6 +28,13 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // eslint-plugin-react-hooks 7 folds the React Compiler rules into
+      // `recommended`. The app does not use the compiler and predates these
+      // rules (57 findings at upgrade time), so they are deferred rather than
+      // fixed inside a dependency bump. Classic hooks rules stay enforced.
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/immutability': 'off',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

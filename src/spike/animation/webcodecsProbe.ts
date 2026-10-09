@@ -101,7 +101,7 @@ async function probeOne(
     return { family, config, configSupported: false, reason: 'webcodecs-unavailable' };
   }
 
-  let configSupported = false;
+  let configSupported: boolean;
   try {
     const support = await encoder.isConfigSupported(config);
     configSupported = support.supported === true;

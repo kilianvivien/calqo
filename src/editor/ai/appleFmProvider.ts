@@ -90,10 +90,14 @@ export function createAppleFmProvider(
         throw new DOMException('Aborted', 'AbortError');
       }
       if (message.includes('APPLE_FM_TIMEOUT')) {
-        throw new Error(`Apple Intelligence timed out after ${timeoutMs}ms.`);
+        throw new Error(`Apple Intelligence timed out after ${timeoutMs}ms.`, {
+          cause: error,
+        });
       }
       if (message.includes('APPLE_FM_UNREACHABLE')) {
-        throw new Error('Apple Intelligence is not reachable on this Mac.');
+        throw new Error('Apple Intelligence is not reachable on this Mac.', {
+          cause: error,
+        });
       }
       throw error;
     } finally {

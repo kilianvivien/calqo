@@ -77,8 +77,8 @@ export function GlassIconButton({
 
     const rect = tooltip.getBoundingClientRect();
     const margin = 8;
-    let nextTop = tip.top;
-    let nextLeft = tip.left;
+    let nextTop: number;
+    let nextLeft: number;
 
     if (tip.transform.includes('translateX')) {
       nextLeft = Math.min(
