@@ -196,7 +196,12 @@ export function AppShell() {
         onClose={() => setShortcutsOpen(false)}
       />
       <TranslateDialog />
-      <EditDesignDialog />
+      <EditDesignDialog
+        onOpenAgentSettings={() => {
+          setSettingsTab('agent');
+          setSettingsOpen(true);
+        }}
+      />
       <NewProjectModal
         open={newProjectOpen}
         initialTab={newProjectTab}

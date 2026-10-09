@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Check, Copy, Wand2, X } from 'lucide-react';
+import { AlertTriangle, Bot, Check, Copy, Wand2, X } from 'lucide-react';
 import { AiReadinessNote } from '@/app/shell/AiReadinessNote';
 import { GlassButton, GlassIconButton, ModalOverlay } from '@/components/glass';
 import { clipboard } from '@/lib/adapters';
@@ -18,6 +18,7 @@ import { useActiveProject } from '@/lib/state/selectors';
 import { projectStore } from '@/lib/state/projectStore';
 import { useSelectionStore } from '@/lib/state/selectionStore';
 import { useUiStore } from '@/lib/state/uiStore';
+import { isTauri } from '@/lib/platform/runtime';
 
 let editDraft = '';
 
@@ -26,10 +27,14 @@ const EDIT_PREVIEW_MAX_EDGE = 768;
 
 const SUGGESTIONS = ['contrast', 'spacing', 'hierarchy', 'palette'] as const;
 
-export function EditDesignDialog() {
+export function EditDesignDialog({
+  onOpenAgentSettings,
+}: {
+  onOpenAgentSettings: () => void;
+}) {
   const aiDialog = useUiStore((s) => s.aiDialog);
   if (aiDialog !== 'edit') return null;
-  return <EditDesignDialogInner />;
+  return <EditDesignDialogInner onOpenAgentSettings={onOpenAgentSettings} />;
 }
 
 /** Render the artboard for vision-capable providers. Best effort: the edit
@@ -55,7 +60,11 @@ async function renderPreview(
   }
 }
 
-function EditDesignDialogInner() {
+function EditDesignDialogInner({
+  onOpenAgentSettings,
+}: {
+  onOpenAgentSettings: () => void;
+}) {
   const { t } = useTranslation('editor');
   const project = useActiveProject();
   const activeArtboardId = useSelectionStore((s) => s.activeArtboardId);
@@ -317,6 +326,19 @@ function EditDesignDialogInner() {
       </div>
 
       <footer className="mt-5 flex items-center justify-end gap-2">
+        {isTauri && !busy && (
+          <GlassButton
+            variant="ghost"
+            className="mr-auto"
+            onClick={() => {
+              close();
+              onOpenAgentSettings();
+            }}
+          >
+            <Bot size={14} />
+            {t('promptTemplate.agentDrawingSettings')}
+          </GlassButton>
+        )}
         {busy && (
           <span
             role="status"
