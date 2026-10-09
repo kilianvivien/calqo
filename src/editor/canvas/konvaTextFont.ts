@@ -8,7 +8,7 @@ interface FontContext {
 }
 
 /** Build the CSS `font` shorthand for a Konva text node. We can't use
- * `node._getContextFont()` here directly because Konva 9 has no `fontWeight`
+ * `node._getContextFont()` here directly because Konva has no `fontWeight`
  * prop — the slot is omitted from the string it builds, so weight silently
  * drops to 400. The CalqoText wrapper stashes the real weight on a custom
  * `fontWeight` attribute that we read here.
@@ -28,7 +28,7 @@ export function buildCanvasFontString(node: FontContext): string {
 
 let patchPromise: Promise<void> | null = null;
 
-/** Konva 9's Text config exposes `fontStyle` (CSS `font-style`) and
+/** Konva's Text config exposes `fontStyle` (CSS `font-style`) and
  * `textDecoration` (CSS `text-decoration`) but no `fontWeight`. We patch
  * `_getContextFont` to read a custom `fontWeight` attribute and build a
  * proper CSS `font` shorthand. Imported once at app start; idempotent.
@@ -41,7 +41,14 @@ export function patchKonvaTextFont(): Promise<void> {
   // top-level graph — Konva's node entry requires the `canvas` package,
   // which isn't available in our jsdom test env.
   patchPromise = import('konva').then((mod) => {
-    const KonvaValue = (mod as { default: { Text: unknown } }).default;
+    const KonvaValue = (
+      mod as { default: { Text: unknown; legacyTextRendering: boolean } }
+    ).default;
+    // Konva 10 moved text to an alphabetic baseline, which shifts every line
+    // vertically. Existing designs, the in-place text editor overlay and the
+    // HTML/SVG exports are all calibrated to the previous middle-baseline
+    // layout, so keep it: an upgrade must not move anyone's text.
+    KonvaValue.legacyTextRendering = true;
     const TextCtor = KonvaValue.Text as unknown as {
       prototype: Konva.Text & { _getContextFont(): string };
     };
