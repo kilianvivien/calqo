@@ -770,24 +770,28 @@ function issuePath(path: PropertyKey[]): string {
  * `operations[2].layer.stroke.width` without probe/bisect calls. */
 function detailedValidationIssues(
   issues: Array<Record<string, unknown>>,
+  parentPath: PropertyKey[] = [],
 ): ValidationIssueDetail[] {
   const flattened = issues.flatMap((issue) => {
-    if (issue.code === 'invalid_union' && Array.isArray(issue.unionErrors)) {
-      const candidates = issue.unionErrors
-        .map((error) => {
-          const nested =
-            error &&
-            typeof error === 'object' &&
-            Array.isArray((error as { issues?: unknown }).issues)
-              ? (error as { issues: Array<Record<string, unknown>> }).issues
-              : [];
-          return detailedValidationIssues(nested);
-        })
+    // Zod reports paths inside a union branch relative to the union itself.
+    const path = [
+      ...parentPath,
+      ...(Array.isArray(issue.path) ? (issue.path as PropertyKey[]) : []),
+    ];
+    if (issue.code === 'invalid_union' && Array.isArray(issue.errors)) {
+      const candidates = issue.errors
+        .map((branch) =>
+          detailedValidationIssues(
+            Array.isArray(branch)
+              ? (branch as Array<Record<string, unknown>>)
+              : [],
+            path,
+          ),
+        )
         .filter((candidate) => candidate.length > 0)
         .sort((a, b) => a.length - b.length);
       if (candidates[0]) return candidates[0];
     }
-    const path = Array.isArray(issue.path) ? (issue.path as PropertyKey[]) : [];
     return [
       {
         path: issuePath(path),

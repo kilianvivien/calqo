@@ -584,6 +584,72 @@ describe('mcp executor', () => {
     });
   });
 
+  it('changes only the style and marker fields a patch names', () => {
+    const project = openProject();
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'addLayer',
+          layer: textLayer('layer_styled', {
+            style: {
+              fontFamily: 'Playfair Display',
+              fontSize: 40,
+              fontWeight: 700,
+              color: '#FF0000',
+              align: 'center',
+            },
+          }),
+        },
+        {
+          type: 'addLayer',
+          layer: {
+            id: 'layer_list',
+            name: 'List',
+            type: 'list',
+            x: 0,
+            y: 0,
+            w: 300,
+            h: 200,
+            items: [{ id: 'row', text: { en: 'One' } }],
+            marker: { kind: 'arrow', color: '#00FF00' },
+            style: {},
+          },
+        },
+      ],
+    });
+
+    executeApplyOperations({
+      operations: [
+        {
+          type: 'updateLayer',
+          layerId: 'layer_styled',
+          patch: { style: { fontSize: 96 } },
+        },
+        {
+          type: 'updateLayer',
+          layerId: 'layer_list',
+          patch: { marker: { color: '#0000FF' } },
+        },
+      ],
+    });
+
+    const layers = currentProject(project.id).artboards[0].layers;
+    const styled = layers.find((layer) => layer.id === 'layer_styled');
+    // A partial patch must not reset untouched properties to schema defaults.
+    expect(styled?.type === 'text' && styled.style).toMatchObject({
+      fontFamily: 'Playfair Display',
+      fontSize: 96,
+      fontWeight: 700,
+      color: '#FF0000',
+      align: 'center',
+    });
+    const list = layers.find((layer) => layer.id === 'layer_list');
+    expect(list?.type === 'list' && list.marker).toMatchObject({
+      kind: 'arrow',
+      color: '#0000FF',
+    });
+  });
+
   it('ignores type-incompatible patch fields instead of corrupting layers', () => {
     const project = openProject();
     executeApplyOperations({

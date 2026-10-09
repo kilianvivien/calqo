@@ -43,6 +43,23 @@ const presetIdSchema = z.enum(
   Object.keys(ARTBOARD_PRESETS) as [ArtboardPresetId, ...ArtboardPresetId[]],
 );
 
+/** A patch form of an object schema: every field optional and none defaulted.
+ * Zod 4 applies a field's default even when it is optional, so a plain
+ * `.partial()` would turn `{ fontSize: 96 }` into a full style object and
+ * silently reset every other property to its default on update. */
+function patchOf<Shape extends z.ZodRawShape>(
+  schema: z.ZodObject<Shape>,
+): z.ZodType<Partial<z.output<z.ZodObject<Shape>>>> {
+  const shape: Record<string, z.ZodType> = {};
+  for (const [key, field] of Object.entries(schema.shape)) {
+    const bare = field instanceof z.ZodDefault ? field.unwrap() : field;
+    shape[key] = (bare as z.ZodType).optional();
+  }
+  return z.object(shape) as unknown as z.ZodType<
+    Partial<z.output<z.ZodObject<Shape>>>
+  >;
+}
+
 /** Field patch for `updateLayer`. Strict so typos fail loudly instead of being
  * silently dropped — agents recover better from a clear validation error. The
  * shape mirrors `LayerPatch` in `src/editor/utils/layers.ts`; type-incompatible
@@ -63,7 +80,7 @@ export const layerPatchSchema = z
     sticker: stickerOutlineSchema.nullable(),
     // Text / list typography.
     text: z.record(localeCodeSchema, z.string()),
-    style: textStyleSchema.partial(),
+    style: patchOf(textStyleSchema),
     // Shape fields.
     fill: fillSchema,
     stroke: strokeSchema,
@@ -76,7 +93,7 @@ export const layerPatchSchema = z
     color: z.string().nullable(),
     // List fields.
     items: z.array(listItemSchema).min(1),
-    marker: listMarkerSchema.partial(),
+    marker: patchOf(listMarkerSchema),
     markerGap: z.number(),
   })
   .partial()
