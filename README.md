@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kilianvivien/calqo/releases/tag/v0.8.0"><strong>Download 0.8.0 for macOS</strong></a>
+  <a href="https://github.com/kilianvivien/calqo/releases/tag/v0.9.0"><strong>Download 0.9.0 for macOS</strong></a>
   ·
   <a href="#animate-mode">Animate mode</a>
   ·
@@ -85,7 +85,7 @@ Safari and installed-PWA checks remain separate release requirements.
 The active roadmap is [docs/plan.md](docs/plan.md); older phase plans live in
 `docs/Old/`.
 
-## Calqo 0.9.0 — AI that edits, not just drafts (unreleased)
+## Calqo 0.9.0 — AI that edits, not just drafts
 
 - **Edit with AI:** describe a change and the model adjusts the current
   artboard. The result is one undo step, and nothing is applied if any part of
